@@ -30,12 +30,13 @@ class ErrorHandler
 
 public:
     static void errorParsing( const std::string& );
-
     static void errorParsing( const char*  );
 
     static void errorGeneric( const std::string&  );
-
     static void errorGeneric( const char*  );
+
+    static void errorNotImplemented( const std::string&  );
+    static void errorNotImplemented( const char*  );
 
 };
 

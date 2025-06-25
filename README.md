@@ -4,7 +4,7 @@
 
 # BumbleBee DB
 
-## Requirements
+## Features
 
 - Datalog as input language
 - High-performance engine with code generation, push-based execution, columnar storage, and multithreading
@@ -12,7 +12,6 @@
 - Supports data sources including CSV, ASP, and Parquet files
 - Designed for data engineers: easy to debug and customize internal optimizations
 
-## Dev
 
 ### Build parser
 ```

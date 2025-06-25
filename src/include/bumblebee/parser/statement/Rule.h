@@ -17,28 +17,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-
 namespace bumblebee {
 
-#define NAME "BumbleBee"
+class Rule {
 
-// Error messages
-#define ERROR_PARSING "\nError during parsing"
-#define ERROR_GENERIC "\nGeneric error"
-#define ERROR_DB "\nDatabase error"
-#define ERROR_PARSING_CODE 100
-#define ERROR_GENERIC_CODE 110
-#define ERROR_NOT_IMPLEMENTED 120
+};
 
-// Logs
-#define DEFAULT_LOG_FILE "bbdb.log"
-#define LOG_LVL_DEBUG 0
-#define LOG_LVL_INFO 1
-#define LOG_LVL_WARNING 2
-#define LOG_LVL_ERROR 3
-
-#ifndef LOG_LEVEL
-    #define LOG_LEVEL LOG_LVL_DEBUG
-#endif
-
-}
+} // bumblebee
