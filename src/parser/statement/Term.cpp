@@ -19,6 +19,7 @@
 #include "bumblebee/parser/statement/Term.h"
 
 #include "bumblebee/common/Hash.h"
+#include "bumblebee/common/Log.h"
 
 
 namespace bumblebee {
@@ -67,8 +68,8 @@ Term::Term(Term&& term)
             value_.double_ = term.value_.double_;
             break;
         case STRING:
-            stringValue_ = std::move(term.stringValue_);
-            break;
+            ;
+
     }
 }
 
@@ -104,10 +105,12 @@ Term::Term(float c)
 Term::Term(double c)
     : ctype_(ConstantType::DOUBLE), negative_(false), value_({.double_ = c}), type_(TermType::CONSTANT) {}
 
-Term::Term(StringT c)
+Term::Term(StringT&& c)
     : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false), type_(TermType::CONSTANT) {}
+Term::Term(char* c)
+        : stringValue_(c), ctype_(ConstantType::STRING), negative_(false), type_(TermType::CONSTANT) {}
 
-Term::Term(StringT c, bool isVariable)
+Term::Term(StringT&& c, bool isVariable)
     : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false) {
     isAnonymous_ = stringValue_ == anonymous_variable && isVariable;
     type_ = isVariable ? TermType::VARIABLE : TermType::CONSTANT;
@@ -115,8 +118,9 @@ Term::Term(StringT c, bool isVariable)
 
 Term::Term(IntervalTerm interval_) : negative_(false), interval_(std::move(interval_)), type_(RANGE) {}
 
-Term::Term(Term &&t, Operator op): negative_(false), type_(TermType::ARITH)  {
-    terms_.push_back(std::move(t));
+Term::Term(Term &&t1,Term &&t2, Operator op): negative_(false), type_(TermType::ARITH)  {
+    terms_.push_back(std::move(t1));
+    terms_.push_back(std::move(t2));
     operators_.push_back(op);
 }
 
@@ -181,6 +185,9 @@ TermType Term::getType() {
     return type_;
 }
 
+ConstantType Term::getConstantType() {
+    return ctype_;
+}
 void Term::setType(TermType type) {
     type_ = type;
 }
@@ -194,6 +201,13 @@ bool Term::isGround() {
 std::string Term::toString() const {
     if (type_ == TermType::RANGE) {
         return std::to_string(interval_.from)+".."+std::to_string(interval_.to);
+    }
+    if ( type_ == TermType::ARITH) {
+        std::string s = "";
+        for (unsigned int i = 0; i < terms_.size() - 1; i++) {
+            s += terms_[i].toString() + getOperatorChar(operators_[i]);
+        }
+        return s + terms_.back().toString();
     }
 
     switch (ctype_) {
@@ -228,9 +242,139 @@ bool Term::isAnonymous() {
     return isAnonymous_;
 }
 
-void Term::addTerm(Term&& term, Operator op) {
+void Term::addInArithTerm(Term&& term, Operator op) {
     terms_.push_back(std::move(term));
     operators_.push_back(op);
+}
+
+void Term::addInArithTermBegin(Term&& term, Operator op) {
+    terms_.insert(terms_.begin(), std::move(term));
+    operators_.insert(operators_.begin(), op);
+}
+
+void Term::addInArithTerm(Term&& term, char sop) {
+    Operator op = getOperator(sop);
+    addInArithTerm(std::move(term), op);
+}
+
+Term Term::createVariable(std::string &&value) {
+    return Term(std::move(value), true);
+}
+
+Operator Term::getOperator(char sop) {
+    Operator op;
+    switch (sop) {
+        case '+':
+            return PLUS;
+        case '-':
+            return MINUS;
+        case '/':
+            return DIV;
+        case '*':
+            return TIMES;
+        case '%':
+            return MODULO;
+    }
+    ErrorHandler::errorNotImplemented("Invalid operator conversion from char");
+    return PLUS;
+}
+
+char Term::getOperatorChar(Operator op) {
+    switch (op) {
+        case PLUS:
+            return '+';
+        case MINUS:
+            return '-';
+        case DIV:
+            return '/';
+        case TIMES:
+            return '*';
+        case MODULO:
+            return '%';
+        default:
+           ;
+    }
+    ErrorHandler::errorNotImplemented("Invalid operator conversion from Operator");
+}
+
+void Term::setConstantNumericTerm(Term &term, long long num) {
+
+    // Check for signed types
+    if (num >= CHAR_MIN && num <= CHAR_MAX) {
+        term.value_.tinyint = static_cast<int8_t>(num);
+        term.ctype_ = ConstantType::TINYINT;
+        return;
+    }
+    if (num >= SHRT_MIN && num <= SHRT_MAX) {
+        term.value_.smallint = static_cast<int16_t>(num);
+        term.ctype_ = ConstantType::SMALLINT;
+        return ;
+    }
+    if (num >= INT_MIN && num <= INT_MAX) {
+        term.value_.integer = static_cast<int32_t>(num);
+        term.ctype_ = ConstantType::INTEGER;
+        return ;
+    }
+    term.value_.bigint = static_cast<int64_t>(num);
+    term.ctype_ = ConstantType::BIGINT;
+}
+
+void Term::setConstantNumericTerm(Term &term, unsigned long long value) {
+    // Check for unsigned types and create the variable
+    if (value <= UCHAR_MAX) {
+        term.value_.utinyint = static_cast<uint8_t>(value);
+        term.ctype_ = ConstantType::UTINYINT;
+        return ;
+    }
+    if (value <= USHRT_MAX) {
+        term.value_.usmallint = static_cast<uint16_t>(value);
+        term.ctype_ = ConstantType::USMALLINT;
+        return ;
+    }
+    if (value <= UINT_MAX) {
+        term.value_.uinteger = static_cast<uint32_t>(value);
+        term.ctype_ = ConstantType::UINTEGER;
+        return ;
+    }
+    term.value_.ubigint = static_cast<uint64_t>(value);
+    term.ctype_ = ConstantType::UBIGINT;
+}
+
+Term Term::createSmallestConstantNumericTerm(unsigned long long value) {
+    if (value <= UCHAR_MAX) {
+        return Term::createConstantTerm(static_cast<uint8_t>(value));;
+    }
+    if (value <= USHRT_MAX) {
+        return Term::createConstantTerm(static_cast<uint16_t>(value));;
+    }
+    if (value <= UINT_MAX) {
+        return Term::createConstantTerm(static_cast<uint32_t>(value));;
+    }
+    return Term::createConstantTerm(static_cast<uint64_t>(value));;
+}
+
+Term Term::createSmallestConstantNumericTerm(long long num) {
+    // Check for signed types
+    if (num >= CHAR_MIN && num <= CHAR_MAX) {
+        return Term::createConstantTerm(static_cast<int8_t>(num));;
+    }
+    if (num >= SHRT_MIN && num <= SHRT_MAX) {
+        return Term::createConstantTerm(static_cast<int16_t>(num));;
+    }
+    if (num >= INT_MIN && num <= INT_MAX) {
+        return Term::createConstantTerm(static_cast<int32_t>(num));;
+    }
+    return Term::createConstantTerm(static_cast<int64_t>(num));;
+}
+
+Term Term::createRange(int from, int to) {
+    IntervalTerm t{from, to};
+    return Term(t);
+}
+
+Term Term::createArith(Term &&t1, Term &&t2, char sop) {
+    Operator op = getOperator(sop);
+    return Term(std::move(t1),std::move(t2) ,op);
 }
 
 // -------------------- Creation template ------------------
@@ -285,7 +429,11 @@ Term Term::createConstantTerm(double c) {
 }
 
 template <>
-Term Term::createConstantTerm(std::string c) {
+Term Term::createConstantTerm(std::string&& c) {
+    return Term(std::forward<std::string>(c));
+}
+template <>
+Term Term::createConstantTerm(char* c) {
     return Term(c);
 }
 

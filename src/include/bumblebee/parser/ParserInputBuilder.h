@@ -20,9 +20,12 @@
 
 #include <string>
 
-namespace bumblebee {
+#include "bumblebee/parser/statement/Term.h"
 
-class ParserInputBuilder {
+namespace bumblebee {
+	class Term;
+
+	class ParserInputBuilder {
 public:
 	ParserInputBuilder();
 	virtual ~ParserInputBuilder();
@@ -48,7 +51,6 @@ public:
 	virtual void onGreaterOperator();
 	virtual void onGreaterOrEqualOperator();
 	virtual void onTerm( char* value );
-	virtual void onTerm( int value );
 	virtual void onUnknownVariable();
 	virtual void onFunction( char* functionSymbol, int nTerms );
 	virtual void onHeadTailList();
@@ -86,6 +88,11 @@ protected:
 	std::string safetyErrorMessage_;
 	bool currentRuleIsUnsafe_;
 	bool foundASafetyError_;
+
+	std::vector<Term> terms_parsered;
+	bool foundARangeAtomInCurrentRule;
+	bool hiddenNewPredicate;
+	bool currentRewriteArith;
 
 };
 

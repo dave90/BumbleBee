@@ -32,7 +32,7 @@ enum TermType{
 	CONSTANT = 0,
 	VARIABLE = 1,
 	ARITH = 2,
-	RANGE = 4
+	RANGE = 3
 };
 
 enum ConstantType {
@@ -58,8 +58,8 @@ enum Operator {
 };
 
 struct IntervalTerm {
-	unsigned from;
-	unsigned to;
+	int from;
+	int to;
 };
 
 using set_term_variable = std::unordered_set<StringT>;
@@ -86,40 +86,84 @@ public:
 	Term(uint64_t c);
 	Term(float c);
 	Term(double c);
-	Term(StringT c);
-	Term(StringT c, bool isVariable);
+	Term(StringT&& c);
+	Term(char* c);
+	Term(StringT&& c, bool isVariable);
 	Term(IntervalTerm interval_);
-	Term(Term&& t, Operator op);
+	Term(Term&& t1,Term&& t2, Operator op);
 	~Term() = default;
 
+	Term& operator=(Term&&) = default;
 	Term& operator=(Term& term) = delete;
 
 	hash_t hash();
 	bool isNegative();
 	void setNegative(bool n);
 	TermType getType();
+	ConstantType getConstantType();
 	void setType(TermType type);
 	bool isGround();
 	void getVariables(set_term_variable& vars);
 	std::string toString()const;
 	bool isAnonymous();
-	void addTerm(Term&& term, Operator op);
+	void addInArithTermBegin(Term&& term, Operator op);
+	void addInArithTerm(Term&& term, Operator op);
+	void addInArithTerm(Term&& term, char op);
 
-	// static function to create terms
+	// template
+
 	template <class T>
+	T getNumericValue() {
+		switch (ctype_) {
+			case ConstantType::TINYINT:
+				return static_cast<T>(value_.tinyint);
+			case ConstantType::SMALLINT:
+				return static_cast<T>(value_.smallint);
+			case ConstantType::INTEGER:
+				return static_cast<T>(value_.integer);
+			case ConstantType::BIGINT:
+				return static_cast<T>(value_.bigint);
+			case ConstantType::UTINYINT:
+				return static_cast<T>(value_.utinyint);
+			case ConstantType::USMALLINT:
+				return static_cast<T>(value_.usmallint);
+			case ConstantType::UINTEGER:
+				return static_cast<T>(value_.uinteger);
+			case ConstantType::UBIGINT:
+				return static_cast<T>(value_.ubigint);
+			case ConstantType::FLOAT:
+				return static_cast<T>(value_.float_);
+			case ConstantType::DOUBLE:
+				return static_cast<T>(value_.double_);
+			default:
+				;
+		}
+		ErrorHandler::errorNotImplemented("Term getValue not supported");
+		return {};
+	}
+
+	template<class T>
 	static Term createConstantTerm(T value) {
 		ErrorHandler::errorNotImplemented("Term values not supported");
 		return {};
 	}
 
-	static Term createVariable(std::string value) {
-		return Term(value, true);
-	}
+	// static functions
+	static Term createVariable(std::string&& value);
+	static Operator getOperator(char sop);
+	static char getOperatorChar(Operator op);
+	static Term createRange(int from, int to);
+	static Term createArith(Term&& t1,Term&& t2, char op );
+	static void setConstantNumericTerm(Term& term, long long value);
+	static void setConstantNumericTerm(Term& term, unsigned long long value);
+	static Term createSmallestConstantNumericTerm(unsigned long long value);
+	static Term createSmallestConstantNumericTerm(long long value);
+
 	static constexpr const char* anonymous_variable = "_";
 
-protected:
+private:
     // if it is negative term
-    bool negative_{};
+    bool negative_;
 
 	// Numeric Values
 	union Val {
@@ -171,7 +215,9 @@ Term  Term::createConstantTerm(int32_t value);
 template <>
 Term  Term::createConstantTerm(int64_t value);
 template <>
-Term  Term::createConstantTerm(std::string value);
+Term  Term::createConstantTerm(std::string&& value);
+template <>
+Term  Term::createConstantTerm(char* value);
 template <>
 Term  Term::createConstantTerm(float value);
 template <>
