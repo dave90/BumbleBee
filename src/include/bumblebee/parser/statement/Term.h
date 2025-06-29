@@ -96,6 +96,9 @@ public:
 	Term& operator=(Term&&) = default;
 	Term& operator=(Term& term) = delete;
 
+	friend bool operator==(const Term &lhs, const Term &rhs);
+	friend bool operator!=(const Term &lhs, const Term &rhs);
+
 	hash_t hash();
 	bool isNegative();
 	void setNegative(bool n);
@@ -148,18 +151,6 @@ public:
 		return {};
 	}
 
-	// static functions
-	static Term createVariable(std::string&& value);
-	static Operator getOperator(char sop);
-	static char getOperatorChar(Operator op);
-	static Term createRange(int from, int to);
-	static Term createArith(Term&& t1,Term&& t2, char op );
-	static void setConstantNumericTerm(Term& term, long long value);
-	static void setConstantNumericTerm(Term& term, unsigned long long value);
-	static Term createSmallestConstantNumericTerm(unsigned long long value);
-	static Term createSmallestConstantNumericTerm(long long value);
-
-	static constexpr const char* anonymous_variable = "_";
 
 private:
     // if it is negative term
@@ -177,9 +168,9 @@ private:
 		uint64_t ubigint;
 		float float_;
 		double double_;
-	} value_{};
+	} value_;
 	// String value
-	StringT stringValue_;
+	StringT stringValue_{};
 	// If it is interval the interval from to
 	IntervalTerm interval_{};
 	// If constant the constant type
@@ -187,11 +178,25 @@ private:
 	// Type of the term Constant/Variable/etc.
 	TermType type_;
 	// True if is anonymous variable
-	bool isAnonymous_{};
+	bool anonymous_{false};
 	// ArithTerm is an arithmetic with the list of a terms
 	// and the relative operator(+, -, *, /,\)
-	TermVector terms_;
-	OpVector operators_;
+	TermVector terms_{};
+	OpVector operators_{};
+
+public:
+	// static functions
+	static Term createVariable(std::string&& value);
+	static Operator getOperator(char sop);
+	static char getOperatorChar(Operator op);
+	static Term createRange(int from, int to);
+	static Term createArith(Term&& t1,Term&& t2, char op );
+	static void setConstantNumericTerm(Term& term, long long value);
+	static void setConstantNumericTerm(Term& term, unsigned long long value);
+	static Term createSmallestConstantNumericTerm(unsigned long long value);
+	static Term createSmallestConstantNumericTerm(long long value);
+
+	static constexpr const char* anonymous_variable = "_";
 };
 
 

@@ -26,7 +26,7 @@
 namespace bumblebee {
 
 
-ParserInputBuilder::ParserInputBuilder() {
+ParserInputBuilder::ParserInputBuilder(): currentSchema_(Catalog::instance().getDefaultSchema()), hiddenNewPredicate(false) {
 }
 
 ParserInputBuilder::~ParserInputBuilder() {
@@ -71,34 +71,43 @@ void ParserInputBuilder::onExistentialAtom() {
 
 void ParserInputBuilder::onPredicateName(char *name) {
     // TODO keep track of the type of the terms and keep the largest one in predicate tables to calculate the type of a column
-
-    std::cout << "Parsed terms: ";
-    for (auto&t : terms_parsered) {
-        std::cout<< "( " << t.toString() <<" , "<< t.getType() << " , " << t.getConstantType() << " , " << t.isAnonymous() << " ) " ;
-    }
-    std::cout<<std::endl;
+    //
+    // std::cout << "Parsed terms: ";
+    // for (auto&t : terms_parsered) {
+    //     std::cout<< "( " << t.toString() <<" , "<< t.getType() << " , " << t.getConstantType() << " , " << t.isAnonymous() << " ) " ;
+    // }
+    // std::cout<<std::endl;
+    Predicate *predicate = currentSchema_.get().createPredicate(name, terms_parsered.size());
+    currentAtom = Atom::createClassicalAtom(predicate, std::move(terms_parsered));
     terms_parsered.clear();
+    std::cout<<currentAtom.toString()<<std::endl;
 }
 
 void ParserInputBuilder::onExistentialVariable(char *var) {
 }
 
 void ParserInputBuilder::onEqualOperator() {
+    binop_ = Binop::EQUAL;
 }
 
 void ParserInputBuilder::onUnequalOperator() {
+    binop_ = Binop::UNEQUAL;
 }
 
 void ParserInputBuilder::onLessOperator() {
+    binop_ = Binop::LESS;
 }
 
 void ParserInputBuilder::onLessOrEqualOperator() {
+    binop_ = Binop::LESS_OR_EQ;
 }
 
 void ParserInputBuilder::onGreaterOperator() {
+    binop_ = Binop::GREATER;
 }
 
 void ParserInputBuilder::onGreaterOrEqualOperator() {
+    binop_ = Binop::GREATER_OR_EQ;
 }
 
 void ParserInputBuilder::onTerm(char *value) {
@@ -163,7 +172,6 @@ void ParserInputBuilder::onArithmeticOperation(char arithOperator) {
     if (lt.getType() != ARITH && slt.getType() != ARITH) {
         auto t = Term::createArith(std::move(slt), std::move(lt), arithOperator);
         terms_parsered.push_back(std::move(t));
-        LOG_DEBUG("SUM TERM ARITH");
 
         return;
     }
@@ -171,12 +179,9 @@ void ParserInputBuilder::onArithmeticOperation(char arithOperator) {
         // only last term is arith second last is normal term
         lt.addInArithTerm(std::move(slt), arithOperator);
         terms_parsered.push_back(std::move(lt));
-        LOG_DEBUG("MERGE ARITH");
         return;
     }
     // the second last is arith and the last is normal term
-    LOG_DEBUG("NONE TERM ARITH");
-
     slt.addInArithTerm(std::move(lt), arithOperator);
     terms_parsered.push_back(std::move(slt));
 }
@@ -203,6 +208,8 @@ void ParserInputBuilder::onChoiceAtom() {
 }
 
 void ParserInputBuilder::onBuiltinAtom() {
+    currentAtom = Atom::createBuiltinAtom(std::move(terms_parsered), binop_);
+    terms_parsered.clear();
 }
 
 void ParserInputBuilder::onAggregateLowerGuard() {
@@ -239,7 +246,6 @@ void ParserInputBuilder::onEnd() {
 }
 
 void ParserInputBuilder::newTerm(char * value) {
-    LOG_DEBUG("NEW TERM %s",value);
     if( value[0] >= 'A' && value[0] <='Z' ) // Variable
     {
         std::string s(value);

@@ -20,7 +20,10 @@
 
 #include <string>
 
+#include "bumblebee/catalog/Catalog.h"
+#include "bumblebee/catalog/Schema.h"
 #include "bumblebee/parser/statement/Term.h"
+#include "statement/Atom.h"
 
 namespace bumblebee {
 	class Term;
@@ -84,15 +87,18 @@ public:
 	const std::string& getSafetyErrorMessage();
 
 protected:
-	bool foundARangeAtomInCurrentRule_;
+	std::reference_wrapper<Schema> currentSchema_;
+	bool foundARangeAtomInCurrentRule_{false};
 	std::string safetyErrorMessage_;
-	bool currentRuleIsUnsafe_;
-	bool foundASafetyError_;
+	bool currentRuleIsUnsafe_{false};
+	bool foundASafetyError_{false};
+	Binop binop_;
 
 	std::vector<Term> terms_parsered;
-	bool foundARangeAtomInCurrentRule;
-	bool hiddenNewPredicate;
-	bool currentRewriteArith;
+	Atom currentAtom;
+	bool foundARangeAtomInCurrentRule{false};
+	bool hiddenNewPredicate{false};
+	bool currentRewriteArith{false};
 
 };
 

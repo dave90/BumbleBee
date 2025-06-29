@@ -119,3 +119,10 @@ For the recursive rules:
 - Write to disk
 - Server mode
 
+## Commands
+
+example test clingo:
+/usr/bin/time -al clingo --mode=gringo --text benchmarks/files/asp/input/edge1M > /dev/null
+
+example test bb:
+/usr/bin/time -al ./cmake-build-release/BumbleBee -i benchmarks/files/asp/input/edge1M > /dev/null

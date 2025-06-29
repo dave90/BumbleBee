@@ -1,0 +1,105 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+#include <vector>
+
+#include "Predicate.h"
+#include "Term.h"
+
+
+namespace bumblebee {
+
+enum Binop {
+    NONE_OP = 0,
+    EQUAL = 1,
+    UNEQUAL = 2,
+    LESS = 3,
+    GREATER = 4,
+    LESS_OR_EQ = 5,
+    GREATER_OR_EQ = 6,
+    ASSIGNMENT = 7,
+};
+
+enum AtomType {
+    CLASSICAL = 0,
+    BUILTIN = 1,
+};
+
+using terms_vector = std::vector<Term>;
+
+class Atom {
+public:
+
+    Atom() = default;
+    Atom(Predicate* predicate, terms_vector &&terms, AtomType type);
+    Atom(terms_vector &&terms, Binop binop);
+    Atom(AtomType type, bool negative);
+    Atom(const Atom &other) = delete;
+    Atom(Atom &&other) noexcept;
+    ~Atom() = default;
+
+    Atom & operator=(const Atom &other) = delete;
+    Atom & operator=(Atom &&other) noexcept;
+
+    hash_t hash();
+    void getVariables(set_term_variable &variables);
+    bool isGround();
+    std::string toString();
+
+
+    friend bool operator==(const Atom &lhs, const Atom &rhs);
+    friend bool operator!=(const Atom &lhs, const Atom &rhs);
+    inline Term& operator[](unsigned i);
+
+    terms_vector& getTerms();
+    Predicate* getPredicate();
+    void getPredicates(predicates_ptr_set &predicates);
+    AtomType getType() const;
+    void setType(AtomType type);
+    bool isNegative() const;
+    void setNegative(bool negative);
+    Binop getBinop() const;
+    void setBinop(Binop binop);
+    bool isFact() const;
+    void setFact(bool fact);
+
+
+private:
+    void calculateIsGround();
+
+    terms_vector terms_;
+    // pointer to predicate, do not own the predicate lifetime
+    Predicate* predicate_;
+    AtomType type_;
+    bool negative_{false};
+    // If it is a builtin the binop operation
+    Binop binop_;
+    // True if it is a fact
+    bool fact_{false};
+    // True if it is ground
+    bool ground_{false};
+
+public:
+    // static functions
+    static Atom createClassicalAtom(Predicate* p, terms_vector&& t);
+    static Atom createBuiltinAtom(terms_vector&& t, Binop binop);
+    static std::string getBinop(Binop binop);
+};
+
+}

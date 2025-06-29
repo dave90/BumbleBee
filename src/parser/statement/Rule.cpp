@@ -19,4 +19,85 @@
 #include "bumblebee/parser/statement/Rule.h"
 
 namespace bumblebee {
+Rule::Rule(Rule &&other) noexcept: body_(std::move(other.body_)),
+                                   head_(std::move(other.head_)) {
+}
+
+Rule & Rule::operator=(Rule &&other) noexcept {
+    if (this == &other)
+        return *this;
+    body_ = std::move(other.body_);
+    head_ = std::move(other.head_);
+    return *this;
+}
+
+bool Rule::isGround() {
+    for (auto& atom :head_)
+        if (!atom.isGround())return false;
+    for (auto& atom :body_)
+        if (!atom.isGround())return false;
+    return true;
+
+}
+
+predicates_ptr_set Rule::getPredicates() {
+    predicates_ptr_set predicates;
+    for (auto& atom :head_)
+        atom.getPredicates(predicates);
+    for (auto& atom :body_)
+        atom.getPredicates(predicates);
+    return predicates;
+}
+
+atoms_vector& Rule::getBody()  {
+    return body_;
+}
+
+atoms_vector& Rule::getHead() {
+    return head_;
+}
+
+void Rule::addAtomInHead(Atom &&atom) {
+    head_.push_back(std::move(atom));
+}
+
+void Rule::addAtomInBody(Atom &&atom) {
+    body_.push_back(std::move(atom));
+}
+
+std::string Rule::toString() {
+    std::string s;
+    if (!head_.empty()) s += head_.front().toString();
+    for (unsigned int i = 1; i < head_.size(); i++) {
+        s += SEPARATOR_HAED + head_[i].toString();
+    }
+    s += std::string(" ")+ SEPARATOR+" ";
+    if (!body_.empty()) s += body_.front().toString();
+    for (unsigned int i = 1; i < body_.size(); i++) {
+        s += SEPARATOR_BODY + body_[i].toString();
+    }
+    return s;
+}
+
+bool Rule::isAStrongConstraint() {
+    return head_.empty();
+}
+
+void Rule::getVariables(set_term_variable &variables) {
+    getVariablesInBody(variables);
+    getVariablesInBody(variables);
+}
+
+void Rule::getVariablesInHead(set_term_variable &variables) {
+    for (auto& atom : head_) {
+        atom.getVariables(variables);
+    }
+}
+
+void Rule::getVariablesInBody(set_term_variable &variables) {
+    for (auto& atom : body_) {
+        atom.getVariables(variables);
+    }
+}
+
 } // bumblebee

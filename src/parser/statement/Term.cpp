@@ -31,7 +31,7 @@ Term::Term(Term&& term)
       interval_(std::move(term.interval_)),
       ctype_(term.ctype_),
       type_(term.type_),
-      isAnonymous_(term.isAnonymous_),
+      anonymous_(term.anonymous_),
       terms_(std::move(term.terms_)),
       operators_(std::move(term.operators_)) {
 
@@ -112,7 +112,7 @@ Term::Term(char* c)
 
 Term::Term(StringT&& c, bool isVariable)
     : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false) {
-    isAnonymous_ = stringValue_ == anonymous_variable && isVariable;
+    anonymous_ = stringValue_ == anonymous_variable && isVariable;
     type_ = isVariable ? TermType::VARIABLE : TermType::CONSTANT;
 }
 
@@ -193,7 +193,10 @@ void Term::setType(TermType type) {
 }
 
 bool Term::isGround() {
-    if (type_ == TermType::CONSTANT) return true;
+    if (type_ == TermType::CONSTANT || type_ == TermType::RANGE) return true;
+    if (type_ == TermType::ARITH) {
+
+    }
     return false;
 }
 
@@ -239,7 +242,7 @@ std::string Term::toString() const {
 }
 
 bool Term::isAnonymous() {
-    return isAnonymous_;
+    return anonymous_;
 }
 
 void Term::addInArithTerm(Term&& term, Operator op) {
@@ -375,6 +378,50 @@ Term Term::createRange(int from, int to) {
 Term Term::createArith(Term &&t1, Term &&t2, char sop) {
     Operator op = getOperator(sop);
     return Term(std::move(t1),std::move(t2) ,op);
+}
+
+    bool operator==(const Term &lhs, const Term &rhs) {
+    if (lhs.type_ != rhs.type_) return false;
+    // constant and variable checks
+    if (lhs.type_ == VARIABLE || lhs.type_ == CONSTANT) {
+        if (lhs.ctype_ != rhs.ctype_) return false;
+        switch (lhs.ctype_) {
+            case ConstantType::TINYINT:
+                return lhs.value_.utinyint == rhs.value_.utinyint;
+            case ConstantType::SMALLINT:
+                return lhs.value_.smallint == rhs.value_.smallint;
+            case ConstantType::INTEGER:
+                return lhs.value_.integer == rhs.value_.integer;
+            case ConstantType::BIGINT:
+                return lhs.value_.bigint == rhs.value_.bigint;
+            case ConstantType::UTINYINT:
+                return lhs.value_.utinyint == rhs.value_.utinyint;
+            case ConstantType::USMALLINT:
+                return lhs.value_.usmallint == rhs.value_.usmallint;
+            case ConstantType::UINTEGER:
+                return lhs.value_.uinteger == rhs.value_.uinteger;
+            case ConstantType::UBIGINT:
+                return lhs.value_.ubigint == rhs.value_.ubigint;
+            case ConstantType::FLOAT:
+                return lhs.value_.float_ == rhs.value_.float_;
+            case ConstantType::DOUBLE:
+                return lhs.value_.double_ == rhs.value_.double_;
+            case ConstantType::STRING:
+                return lhs.stringValue_ == rhs.stringValue_;
+            default:
+                ;
+        }
+        return false;
+    }
+    // range comparison
+    if (lhs.type_ == RANGE) return lhs.interval_ == rhs.interval_;
+    // arith comparison
+    return lhs.terms_ == rhs.terms_
+           && lhs.operators_ == rhs.operators_;
+}
+
+    bool operator!=(const Term &lhs, const Term &rhs) {
+    return !(lhs == rhs);
 }
 
 // -------------------- Creation template ------------------
