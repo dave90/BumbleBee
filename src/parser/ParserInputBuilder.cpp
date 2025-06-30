@@ -35,10 +35,50 @@ ParserInputBuilder::~ParserInputBuilder() {
 void ParserInputBuilder::onDirective(char *directiveName, char *directiveValue) {
 }
 
-void ParserInputBuilder::onRule() {
+bool ParserInputBuilder::checkRuleSafety() {
+    // check if rule is safe
+    set_term_variable toCheckVars, bodyVars;
+    for (auto&a : currentRule.getHead())a.getVariables(toCheckVars);
+    for (auto&a : currentRule.getBody())
+        if (a.isNegative())
+            a.getVariables(toCheckVars);
+    for (auto&a : currentRule.getBody())
+        if (!a.isNegative())
+            a.getVariables(bodyVars);
+    // Check all the vars in head and in negative atoms are present in body
+    for (auto& v : toCheckVars)
+        if (bodyVars.find(v) == bodyVars.end()) {
+            currentRuleIsUnsafe_ = true;
+            break;
+        }
+
+    if(currentRuleIsUnsafe_){
+        safetyErrorMessage="--> Safety Error: "+currentRule.toString();
+        foundASafetyError_=true;
+        return false;
+    }
+    return true;
 }
 
+void ParserInputBuilder::onRule() {
+    if(foundASafetyError_) return;
+    if (currentRule.isFact()) {
+        // TODO add the fact in the predicate table
+        Atom fact = std::move(currentRule.getHead()[0]);
+        std::cout<<fact.toString()<< "." <<std::endl;
+        currentRule = {};
+        return;
+    }
+    if (!checkRuleSafety()) return;
+    program_.push_back(std::move(currentRule));
+    currentRule = {};
+}
+
+
 void ParserInputBuilder::onConstraint() {
+    if (!checkRuleSafety()) return;
+    program_.push_back(std::move(currentRule));
+    currentRule = {};
 }
 
 void ParserInputBuilder::onWeakConstraint() {
@@ -48,21 +88,30 @@ void ParserInputBuilder::onQuery() {
 }
 
 void ParserInputBuilder::onHeadAtom() {
+    if(foundASafetyError_) return;
+    if (currentAtom.containsAnonymous())currentRuleIsUnsafe_=true;
+    currentRule.addAtomInHead(std::move(currentAtom));
 }
 
 void ParserInputBuilder::onHead() {
 }
 
 void ParserInputBuilder::onBodyLiteral() {
+    if(foundASafetyError_) return;
+    currentRule.addAtomInBody(std::move(currentAtom));
 }
 
 void ParserInputBuilder::onBody() {
 }
 
 void ParserInputBuilder::onNafLiteral(bool naf) {
+    if(foundASafetyError_) return;
+    currentAtom.setNegative(naf);
+    if (naf && currentAtom.containsAnonymous())currentRuleIsUnsafe_=true;
 }
 
 void ParserInputBuilder::onAtom(bool isStrongNeg) {
+    if(foundASafetyError_) return;
 
 }
 
@@ -70,6 +119,8 @@ void ParserInputBuilder::onExistentialAtom() {
 }
 
 void ParserInputBuilder::onPredicateName(char *name) {
+    if(foundASafetyError_) return;
+
     // TODO keep track of the type of the terms and keep the largest one in predicate tables to calculate the type of a column
     //
     // std::cout << "Parsed terms: ";
@@ -80,7 +131,6 @@ void ParserInputBuilder::onPredicateName(char *name) {
     Predicate *predicate = currentSchema_.get().createPredicate(name, terms_parsered.size());
     currentAtom = Atom::createClassicalAtom(predicate, std::move(terms_parsered));
     terms_parsered.clear();
-    std::cout<<currentAtom.toString()<<std::endl;
 }
 
 void ParserInputBuilder::onExistentialVariable(char *var) {
@@ -111,11 +161,13 @@ void ParserInputBuilder::onGreaterOrEqualOperator() {
 }
 
 void ParserInputBuilder::onTerm(char *value) {
+    if(foundASafetyError_) return;
     newTerm(value);
 }
 
 
 void ParserInputBuilder::onUnknownVariable() {
+    if(foundASafetyError_) return;
     std::string s("_");
     Term term = Term::createVariable(std::move(s));
     terms_parsered.push_back(std::move(term));
@@ -131,6 +183,8 @@ void ParserInputBuilder::onListTerm(int nTerms) {
 }
 
 void ParserInputBuilder::onTermDash() {
+    if(foundASafetyError_) return;
+
     Term& term = terms_parsered.back();
     term.setNegative(true);
     if (term.getType() == CONSTANT && term.getConstantType() != ConstantType::STRING) {
@@ -159,11 +213,15 @@ void ParserInputBuilder::onTermParams() {
 }
 
 void ParserInputBuilder::onTermRange(char *lowerBound, char *upperBound) {
+    if(foundASafetyError_) return;
+
     Term t = Term::createRange(atoi(lowerBound), atoi(upperBound));
     terms_parsered.push_back(std::move(t));
 }
 
 void ParserInputBuilder::onArithmeticOperation(char arithOperator) {
+    if(foundASafetyError_) return;
+
     auto lt = std::move(terms_parsered.back());
     terms_parsered.pop_back();
     auto slt = std::move(terms_parsered.back());
@@ -208,6 +266,8 @@ void ParserInputBuilder::onChoiceAtom() {
 }
 
 void ParserInputBuilder::onBuiltinAtom() {
+    if(foundASafetyError_) return;
+
     currentAtom = Atom::createBuiltinAtom(std::move(terms_parsered), binop_);
     terms_parsered.clear();
 }
@@ -245,7 +305,13 @@ void ParserInputBuilder::onAggregate(bool naf) {
 void ParserInputBuilder::onEnd() {
 }
 
+rules_vector & ParserInputBuilder::getProgram() {
+    return program_;
+}
+
 void ParserInputBuilder::newTerm(char * value) {
+    if(foundASafetyError_) return;
+
     if( value[0] >= 'A' && value[0] <='Z' ) // Variable
     {
         std::string s(value);
@@ -279,7 +345,7 @@ bool ParserInputBuilder::isFoundASafetyError() {
 }
 
 const std::string & ParserInputBuilder::getSafetyErrorMessage() {
-    return safetyErrorMessage_;
+    return safetyErrorMessage;
 }
 
 }

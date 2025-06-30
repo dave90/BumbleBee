@@ -112,6 +112,7 @@ public:
 	void addInArithTermBegin(Term&& term, Operator op);
 	void addInArithTerm(Term&& term, Operator op);
 	void addInArithTerm(Term&& term, char op);
+	bool containsAnonymous()const;
 
 	// template
 

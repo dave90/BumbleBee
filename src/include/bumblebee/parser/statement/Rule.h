@@ -39,6 +39,7 @@ public:
     Rule & operator=(const Rule &other) = delete;
     Rule & operator=(Rule &&other) noexcept;
 
+    bool isFact();
     bool isGround();
     atoms_vector& getBody();
     atoms_vector& getHead();
@@ -55,7 +56,8 @@ private:
 
     atoms_vector body_;
     atoms_vector head_;
-    bool fact_;
 };
+
+using rules_vector = std::vector<Rule>;
 
 } // bumblebee

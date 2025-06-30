@@ -31,6 +31,10 @@ Rule & Rule::operator=(Rule &&other) noexcept {
     return *this;
 }
 
+bool Rule::isFact() {
+    return body_.size() == 0 && head_.size() == 1 && head_[0].getType() == CLASSICAL && head_[0].isGround();
+}
+
 bool Rule::isGround() {
     for (auto& atom :head_)
         if (!atom.isGround())return false;
@@ -76,7 +80,7 @@ std::string Rule::toString() {
     for (unsigned int i = 1; i < body_.size(); i++) {
         s += SEPARATOR_BODY + body_[i].toString();
     }
-    return s;
+    return s + ".";
 }
 
 bool Rule::isAStrongConstraint() {

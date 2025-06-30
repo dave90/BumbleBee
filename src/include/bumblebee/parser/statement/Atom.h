@@ -76,8 +76,7 @@ public:
     void setNegative(bool negative);
     Binop getBinop() const;
     void setBinop(Binop binop);
-    bool isFact() const;
-    void setFact(bool fact);
+    bool containsAnonymous() const;
 
 
 private:
@@ -90,8 +89,6 @@ private:
     bool negative_{false};
     // If it is a builtin the binop operation
     Binop binop_;
-    // True if it is a fact
-    bool fact_{false};
     // True if it is ground
     bool ground_{false};
 

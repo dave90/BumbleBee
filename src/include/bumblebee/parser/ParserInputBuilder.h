@@ -24,6 +24,7 @@
 #include "bumblebee/catalog/Schema.h"
 #include "bumblebee/parser/statement/Term.h"
 #include "statement/Atom.h"
+#include "statement/Rule.h"
 
 namespace bumblebee {
 	class Term;
@@ -34,6 +35,9 @@ public:
 	virtual ~ParserInputBuilder();
 
 	virtual void onDirective( char* directiveName, char* directiveValue );
+
+	bool checkRuleSafety();
+
 	virtual void onRule();
 	virtual void onConstraint();
 	virtual void onWeakConstraint();
@@ -82,23 +86,29 @@ public:
 	virtual void onAggregate( bool naf = false );
 	virtual void onEnd();
 
-    void newTerm(char*);
+
+	void newTerm(char*);
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
+	rules_vector& getProgram();
 
 protected:
 	std::reference_wrapper<Schema> currentSchema_;
 	bool foundARangeAtomInCurrentRule_{false};
-	std::string safetyErrorMessage_;
 	bool currentRuleIsUnsafe_{false};
 	bool foundASafetyError_{false};
 	Binop binop_;
 
 	std::vector<Term> terms_parsered;
-	Atom currentAtom;
+	Atom currentAtom{};
+	Rule currentRule{};
+
 	bool foundARangeAtomInCurrentRule{false};
 	bool hiddenNewPredicate{false};
 	bool currentRewriteArith{false};
+
+	std::string safetyErrorMessage;
+	rules_vector program_;
 
 };
 

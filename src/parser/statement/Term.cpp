@@ -264,6 +264,10 @@ Term Term::createVariable(std::string &&value) {
     return Term(std::move(value), true);
 }
 
+bool Term::containsAnonymous() const {
+    return anonymous_;
+}
+
 Operator Term::getOperator(char sop) {
     Operator op;
     switch (sop) {

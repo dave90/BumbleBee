@@ -55,6 +55,21 @@ void BumbleBeeDB::run() {
     ParserInputDirector inputDirector;
     inputDirector.parse(inputFiles_);
 
+    if (inputDirector.getBuilder()->isFoundASafetyError()) {
+        // found a rule unsafe
+        std::string error = inputDirector.getBuilder()->getSafetyErrorMessage();
+        LOG_ERROR("Error: %s ",error.c_str());
+        ErrorHandler::errorParsing("Error, found unsafe rule.");
+    }
+
+    // TODO continue processing
+    // create dags
+    // rewrite rule
+    rules_vector program = std::move(inputDirector.getBuilder()->getProgram());
+    for (auto& rule : program) {
+        std::cout << rule.toString() << std::endl;
+    }
+
 }
 
 } // bumblebee

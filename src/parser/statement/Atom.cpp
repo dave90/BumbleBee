@@ -35,8 +35,7 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
                                    predicate_(other.predicate_),
                                    type_(other.type_),
                                    negative_(other.negative_),
-                                   binop_(other.binop_),
-                                   fact_(other.fact_) {
+                                   binop_(other.binop_){
     calculateIsGround();
 }
 
@@ -83,12 +82,12 @@ void Atom::setBinop(Binop binop) {
     binop_ = binop;
 }
 
-bool Atom::isFact() const {
-    return fact_;
-}
 
-void Atom::setFact(bool fact) {
-    fact_ = fact;
+bool Atom::containsAnonymous() const {
+    for (auto& term : terms_)
+        if (term.containsAnonymous())
+            return true;
+    return false;
 }
 
 Atom & Atom::operator=(Atom &&other) noexcept {
@@ -99,7 +98,6 @@ Atom & Atom::operator=(Atom &&other) noexcept {
     type_ = other.type_;
     negative_ = other.negative_;
     binop_ = other.binop_;
-    fact_ = other.fact_;
     ground_ = other.ground_;
     return *this;
 }
@@ -111,8 +109,7 @@ bool operator==(const Atom &lhs, const Atom &rhs) {
            && lhs.predicate_ == rhs.predicate_
            && lhs.type_ == rhs.type_
            && lhs.negative_ == rhs.negative_
-           && lhs.binop_ == rhs.binop_
-           && lhs.fact_ == rhs.fact_;
+           && lhs.binop_ == rhs.binop_;
 }
 
 bool operator!=(const Atom &lhs, const Atom &rhs) {
