@@ -41,14 +41,14 @@ enum AtomType {
     BUILTIN = 1,
 };
 
-using terms_vector = std::vector<Term>;
+using terms_vector_t = std::vector<Term>;
 
 class Atom {
 public:
 
     Atom() = default;
-    Atom(Predicate* predicate, terms_vector &&terms, AtomType type);
-    Atom(terms_vector &&terms, Binop binop);
+    Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type);
+    Atom(terms_vector_t &&terms, Binop binop);
     Atom(AtomType type, bool negative);
     Atom(const Atom &other) = delete;
     Atom(Atom &&other) noexcept;
@@ -58,7 +58,7 @@ public:
     Atom & operator=(Atom &&other) noexcept;
 
     hash_t hash();
-    void getVariables(set_term_variable &variables);
+    void getVariables(set_term_variable_t &variables);
     bool isGround();
     std::string toString();
 
@@ -67,9 +67,9 @@ public:
     friend bool operator!=(const Atom &lhs, const Atom &rhs);
     inline Term& operator[](unsigned i);
 
-    terms_vector& getTerms();
+    terms_vector_t& getTerms();
     Predicate* getPredicate();
-    void getPredicates(predicates_ptr_set &predicates);
+    void getPredicates(predicates_ptr_set_t &predicates);
     AtomType getType() const;
     void setType(AtomType type);
     bool isNegative() const;
@@ -82,7 +82,7 @@ public:
 private:
     void calculateIsGround();
 
-    terms_vector terms_;
+    terms_vector_t terms_;
     // pointer to predicate, do not own the predicate lifetime
     Predicate* predicate_;
     AtomType type_;
@@ -94,8 +94,8 @@ private:
 
 public:
     // static functions
-    static Atom createClassicalAtom(Predicate* p, terms_vector&& t);
-    static Atom createBuiltinAtom(terms_vector&& t, Binop binop);
+    static Atom createClassicalAtom(Predicate* p, terms_vector_t&& t);
+    static Atom createBuiltinAtom(terms_vector_t&& t, Binop binop);
     static std::string getBinop(Binop binop);
 };
 

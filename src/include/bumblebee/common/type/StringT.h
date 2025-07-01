@@ -19,5 +19,8 @@
 #pragma once
 #include <string>
 
-// TODO implement better version of string type
-using StringT = std::string;
+namespace bumblebee {
+    // TODO implement better version of string type
+    using string_t = std::string;
+
+}

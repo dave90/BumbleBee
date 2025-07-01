@@ -23,7 +23,7 @@
 
 namespace bumblebee {
 
-using atoms_vector = std::vector<Atom>;
+using atoms_vector_t = std::vector<Atom>;
 
 class Rule {
 public:
@@ -41,23 +41,23 @@ public:
 
     bool isFact();
     bool isGround();
-    atoms_vector& getBody();
-    atoms_vector& getHead();
+    atoms_vector_t& getBody();
+    atoms_vector_t& getHead();
     void addAtomInHead(Atom &&atom);
     void addAtomInBody(Atom &&atom);
     std::string toString();
     bool isAStrongConstraint();
-    void getVariables(set_term_variable &variables);
-    void getVariablesInHead(set_term_variable &variables);
-    void getVariablesInBody(set_term_variable &variables);
-    predicates_ptr_set getPredicates();
+    void getVariables(set_term_variable_t &variables);
+    void getVariablesInHead(set_term_variable_t &variables);
+    void getVariablesInBody(set_term_variable_t &variables);
+    predicates_ptr_set_t getPredicates();
 
 private:
 
-    atoms_vector body_;
-    atoms_vector head_;
+    atoms_vector_t body_;
+    atoms_vector_t head_;
 };
 
-using rules_vector = std::vector<Rule>;
+using rules_vector_t = std::vector<Rule>;
 
 } // bumblebee

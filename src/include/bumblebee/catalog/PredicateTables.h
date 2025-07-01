@@ -33,7 +33,7 @@ public:
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
 
-    PredicateUPtr predicate_;
+    predicate_ptr_t predicate_;
     // TODO EDB and IDB
     // cache output
     // hash tables etc

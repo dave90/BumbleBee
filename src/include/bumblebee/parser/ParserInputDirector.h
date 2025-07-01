@@ -25,7 +25,7 @@
 
 namespace bumblebee {
 
-using BuilderPtr = std::shared_ptr<ParserInputBuilder>;
+using builder_ptr_t = std::shared_ptr<ParserInputBuilder>;
 
 class ParserInputDirector {
 
@@ -33,7 +33,7 @@ public:
     ParserInputDirector();
     ~ParserInputDirector() = default;
 
-    void configureBuilder( BuilderPtr );
+    void configureBuilder( builder_ptr_t );
     ParserInputBuilder* getBuilder();
 
     //////////////////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ private:
     const char* parserFile_;
     unsigned parserErrors_;
     bool parserStateInternal_;
-    BuilderPtr builder_;
+    builder_ptr_t builder_;
     bool findError_;
 };
 };

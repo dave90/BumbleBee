@@ -62,14 +62,14 @@ struct IntervalTerm {
 	int to;
 };
 
-using set_term_variable = std::unordered_set<StringT>;
+using set_term_variable_t = std::unordered_set<string_t>;
 
 /*  class that store a Term
  *
  **/
 class Term {
-	using TermVector = std::vector<Term>;
-	using OpVector = std::vector<Operator>;
+	using term_vector_t = std::vector<Term>;
+	using op_vector_t = std::vector<Operator>;
 
 public:
 	Term();
@@ -86,9 +86,9 @@ public:
 	Term(uint64_t c);
 	Term(float c);
 	Term(double c);
-	Term(StringT&& c);
+	Term(string_t&& c);
 	Term(char* c);
-	Term(StringT&& c, bool isVariable);
+	Term(string_t&& c, bool isVariable);
 	Term(IntervalTerm interval_);
 	Term(Term&& t1,Term&& t2, Operator op);
 	~Term() = default;
@@ -106,7 +106,7 @@ public:
 	ConstantType getConstantType();
 	void setType(TermType type);
 	bool isGround();
-	void getVariables(set_term_variable& vars);
+	void getVariables(set_term_variable_t& vars);
 	std::string toString()const;
 	bool isAnonymous();
 	void addInArithTermBegin(Term&& term, Operator op);
@@ -171,7 +171,7 @@ private:
 		double double_;
 	} value_;
 	// String value
-	StringT stringValue_{};
+	string_t stringValue_{};
 	// If it is interval the interval from to
 	IntervalTerm interval_{};
 	// If constant the constant type
@@ -182,8 +182,8 @@ private:
 	bool anonymous_{false};
 	// ArithTerm is an arithmetic with the list of a terms
 	// and the relative operator(+, -, *, /,\)
-	TermVector terms_{};
-	OpVector operators_{};
+	term_vector_t terms_{};
+	op_vector_t operators_{};
 
 public:
 	// static functions

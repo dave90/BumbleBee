@@ -80,8 +80,8 @@ struct PredicateMapEntry {
     };
 };
 
-using predicates_ptr_set = std::unordered_set<Predicate*>;
-using PredicateUPtr = std::unique_ptr<Predicate>;
-using predicates_ptr_map = std::unordered_map<PredicateMapEntry, PredicateUPtr, PredicateMapEntry::PEHash>;
+using predicates_ptr_set_t = std::unordered_set<Predicate*>;
+using predicate_ptr_t = std::unique_ptr<Predicate>;
+using predicates_ptr_map_t = std::unordered_map<PredicateMapEntry, predicate_ptr_t, PredicateMapEntry::PEHash>;
 
 }

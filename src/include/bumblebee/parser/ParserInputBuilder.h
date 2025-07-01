@@ -90,7 +90,7 @@ public:
 	void newTerm(char*);
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
-	rules_vector& getProgram();
+	rules_vector_t& getProgram();
 
 protected:
 	std::reference_wrapper<Schema> currentSchema_;
@@ -108,7 +108,7 @@ protected:
 	bool currentRewriteArith{false};
 
 	std::string safetyErrorMessage;
-	rules_vector program_;
+	rules_vector_t program_;
 
 };
 

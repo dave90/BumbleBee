@@ -37,7 +37,7 @@ void ParserInputBuilder::onDirective(char *directiveName, char *directiveValue) 
 
 bool ParserInputBuilder::checkRuleSafety() {
     // check if rule is safe
-    set_term_variable toCheckVars, bodyVars;
+    set_term_variable_t toCheckVars, bodyVars;
     for (auto&a : currentRule.getHead())a.getVariables(toCheckVars);
     for (auto&a : currentRule.getBody())
         if (a.isNegative())
@@ -305,7 +305,7 @@ void ParserInputBuilder::onAggregate(bool naf) {
 void ParserInputBuilder::onEnd() {
 }
 
-rules_vector & ParserInputBuilder::getProgram() {
+rules_vector_t & ParserInputBuilder::getProgram() {
     return program_;
 }
 

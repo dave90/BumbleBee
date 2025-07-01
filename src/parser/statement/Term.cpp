@@ -105,12 +105,12 @@ Term::Term(float c)
 Term::Term(double c)
     : ctype_(ConstantType::DOUBLE), negative_(false), value_({.double_ = c}), type_(TermType::CONSTANT) {}
 
-Term::Term(StringT&& c)
+Term::Term(string_t&& c)
     : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false), type_(TermType::CONSTANT) {}
 Term::Term(char* c)
         : stringValue_(c), ctype_(ConstantType::STRING), negative_(false), type_(TermType::CONSTANT) {}
 
-Term::Term(StringT&& c, bool isVariable)
+Term::Term(string_t&& c, bool isVariable)
     : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false) {
     anonymous_ = stringValue_ == anonymous_variable && isVariable;
     type_ = isVariable ? TermType::VARIABLE : TermType::CONSTANT;
@@ -130,7 +130,7 @@ void Term::setNegative(bool n) {
     negative_ = n;
 }
 
-void Term::getVariables(set_term_variable &vars) {
+void Term::getVariables(set_term_variable_t &vars) {
     if (type_ == TermType::CONSTANT || type_ == TermType::RANGE || (type_ == TermType::VARIABLE && isAnonymous())) return;
     if (type_ == TermType::VARIABLE) {
         vars.insert(stringValue_);
@@ -176,7 +176,7 @@ hash_t Term::hash() {
         case ConstantType::DOUBLE:
             return Hash<double>(value_.double_);
         case ConstantType::STRING:
-            return Hash<StringT>(stringValue_);
+            return Hash<string_t>(stringValue_);
         default: Hash(stringValue_);
     }
 }

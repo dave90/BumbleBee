@@ -20,3 +20,4 @@
 #include <cstdint>
 
 using hash_t = uint64_t;
+using idx_t = uint64_t;

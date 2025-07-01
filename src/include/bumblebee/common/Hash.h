@@ -44,7 +44,13 @@ hash_t Hash(const char *val);
 template <>
 hash_t Hash(char *val);
 template <>
-hash_t Hash(StringT val);
+hash_t Hash(string_t val);
 hash_t Hash(const char *val, size_t size);
 
+
+struct StringTHash {
+	size_t operator()(const string_t& v) const noexcept {
+		return Hash<string_t>(v);
+	}
+};
 }

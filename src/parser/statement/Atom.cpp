@@ -24,7 +24,7 @@
 
 namespace bumblebee {
 
-Atom::Atom(Predicate* predicate, terms_vector &&terms, AtomType type): terms_(std::move(terms)) , negative_(false), predicate_(predicate), type_(type) {
+Atom::Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type): terms_(std::move(terms)) , negative_(false), predicate_(predicate), type_(type) {
     calculateIsGround();
 }
 
@@ -39,11 +39,11 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
     calculateIsGround();
 }
 
-Atom::Atom(terms_vector &&terms, Binop binop) : terms_(std::move(terms)), binop_(binop), type_(AtomType::BUILTIN) {
+Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), binop_(binop), type_(AtomType::BUILTIN) {
     calculateIsGround();
 }
 
-terms_vector& Atom::getTerms() {
+terms_vector_t& Atom::getTerms() {
     return terms_;
 }
 
@@ -51,7 +51,7 @@ Predicate* Atom::getPredicate() {
     return predicate_;
 }
 
-void Atom::getPredicates(predicates_ptr_set &predicates) {
+void Atom::getPredicates(predicates_ptr_set_t &predicates) {
     if (type_ == AtomType::CLASSICAL) {
         predicates.insert(predicate_);
     }
@@ -124,7 +124,7 @@ hash_t Atom::hash() {
     return hash;
 }
 
-void Atom::getVariables(set_term_variable &variables) {
+void Atom::getVariables(set_term_variable_t &variables) {
     for (auto& term : terms_) {
         term.getVariables(variables);
     }
@@ -165,11 +165,11 @@ void Atom::calculateIsGround() {
     ground_ = true;
 }
 
-Atom Atom::createClassicalAtom(Predicate*p, terms_vector &&t) {
+Atom Atom::createClassicalAtom(Predicate*p, terms_vector_t &&t) {
     return Atom(p, std::move(t), AtomType::CLASSICAL);
 }
 
-Atom Atom::createBuiltinAtom(terms_vector &&t, Binop binop) {
+Atom Atom::createBuiltinAtom(terms_vector_t &&t, Binop binop) {
     return Atom(std::move(t), binop);
 }
 

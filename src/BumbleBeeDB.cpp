@@ -65,7 +65,7 @@ void BumbleBeeDB::run() {
     // TODO continue processing
     // create dags
     // rewrite rule
-    rules_vector program = std::move(inputDirector.getBuilder()->getProgram());
+    rules_vector_t program = std::move(inputDirector.getBuilder()->getProgram());
     for (auto& rule : program) {
         std::cout << rule.toString() << std::endl;
     }

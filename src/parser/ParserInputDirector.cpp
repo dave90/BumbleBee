@@ -37,7 +37,7 @@ ParserInputDirector::ParserInputDirector() : parserLine_(0),
     findError_(false){}
 
 
-void ParserInputDirector::configureBuilder(BuilderPtr newBuilder) {
+void ParserInputDirector::configureBuilder(builder_ptr_t newBuilder) {
     builder_ = newBuilder;
 }
 

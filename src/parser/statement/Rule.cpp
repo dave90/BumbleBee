@@ -44,8 +44,8 @@ bool Rule::isGround() {
 
 }
 
-predicates_ptr_set Rule::getPredicates() {
-    predicates_ptr_set predicates;
+predicates_ptr_set_t Rule::getPredicates() {
+    predicates_ptr_set_t predicates;
     for (auto& atom :head_)
         atom.getPredicates(predicates);
     for (auto& atom :body_)
@@ -53,11 +53,11 @@ predicates_ptr_set Rule::getPredicates() {
     return predicates;
 }
 
-atoms_vector& Rule::getBody()  {
+atoms_vector_t& Rule::getBody()  {
     return body_;
 }
 
-atoms_vector& Rule::getHead() {
+atoms_vector_t& Rule::getHead() {
     return head_;
 }
 
@@ -87,18 +87,18 @@ bool Rule::isAStrongConstraint() {
     return head_.empty();
 }
 
-void Rule::getVariables(set_term_variable &variables) {
+void Rule::getVariables(set_term_variable_t &variables) {
     getVariablesInBody(variables);
     getVariablesInBody(variables);
 }
 
-void Rule::getVariablesInHead(set_term_variable &variables) {
+void Rule::getVariablesInHead(set_term_variable_t &variables) {
     for (auto& atom : head_) {
         atom.getVariables(variables);
     }
 }
 
-void Rule::getVariablesInBody(set_term_variable &variables) {
+void Rule::getVariablesInBody(set_term_variable_t &variables) {
     for (auto& atom : body_) {
         atom.getVariables(variables);
     }
