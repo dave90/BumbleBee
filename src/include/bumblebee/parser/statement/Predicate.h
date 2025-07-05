@@ -47,6 +47,7 @@ public:
     void setInternal(bool internal);
     bool isSolved() const;
     void setSolved(bool solved);
+    string_t getLabel() const;
 
     friend bool operator==(const Predicate &lhs, const Predicate &rhs);
     friend bool operator!=(const Predicate &lhs, const Predicate &rhs);
@@ -59,12 +60,12 @@ private:
     std::unique_ptr<char[]> name_;
     // arity of the predicate
     unsigned arity_;
-    // if is EDB or IDB
+    // if is EDB (facts) or IDB
     bool edb_{false};
     // if is used only for internal computation (no printing or stored)
     bool internal_{false};
     // If the predicated is solved or undefined
-    bool solved_{false};
+    bool solved_{true};
 };
 
 

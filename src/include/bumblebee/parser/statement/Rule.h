@@ -41,6 +41,10 @@ public:
 
     bool isFact();
     bool isGround();
+
+    void getPredicatesInHead(predicates_ptr_set_t &predicates);
+    void getPredicatesInBody(predicates_ptr_set_t &predicates);
+
     atoms_vector_t& getBody();
     atoms_vector_t& getHead();
     void addAtomInHead(Atom &&atom);
@@ -59,5 +63,14 @@ private:
 };
 
 using rules_vector_t = std::vector<Rule>;
+
+// Bucket of rules divided based on the type
+struct RulesBucket {
+    rules_vector_t exit;
+    rules_vector_t recursive;
+    rules_vector_t constraints;
+};
+
+using rules_bucket_vector_t = std::vector<RulesBucket>;
 
 } // bumblebee

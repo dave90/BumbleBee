@@ -44,10 +44,18 @@ bool Rule::isGround() {
 
 }
 
-predicates_ptr_set_t Rule::getPredicates() {
-    predicates_ptr_set_t predicates;
+void Rule::getPredicatesInHead(predicates_ptr_set_t &predicates) {
     for (auto& atom :head_)
         atom.getPredicates(predicates);
+}
+
+void Rule::getPredicatesInBody(predicates_ptr_set_t &predicates) {
+    for (auto& atom :body_)
+        atom.getPredicates(predicates);
+}
+predicates_ptr_set_t Rule::getPredicates() {
+    predicates_ptr_set_t predicates;
+    getPredicatesInHead(predicates);
     for (auto& atom :body_)
         atom.getPredicates(predicates);
     return predicates;

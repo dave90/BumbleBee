@@ -64,6 +64,11 @@ void Predicate::setSolved(bool solved) {
     solved_ = solved;
 }
 
+string_t Predicate::getLabel() const {
+    string_t label = name_.get();
+    return label + "::"+std::to_string(arity_);
+}
+
 bool operator==(const Predicate &lhs, const Predicate &rhs) {
     return lhs.name_ == rhs.name_
            && lhs.arity_ == rhs.arity_;

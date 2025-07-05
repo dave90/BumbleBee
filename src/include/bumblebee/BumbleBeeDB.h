@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include "planner/StatementDependency.h"
+
 namespace bumblebee {
 
 class BumbleBeeDB {
@@ -29,10 +31,13 @@ public:
 
     int parseArgs(int, char **);
     void printArgs();
+
     void run();
 
 
 private:
+    void processBucketRules( RulesBucket & bucket);
+
     std::string logFilename_;
     std::vector<std::string> inputFiles_;
     bool printLog_;

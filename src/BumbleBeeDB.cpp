@@ -21,9 +21,10 @@
 #include <CLI11.hpp>
 
 #include "bumblebee/common/Constants.h"
-#include  "bumblebee/common/Log.h"
-#include  "bumblebee/common/ErrorHandler.h"
-#include  "bumblebee/parser/ParserInputDirector.h"
+#include "bumblebee/common/Log.h"
+#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/parser/ParserInputDirector.h"
+#include "bumblebee/planner/StatementDependency.h"
 
 namespace bumblebee {
 int BumbleBeeDB::parseArgs(int argc, char **argv) {
@@ -52,24 +53,38 @@ void BumbleBeeDB::run() {
         LOG_ERROR("Error, only single shot mode is avaliable.");
         ErrorHandler::errorGeneric("Error, only single shot mode is avaliable.");
     }
+    // Parse the program
     ParserInputDirector inputDirector;
     inputDirector.parse(inputFiles_);
-
+    // Check errors during parsing
     if (inputDirector.getBuilder()->isFoundASafetyError()) {
         // found a rule unsafe
         std::string error = inputDirector.getBuilder()->getSafetyErrorMessage();
         LOG_ERROR("Error: %s ",error.c_str());
         ErrorHandler::errorParsing("Error, found unsafe rule.");
     }
-
-    // TODO continue processing
-    // create dags
-    // rewrite rule
     rules_vector_t program = std::move(inputDirector.getBuilder()->getProgram());
+
+    LOG_INFO("Program size: %u", program.size());
     for (auto& rule : program) {
-        std::cout << rule.toString() << std::endl;
+        LOG_DEBUG("Rule: %s", rule.toString().c_str());
+    }
+
+    // Order the rules
+    StatementDependency sd(std::move(program));
+    auto orderedBucketRules = sd.orderRules();
+
+    // Process each bucket of rules
+    for (auto &bucket : orderedBucketRules) {
+        processBucketRules(bucket);
     }
 
 }
 
+void BumbleBeeDB::processBucketRules( RulesBucket &bucket) {
+    LOG_INFO("Processing bucket of rules...");
+    for (auto& rule : bucket.exit)LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
+    for (auto& rule : bucket.recursive)LOG_DEBUG("Recursive rule: %s", rule.toString().c_str());
+    for (auto& rule : bucket.constraints)LOG_DEBUG("Constraint rule: %s", rule.toString().c_str());
+}
 } // bumblebee

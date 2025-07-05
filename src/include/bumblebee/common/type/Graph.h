@@ -41,15 +41,16 @@ public:
     void addEdge(string_t v1, string_t v2, edge_weight_t weight);
     idx_t addVertex(string_t v);
     void removeEdge(string_t v1, string_t v2);
+    void removeEdge(idx_t v1,idx_t v2);
     adjacency_list_t& getEdges();
     std::string getDotFormat(std::string graphName);
     unsigned getNumVertices();
     unsigned getNumEdges();
     strong_comp_vec_t calculateStrongComponent();
     top_sort_vec_t calculateTopologicalSort();
+    string_t& getValue(idx_t v);
 
 private:
-    string_t& getValue(idx_t v);
     strong_comp_vec_t tarjan();
     std::vector<std::vector<idx_t>> kahn();
     bool haveIncomingEdges(idx_t v);

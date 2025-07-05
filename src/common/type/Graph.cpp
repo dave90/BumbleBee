@@ -52,7 +52,11 @@ idx_t Graph::addVertex(string_t v) {
 }
 
 void Graph::removeEdge(string_t v1, string_t v2) {
-    adj_lst_[addVertex(v1)].erase(addVertex(v2));
+    removeEdge(addVertex(v1), addVertex(v2));
+}
+
+void Graph::removeEdge(idx_t v1, idx_t v2) {
+    adj_lst_[v1].erase(v2);
 }
 
 Graph::adjacency_list_t & Graph::getEdges() {
