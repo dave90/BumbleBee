@@ -41,4 +41,8 @@ namespace bumblebee {
     #define LOG_LEVEL LOG_LVL_DEBUG
 #endif
 
+// Vector size
+#define STANDARD_VECTOR_SIZE 1024
+// String Heap. NOTE: Maximum string supported is 4096 bytes
+#define MINIMUM_HEAP_SIZE 4096
 }

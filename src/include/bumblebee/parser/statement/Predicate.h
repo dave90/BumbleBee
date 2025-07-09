@@ -21,7 +21,7 @@
 
 #include "bumblebee/common/Hash.h"
 #include "bumblebee/common/TypeDefs.h"
-#include "bumblebee/common/type/StringT.h"
+#include "bumblebee/common/types/BumbleString.h"
 
 namespace bumblebee {
 
@@ -47,7 +47,7 @@ public:
     void setInternal(bool internal);
     bool isSolved() const;
     void setSolved(bool solved);
-    string_t getLabel() const;
+    string getLabel() const;
 
     friend bool operator==(const Predicate &lhs, const Predicate &rhs);
     friend bool operator!=(const Predicate &lhs, const Predicate &rhs);

@@ -43,6 +43,6 @@ public:
     friend bool operator!=(const PredicateTables &lhs, const PredicateTables &rhs);
 };
 
-using PredicateTablesUPtr = std::unique_ptr<PredicateTables>;
+using predicate_table_ptr_t = std::unique_ptr<PredicateTables>;
 
 }

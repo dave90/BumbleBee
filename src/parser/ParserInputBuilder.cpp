@@ -195,14 +195,14 @@ void ParserInputBuilder::onTermDash() {
     if (term.getType() == ARITH) {
         // multiply the arith term by -1
         int8_t mone = -1;
-        Term moneTerm = Term::createConstantTerm(mone);
+        Term moneTerm = Term(mone);
         term.addInArithTermBegin(std::move(moneTerm), Operator::TIMES);
         return;
     }
     if (term.getType() == VARIABLE) {
         // transform the variable term in arith and multiply by -1
         int8_t mone = -1;
-        Term moneTerm = Term::createConstantTerm(mone);
+        Term moneTerm = Term(mone);
         Term newArith = Term::createArith(std::move(term), std::move(moneTerm), '*');
         terms_parsered.pop_back();
         terms_parsered.push_back(std::move(newArith));
@@ -323,7 +323,7 @@ void ParserInputBuilder::newTerm(char * value) {
             (value[0] >= 'a' && value[0] <='z') )   // String constant
     {
         std::string s(value);
-        Term term = Term::createConstantTerm(std::move(s));
+        Term term = Term(std::move(s));
         terms_parsered.push_back(std::move(term));
         return;
     }

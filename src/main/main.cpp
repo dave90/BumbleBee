@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "bumblebee/BumbleBeeDB.h"
-#include "bumblebee/common/type/Graph.h"
+#include "bumblebee/common/types/Graph.h"
 
 using namespace std;
 

@@ -236,7 +236,7 @@ void StatementDependency::recursiveOrderComponentGraph() {
 
     auto& edges = compGraph_.getEdges();
     std::unordered_set<idx_t> componentVisited;
-    std::vector<std::pair<string_t, string_t>> edgesToRemove;
+    std::vector<std::pair<string, string>> edgesToRemove;
     for (unsigned i=0; i<edges.size(); i++) {
         for (auto [key, value]: edges[i]) {
             auto v1 = compGraph_.getValue(i);

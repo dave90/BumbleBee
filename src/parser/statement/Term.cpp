@@ -27,98 +27,60 @@ Term::Term():negative_(false) {}
 
 Term::Term(Term&& term)
     : negative_(term.negative_),
-      stringValue_(std::move(term.stringValue_)),
-      interval_(std::move(term.interval_)),
-      ctype_(term.ctype_),
+      interval_(term.interval_),
+      value_(std::move(term.value_)),
       type_(term.type_),
       anonymous_(term.anonymous_),
       terms_(std::move(term.terms_)),
-      operators_(std::move(term.operators_)) {
-
-    // Move the value union
-    switch (term.ctype_) {
-        case TINYINT:
-            value_.tinyint = term.value_.tinyint;
-            break;
-        case SMALLINT:
-            value_.smallint = term.value_.smallint;
-            break;
-        case INTEGER:
-            value_.integer = term.value_.integer;
-            break;
-        case BIGINT:
-            value_.bigint = term.value_.bigint;
-            break;
-        case UTINYINT:
-            value_.utinyint = term.value_.utinyint;
-            break;
-        case USMALLINT:
-            value_.usmallint = term.value_.usmallint;
-            break;
-        case UINTEGER:
-            value_.uinteger = term.value_.uinteger;
-            break;
-        case UBIGINT:
-            value_.ubigint = term.value_.ubigint;
-            break;
-        case FLOAT:
-            value_.float_ = term.value_.float_;
-            break;
-        case DOUBLE:
-            value_.double_ = term.value_.double_;
-            break;
-        case STRING:
-            ;
-
-    }
-}
+      operators_(std::move(term.operators_)) {}
 
 Term::Term(bool negative): negative_(negative) {}
 
 Term::Term(int8_t c)
-    : ctype_(ConstantType::TINYINT), negative_(false), value_({.tinyint = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(int16_t c)
-    : ctype_(ConstantType::SMALLINT), negative_(false), value_({.smallint = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(int32_t c)
-    : ctype_(ConstantType::INTEGER), negative_(false), value_({.integer = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(int64_t c)
-    : ctype_(ConstantType::BIGINT), negative_(false), value_({.bigint = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(uint8_t c)
-    : ctype_(ConstantType::UTINYINT), negative_(false), value_({.utinyint = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(uint16_t c)
-    : ctype_(ConstantType::USMALLINT), negative_(false), value_({.usmallint = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(uint32_t c)
-    : ctype_(ConstantType::UINTEGER), negative_(false), value_({.uinteger = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(uint64_t c)
-    : ctype_(ConstantType::UBIGINT), negative_(false), value_({.ubigint = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(float c)
-    : ctype_(ConstantType::FLOAT), negative_(false), value_({.float_ = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
 Term::Term(double c)
-    : ctype_(ConstantType::DOUBLE), negative_(false), value_({.double_ = c}), type_(TermType::CONSTANT) {}
+    :  negative_(false), value_( c) {}
 
-Term::Term(string_t&& c)
-    : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false), type_(TermType::CONSTANT) {}
+Term::Term(string&& c)
+    : negative_(false), value_(std::move(c)) {}
+
 Term::Term(char* c)
-        : stringValue_(c), ctype_(ConstantType::STRING), negative_(false), type_(TermType::CONSTANT) {}
+        : negative_(false), value_(c) {}
 
-Term::Term(string_t&& c, bool isVariable)
-    : stringValue_(std::move(c)), ctype_(ConstantType::STRING), negative_(false) {
-    anonymous_ = stringValue_ == anonymous_variable && isVariable;
+Term::Term(string&& c, bool isVariable)
+    : value_(std::move(c)), negative_(false) {
+    anonymous_ = value_.stringValue_ == anonymous_variable && isVariable;
     type_ = isVariable ? TermType::VARIABLE : TermType::CONSTANT;
 }
 
-Term::Term(IntervalTerm interval_) : negative_(false), interval_(std::move(interval_)), type_(RANGE) {}
+Term::Term(IntervalTerm interval_) : negative_(false), interval_(interval_), type_(RANGE) {}
 
-Term::Term(Term &&t1,Term &&t2, Operator op): negative_(false), type_(TermType::ARITH)  {
+Term::Term(Term &&t1,Term &&t2, Operator op): negative_(false), type_(ARITH)  {
     terms_.push_back(std::move(t1));
     terms_.push_back(std::move(t2));
     operators_.push_back(op);
@@ -133,7 +95,7 @@ void Term::setNegative(bool n) {
 void Term::getVariables(set_term_variable_t &vars) {
     if (type_ == TermType::CONSTANT || type_ == TermType::RANGE || (type_ == TermType::VARIABLE && isAnonymous())) return;
     if (type_ == TermType::VARIABLE) {
-        vars.insert(stringValue_);
+        vars.insert(value_.stringValue_);
         return;
     }
     // ARITH term
@@ -154,30 +116,30 @@ hash_t Term::hash() {
     }
 
     // Constant or Variable
-    switch (ctype_) {
+    switch (value_.ctype_) {
         case ConstantType::TINYINT:
-            return Hash<uint8_t>(value_.tinyint);
+            return Hash<uint8_t>(value_.getValueUnsafe<uint8_t>());
         case ConstantType::SMALLINT:
-            return Hash<uint16_t>(value_.smallint);
+            return Hash<uint16_t>(value_.getValueUnsafe<uint16_t>());
         case ConstantType::INTEGER:
-            return Hash<uint32_t>(value_.integer);
+            return Hash<uint32_t>(value_.getValueUnsafe<uint32_t>());
         case ConstantType::BIGINT:
-            return Hash<uint64_t>(value_.bigint);
+            return Hash<uint64_t>(value_.getValueUnsafe<uint64_t>());
         case ConstantType::UTINYINT:
-            return Hash<uint8_t>(value_.utinyint);
+            return Hash<uint8_t>(value_.getValueUnsafe<uint8_t>());
         case ConstantType::USMALLINT:
-            return Hash<uint16_t>(value_.usmallint);
+            return Hash<uint16_t>(value_.getValueUnsafe<uint16_t>());
         case ConstantType::UINTEGER:
-            return Hash<uint32_t>(value_.uinteger);
+            return Hash<uint32_t>(value_.getValueUnsafe<uint32_t>());
         case ConstantType::UBIGINT:
-            return Hash<uint64_t>(value_.ubigint);
+            return Hash<uint64_t>(value_.getValueUnsafe<uint64_t>());
         case ConstantType::FLOAT:
-            return Hash<float>(value_.float_);
+            return Hash<float>(value_.getValueUnsafe<float>());
         case ConstantType::DOUBLE:
-            return Hash<double>(value_.double_);
+            return Hash<double>(value_.getValueUnsafe<double>());
         case ConstantType::STRING:
-            return Hash<string_t>(stringValue_);
-        default: Hash(stringValue_);
+            return Hash<string>(value_.getValueUnsafe<string>());
+        default: Hash(value_.getValueUnsafe<string>());
     }
 }
 
@@ -186,7 +148,7 @@ TermType Term::getType() {
 }
 
 ConstantType Term::getConstantType() {
-    return ctype_;
+    return value_.ctype_;
 }
 void Term::setType(TermType type) {
     type_ = type;
@@ -212,33 +174,7 @@ std::string Term::toString() const {
         }
         return s + terms_.back().toString();
     }
-
-    switch (ctype_) {
-        case ConstantType::TINYINT:
-            return std::to_string(value_.tinyint);
-        case ConstantType::SMALLINT:
-            return std::to_string(value_.smallint);
-        case ConstantType::INTEGER:
-            return std::to_string(value_.integer);
-        case ConstantType::BIGINT:
-            return std::to_string(value_.bigint);
-        case ConstantType::UTINYINT:
-            return std::to_string(value_.utinyint);
-        case ConstantType::USMALLINT:
-            return std::to_string(value_.usmallint);
-        case ConstantType::UINTEGER:
-            return std::to_string(value_.uinteger);
-        case ConstantType::UBIGINT:
-            return std::to_string(value_.ubigint);
-        case ConstantType::FLOAT:
-            return std::to_string(value_.float_);
-        case ConstantType::DOUBLE:
-            return std::to_string(value_.double_);
-        case ConstantType::STRING:
-            return stringValue_;
-        default:
-            return "";
-    }
+    return value_.toString();
 }
 
 bool Term::isAnonymous() {
@@ -308,70 +244,70 @@ void Term::setConstantNumericTerm(Term &term, long long num) {
 
     // Check for signed types
     if (num >= CHAR_MIN && num <= CHAR_MAX) {
-        term.value_.tinyint = static_cast<int8_t>(num);
-        term.ctype_ = ConstantType::TINYINT;
+        term.value_.value_.tinyint = static_cast<int8_t>(num);
+        term.value_.ctype_ = ConstantType::TINYINT;
         return;
     }
     if (num >= SHRT_MIN && num <= SHRT_MAX) {
-        term.value_.smallint = static_cast<int16_t>(num);
-        term.ctype_ = ConstantType::SMALLINT;
+        term.value_.value_.smallint = static_cast<int16_t>(num);
+        term.value_.ctype_ = ConstantType::SMALLINT;
         return ;
     }
     if (num >= INT_MIN && num <= INT_MAX) {
-        term.value_.integer = static_cast<int32_t>(num);
-        term.ctype_ = ConstantType::INTEGER;
+        term.value_.value_.integer = static_cast<int32_t>(num);
+        term.value_.ctype_ = ConstantType::INTEGER;
         return ;
     }
-    term.value_.bigint = static_cast<int64_t>(num);
-    term.ctype_ = ConstantType::BIGINT;
+    term.value_.value_.bigint = static_cast<int64_t>(num);
+    term.value_.ctype_ = ConstantType::BIGINT;
 }
 
 void Term::setConstantNumericTerm(Term &term, unsigned long long value) {
     // Check for unsigned types and create the variable
     if (value <= UCHAR_MAX) {
-        term.value_.utinyint = static_cast<uint8_t>(value);
-        term.ctype_ = ConstantType::UTINYINT;
+        term.value_.value_.utinyint = static_cast<uint8_t>(value);
+        term.value_.ctype_ = ConstantType::UTINYINT;
         return ;
     }
     if (value <= USHRT_MAX) {
-        term.value_.usmallint = static_cast<uint16_t>(value);
-        term.ctype_ = ConstantType::USMALLINT;
+        term.value_.value_.usmallint = static_cast<uint16_t>(value);
+        term.value_.ctype_ = ConstantType::USMALLINT;
         return ;
     }
     if (value <= UINT_MAX) {
-        term.value_.uinteger = static_cast<uint32_t>(value);
-        term.ctype_ = ConstantType::UINTEGER;
+        term.value_.value_.uinteger = static_cast<uint32_t>(value);
+        term.value_.ctype_ = ConstantType::UINTEGER;
         return ;
     }
-    term.value_.ubigint = static_cast<uint64_t>(value);
-    term.ctype_ = ConstantType::UBIGINT;
+    term.value_.value_.ubigint = static_cast<uint64_t>(value);
+    term.value_.ctype_ = ConstantType::UBIGINT;
 }
 
 Term Term::createSmallestConstantNumericTerm(unsigned long long value) {
     if (value <= UCHAR_MAX) {
-        return Term::createConstantTerm(static_cast<uint8_t>(value));;
+        return Term(static_cast<uint8_t>(value));;
     }
     if (value <= USHRT_MAX) {
-        return Term::createConstantTerm(static_cast<uint16_t>(value));;
+        return Term(static_cast<uint16_t>(value));;
     }
     if (value <= UINT_MAX) {
-        return Term::createConstantTerm(static_cast<uint32_t>(value));;
+        return Term(static_cast<uint32_t>(value));;
     }
-    return Term::createConstantTerm(static_cast<uint64_t>(value));;
+    return Term(static_cast<uint64_t>(value));;
 }
 
 Term Term::createSmallestConstantNumericTerm(long long num) {
     // Check for signed types
     if (num >= CHAR_MIN && num <= CHAR_MAX) {
-        return Term::createConstantTerm(static_cast<int8_t>(num));;
+        return Term(static_cast<int8_t>(num));;
     }
     if (num >= SHRT_MIN && num <= SHRT_MAX) {
-        return Term::createConstantTerm(static_cast<int16_t>(num));;
+        return Term(static_cast<int16_t>(num));;
     }
     if (num >= INT_MIN && num <= INT_MAX) {
-        return Term::createConstantTerm(static_cast<int32_t>(num));;
+        return Term(static_cast<int32_t>(num));;
     }
-    return Term::createConstantTerm(static_cast<int64_t>(num));;
+    return Term(static_cast<int64_t>(num));;
 }
 
 Term Term::createRange(int from, int to) {
@@ -384,38 +320,11 @@ Term Term::createArith(Term &&t1, Term &&t2, char sop) {
     return Term(std::move(t1),std::move(t2) ,op);
 }
 
-    bool operator==(const Term &lhs, const Term &rhs) {
+bool operator==(const Term &lhs, const Term &rhs) {
     if (lhs.type_ != rhs.type_) return false;
     // constant and variable checks
     if (lhs.type_ == VARIABLE || lhs.type_ == CONSTANT) {
-        if (lhs.ctype_ != rhs.ctype_) return false;
-        switch (lhs.ctype_) {
-            case ConstantType::TINYINT:
-                return lhs.value_.utinyint == rhs.value_.utinyint;
-            case ConstantType::SMALLINT:
-                return lhs.value_.smallint == rhs.value_.smallint;
-            case ConstantType::INTEGER:
-                return lhs.value_.integer == rhs.value_.integer;
-            case ConstantType::BIGINT:
-                return lhs.value_.bigint == rhs.value_.bigint;
-            case ConstantType::UTINYINT:
-                return lhs.value_.utinyint == rhs.value_.utinyint;
-            case ConstantType::USMALLINT:
-                return lhs.value_.usmallint == rhs.value_.usmallint;
-            case ConstantType::UINTEGER:
-                return lhs.value_.uinteger == rhs.value_.uinteger;
-            case ConstantType::UBIGINT:
-                return lhs.value_.ubigint == rhs.value_.ubigint;
-            case ConstantType::FLOAT:
-                return lhs.value_.float_ == rhs.value_.float_;
-            case ConstantType::DOUBLE:
-                return lhs.value_.double_ == rhs.value_.double_;
-            case ConstantType::STRING:
-                return lhs.stringValue_ == rhs.stringValue_;
-            default:
-                ;
-        }
-        return false;
+        return lhs.value_ == rhs.value_;
     }
     // range comparison
     if (lhs.type_ == RANGE) return lhs.interval_ == rhs.interval_;
@@ -424,79 +333,10 @@ Term Term::createArith(Term &&t1, Term &&t2, char sop) {
            && lhs.operators_ == rhs.operators_;
 }
 
-    bool operator!=(const Term &lhs, const Term &rhs) {
+bool operator!=(const Term &lhs, const Term &rhs) {
     return !(lhs == rhs);
 }
 
-// -------------------- Creation template ------------------
-template <>
-Term Term::createConstantTerm(int8_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(int16_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(int32_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(int64_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(uint8_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(uint16_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(uint32_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(uint64_t c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(float c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(double c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(std::string&& c) {
-    return Term(std::forward<std::string>(c));
-}
-template <>
-Term Term::createConstantTerm(char* c) {
-    return Term(c);
-}
-
-template <>
-Term Term::createConstantTerm(IntervalTerm interval_) {
-    return Term(interval_);
-}
-
-template<>
-Term Term::createConstantTerm<bool>(bool value) {
-    return Term(value);
-}
 
 
 } // bumblebee

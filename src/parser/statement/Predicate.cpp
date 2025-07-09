@@ -64,8 +64,8 @@ void Predicate::setSolved(bool solved) {
     solved_ = solved;
 }
 
-string_t Predicate::getLabel() const {
-    string_t label = name_.get();
+string Predicate::getLabel() const {
+    string label = name_.get();
     return label + "::"+std::to_string(arity_);
 }
 

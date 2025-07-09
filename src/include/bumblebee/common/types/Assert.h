@@ -17,30 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <map>
-#include <string>
 
-#include "PredicateTables.h"
-
-namespace bumblebee{
-
-using predicates_tables_map = std::unordered_map<PredicateMapEntry, predicate_table_ptr_t, PredicateMapEntry::PEHash>;
-
-class Schema {
-public:
-    explicit Schema(const std::string &name);
-
-    ~Schema() = default;
-
-    Schema(const Schema &other) = delete;
-    Schema & operator=(const Schema &other) = delete;
-    Predicate* createPredicate(char* predicateName, unsigned arity);
-
-private:
-    std::string name_;
-    predicates_tables_map ptables_;
-
-};
-
-
-}
+#include <assert.h>
+#define BB_ASSERT assert

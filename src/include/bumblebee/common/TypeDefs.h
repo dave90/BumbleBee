@@ -18,6 +18,35 @@
  */
 #pragma once
 #include <cstdint>
+#include <string>
+
+namespace bumblebee {
+
+enum ConstantType: uint8_t  {
+    TINYINT = 0,
+    SMALLINT = 1,
+    INTEGER = 2,
+    BIGINT = 3,
+    UTINYINT = 4,
+    USMALLINT = 5,
+    UINTEGER = 6,
+    UBIGINT = 7,
+    FLOAT = 8,
+    DOUBLE = 9,
+    STRING = 10
+};
 
 using hash_t = uint64_t;
 using idx_t = uint64_t;
+
+using data_t = uint8_t;
+using data_ptr_t = data_t*;
+using const_data_ptr_t = const data_t*;
+
+using sel_t = uint32_t;
+
+using string = std::string;
+
+idx_t getCTypeSize(ConstantType type);
+
+}

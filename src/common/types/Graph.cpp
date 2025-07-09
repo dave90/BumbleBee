@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/type/Graph.h"
+#include "bumblebee/common/types/Graph.h"
 
 #include <iostream>
 #include <stack>
@@ -30,7 +30,7 @@ Graph::Graph(bool update_policy)
     : updatePolicy_(update_policy) {
 }
 
-void Graph::addEdge(string_t v1, string_t v2, edge_weight_t weight) {
+void Graph::addEdge(string v1, string v2, edge_weight_t weight) {
     auto idx1 = addVertex(v1);
     auto idx2 = addVertex(v2);
     // if updatePolicy_ is false and edge already exist do not update
@@ -38,7 +38,7 @@ void Graph::addEdge(string_t v1, string_t v2, edge_weight_t weight) {
     adj_lst_[idx1][idx2] = weight;
 }
 
-idx_t Graph::addVertex(string_t v) {
+idx_t Graph::addVertex(string v) {
     auto it = vertex_map_.find(v);
     // check if vertex is present
     if ( it != vertex_map_.end()) return it->second;
@@ -51,7 +51,7 @@ idx_t Graph::addVertex(string_t v) {
     return idx_++;
 }
 
-void Graph::removeEdge(string_t v1, string_t v2) {
+void Graph::removeEdge(string v1, string v2) {
     removeEdge(addVertex(v1), addVertex(v2));
 }
 
@@ -86,7 +86,7 @@ unsigned Graph::getNumEdges() {
     return edges;
 }
 
-string_t& Graph::getValue(idx_t v) {
+string& Graph::getValue(idx_t v) {
     return index_map_[v];
 }
 
@@ -133,7 +133,7 @@ strong_comp_vec_t Graph::tarjan() {
         }
 
         if (lowlink[v] == index[v]) {
-            std::vector<string_t> component;
+            std::vector<string> component;
             idx_t w;
             do {
                 w = stack.top();
@@ -179,7 +179,7 @@ top_sort_vec_t Graph::calculateTopologicalSort() {
     top_sort_vec_t topSort;
 
     for (auto& iv : topIndexSort) {
-        std::vector<string_t> components;
+        std::vector<string> components;
         for (auto& v : iv)
             components.push_back(getValue(v));
         topSort.push_back(std::move(components));

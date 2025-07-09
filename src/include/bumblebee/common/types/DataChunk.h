@@ -16,24 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/catalog/Schema.h"
+#pragma once
 
 namespace bumblebee{
-Schema::Schema(const std::string &name): name_(name) {}
 
-Predicate * Schema::createPredicate(char *predicateName, unsigned arity) {
-    PredicateMapEntry entry{.name_ = predicateName, .arity_ = arity};
-    auto it = ptables_.find(entry);
-    if (it != ptables_.end()) {
-        return it->second.get()->predicate_.get();
-    }
-    // create new predicate table
-    // auto pt = make_predicate_tables_uptr(static_cast<const char*>(predicateName), arity);
-    auto pt = predicate_table_ptr_t(new PredicateTables(predicateName, arity));
-    Predicate *p = pt.get()->predicate_.get();
-    entry.name_ = p->getName();
-    ptables_.emplace(entry, std::move(pt));
-    return p;
-}
+
+class DataChunk {
+
+};
+
 
 }

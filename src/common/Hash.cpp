@@ -37,6 +37,11 @@ hash_t Hash(const char *str) {
 }
 
 template <>
+hash_t Hash(string val) {
+    return Hash(val.c_str(), val.size());
+}
+
+template <>
 hash_t Hash(string_t val) {
     return Hash(val.c_str(), val.size());
 }

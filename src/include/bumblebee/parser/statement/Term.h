@@ -23,7 +23,8 @@
 
 #include "bumblebee/common/ErrorHandler.h"
 #include "bumblebee/common/TypeDefs.h"
-#include "bumblebee/common/type/StringT.h"
+#include "bumblebee/common/types/BumbleString.h"
+#include "bumblebee/common/types/Value.h"
 
 namespace bumblebee {
 
@@ -35,19 +36,7 @@ enum TermType{
 	RANGE = 3
 };
 
-enum ConstantType {
-	TINYINT = 0,
-	SMALLINT = 1,
-	INTEGER = 2,
-	BIGINT = 3,
-	UTINYINT = 4,
-	USMALLINT = 5,
-	UINTEGER = 6,
-	UBIGINT = 7,
-	FLOAT = 8,
-	DOUBLE = 9,
-	STRING = 10
-};
+
 
 enum Operator {
 	PLUS=0,
@@ -62,7 +51,7 @@ struct IntervalTerm {
 	int to;
 };
 
-using set_term_variable_t = std::unordered_set<string_t>;
+using set_term_variable_t = std::unordered_set<string>;
 
 /*  class that store a Term
  *
@@ -86,9 +75,9 @@ public:
 	Term(uint64_t c);
 	Term(float c);
 	Term(double c);
-	Term(string_t&& c);
+	Term(string&& c);
 	Term(char* c);
-	Term(string_t&& c, bool isVariable);
+	Term(string&& c, bool isVariable);
 	Term(IntervalTerm interval_);
 	Term(Term&& t1,Term&& t2, Operator op);
 	~Term() = default;
@@ -118,38 +107,7 @@ public:
 
 	template <class T>
 	T getNumericValue() {
-		switch (ctype_) {
-			case ConstantType::TINYINT:
-				return static_cast<T>(value_.tinyint);
-			case ConstantType::SMALLINT:
-				return static_cast<T>(value_.smallint);
-			case ConstantType::INTEGER:
-				return static_cast<T>(value_.integer);
-			case ConstantType::BIGINT:
-				return static_cast<T>(value_.bigint);
-			case ConstantType::UTINYINT:
-				return static_cast<T>(value_.utinyint);
-			case ConstantType::USMALLINT:
-				return static_cast<T>(value_.usmallint);
-			case ConstantType::UINTEGER:
-				return static_cast<T>(value_.uinteger);
-			case ConstantType::UBIGINT:
-				return static_cast<T>(value_.ubigint);
-			case ConstantType::FLOAT:
-				return static_cast<T>(value_.float_);
-			case ConstantType::DOUBLE:
-				return static_cast<T>(value_.double_);
-			default:
-				;
-		}
-		ErrorHandler::errorNotImplemented("Term getValue not supported");
-		return {};
-	}
-
-	template<class T>
-	static Term createConstantTerm(T value) {
-		ErrorHandler::errorNotImplemented("Term values not supported");
-		return {};
+		return value_.getValueUnsafe<T>();
 	}
 
 
@@ -158,26 +116,11 @@ private:
     bool negative_;
 
 	// Numeric Values
-	union Val {
-		int8_t tinyint;
-		int16_t smallint;
-		int32_t integer;
-		int64_t bigint;
-		uint8_t utinyint;
-		uint16_t usmallint;
-		uint32_t uinteger;
-		uint64_t ubigint;
-		float float_;
-		double double_;
-	} value_;
-	// String value
-	string_t stringValue_{};
+	Value value_;
 	// If it is interval the interval from to
 	IntervalTerm interval_{};
-	// If constant the constant type
-	ConstantType ctype_;
 	// Type of the term Constant/Variable/etc.
-	TermType type_;
+	TermType type_{TermType::CONSTANT};
 	// True if is anonymous variable
 	bool anonymous_{false};
 	// ArithTerm is an arithmetic with the list of a terms
@@ -201,34 +144,5 @@ public:
 };
 
 
-template<>
-Term Term::createConstantTerm(bool value);
-
-template<>
-Term  Term::createConstantTerm(uint8_t value);
-template <>
-Term  Term::createConstantTerm(uint16_t value);
-template <>
-Term  Term::createConstantTerm(uint32_t value);
-template <>
-Term  Term::createConstantTerm(uint64_t value);
-template <>
-Term  Term::createConstantTerm(int8_t value);
-template <>
-Term  Term::createConstantTerm(int16_t value);
-template <>
-Term  Term::createConstantTerm(int32_t value);
-template <>
-Term  Term::createConstantTerm(int64_t value);
-template <>
-Term  Term::createConstantTerm(std::string&& value);
-template <>
-Term  Term::createConstantTerm(char* value);
-template <>
-Term  Term::createConstantTerm(float value);
-template <>
-Term  Term::createConstantTerm(double value);
-template <>
-Term  Term::createConstantTerm(IntervalTerm value);
 
 } // bumblebee

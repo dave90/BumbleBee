@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include "TypeDefs.h"
-#include "type/StringT.h"
+#include "bumblebee/common/types/BumbleString.h"
 
 namespace bumblebee {
 
@@ -44,13 +44,15 @@ hash_t Hash(const char *val);
 template <>
 hash_t Hash(char *val);
 template <>
+hash_t Hash(string val);
+template <>
 hash_t Hash(string_t val);
 hash_t Hash(const char *val, size_t size);
 
 
 struct StringTHash {
-	size_t operator()(const string_t& v) const noexcept {
-		return Hash<string_t>(v);
+	size_t operator()(const string& v) const noexcept {
+		return Hash<string>(v);
 	}
 };
 }

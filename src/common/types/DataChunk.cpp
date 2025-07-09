@@ -16,11 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
-#include <string>
+#include "bumblebee/common/types/DataChunk.h"
 
-namespace bumblebee {
-    // TODO implement better version of string type
-    using string_t = std::string;
+namespace bumblebee{
+
 
 }

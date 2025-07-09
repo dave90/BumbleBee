@@ -1,0 +1,63 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "bumblebee/common/types/StringHeap.h"
+
+#include "bumblebee/common/Constants.h"
+#include "bumblebee/common/types/Assert.h"
+
+namespace bumblebee{
+    StringHeap::StringHeap(StringHeap &&other) : chunk_(std::move(other.chunk_)) {}
+
+    void StringHeap::destroy() {
+        chunk_ = nullptr;
+    }
+
+    string_t StringHeap::addString(const char *data, idx_t len) {
+        return addString(string_t(data, len));
+    }
+
+    string_t StringHeap::addString(const char *data) {
+        return addString(data, strlen(data));
+    }
+
+    string_t StringHeap::addString(const string &data) {
+        return addString(data.c_str(), data.length());
+    }
+
+    string_t StringHeap::addString(const string_t &data) {
+        return addString(data.c_str(), data.length());
+    }
+
+    string_t StringHeap::addBlob(const char *data, idx_t len) {
+        BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
+        if (!chunk_ || chunk_->current_position_ + len >= chunk_->maximum_size_) {
+            // create a new chunk
+            // NOTE: Max string len supported is MINIMUM_HEAP_SIZE
+            auto newChunk = std::make_unique<StringChunk>(MINIMUM_HEAP_SIZE);
+            newChunk->prev_ = std::move(chunk_);
+            chunk_ = std::move(newChunk);
+        }
+        // create a new string
+        char * dataPtr = chunk_->data_.get() + chunk_->current_position_;
+        memcpy(dataPtr, data, len);
+        chunk_->current_position_ += len;
+        return string_t(dataPtr, len);
+    }
+
+}

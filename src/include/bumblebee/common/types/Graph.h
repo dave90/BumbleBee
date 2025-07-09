@@ -26,21 +26,21 @@
 namespace bumblebee{
 
 using edge_weight_t = int64_t;
-using strong_comp_vec_t = std::vector<std::vector<string_t>>;
-using top_sort_vec_t = std::vector<std::vector<string_t>>;
-using index_vertex_map_t = std::vector<string_t>;
+using strong_comp_vec_t = std::vector<std::vector<string>>;
+using top_sort_vec_t = std::vector<std::vector<string>>;
+using index_vertex_map_t = std::vector<string>;
 
 class Graph {
 private:
 
-    using vertex_map_t = std::unordered_map<string_t,idx_t, StringTHash>;
+    using vertex_map_t = std::unordered_map<string,idx_t, StringTHash>;
     using adjacency_list_t = std::vector<std::unordered_map<idx_t, edge_weight_t>>;
 
 public:
     Graph(bool update_policy);
-    void addEdge(string_t v1, string_t v2, edge_weight_t weight);
-    idx_t addVertex(string_t v);
-    void removeEdge(string_t v1, string_t v2);
+    void addEdge(string v1, string v2, edge_weight_t weight);
+    idx_t addVertex(string v);
+    void removeEdge(string v1, string v2);
     void removeEdge(idx_t v1,idx_t v2);
     adjacency_list_t& getEdges();
     std::string getDotFormat(std::string graphName);
@@ -48,7 +48,7 @@ public:
     unsigned getNumEdges();
     strong_comp_vec_t calculateStrongComponent();
     top_sort_vec_t calculateTopologicalSort();
-    string_t& getValue(idx_t v);
+    string& getValue(idx_t v);
 
 private:
     strong_comp_vec_t tarjan();
