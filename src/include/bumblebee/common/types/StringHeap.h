@@ -32,6 +32,7 @@ public:
     ~StringHeap() = default;
 
     void destroy();
+    // Add a string in the heap (note: the add string do not copy the null termination)
     string_t addString(const char *data, idx_t len);
     string_t addString(const char *data);
     string_t addString(const string &data);

@@ -2,7 +2,7 @@ import time
 import pytest
 import os
 from pathlib import Path
-from test.utils import run_process_on_file, compare_files
+from test.e2e.utils import run_process_on_file, compare_files
 
 
 EXE_PATH = os.path.join("..","cmake-build-debug","BumbleBee")

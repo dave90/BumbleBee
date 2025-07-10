@@ -64,7 +64,10 @@ string_t StringHeap::addEmptyString(idx_t len) {
     // create a new string
     char * dataPtr = chunk_->data_.get() + chunk_->current_position_;
     chunk_->current_position_ += len;
+    //add null termination
+    dataPtr[0] = '\0';
     return string_t(dataPtr, len);
 }
+
 
 }
