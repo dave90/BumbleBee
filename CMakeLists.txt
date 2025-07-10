@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 3.31)
 project(BumbleBee)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 include_directories(src)
+
 
 # Include Third party
 include_directories(${CMAKE_SOURCE_DIR}/third_party)

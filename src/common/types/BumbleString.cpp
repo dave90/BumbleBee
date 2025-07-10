@@ -25,7 +25,7 @@ namespace bumblebee {
 BumbleString::BumbleString(const char *data): BumbleString(data, strlen(data)) {}
 
 BumbleString::BumbleString(const char *data, uint32_t len) {
-    length_ = len;
+    value_.length = len;
     if (isInlined()) {
         // store the data in prefix
         // +1 for string termination
@@ -41,7 +41,7 @@ BumbleString::BumbleString(const char *data, uint32_t len) {
 BumbleString::BumbleString(const BumbleString &other): BumbleString(other.c_str(), other.size()) {}
 
 bool BumbleString::isInlined() const {
-    return length_ <= PREFIX_LENGTH;
+    return isInlined(value_.length);
 }
 
 const char * BumbleString::getDataUnsafe() const {
@@ -61,7 +61,7 @@ const char * BumbleString::getPrefix() const {
 }
 
 idx_t BumbleString::size() const {
-    return length_;
+    return value_.length;
 }
 
 idx_t BumbleString::length() const {
@@ -80,5 +80,9 @@ bool BumbleString::operator<(const BumbleString &r) const {
 
 const char * BumbleString::c_str() const {
     return getDataUnsafe();
+}
+
+bool BumbleString::isInlined( uint32_t len) {
+    return len <= PREFIX_LENGTH;
 }
 }

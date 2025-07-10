@@ -37,7 +37,7 @@ public:
     string_t addString(const string &data);
     string_t addString(const string_t &data);
     string_t addBlob(const char *data, idx_t len);
-
+    string_t addEmptyString(idx_t len);
 
 private:
     // chunk where to store the strings in a unique block

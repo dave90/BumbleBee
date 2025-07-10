@@ -94,7 +94,7 @@ public:
 	void normalify(const SelectionVector &sel, idx_t count);
 	// Obtains a selection vector and data pointer through which the data of this vector can be accessed
 	void orrify(idx_t count, VectorData &data);
-
+	// Transform the vector into a sequence
 	void sequence(int64_t start, int64_t increment);
 
 	// Verify functions enabled only with DEBUG compilation
@@ -103,19 +103,31 @@ public:
 	void utfVerify(idx_t count);
 	void utfVerify(const SelectionVector &sel, idx_t count);
 
+	// Get the value in a specific index
 	Value getValue(idx_t index) const;
+	// Set a value in the specific index
 	void setValue(idx_t index, const Value &val);
 
+	// set the aux data mngr
 	void setAuxiliary(vector_data_mngr_ptr_t new_buffer);
+	// resize the vector
 	void resize(idx_t cur_size, idx_t new_size);
 
-	inline VectorType getVectorType() const ;
-	inline const ConstantType &getType() const ;
-	inline data_ptr_t getData();
 	vector_data_mngr_ptr_t getAuxiliary() ;
 	vector_data_mngr_ptr_t getDataMngr();
+
 	void setVectorType(VectorType vector_type);
 
+	// inline function
+	inline VectorType getVectorType() const {
+		return vtype_;
+	}
+	inline const ConstantType &getType() const {
+		return ctype_;
+	}
+	inline data_ptr_t getData() {
+		return data_;
+	}
 
 protected:
     // Type of the vector
@@ -140,7 +152,7 @@ public:
 public:
 	Vector data_;
 };
-// ------------------  Struct Vector to handle the operations of Vector class --------------------
+// ------------------  Struct Vector to handle the data of Vector class based on type --------------------
 
 struct ConstantVector {
 	static inline const_data_ptr_t getData(const Vector &vector) {
@@ -161,9 +173,9 @@ struct ConstantVector {
 	static inline T *getData(Vector &vector) {
 		return (T *)getData(vector);
 	}
-
+	// return selection vector with all 0
 	static const SelectionVector *zeroSelectionVector(idx_t count, SelectionVector &owned_sel);
-	//! Turns Vector into a constant vector by referencing a value within the source vector
+	// Turns Vector into a constant vector by referencing a value within the source vector
 	static void reference(Vector &vector, Vector &source, idx_t position, idx_t count);
 
 	static const sel_t ZERO_VECTOR[STANDARD_VECTOR_SIZE];
@@ -235,12 +247,7 @@ struct StringVector {
 };
 
 struct SequenceVector {
-	static void getSequence(const Vector &vector, int64_t &start, int64_t &increment) {
-		BB_ASSERT(vector.getVectorType() == VectorType::SEQUENCE_VECTOR);
-		auto data = (int64_t *)vector.dataMngr_->getData();
-		start = data[0];
-		increment = data[1];
-	}
+	static void getSequence(const Vector &vector, int64_t &start, int64_t &increment);
 };
 
 }

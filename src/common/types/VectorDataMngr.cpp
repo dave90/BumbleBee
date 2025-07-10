@@ -83,7 +83,11 @@ string_t StringDataMngr::addBlob(string_t data) {
     return heap_.addBlob(data.getDataWriteable(), data.size());
 }
 
-void StringDataMngr::AddHeapReference(vector_data_mngr_ptr_t heap) {
+void StringDataMngr::addHeapReference(vector_data_mngr_ptr_t heap) {
     references_.push_back(std::move(heap));
+}
+
+string_t StringDataMngr::addEmptyString(idx_t len) {
+    return heap_.addEmptyString(len);
 }
 }

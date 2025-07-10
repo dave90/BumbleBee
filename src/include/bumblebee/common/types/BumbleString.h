@@ -42,7 +42,8 @@ namespace bumblebee {
 */
 class BumbleString {
 public:
-    static constexpr idx_t PREFIX_LENGTH = 12;
+    // lenght set to 11 as total data should fit in 24 bytes (multiple of 8)
+    static constexpr idx_t PREFIX_LENGTH = 11;
 
     BumbleString() = default;
     BumbleString(const char* data);
@@ -60,13 +61,17 @@ public:
 
     bool operator<(const BumbleString &r) const;
     const char* c_str() const;
+
+    // return true if the string is inline
+    static bool isInlined( uint32_t len);
 private:
     struct {
         // +1 for end termination
         char prefix[PREFIX_LENGTH+1];
+        // moved into the struct to avoid memory padding
+        uint32_t length;
         char *ptr;
     } value_;
-    uint32_t length_;
 };
     using string_t = BumbleString;
 

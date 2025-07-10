@@ -83,8 +83,9 @@ public:
     string_t addString(const char *data, idx_t len);
     string_t addString(string_t data);
     string_t addBlob(string_t data);
+    string_t addEmptyString(idx_t len);
     // take ownership of the heap
-    void AddHeapReference(vector_data_mngr_ptr_t heap);
+    void addHeapReference(vector_data_mngr_ptr_t heap);
 
 private:
     StringHeap heap_;

@@ -34,7 +34,7 @@ idx_t getCTypeSize(ConstantType type) {
         case UBIGINT:    return sizeof(uint64_t);
         case FLOAT:      return sizeof(float);
         case DOUBLE:     return sizeof(double);
-        case STRING:     return sizeof(bumblebee::string_t);  // size of string object, not content
+        case STRING:     return sizeof(bumblebee::string_t);  // size of string_t object, not content ---> Make sure to not call for string
         default:         return 0; // or throw an error
     }
 }

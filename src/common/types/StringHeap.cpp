@@ -22,42 +22,49 @@
 #include "bumblebee/common/types/Assert.h"
 
 namespace bumblebee{
-    StringHeap::StringHeap(StringHeap &&other) : chunk_(std::move(other.chunk_)) {}
+StringHeap::StringHeap(StringHeap &&other) : chunk_(std::move(other.chunk_)) {}
 
-    void StringHeap::destroy() {
-        chunk_ = nullptr;
-    }
+void StringHeap::destroy() {
+    chunk_ = nullptr;
+}
 
-    string_t StringHeap::addString(const char *data, idx_t len) {
-        return addString(string_t(data, len));
-    }
+string_t StringHeap::addString(const char *data, idx_t len) {
+    return addBlob(data, len);
+}
 
-    string_t StringHeap::addString(const char *data) {
-        return addString(data, strlen(data));
-    }
+string_t StringHeap::addString(const char *data) {
+    return addString(data, strlen(data));
+}
 
-    string_t StringHeap::addString(const string &data) {
-        return addString(data.c_str(), data.length());
-    }
+string_t StringHeap::addString(const string &data) {
+    return addString(data.c_str(), data.length());
+}
 
-    string_t StringHeap::addString(const string_t &data) {
-        return addString(data.c_str(), data.length());
-    }
+string_t StringHeap::addString(const string_t &data) {
+    return addString(data.c_str(), data.length());
+}
 
-    string_t StringHeap::addBlob(const char *data, idx_t len) {
-        BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
-        if (!chunk_ || chunk_->current_position_ + len >= chunk_->maximum_size_) {
-            // create a new chunk
-            // NOTE: Max string len supported is MINIMUM_HEAP_SIZE
-            auto newChunk = std::make_unique<StringChunk>(MINIMUM_HEAP_SIZE);
-            newChunk->prev_ = std::move(chunk_);
-            chunk_ = std::move(newChunk);
-        }
-        // create a new string
-        char * dataPtr = chunk_->data_.get() + chunk_->current_position_;
-        memcpy(dataPtr, data, len);
-        chunk_->current_position_ += len;
-        return string_t(dataPtr, len);
+string_t StringHeap::addBlob(const char *data, idx_t len) {
+    BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
+    auto newString = addEmptyString(len);
+    memcpy(newString.getDataWriteable(), data, len);
+    return newString;
+}
+
+
+string_t StringHeap::addEmptyString(idx_t len) {
+    BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
+    if (!chunk_ || chunk_->current_position_ + len >= chunk_->maximum_size_) {
+        // create a new chunk
+        // NOTE: Max string len supported is MINIMUM_HEAP_SIZE
+        auto newChunk = std::make_unique<StringChunk>(MINIMUM_HEAP_SIZE);
+        newChunk->prev_ = std::move(chunk_);
+        chunk_ = std::move(newChunk);
     }
+    // create a new string
+    char * dataPtr = chunk_->data_.get() + chunk_->current_position_;
+    chunk_->current_position_ += len;
+    return string_t(dataPtr, len);
+}
 
 }
