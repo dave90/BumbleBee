@@ -79,18 +79,21 @@ public:
 
 	// Slice from another vector starting from offset
 	void slice(Vector &other, idx_t offset);
-	// Slice from another vector following selection vector
+	// Slice from another vector following selection vector (will set the data only on index present in selection vector ignoring the others)
 	void slice(Vector &other, const SelectionVector &sel, idx_t count);
 	void slice(const SelectionVector &sel, idx_t count);
 
 	// Create empty vector
-	void initialize(bool zero_data = false, idx_t capacity = STANDARD_VECTOR_SIZE);
+	void initialize(bool zero_data, idx_t capacity);
+	inline void initialize(idx_t capacity){initialize(false, capacity);}
+	inline void initialize(bool zero_data){initialize(zero_data, STANDARD_VECTOR_SIZE);}
 
 	string toString(idx_t count) const;
 	string toString() const;
 
 	// Flatten the vector, removing any compression and turning it into a FLAT_VECTOR
 	void normalify(idx_t count);
+	// Flattern the vector only on selection data
 	void normalify(const SelectionVector &sel, idx_t count);
 	// Obtains a selection vector and data pointer through which the data of this vector can be accessed
 	void orrify(idx_t count, VectorData &data);
@@ -108,17 +111,13 @@ public:
 	// Set a value in the specific index
 	void setValue(idx_t index, const Value &val);
 
-	// set the aux data mngr
-	void setAuxiliary(vector_data_mngr_ptr_t new_buffer);
 	// resize the vector
 	void resize(idx_t cur_size, idx_t new_size);
 
-	vector_data_mngr_ptr_t getAuxiliary() ;
-	vector_data_mngr_ptr_t getDataMngr();
 
 	void setVectorType(VectorType vector_type);
 
-	// inline function
+	// inline functions
 	inline VectorType getVectorType() const {
 		return vtype_;
 	}
@@ -127,6 +126,16 @@ public:
 	}
 	inline data_ptr_t getData() {
 		return data_;
+	}
+	inline vector_data_mngr_ptr_t getAuxiliary() {
+		return auxDataMngr_;
+	}
+	inline vector_data_mngr_ptr_t getDataMngr() {
+		return dataMngr_;
+	}
+	// set the aux data mngr
+	inline void setAuxiliary(vector_data_mngr_ptr_t newBuffer) {
+		auxDataMngr_ = std::move(newBuffer);
 	}
 
 protected:
@@ -146,14 +155,13 @@ protected:
 // The VectorChildDataMngr holds the real data of a dictionary vector
 class VectorChildDataMngr : public VectorDataMngr {
 public:
-	VectorChildDataMngr(Vector vector) : VectorDataMngr(VectorDataMngrType::VECTOR_CHILD_BUFFER), data_(std::move(vector)) {
-	}
+	VectorChildDataMngr(Vector vector) : VectorDataMngr(VectorDataMngrType::VECTOR_CHILD_BUFFER), data_(std::move(vector)) {}
 
 public:
 	Vector data_;
 };
 // ------------------  Struct Vector to handle the data of Vector class based on type --------------------
-
+// Critical class -> all the inline functions defined here
 struct ConstantVector {
 	static inline const_data_ptr_t getData(const Vector &vector) {
 		BB_ASSERT(vector.getVectorType() == VectorType::CONSTANT_VECTOR ||

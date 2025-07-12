@@ -35,20 +35,25 @@ enum class VectorDataMngrType : uint8_t {
 };
 
 // This class manage the data of a vector
+// Critical class -> inlined functions
 class VectorDataMngr {
 public:
     using vector_data_mngr_ptr_t = std::shared_ptr<VectorDataMngr>;
     using vector_vdm_ptr_t = std::vector<vector_data_mngr_ptr_t>;
 
-    explicit VectorDataMngr(VectorDataMngrType type);
-    explicit VectorDataMngr(std::unique_ptr<data_t[]> data);
-    explicit VectorDataMngr(idx_t size);
-    ~VectorDataMngr() = default;
+    explicit VectorDataMngr(VectorDataMngrType type): type_(type) {}
+    explicit VectorDataMngr(std::unique_ptr<data_t[]> data): data_(std::move(data)), type_(VectorDataMngrType::STANDARD_DATA_MNGR) {}
+    explicit VectorDataMngr(idx_t size): data_(new data_t[size]),type_(VectorDataMngrType::STANDARD_DATA_MNGR) {}
 
-    VectorDataMngrType getType() ;
-    data_ptr_t getData();
-
-    void setData(std::unique_ptr<data_t[]> data);
+    inline VectorDataMngrType getType() {
+        return type_;
+    }
+    inline data_ptr_t getData() {
+        return data_.get();
+    }
+    inline void setData(std::unique_ptr<data_t[]> data) {
+        data_ = std::move(data);
+    }
 
 protected:
     VectorDataMngrType type_;
@@ -56,20 +61,31 @@ protected:
 
 public:
     // static method
-    static vector_data_mngr_ptr_t createStandardVector(ConstantType type, idx_t capacity = STANDARD_VECTOR_SIZE);
-    static vector_data_mngr_ptr_t createConstantVector(ConstantType type);
+    static inline vector_data_mngr_ptr_t createStandardVector(ConstantType type, idx_t capacity = STANDARD_VECTOR_SIZE) {
+        return vector_data_mngr_ptr_t(new VectorDataMngr(capacity * getCTypeSize(type)));
+    }
+    static inline vector_data_mngr_ptr_t createConstantVector(ConstantType type) {
+        return vector_data_mngr_ptr_t(new VectorDataMngr(getCTypeSize(type)));
+    }
 
 };
 
 class DictionaryDataMngr : public VectorDataMngr {
 public:
-    explicit DictionaryDataMngr(const SelectionVector& sel);
-    explicit DictionaryDataMngr(sel_ptr_t sel);
-    explicit DictionaryDataMngr(idx_t size);
 
-    const SelectionVector& getSelection() const;
-    SelectionVector& getSelection();
-    void setSelection(const SelectionVector& sel);
+    explicit DictionaryDataMngr(const SelectionVector &sel):VectorDataMngr(VectorDataMngrType::DICTIONARY_DATA_MNGR), sel_(sel) {}
+    explicit DictionaryDataMngr(sel_ptr_t sel):VectorDataMngr(VectorDataMngrType::DICTIONARY_DATA_MNGR), sel_(sel) {}
+    explicit DictionaryDataMngr(idx_t size):VectorDataMngr(VectorDataMngrType::DICTIONARY_DATA_MNGR), sel_(size) {}
+
+    inline const SelectionVector & getSelection() const {
+        return sel_;
+    }
+    inline SelectionVector & getSelection() {
+        return sel_;
+    }
+    inline void setSelection(const SelectionVector &sel) {
+        sel_.initialize(sel);
+    }
 
 private:
     SelectionVector sel_;
@@ -77,15 +93,24 @@ private:
 
 class StringDataMngr : public VectorDataMngr {
 public:
-    StringDataMngr();
+    StringDataMngr():VectorDataMngr(VectorDataMngrType::STRING_BUFFER) {}
 
-public:
-    string_t addString(const char *data, idx_t len);
-    string_t addString(string_t data);
-    string_t addBlob(string_t data);
-    string_t addEmptyString(idx_t len);
+    inline string_t addString(const char *data, idx_t len) {
+        return heap_.addString(data, len);
+    }
+    inline string_t addString(string_t data) {
+        return heap_.addString(data);
+    }
+    inline string_t addBlob(string_t data) {
+        return heap_.addBlob(data.getDataWriteable(), data.size());
+    }
     // take ownership of the heap
-    void addHeapReference(vector_data_mngr_ptr_t heap);
+    inline void addHeapReference(vector_data_mngr_ptr_t heap) {
+        references_.push_back(std::move(heap));
+    }
+    inline string_t addEmptyString(idx_t len) {
+        return heap_.addEmptyString(len);
+    }
 
 private:
     StringHeap heap_;

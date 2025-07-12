@@ -22,27 +22,6 @@
 #include "bumblebee/common/types/Assert.h"
 
 namespace bumblebee{
-StringHeap::StringHeap(StringHeap &&other) : chunk_(std::move(other.chunk_)) {}
-
-void StringHeap::destroy() {
-    chunk_ = nullptr;
-}
-
-string_t StringHeap::addString(const char *data, idx_t len) {
-    return addBlob(data, len);
-}
-
-string_t StringHeap::addString(const char *data) {
-    return addString(data, strlen(data));
-}
-
-string_t StringHeap::addString(const string &data) {
-    return addString(data.c_str(), data.length());
-}
-
-string_t StringHeap::addString(const string_t &data) {
-    return addString(data.c_str(), data.length());
-}
 
 string_t StringHeap::addBlob(const char *data, idx_t len) {
     BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");

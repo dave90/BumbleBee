@@ -22,6 +22,7 @@
 namespace bumblebee {
 
 const SelectionVector ConstantVector::ZERO_SELECTION_VECTOR = SelectionVector((sel_t *)ConstantVector::ZERO_VECTOR);
+// INCREMENTAL_SELECTION_VECTOR default constr. has nullptr as selection vector so the getIndex(i) will return i
 const SelectionVector FlatVector::INCREMENTAL_SELECTION_VECTOR;
 const sel_t ConstantVector::ZERO_VECTOR[STANDARD_VECTOR_SIZE] = {0};
 

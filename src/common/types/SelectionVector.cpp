@@ -21,75 +21,6 @@
 #include <string>
 
 namespace bumblebee{
-SelectionVector::SelectionVector() : sel_vector_(nullptr) {}
-
-SelectionVector::SelectionVector(sel_t *sel) {
-    initialize(sel);
-}
-
-SelectionVector::SelectionVector(idx_t count) {
-    initialize(count);
-}
-
-SelectionVector::SelectionVector(idx_t start, idx_t count) {
-    initialize(STANDARD_VECTOR_SIZE);
-    for (unsigned i = 0; i < count; i++) {
-        setIndex(i, start+i);
-    }
-}
-
-SelectionVector::SelectionVector(const SelectionVector &sel_vector) {
-    initialize(sel_vector);
-}
-
-SelectionVector::SelectionVector(sel_ptr_t data) {
-    initialize(data);
-}
-
-void SelectionVector::initialize(sel_t *sel) {
-    sel_vector_ = sel;
-    sel_data_.reset();
-}
-
-void SelectionVector::initialize(idx_t count) {
-    sel_data_ = sel_ptr_t(new sel_t[count]);
-    sel_vector_ = sel_data_.get();
-}
-
-void SelectionVector::initialize(sel_ptr_t data) {
-    sel_data_ = data;
-}
-
-void SelectionVector::initialize(const SelectionVector &other) {
-    sel_data_ = other.sel_data_;
-    sel_vector_ = other.sel_vector_;
-}
-
-void SelectionVector::setIndex(idx_t idx, idx_t loc) {
-    sel_vector_[idx] = loc;
-}
-
-void SelectionVector::swap(idx_t i, idx_t j) {
-    sel_t tmp = sel_vector_[i];
-    sel_vector_[i] = sel_vector_[j];
-    sel_vector_[j] = tmp;
-}
-
-idx_t SelectionVector::getIndex(idx_t idx) const{
-    return sel_vector_?sel_vector_[idx]:idx;
-}
-
-sel_t * SelectionVector::getData() {
-    return sel_vector_;
-}
-
-const sel_t * SelectionVector::getData() const {
-    return sel_vector_;
-}
-
-sel_ptr_t SelectionVector::getSelData() const{
-    return sel_data_;
-}
 
 sel_ptr_t SelectionVector::slice(const SelectionVector &sel, idx_t count) const {
     sel_ptr_t data = sel_ptr_t(new sel_t[count]);
@@ -109,7 +40,4 @@ std::string SelectionVector::toString(idx_t count) {
     return r;
 }
 
-sel_t & SelectionVector::operator[](idx_t index) {
-    return sel_vector_[index];
-}
 }

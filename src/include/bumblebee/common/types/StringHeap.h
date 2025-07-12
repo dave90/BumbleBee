@@ -28,15 +28,25 @@ namespace bumblebee{
 class StringHeap {
 public:
     StringHeap() = default;
-    StringHeap(StringHeap &&other);
+    StringHeap(StringHeap &&other) : chunk_(std::move(other.chunk_)) {}
     ~StringHeap() = default;
 
-    void destroy();
+    void destroy() {
+        chunk_ = nullptr;
+    }
+    inline string_t addString(const char *data, idx_t len) {
+        return addBlob(data, len);
+    }
+    inline string_t addString(const char *data) {
+        return addString(data, strlen(data));
+    }
+    inline string_t addString(const string &data) {
+        return addString(data.c_str(), data.length());
+    }
+    inline string_t addString(const string_t &data) {
+        return addString(data.c_str(), data.length());
+    }
     // Add a string in the heap (note: the add string do not copy the null termination)
-    string_t addString(const char *data, idx_t len);
-    string_t addString(const char *data);
-    string_t addString(const string &data);
-    string_t addString(const string_t &data);
     string_t addBlob(const char *data, idx_t len);
     string_t addEmptyString(idx_t len);
 

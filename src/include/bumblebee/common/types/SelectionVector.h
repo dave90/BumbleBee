@@ -30,35 +30,71 @@ using sel_ptr_t = std::shared_ptr<sel_t[]>;
 // which are commonly used in vectorized execution engines to represent filtered subsets of data.
 // It allows efficient referencing and transformation of indices in a columnar data structure,
 // supporting various initialization and modification operations.
+//
+// NOTE: SelectionVector is critical class -> all the inlined functions are defined in the .h
 class SelectionVector {
 
 public:
-    SelectionVector();
-    explicit SelectionVector(sel_t *sel);
-    explicit SelectionVector(idx_t count);
-    SelectionVector(idx_t start, idx_t count); // init the selection vector i -> start + i
-    SelectionVector(const SelectionVector &sel_vector);
-    explicit SelectionVector(sel_ptr_t data);
+    SelectionVector() {}
+    SelectionVector(sel_t *sel) {initialize(sel);}
+    SelectionVector(idx_t count) {initialize(count);}
+    SelectionVector(idx_t start, idx_t count) {
+        initialize(STANDARD_VECTOR_SIZE);
+        for (unsigned i = 0; i < count; i++) {
+            setIndex(i, start+i);
+        }
+    }
+    SelectionVector(const SelectionVector &sel_vector) {initialize(sel_vector);}
+    SelectionVector(sel_ptr_t data) {initialize(data);}
 
-    void initialize(sel_t *sel);
-    void initialize(idx_t count = STANDARD_VECTOR_SIZE);
-    void initialize(sel_ptr_t data);
-    void initialize(const SelectionVector &other);
 
-    void setIndex(idx_t idx, idx_t loc);
-    void swap(idx_t i, idx_t j);
-    idx_t getIndex(idx_t idx) const; // if sel_vector point to null return the index
-    sel_t * getData() ;
-    const sel_t * getData() const;
-    sel_ptr_t getSelData() const;
+
+    inline void initialize(sel_t *sel) {
+        sel_vector_ = sel;
+        sel_data_.reset();
+    }
+    inline void initialize(idx_t count) {
+        sel_data_ = sel_ptr_t(new sel_t[count]);
+        sel_vector_ = sel_data_.get();
+    }
+    inline void initialize(sel_ptr_t data) {
+        sel_data_ = data;
+    }
+    inline void initialize(const SelectionVector &other) {
+        sel_data_ = other.sel_data_;
+        sel_vector_ = other.sel_vector_;
+    }
+    inline void setIndex(idx_t idx, idx_t loc) {
+        sel_vector_[idx] = loc;
+    }
+    inline void swap(idx_t i, idx_t j) {
+        sel_t tmp = sel_vector_[i];
+        sel_vector_[i] = sel_vector_[j];
+        sel_vector_[j] = tmp;
+    }
+    inline sel_t * getData() {
+        return sel_vector_;
+    }
+    inline const sel_t * getData() const {
+        return sel_vector_;
+    }
+    inline sel_ptr_t getSelData() const{
+        return sel_data_;
+    }
+
+    // if sel_vector point to null return the index
+    inline idx_t getIndex(idx_t idx) const{
+        return sel_vector_?sel_vector_[idx]:idx;
+    }
     sel_ptr_t slice(const SelectionVector &sel, idx_t count) const;
-
     std::string toString(idx_t count = 0);
 
-    sel_t &operator[](idx_t index);
 
+    inline sel_t & operator[](idx_t index) {
+        return sel_vector_[index];
+    }
 private:
-    sel_t* sel_vector_;
+    sel_t* sel_vector_{nullptr};
     sel_ptr_t sel_data_;
 };
 

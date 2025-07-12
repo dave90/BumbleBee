@@ -26,7 +26,7 @@ Vector::Vector(Vector &other):ctype_(other.ctype_), vtype_(other.vtype_) {
     reference(other);
 }
 
-Vector::Vector(Vector &other, const SelectionVector &sel, idx_t count):ctype_(other.ctype_), vtype_(other.vtype_) {
+Vector::Vector(Vector &other, const SelectionVector &sel, idx_t count):ctype_(other.ctype_) {
     slice(other, sel, count);
 }
 
@@ -71,6 +71,7 @@ void Vector::reference(Vector &other) {
 }
 
 void Vector::reinterpret(Vector &other) {
+    vtype_ = other.vtype_;
     data_ = other.data_;
     assignSharedPointer(dataMngr_, other.dataMngr_);
     assignSharedPointer(auxDataMngr_, other.auxDataMngr_);
@@ -185,6 +186,14 @@ void Vector::normalify(idx_t count) {
         reference(normVec);
         return;
     }
+    if (vtype_ == VectorType::SEQUENCE_VECTOR) {
+        int64_t start, increment;
+        SequenceVector::getSequence(*this, start, increment);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
+        data_ = dataMngr_->getData();
+        VectorOperations::generateSequence(*this, count, start, increment);
+        return;
+    }
     if (vtype_ == VectorType::CONSTANT_VECTOR) {
         // take old data manager otherwise will remove the old data
         auto oldDataMngr = dataMngr_;
@@ -195,37 +204,40 @@ void Vector::normalify(idx_t count) {
         switch (ctype_) {
             case ConstantType::TINYINT:
                 templatedFlattenConstantVector<int8_t>(data_, oldData, count);
+                break;
             case ConstantType::SMALLINT:
                 templatedFlattenConstantVector<int16_t>(data_, oldData, count);
+                break;
             case ConstantType::INTEGER:
                 templatedFlattenConstantVector<int32_t>(data_, oldData, count);
+                break;
             case ConstantType::BIGINT:
                 templatedFlattenConstantVector<int64_t>(data_, oldData, count);
+                break;
             case ConstantType::UTINYINT:
                 templatedFlattenConstantVector<uint8_t>(data_, oldData, count);
+                break;
             case ConstantType::USMALLINT:
                 templatedFlattenConstantVector<uint16_t>(data_, oldData, count);
+                break;
             case ConstantType::UINTEGER:
                 templatedFlattenConstantVector<uint32_t>(data_, oldData, count);
+                break;
             case ConstantType::UBIGINT:
                 templatedFlattenConstantVector<uint64_t>(data_, oldData, count);
+                break;
             case ConstantType::FLOAT:
                 templatedFlattenConstantVector<float>(data_, oldData, count);
+                break;
             case ConstantType::DOUBLE:
                 templatedFlattenConstantVector<double>(data_, oldData, count);
+                break;
             case ConstantType::STRING:
                 templatedFlattenConstantVector<string_t>(data_, oldData, count);
+                break;
             default:
                 ;
         }
-        return;
-    }
-    if (vtype_ == VectorType::SEQUENCE_VECTOR) {
-        int64_t start, increment;
-        SequenceVector::getSequence(*this, start, increment);
-        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
-        data_ = dataMngr_->getData();
-        VectorOperations::generateSequence(*this, count, start, increment);
         return;
     }
     ErrorHandler::errorNotImplemented("Vector::normalify not implemented");
@@ -239,7 +251,7 @@ void Vector::normalify(const SelectionVector &sel, idx_t count) {
     if (vtype_ == VectorType::SEQUENCE_VECTOR) {
         int64_t start, increment;
         SequenceVector::getSequence(*this, start, increment);
-        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType());
         data_ = dataMngr_->getData();
         VectorOperations::generateSequence(*this, count, sel, start, increment );
         return;
@@ -282,7 +294,7 @@ void Vector::sequence(int64_t start, int64_t increment) {
     dataMngr_  = vector_data_mngr_ptr_t(new VectorDataMngr(2 * sizeof(int64_t)));
     auto data = (int64_t*) dataMngr_->getData();
     data[0] = start;
-    data[0] = increment;
+    data[1] = increment;
 }
 
 void Vector::verify(idx_t count) {
@@ -356,8 +368,6 @@ void Vector::setValue(idx_t index, const Value &val) {
     BB_ASSERT(val.ctype_ == ctype_ && "Error during set value on vector: different types");
 
     switch (getVectorType()){
-        case VectorType::CONSTANT_VECTOR:
-            ErrorHandler::errorNotImplemented("Unimplemented set type on constant");
         case VectorType::DICTIONARY_VECTOR: {
             // get the rela index from the sel vector
             index = DictionaryVector::selVector(*this).getIndex(index);
@@ -368,40 +378,49 @@ void Vector::setValue(idx_t index, const Value &val) {
         case VectorType::SEQUENCE_VECTOR:
             ErrorHandler::errorNotImplemented("Unimplemented set type on constant");
         case VectorType::FLAT_VECTOR:
+        case VectorType::CONSTANT_VECTOR:
             ;
     }
-    // FLAT vector
+    // FLAT or CONSTANT vector
     switch (ctype_) {
         case ConstantType::TINYINT:
             ((int8_t*)data_)[index] = val.value_.tinyint ;
+            break;
         case ConstantType::SMALLINT:
             ((int16_t*)data_)[index] = val.value_.smallint ;
+            break;
         case ConstantType::INTEGER:
             ((int32_t*)data_)[index] = val.value_.integer ;
+            break;
         case ConstantType::BIGINT:
             ((int64_t*)data_)[index] = val.value_.bigint ;
+            break;
         case ConstantType::UTINYINT:
             ((uint8_t*)data_)[index] = val.value_.utinyint ;
+            break;
         case ConstantType::USMALLINT:
             ((uint16_t*)data_)[index] = val.value_.usmallint ;
+            break;
         case ConstantType::UINTEGER:
             ((uint32_t*)data_)[index] = val.value_.uinteger ;
+            break;
         case ConstantType::UBIGINT:
             ((uint64_t*)data_)[index] = val.value_.ubigint ;
+            break;
         case ConstantType::FLOAT:
             ((float*)data_)[index] = val.value_.float_ ;
+            break;
         case ConstantType::DOUBLE:
             ((double*)data_)[index] = val.value_.double_ ;
+            break;
         case ConstantType::STRING:
             ((string_t*)data_)[index] = StringVector::addString(*this, val.stringValue_);
+            break;
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type access");
     }
 }
 
-void Vector::setAuxiliary(vector_data_mngr_ptr_t newBuffer) {
-    auxDataMngr_ = std::move(newBuffer);
-}
 
 void Vector::resize(idx_t curSize, idx_t newSize) {
     if (!dataMngr_)
@@ -414,14 +433,6 @@ void Vector::resize(idx_t curSize, idx_t newSize) {
     data_ = dataMngr_->getData();
 }
 
-
-vector_data_mngr_ptr_t Vector::getAuxiliary() {
-    return auxDataMngr_;
-}
-
-vector_data_mngr_ptr_t Vector::getDataMngr() {
-    return dataMngr_;
-}
 
 void Vector::setVectorType(VectorType vectorType) {
     vtype_ = vectorType;

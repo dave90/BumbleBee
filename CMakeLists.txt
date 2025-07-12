@@ -12,6 +12,7 @@ include_directories(${CMAKE_SOURCE_DIR}/third_party)
 # ----------------------------------------
 file(GLOB_RECURSE SRC_FILES
         ${PROJECT_SOURCE_DIR}/src/*.cpp
+        ${PROJECT_SOURCE_DIR}/third_party/*.cpp
 )
 
 # Exclude main.cpp from the library
@@ -45,7 +46,8 @@ file(GLOB_RECURSE UNIT_TEST_SOURCES
         ${PROJECT_SOURCE_DIR}/test/unit/*.cpp
 )
 
-add_executable(unit_tests ${UNIT_TEST_SOURCES})
+add_executable(unit_tests ${UNIT_TEST_SOURCES} )
+
 target_link_libraries(unit_tests
         bumblebee_lib
         gtest_main
