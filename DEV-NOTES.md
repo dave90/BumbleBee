@@ -1,128 +1,256 @@
+# 🐝 BumbleBee DB — Developer Notes
 
-## Components
-- common
-    - log
-    - data structures
-    - compilation
-    - memory manager
+## 🧩 Components Overview
 
-- third_party
-    - arrow
-- catalog
-    - db
-    - predicate table (with statistics)
+### `common/`
+Core utilities and shared infrastructure:
+- Logging
+- Generic data structures
+- Compilation utilities
+- Memory manager
+- Constants and shared types
 
-- parser
-    - parser
-    - rule
-        - atoms
-    - annotations
-- optimizer
-    - logical plan
-        - dag
-        - rewriter
-            - push filter
-            - projection
-            ...
-    - pyshical plan
-- execution (query evaluation)
-    - pyshical rule
-        - pyshical atoms
-        - output atom
-        - hash_join_atom
-        - compiled_atom 
-            - compiled using a script
-    - states
-- parallel
-    - scheduler
-    - task
-    - task execution
+### `third_party/`
+External dependencies (e.g., Hyper log log).
 
-Commons: contains common utility and data structures. Define also constants and common type used.
+### `catalog/`
+Handles database and predicate metadata:
+- Database instances
+- Predicate catalog per DB
+- Predicate tables (with support for statistics)
+- Caching layer and index management
 
-third_party: the third party components (like arrow).
+Each predicate table includes:
+- **Permanent data** (shared across runs)
+- **Temporary data** (discarded after a run)
+- **Cache** for intermediate results
+- **Indexes** and **Hash tables**
+- **Statistics** via sampling and HyperLogLog
 
-catalog: contains the catalog of the db. initially only the predicates table ad db. A datalog program is mapped to a db. In the future will contains also views 
+### `parser/`
+Parses input strings (Datalog/SQL):
+- Tokenizers and grammar (via Flex/Bison)
+- Atoms, rules, annotations, and internal program model
 
-parsers: will parse the input string and contains the class of the datalog program (atoms rule etc.)
+### `planner/`
+Builds and optimizes query plans:
 
-optimizer: manage the creation of the plans (logical and physical). Logical plan will create the dag of the rules (with sql will convert sql to rules) and rewrites the rules with the rule rewriters. Physical plan given the logic plan will convert rules to pushical rule for the push data chunk execution and parallelism (with states). Will convert rules only components by components (to have more statistics).
+- **Logical Plan**:
+    - Constructs DAG from rules
+    - SQL → Datalog rule conversion
+    - Rule rewriters (e.g., filter pushdown, projection folding)
 
-execution: contains the physical class for the execution.  Filters are putted inside the physical atom. contains also the compiled atom execution
+- **Physical Plan**:
+    - Converts logical plan into executable operators
+    - Designed for push-based execution and parallelism
+    - Uses statistics to optimize rule generation
 
-parallel: manage the execution of the rules in parallel. Each rule body can be execution as a pipeline in parallel. For the head mutex are needed calling the sink. 
+### `execution/`
+Evaluates physical plans:
+- Contains `physical_rule`, `physical_atom`, and `compiled_atom`
+- Manages data movement, execution state, filtering, and output
+- Encapsulates compiled operators (via scripts/codegen)
 
-### Common
-Data structure for data chunk. Data chunks contains vectors (column storage). Each vector can be created by other vector 
-without copy data (cow). These chunks are passed among operators without copying (copy only when necessary). Materialize data
-only when needed (output, join table etc.)
+### `parallel/`
+Handles task parallelism:
+- Rule splitting into **tasks** per partition
+- Scheduler manages task creation and queuing
+- Executor processes task queue
+- Sink/head operators are synchronized using locks/mutexes
+
+---
+
+## 🧠 Core Concepts
+
+### Data Model: `DataChunk` and `Vector`
+- **DataChunk**: container for columnar data (vectors)
+- **Vector**:
+    - Holds typed data and selection vector
+    - Can be:
+        - **Regular**
+        - **Constant**
+        - **Sequence**
+    - Managed by a Data Manager (or memory buffer)
+
+Materialization is deferred and data is copied only when necessary.
+
+---
+
+## ⚙️ Execution Model
+
+### 🔄 High-Level Execution Overview
+
+1. **Parsing Rules**
+    - Input rules (written in Datalog or SQL) are parsed into an internal program structure.
+    - The parser constructs atoms, rules, and annotations.
+
+2. **Building the Logical DAG**
+    - A **Directed Acyclic Graph (DAG)** is created to model dependencies between rules.
+    - Connected components within the DAG are identified and ordered for evaluation.
+
+3. **Processing Components**
+    - Each connected component is processed in topological order.
+    - All rules within a component are prepared for logical and physical planning.
+
+4. **Logical Optimization (Planner Stage)**
+    - The planner applies **logical-to-logical transformations**, including:
+        - Filter pushdown
+        - Atom reordering
+        - Rule simplification
+    - This phase is **extensible** to support advanced optimizers (e.g., a Cascades-style optimizer).
+
+5. **Physical Plan Generation**
+    - Logical rules are converted into one or more **physical rules**:
+        - **Sink-based decomposition**: e.g., a join rule is split into build and probe phases.
+        - **Rule partitioning**: physical rules are generated for each partition, enabling parallel execution.
+    - Each physical rule is assigned a **priority weight**, which influences its scheduling.
+   - Recursive rules are handled similarly to non-recursive ones, with a few key differences:
+       - In each iteration, rules are optimized into **physical rules**, allowing for adjustments such as a dynamic change in the number of partitions per rule based on delta.
+       - The **head atom** stores its results in a **hash table** within the predicate table (to enable efficient deduplication and lookup).
+       - If a rule produces **new data** (i.e., data not already present in the hash table), it is **scheduled for execution in the next iteration**.
+       - If no new data is generated, the rule is **excluded from future iterations**.
+     - This process continues in a loop until **no recursive rule produces new results**, ensuring a **fixed-point** is reached.
+
+6. **Execution Scheduling**
+    - The execution engine schedules physical rules using a **priority queue**.
+    - Execution is guided by:
+        - Rule priority
+        - Available resources
+        - Dependency resolution
+
+### Physical Rule Structure
+
+Each physical rule includes:
+- **Partitioned source atom**
+- **Non-partitioned sources** and **filters**
+- **Sink operator (head)**: either output or intermediate storage (e.g., join hash table)
+
+#### Operators:
+- `ScanOperator`
+- `FilteredScan`
+- `FilterOperator`
+- `HashJoinBuildOperator`
+- `HashJoinProbeOperator`
+- `OutputOperator`
+- `OutputHashOperator`
+- `CompiledOperator` *(planned)*
+- `AggregateOperator` *(planned)*
+
+Each operator returns one of:
+- `FINISHED`
+- `NEED_MORE_INPUT`
+- `HAS_MORE_OUTPUT`
+
+Operators receive input/output chunks and are executed in a pipeline.
+
+---
+
+## 📚 Catalog Design
+
+- **Multiple DBs**, starting with one default
+- Each DB has a **predicate catalog** with:
+    - **Permanent and temp tables**
+    - **Cache**
+    - **Indexes**
+    - **Statistics**
+
+Catalog tables hold:
+- Base data
+- Intermediate results
+- Hash tables for joins
+- Estimated stats (HyperLogLog, sampling)
+
+---
+
+## 🧠 Optimizer
+
+- Converts rules to **logical DAG**
+- Applies logical optimizations
+- Generates **physical rules** using statistics
+- A single rule may produce multiple physical stages (e.g., build and probe for joins)
+
+---
+
+## 🧵 Parallel Execution
+
+- Each rule is divided into **tasks** by partition
+- **Scheduler**:
+    - Generates tasks per rule/DAG
+    - Queues them for execution
+- **Executor**:
+    - Fetches and runs tasks
+- Physical plans are generated **late** for better optimization
+
+*(Recursive rule handling is planned)*
+
+---
+
+## 🧠 Execution Data Structures
+
+### DataChunk
+- Columnar format
+- Passed among operators with minimal copying
+
+### Vector
+- Holds:
+    - Data pointer
+    - Selection vector (for filtering)
+    - Type metadata
+- Can be:
+    - Constant
+    - Sequence
+    - Dicitonary
+- Managed by `VectorMemoryManager`
+    - Supports type-safe access
+    - Handles heap strings
+
+---
+
+## Statistics
+???
 
 
-### Executor
-Physical Rule contains: one partitioned source (the atom that source the data). Other Sources (not partitioned)  and filters (aggregators ?)
-Then the sink operator: the head. The head can be output head (output data), or intermediate data. intermediate data are stored in cache in catalog.
+## 🧪 Benchmark Commands
 
-- Physical Rule
-  - Source
-  - body: List[Operators]
-  - head: Operator
-- Physical Operator
-  - Scan Operator
-  - Filtered Scan
-  - Filter operator
-  - Compiled Operator (in the future)
-  - Hash Join Build Operator
-  - Hash Join Probe Operator
-  - Aggregate ???
-
-Each column of a data chunk is a variable
-Each operator can return 3 state : FINISH, NEED MORE INPUT, HAVE MORE OUTPUT.
-State , State Global and State Local ? maybe not
-Each operator receive input and output chunk
-
-### Catalog
-Multiple DBs, at least one (the default). Each DB contains a predicates catalogs  that contains predicate table (or tables). Each table can be permanent data
-so is shared among runs and temp table (so temporary data of the run, at the end will be deleted). Also each predicate table contains
-a cache (to store cached data) that can be reused during a run. The predicate table contains also the index and htables
-
-- DBs
-    - Preidcate Catalogs
-      - Predicate Table
-        - permanent data
-        - temp data
-        - cache
-        - index
-
-### Optimizer
-Given a set of logical rules create a DAG. For each DAG do the Logical to Logical optimization.
-The optimizare is responsible also to generate the Physical rules. From a Rule multiple physical rules can be generate.
-For example for a join a rule need to be split (build and probe phase). 
-
-
-### Parallel
-Each rule is splitted in Task. Each task can be executed in parallel. Each task is an execution of the rule
-for a single partition. A list of the task is putted in a queue by the scheduler. The scheduler is responsible for 
-the creation of the task and insertion in the quque. This process is done for each DAG created by the optimizer. before the
-execution the rules are transformed in physical rules (generate the physical rule in late stage to have more statistics)
-The executor take a task from the ququq and execute it.
-For the recursive rules: 
-
-
-## Future works
-
-- SIMD
-- Python client library
-- Accepts SQL and ASP input languages
-- Multi Way Join
-- Optimizer (CASCADE) and Adaptive Optimizer
-- Multi Workers
-- Write to disk
-- Server mode
+### Run Clingo (ASP Baseline)
+```bash
+/usr/bin/time -al clingo --mode=gringo --text benchmarks/files/asp/input/edge1M > /dev/null
+```
 
 ## Commands
 
 example test clingo:
+```bash
 /usr/bin/time -al clingo --mode=gringo --text benchmarks/files/asp/input/edge1M > /dev/null
+```
 
 example test bb:
+```
 /usr/bin/time -al ./cmake-build-release/BumbleBee -i benchmarks/files/asp/input/edge1M > /dev/null
+```
+
+### Build parser
+```
+	flex -o src/parser/aspcore2_lexer.hpp src/parser/aspcore2.l
+	bison -y -d -o src/parser/aspcore2_parser.c src/parser/aspcore2.y
+	bison -y -o src/parser/aspcore2_parser.hpp src/parser/aspcore2.y
+```
+
+
+## Clion
+Sometime clean the cmake Tools -> Cmake -> Reset Cache and Reload
+
+If Clion cannot load the the CMake project then delete the .idea folder
+
+## Build
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake build .
+
+## Test
+Run:
+```bash
+ctest
+```
+

@@ -18,6 +18,7 @@
  */
 #pragma once
 #include <memory>
+#include <unordered_map>
 
 #include "bumblebee/common/Constants.h"
 #include "bumblebee/common/TypeDefs.h"
@@ -97,6 +98,5 @@ private:
     sel_t* sel_vector_{nullptr};
     sel_ptr_t sel_data_;
 };
-
 
 }

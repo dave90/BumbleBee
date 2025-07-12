@@ -22,6 +22,7 @@
 
 namespace bumblebee {
 
+// HASH is constant type UBIGINT
 enum ConstantType: uint8_t  {
     TINYINT = 0,
     SMALLINT = 1,

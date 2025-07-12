@@ -35,6 +35,10 @@ enum class VectorType : uint8_t {
 
 using vector_data_mngr_ptr_t = VectorDataMngr::vector_data_mngr_ptr_t;
 
+// Selection vector cache used for caching vector slices
+struct SelCache {
+	std::unordered_map<sel_t *, vector_data_mngr_ptr_t> cache;
+};
 
 // Lightweight struct to navigate vector data
 struct VectorData {
@@ -82,6 +86,8 @@ public:
 	// Slice from another vector following selection vector (will set the data only on index present in selection vector ignoring the others)
 	void slice(Vector &other, const SelectionVector &sel, idx_t count);
 	void slice(const SelectionVector &sel, idx_t count);
+	// Slice and avoid to recalculate the slice of dictionary if sel is present in the cache
+	void slice(const SelectionVector &sel, idx_t count, SelCache& cache);
 
 	// Create empty vector
 	void initialize(bool zero_data, idx_t capacity);
@@ -258,4 +264,7 @@ struct SequenceVector {
 	static void getSequence(const Vector &vector, int64_t &start, int64_t &increment);
 };
 
+
+using vector_vector_t = std::vector<Vector>;
+using array_vector_data_t = std::unique_ptr<VectorData[]>;
 }

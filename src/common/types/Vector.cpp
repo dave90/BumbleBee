@@ -121,6 +121,28 @@ void Vector::slice(const SelectionVector &sel, idx_t count) {
     auxDataMngr_ = vector_data_mngr_ptr_t(new VectorChildDataMngr(std::move(child)));
 }
 
+void Vector::slice(const SelectionVector &sel, idx_t count, SelCache &cache) {
+    if (getVectorType() == VectorType::DICTIONARY_VECTOR) {
+        // check if we have a cached entry
+        auto &current_sel = DictionaryVector::selVector(*this);
+        auto target_data = current_sel.getData();
+        auto entry = cache.cache.find(target_data);
+        if (entry != cache.cache.end()) {
+            // cached entry exists: use that do not calculate the slice
+            auto selCached = ((DictionaryDataMngr &)*entry->second).getSelection();
+            dataMngr_ = vector_data_mngr_ptr_t( new DictionaryDataMngr(selCached) );
+            vtype_ = VectorType::DICTIONARY_VECTOR;
+        } else {
+            // calculate the slice and store the result in the cache
+            slice(sel, count);
+            cache.cache[target_data] = this->dataMngr_;
+        }
+    } else {
+        // if is not a dictionary call the normal slice
+        slice(sel, count);
+    }
+}
+
 void Vector::initialize(bool zeroData, idx_t capacity) {
     auxDataMngr_.reset();
     dataMngr_ = VectorDataMngr::createStandardVector(ctype_, capacity);

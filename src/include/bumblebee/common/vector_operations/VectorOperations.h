@@ -75,10 +75,10 @@ public:
     // static idx_t nestedLessThan(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
     // static idx_t nestedLessThanEquals(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
     //
-    // static void hash(Vector &input, Vector &hashes, idx_t count);
-    // static void hash(Vector &input, Vector &hashes, const SelectionVector &rsel, idx_t count);
-    // static void combineHash(Vector &hashes, Vector &B, idx_t count);
-    // static void combineHash(Vector &hashes, Vector &B, const SelectionVector &rsel, idx_t count);
+    static void hash(Vector &input, Vector &hashes, idx_t count);
+    static void hash(Vector &input, Vector &hashes, const SelectionVector &rsel, idx_t count);
+    static void combineHash(Vector &hashes, Vector &B, idx_t count);
+    static void combineHash(Vector &hashes, Vector &B, const SelectionVector &rsel, idx_t count);
     //
     static void generateSequence(Vector &result, idx_t count, int64_t start = 0, int64_t increment = 1);
     static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start = 0, int64_t increment = 1);

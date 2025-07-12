@@ -672,3 +672,9 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+
+This project includes code derived from the following third-party components:
+
+- DuckDb (MIT License)
+  See third_party/third_party_licenses/MIT-duckdb for license details.
