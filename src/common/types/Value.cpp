@@ -133,6 +133,38 @@ std::string Value::toString() const {
 }
 
 
+Value Value::cast(ConstantType type) const {
+    if (ctype_ == ConstantType::STRING && type == ConstantType::STRING)
+        return Value(stringValue_.c_str());
+
+    switch (type) {
+        case ConstantType::TINYINT:
+            return Value(getNumericValue<int8_t>());
+        case ConstantType::SMALLINT:
+            return Value(getNumericValue<int16_t>());
+        case ConstantType::INTEGER:
+            return Value(getNumericValue<int32_t>());
+        case ConstantType::BIGINT:
+            return Value(getNumericValue<int64_t>());
+        case ConstantType::UTINYINT:
+            return Value(getNumericValue<uint8_t>());
+        case ConstantType::USMALLINT:
+            return Value(getNumericValue<uint16_t>());
+        case ConstantType::UINTEGER:
+            return Value(getNumericValue<uint32_t>());
+        case ConstantType::UBIGINT:
+            return Value(getNumericValue<uint64_t>());
+        case ConstantType::FLOAT:
+            return Value(getNumericValue<float>());
+        case ConstantType::DOUBLE:
+            return Value(getNumericValue<double>());
+        case ConstantType::STRING:
+            return Value(toString());
+    }
+    ErrorHandler::errorNotImplemented("Cast not implemented.");
+    return {};
+}
+
 
 // --------------------  Template ------------------
 

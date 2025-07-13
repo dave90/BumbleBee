@@ -117,7 +117,7 @@ public:
 	void hash(Vector &result);
 
 	// Returns a list of types of the vectors of this data chunk
-	std::vector<ConstantType> GetTypes();
+	std::vector<ConstantType> getTypes();
 
 	// Converts this DataChunk to a printable string representation
 	std::string toString() const;

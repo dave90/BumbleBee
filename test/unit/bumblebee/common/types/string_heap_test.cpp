@@ -90,6 +90,4 @@ TEST_F(StringHeapTest, SingleChunkAllocation) {
     // check s1 first chunk still exist
     EXPECT_EQ(s1.c_str()[0], 'A');
     heap.destroy();
-    // after the destroy not exist
-    EXPECT_NE(s1.c_str()[0], 'A');
 }

@@ -1,6 +1,7 @@
 ## TODOLIST
 - Test data chunk
 - test vector operator copy hash sequence
+- chunk collection
 - look the operators (how to implement)
 - How to store fact in predicate table (and find for each column the type)
 - Query predicates (parsing) set all predicates internal

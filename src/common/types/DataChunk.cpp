@@ -29,12 +29,14 @@ DataChunk::DataChunk(DataChunk &&other) noexcept : count_(other.count_), capacit
 }
 
 Value DataChunk::getValue(idx_t col, idx_t index) const {
-    BB_ASSERT(col < getSize());
+    BB_ASSERT(col < columnCount());
+    BB_ASSERT(index < getSize());
     return data_[col].getValue(index);
 }
 
 void DataChunk::setValue(idx_t col, idx_t index, const Value &val) {
-    BB_ASSERT(col < getSize());
+    BB_ASSERT(col < columnCount());
+    BB_ASSERT(index < getSize());
     return data_[col].setValue(index, val);
 }
 
@@ -151,6 +153,7 @@ array_vector_data_t DataChunk::orrify() {
 }
 
 void DataChunk::slice(const SelectionVector &selVector, idx_t count) {
+    count_ = count;
     for (idx_t i = 0; i < columnCount(); i++) {
         data_[i].slice(selVector, count);
     }
@@ -175,10 +178,10 @@ void DataChunk::reset() {
     if (data_.empty()) {
         return;
     }
-
+    auto types = getTypes();
     data_.clear();
     count_ = 0;
-    initialize(GetTypes());
+    initialize(types);
 }
 
 void DataChunk::hash(Vector &result) {
@@ -190,7 +193,7 @@ void DataChunk::hash(Vector &result) {
     }
 }
 
-std::vector<ConstantType> DataChunk::GetTypes() {
+std::vector<ConstantType> DataChunk::getTypes() {
     std::vector<ConstantType> types;
     types.reserve(data_.size());
     for (auto&v : data_) {

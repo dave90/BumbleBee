@@ -59,11 +59,12 @@ public:
 	ConstantType getConstantType();
 	void setConstantType(ConstantType type);
 	std::string toString()const;
+	// Create a new Value casted base on type
+	Value cast(ConstantType type)const;
 
 	// template
-
 	template <class T>
-	T getNumericValue() {
+	T getNumericValue() const{
 		switch (ctype_) {
 			case ConstantType::TINYINT:
 				return static_cast<T>(value_.tinyint);
@@ -100,6 +101,7 @@ public:
 		ErrorHandler::errorNotImplemented("Unimplemented template type for Value::GetValueUnsafe");
 		return this;
 	}
+
 
 private:
 

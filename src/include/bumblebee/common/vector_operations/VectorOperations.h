@@ -76,11 +76,15 @@ public:
     // static idx_t nestedLessThanEquals(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
     //
     static void hash(Vector &input, Vector &hashes, idx_t count);
+    // hash only in the index inside the selection vector ( loc ignoring the idx)
+    // do the computation only for the sel index
     static void hash(Vector &input, Vector &hashes, const SelectionVector &rsel, idx_t count);
     static void combineHash(Vector &hashes, Vector &B, idx_t count);
     static void combineHash(Vector &hashes, Vector &B, const SelectionVector &rsel, idx_t count);
     //
     static void generateSequence(Vector &result, idx_t count, int64_t start = 0, int64_t increment = 1);
+    // generate only in the index inside the selection vector ( loc ignoring the idx)
+    // do the computation only for the sel index
     static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start = 0, int64_t increment = 1);
     //
     // static bool tryCast(Vector &source, Vector &result, idx_t count, string *error_message, bool strict = false);

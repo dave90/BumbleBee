@@ -32,7 +32,7 @@ sel_ptr_t SelectionVector::slice(const SelectionVector &sel, idx_t count) const 
 }
 
 std::string SelectionVector::toString(idx_t count) {
-    if (sel_vector_ == nullptr) return "";
+    if (!sel_data_) return "";
     std::string r = "";
     for (unsigned i = 0; i < count; i++) {
         r += std::to_string(sel_vector_[i]) + ", ";
