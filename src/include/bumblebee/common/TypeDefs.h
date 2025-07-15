@@ -34,7 +34,8 @@ enum ConstantType: uint8_t  {
     UBIGINT = 7,
     FLOAT = 8,
     DOUBLE = 9,
-    STRING = 10
+    STRING = 10,
+    UNKNOWN = 11
 };
 
 using hash_t = uint64_t;
@@ -49,5 +50,7 @@ using sel_t = uint32_t;
 using string = std::string;
 
 idx_t getCTypeSize(ConstantType type);
+bool isUnsigned(ConstantType type);
+ConstantType getBumpedType(ConstantType type);
 
 }

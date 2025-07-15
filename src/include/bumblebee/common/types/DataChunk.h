@@ -68,6 +68,9 @@ public:
 	inline void setCapacity(const DataChunk &other) {
 		capacity_ = other.capacity_;
 	}
+	inline idx_t getCapacity() const {
+    	return capacity_;
+    }
 
 	Value getValue(idx_t col, idx_t index) const;
 	void setValue(idx_t col, idx_t index, const Value &val);
@@ -133,6 +136,8 @@ private:
 	// The amount of tuples that can be stored in the data chunk
 	idx_t capacity_;
 };
+
+using data_chunk_ptr_t = std::unique_ptr<DataChunk>;
 
 
 }

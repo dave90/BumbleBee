@@ -90,6 +90,22 @@ bool Atom::containsAnonymous() const {
     return false;
 }
 
+bool Atom::containsRange() const {
+    for (auto& term : terms_)
+        if (term.getType() == TermType::RANGE)
+            return true;
+    return false;
+}
+
+std::vector<ConstantType> Atom::getTermsCType() {
+    std::vector<ConstantType> types;
+    types.reserve(terms_.size());
+    for (auto& term : terms_) {
+        types.push_back(term.getConstantType());
+    }
+    return types;
+}
+
 Atom & Atom::operator=(Atom &&other) noexcept {
     if (this == &other)
         return *this;

@@ -160,6 +160,8 @@ Value Value::cast(ConstantType type) const {
             return Value(getNumericValue<double>());
         case ConstantType::STRING:
             return Value(toString());
+        case ConstantType::UNKNOWN:
+            ;
     }
     ErrorHandler::errorNotImplemented("Cast not implemented.");
     return {};

@@ -39,4 +39,35 @@ idx_t getCTypeSize(ConstantType type) {
     }
 }
 
+bool isUnsigned(ConstantType type) {
+    switch (type) {
+        case UTINYINT:
+        case USMALLINT:
+        case UINTEGER:
+        case UBIGINT:
+            return true;
+        default:
+            return false;
+    }
+}
+
+ConstantType getBumpedType(ConstantType type) {
+    switch (type) {
+        case TINYINT:    return SMALLINT;
+        case SMALLINT:   return INTEGER;
+        case INTEGER:    return BIGINT;
+        case BIGINT:     return BIGINT;   // Already largest signed int
+
+        case UTINYINT:   return USMALLINT;
+        case USMALLINT:  return UINTEGER;
+        case UINTEGER:   return UBIGINT;
+        case UBIGINT:    return UBIGINT;  // Already largest unsigned int
+
+        case FLOAT:      return DOUBLE;
+        case DOUBLE:     return DOUBLE;   // Already largest floating point
+
+        default:         return type;
+    }
+}
+
 }

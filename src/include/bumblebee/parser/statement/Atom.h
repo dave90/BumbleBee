@@ -77,6 +77,12 @@ public:
     Binop getBinop() const;
     void setBinop(Binop binop);
     bool containsAnonymous() const;
+    bool containsRange() const;
+    std::vector<ConstantType> getTermsCType();
+
+    inline const Value& getValue(idx_t idx) const {
+        return terms_[idx].getValue();
+    }
 
 
 private:

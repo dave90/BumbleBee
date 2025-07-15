@@ -383,7 +383,7 @@ Value Vector::getValue(idx_t index) const {
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type access");
     }
-
+    return Value();
 }
 
 void Vector::setValue(idx_t index, const Value &val) {

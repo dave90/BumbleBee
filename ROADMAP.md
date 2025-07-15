@@ -1,10 +1,9 @@
 ## TODOLIST
-- Test data chunk
-- test vector operator copy hash sequence
-- chunk collection
-- look the operators (how to implement)
+- binary operators
+- design the operators (states and functions)
 - How to store fact in predicate table (and find for each column the type)
 - Query predicates (parsing) set all predicates internal
+- Hash map (look the umbra version)
 
 ## First draft
 - Data structure class (Data chunk and vector)

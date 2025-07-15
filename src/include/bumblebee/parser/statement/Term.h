@@ -91,7 +91,7 @@ public:
 	hash_t hash();
 	bool isNegative();
 	void setNegative(bool n);
-	TermType getType();
+	TermType getType() const;
 	ConstantType getConstantType();
 	void setType(TermType type);
 	bool isGround();
@@ -102,6 +102,10 @@ public:
 	void addInArithTerm(Term&& term, Operator op);
 	void addInArithTerm(Term&& term, char op);
 	bool containsAnonymous()const;
+
+	inline const Value& getValue()const {
+		return value_;
+	}
 
 	// template
 

@@ -139,11 +139,12 @@ hash_t Term::hash() {
             return Hash<double>(value_.getValueUnsafe<double>());
         case ConstantType::STRING:
             return Hash<string>(value_.getValueUnsafe<string>());
-        default: Hash(value_.getValueUnsafe<string>());
+        default: return Hash(value_.getValueUnsafe<string>());
     }
+
 }
 
-TermType Term::getType() {
+TermType Term::getType() const{
     return type_;
 }
 
