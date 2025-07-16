@@ -107,6 +107,10 @@ public:
 		return value_;
 	}
 
+	inline const IntervalTerm& getInterval()const {
+		return interval_;
+	}
+
 	// template
 
 	template <class T>

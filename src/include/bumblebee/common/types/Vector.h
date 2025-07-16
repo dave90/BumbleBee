@@ -30,7 +30,8 @@ enum class VectorType : uint8_t {
     FLAT_VECTOR,       // Flat vectors represent a standard uncompressed vector
     CONSTANT_VECTOR,   // Constant vector represents a single constant
     DICTIONARY_VECTOR, // Dictionary vector represents a selection vector on top of another vector
-    SEQUENCE_VECTOR    // Sequence vector represents a sequence with a start point and end point
+    SEQUENCE_VECTOR,    // Sequence vector represents a sequence with a start point and increment
+    SEQUENCE_CIRCULAR_VECTOR,    // Sequence circular vector represents a sequence (incremented by 1) with a start point and end point. If the size > end point the sequence restart
 };
 
 using vector_data_mngr_ptr_t = VectorDataMngr::vector_data_mngr_ptr_t;
@@ -55,6 +56,7 @@ class Vector {
 	friend struct DictionaryVector;
 	friend struct StringVector;
 	friend struct SequenceVector;
+	friend struct CircularSequenceVector;
 
 public:
 	// Reference to the other vector
@@ -105,6 +107,7 @@ public:
 	void orrify(idx_t count, VectorData &data);
 	// Transform the vector into a sequence
 	void sequence(int64_t start, int64_t increment);
+	void sequence(int64_t start, int64_t offfset, int64_t stride, int64_t end);
 
 	// Verify functions enabled only with DEBUG compilation
 	void verify(idx_t count);
@@ -262,6 +265,15 @@ struct StringVector {
 
 struct SequenceVector {
 	static void getSequence(const Vector &vector, int64_t &start, int64_t &increment);
+};
+
+struct CircularSequenceVector {
+	// startOffset is an index offset and stride is
+	// 'stride' represents how often the values in the target column repeat
+	// It is the product of the
+	// lengths of all sets before this column. This helps determine which
+	// value from the column's set should appear at a given row index for a Cartesian product and range rappresentation.
+	static void getSequence(const Vector &vector, int64_t &start,int64_t &offset, int64_t &stride, int64_t &end);
 };
 
 

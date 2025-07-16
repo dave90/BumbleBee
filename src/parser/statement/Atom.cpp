@@ -97,6 +97,12 @@ bool Atom::containsRange() const {
     return false;
 }
 
+bool Atom::containsArith() const {
+    for (auto& term : terms_)
+        if (term.getType() == TermType::ARITH)
+            return true;
+    return false;
+}
 std::vector<ConstantType> Atom::getTermsCType() {
     std::vector<ConstantType> types;
     types.reserve(terms_.size());

@@ -20,6 +20,7 @@
 
 #include "bumblebee/common/Hash.h"
 #include "bumblebee/common/Log.h"
+#include "bumblebee/common/types/Assert.h"
 
 
 namespace bumblebee {
@@ -149,6 +150,9 @@ TermType Term::getType() const{
 }
 
 ConstantType Term::getConstantType() {
+    if ( type_ == RANGE)
+        return ConstantType::INTEGER;
+    BB_ASSERT(type_ == CONSTANT);
     return value_.ctype_;
 }
 void Term::setType(TermType type) {

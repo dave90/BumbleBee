@@ -57,3 +57,33 @@ TEST(VectorOperationsGenerateSequenceTest, SequenceWithSelectionVector) {
     ASSERT_EQ(data[2], 100 + 2);
     ASSERT_EQ(data[4], 100 + 4);
 }
+
+TEST(VectorOperationsGenerateSequenceTest, BasicCircularSequenceGeneration) {
+    const idx_t count = 100;
+    Vector result(ConstantType::INTEGER, count);
+    VectorOperations::generateSequence(result, count, 10, 5, 1, 50);
+    int32_t* data = FlatVector::getData<int32_t>(result);
+    for (idx_t i = 0; i < count; ++i) {
+        ASSERT_EQ(data[i], 10 + ( (i + 5) %41));
+    }
+}
+
+TEST(VectorOperationsGenerateSequenceTest, BasicCircularSelectionSequenceGeneration) {
+    const idx_t count = 7;
+    Vector result(ConstantType::INTEGER, count);
+    SelectionVector sel(count);
+    sel.setIndex(0, 0);
+    sel.setIndex(1, 2);
+    sel.setIndex(2, 4);
+    sel.setIndex(3, 6);
+    sel.setIndex(4, 8);
+    sel.setIndex(5, 10);
+    sel.setIndex(6, 12);
+
+    VectorOperations::generateSequence(result, count, sel, 1, 0, 2, 5);
+    int32_t* data = FlatVector::getData<int32_t>(result);
+    for (idx_t i = 0; i < count; ++i) {
+        auto idx = sel.getIndex(i);
+        ASSERT_EQ(data[idx], 1 + ( i % 5));
+    }
+}

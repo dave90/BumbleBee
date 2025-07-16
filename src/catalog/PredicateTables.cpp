@@ -19,6 +19,7 @@
 #include "bumblebee/catalog/PredicateTables.h"
 
 #include "bumblebee/parser/statement/Atom.h"
+#include "bumblebee/parser/statement/Rule.h"
 
 namespace bumblebee{
 PredicateTables::PredicateTables(const char* name, unsigned arity): predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
@@ -50,45 +51,182 @@ void PredicateTables::updateTypes(std::vector<ConstantType>& newTypes) {
 }
 
 void PredicateTables::addFact(Atom &atom) {
+    if (atom.containsArith())
+        ErrorHandler::errorNotImplemented("Arith term in fact not implemented!");
+    auto types = atom.getTermsCType();
+    updateTypes(types);
+
     // track the types for each column
     if (!atom.containsRange()) {
-        auto types = atom.getTermsCType();
-        updateTypes(types);
         facts_.push_back(std::move(atom));
+    }else {
+        ranges_.push_back(std::move(atom));
     }
-    // fact atom is a sequence convert to sequence vector
-
 }
 
 std::vector<ConstantType> PredicateTables::getTypes() {
     return types_;
 }
 
+
 void PredicateTables::initializeChunks() {
-    if (facts_.empty()) return;
+    if (!facts_.empty()) loadFacts();
+    if (!ranges_.empty()) loadRanges();
+    facts_.clear();
+    ranges_.clear();
+}
+
+void PredicateTables::loadFacts() {
     auto types = getTypes();
     BB_ASSERT(types.size() == predicate_->getArity());
-    DataChunk chunk;
-    chunk.initialize(types);
-    auto columns = chunk.columnCount();
+    data_chunk_ptr_t chunk = data_chunk_ptr_t(new DataChunk());
+    chunk->initialize(types);
+
     idx_t idx = 0;
-    auto chunkCapacity = chunk.getCapacity();
+    auto chunkCapacity = chunk->getCapacity();
     auto factsSize = facts_.size();
-    // while until we add all the facts
-    while (idx < factsSize) {
-        // fill the data chunk or we finish the facts
-        for (idx_t i=0;i< chunkCapacity && idx < factsSize;++i) {
-            for (auto col = 0;col < columns;++col) {
-                chunk.setValue(col, idx, facts_[idx].getValue(col) );
+    for (auto& fact : facts_) {
+        auto factTypes = fact.getTermsCType();
+        // set all the columns
+        for (auto col = 0;col < types.size();++col) {
+            if (types[col] != factTypes[col])
+                // different column type cast it
+                chunk->setValue(col, idx, fact.getValue(col).cast(types[col]) );
+            else
+                chunk->setValue(col, idx, fact.getValue(col) );
+        }
+        ++idx;
+        // check chunk capacity
+        if (idx >= chunkCapacity ) {
+            chunk->setCardinality(idx);
+            // chunk is full add into atoms and create new chunk
+            chunks_.append(std::move(chunk));
+            chunk = data_chunk_ptr_t(new DataChunk());
+            chunk->initialize(types);
+            idx = 0;
+        }
+    }
+    chunk->setCardinality(idx);
+    if (chunk->getSize() > 0 ) {
+        // insert last chunk
+        chunks_.append(std::move(chunk));
+    }
+}
+
+
+std::vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const std::vector<ConstantType> &types) {
+    std::vector<data_chunk_ptr_t>  chunks;
+    data_chunk_ptr_t chunk = data_chunk_ptr_t(new DataChunk());
+    // we will set by us the vector data ;)
+    chunk->initializeEmpty(types);
+    chunk->data_.clear();
+
+    idx_t capacity = chunk->getCapacity();
+    auto &terms = atom.getTerms();
+    auto cardinality = 1;
+    // try to fit all in one chunk
+    for (idx_t i = 0; i < terms.size(); ++i) {
+        auto &term = terms[i];
+        if (term.getType() != RANGE) {
+            // constant column
+            Vector v(term.getValue());
+            chunk->data_.push_back(std::move(v));
+            continue;
+        }
+        // sequence column
+        auto& interval = term.getInterval();
+        BB_ASSERT(interval.to > interval.from);
+        // Set sequence type as BIGINT (64 bit) for handle big sequence
+        Vector v(ConstantType::BIGINT, nullptr);
+        v.sequence(interval.from, 0,  (int64_t) cardinality , interval.to);
+        cardinality = cardinality * (interval.to - interval.from + 1);
+        chunk->data_.push_back(std::move(v));
+    }
+    if (cardinality <= capacity) {
+        chunk->setCardinality(cardinality);
+        // the sequence is fit on one chunk
+        if (cardinality < capacity) {
+            // normalify and resize as does not fit an entire chunk
+            // resize is for allocate the data as capacity otherwise sequence allocate memory only for the sequence size
+            chunk->normalify();
+            chunk->resize(capacity);
+        }
+        chunks.push_back(std::move(chunk));
+        return chunks;
+    }
+    // chunk need to be split in multiple chunks
+    idx_t idx = 0;
+    auto& vectors = chunk->data_;
+    while (idx < cardinality) {
+        data_chunk_ptr_t schunk = data_chunk_ptr_t(new DataChunk());
+        schunk->initializeEmpty(types);
+        schunk->data_.clear();
+
+        for (idx_t col = 0; col < vectors.size(); ++col) {
+            if (vectors[col].getVectorType() == VectorType::CONSTANT_VECTOR) {
+                Vector newVec(atom.getValue(col));
+                schunk->data_.push_back(std::move(newVec));
+                continue;
             }
+            // sequence to split
+            int64_t start, stride, end, offset;
+            CircularSequenceVector::getSequence(vectors[col], start,offset, stride, end);
+            BB_ASSERT(offset == 0);
+            offset = (int64_t)idx;
+            Vector newVec(ConstantType::BIGINT, nullptr);
+            newVec.sequence(start, offset,  stride , end);
+            schunk->data_.push_back(std::move(newVec));
+        }
+        auto schunkCapacity = std::min(cardinality-idx, capacity); // the last split chunk can be smaller than capacity
+        schunk->setCardinality(schunkCapacity);
+        chunks.push_back(std::move(schunk));
+        idx += capacity;
+    }
+
+    // check last chunk size if fit the chunk
+    if (chunks.back()->getSize() < capacity) {
+        // resize and normalify as does not fit an entire chunk
+        chunks.back()->normalify();
+        chunks.back()->resize(capacity);
+    }
+    return chunks;
+}
+
+void PredicateTables::loadRanges() {
+
+    // process the range atoms
+    for (auto& atom: ranges_) {
+        auto chunks = getChunksFromRange(atom, types_);
+        auto chunksSize = chunks.size();
+
+        // check if the last chunk is not totally full
+        if (chunks_.chunkCount() > 0  ) {
+            auto &lastChunk = chunks_.chunks().back();
+            if (lastChunk->getSize() < lastChunk->getCapacity()) {
+                // merge the last chunk created by this atom with the last chunk stored (copy needed :( )
+                chunks_.append(*chunks.back());
+                if (chunksSize == 1) return;
+                // remove the chunk appended
+                chunks.pop_back();
+                --chunksSize;
+            }
+        }
+
+        for (auto& chunk: chunks) {
+            // do not copy the chunk :)
+            chunks_.append(std::move(chunk));
         }
 
     }
 }
 
+Value PredicateTables::getValue(idx_t column, idx_t index) {
+    return chunks_.getValue(column, index);
+}
+
 void PredicateTables::append(DataChunk &chunk) {
     // TODO mutex
-    atoms_.append(chunk);
+    chunks_.append(chunk);
     if (types_.size() > 0 && types_[0] == UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk.getTypes();

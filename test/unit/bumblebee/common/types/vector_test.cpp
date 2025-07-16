@@ -49,6 +49,37 @@ TEST(VectorTest, ConstructSequenceVector) {
     }
 }
 
+TEST(VectorTest, ConstructCircularSequenceVector) {
+    Vector vec(ConstantType::BIGINT);
+    vec.sequence(5,0, 1, 10); // 5 6 7 8 9 10 5 6 7 8 ...
+    EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_CIRCULAR_VECTOR);
+    std::cout <<vec.toString(10) << std::endl;
+    for (idx_t i = 0; i < 10; ++i) {
+        EXPECT_EQ(vec.getValue(i), Value((int64_t)( 5 + ( i % 6 ))));
+    }
+}
+
+TEST(VectorTest, ConstructCircularSequenceVectorWithOffsetAndStride) {
+    Vector vec(ConstantType::BIGINT);
+    vec.sequence(5,4, 2, 10); // 7 7 8 8 9 9 10 10 5 5 6 6 ....
+    EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_CIRCULAR_VECTOR);
+    std::cout <<vec.toString(10) << std::endl;
+    for (idx_t i = 0; i < 10; ++i) {
+        EXPECT_EQ(vec.getValue(i), Value((int64_t)( 5  + (i +4) / 2 % 6 ) ));
+    }
+}
+
+TEST(VectorTest, ConstructNegativeCircularSequenceVector) {
+    Vector vec(ConstantType::BIGINT);
+    vec.sequence(-4, 0, 3, 4); // -4 -4 -4 -3 -3 -3 -2 -2 -2 -1 -1 -1 ....
+    EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_CIRCULAR_VECTOR);
+    std::cout <<vec.toString(20) << std::endl;
+    for (idx_t i = 0; i < 100; ++i) {
+        auto val = (int64_t)(-4 + (i / 3 % 9));
+        EXPECT_EQ(vec.getValue(i), Value(val));
+    }
+}
+
 TEST(VectorTest, MoveConstructor) {
     Vector vec1(ConstantType::INTEGER, true);
     vec1.setValue(0, Value(123));
@@ -155,6 +186,35 @@ TEST(VectorTest, NormalifySequenceVector) {
     EXPECT_EQ(vec.getValue(3), Value((int64_t)19));
 }
 
+TEST(VectorTest, NormalifyCircularSequenceVector) {
+    Vector vec(ConstantType::BIGINT);
+    vec.sequence(10, 0, 1,20); // 10 11 12 13 14 15 16 17 18 19 20 10 11 12 .....
+    std::cout << vec.toString(20) << std::endl;
+    vec.normalify(20);
+    std::cout << vec.toString(20) << std::endl;
+
+    EXPECT_EQ(vec.getVectorType(), VectorType::FLAT_VECTOR);
+    EXPECT_EQ(vec.getValue(0), Value((int64_t)10));
+    EXPECT_EQ(vec.getValue(1), Value((int64_t)11));
+    EXPECT_EQ(vec.getValue(2), Value((int64_t)12));
+    EXPECT_EQ(vec.getValue(10), Value((int64_t)20));
+    EXPECT_EQ(vec.getValue(11), Value((int64_t)10));
+}
+
+TEST(VectorTest, NormalifyCircularSequenceVectorWithOffset) {
+    Vector vec(ConstantType::BIGINT);
+    vec.sequence(10, 10, 1,20); // 20 10 11 12 13 ...
+    std::cout << vec.toString(15) << std::endl;
+    vec.normalify(15);
+    std::cout << vec.toString(15) << std::endl;
+
+    EXPECT_EQ(vec.getVectorType(), VectorType::FLAT_VECTOR);
+    EXPECT_EQ(vec.getValue(0), Value((int64_t)20));
+    EXPECT_EQ(vec.getValue(1), Value((int64_t)10));
+    EXPECT_EQ(vec.getValue(2), Value((int64_t)11));
+    EXPECT_EQ(vec.getValue(12), Value((int64_t)10));
+}
+
 TEST(VectorTest, NormalifySequenceWithSelection) {
     Vector vec(ConstantType::BIGINT);
     vec.sequence(100, 5);
@@ -163,8 +223,8 @@ TEST(VectorTest, NormalifySequenceWithSelection) {
     sel.setIndex(0, 0);
     sel.setIndex(1, 2);
     sel.setIndex(2, 4);
-    // std::cout << vec.toString(5) << std::endl;
     vec.normalify(sel, 3);
+    // std::cout << vec.toString(5) << std::endl;
 
     EXPECT_EQ(vec.getVectorType(), VectorType::FLAT_VECTOR);
     auto vv = vec.getValue(0);
@@ -173,6 +233,29 @@ TEST(VectorTest, NormalifySequenceWithSelection) {
     EXPECT_EQ(vec.getValue(sel.getIndex(2)), Value((int64_t)120));   // 100 + 5*4
 }
 
+TEST(VectorTest, SliceAndNormalifyCircularSequenceWithOffset) {
+    Vector vec(ConstantType::BIGINT);
+    vec.sequence(-3, 5, 3, -1);
+    // -2 -1 -1 -1 -3 -3 -3 -2 -2 -2
+
+    SelectionVector sel(4);
+    sel.setIndex(0, 0);
+    sel.setIndex(1, 1);
+    sel.setIndex(2, 4);
+    sel.setIndex(3, 7);
+    std::cout << vec.toString(10) << std::endl;
+    vec.slice(sel, 4);
+    std::cout << vec.toString(4) << std::endl;
+    vec.normalify( 4);
+    std::cout << vec.toString(4) << std::endl;
+
+
+    EXPECT_EQ(vec.getVectorType(), VectorType::FLAT_VECTOR);
+    EXPECT_EQ(vec.getValue(0), Value((int64_t)-2));
+    EXPECT_EQ(vec.getValue(1), Value((int64_t)-1));
+    EXPECT_EQ(vec.getValue(2), Value((int64_t)-3));
+    EXPECT_EQ(vec.getValue(3), Value((int64_t)-2));
+}
 
 TEST(VectorTest, OrrifyFlatVector) {
     Vector vec(ConstantType::INTEGER, 10);

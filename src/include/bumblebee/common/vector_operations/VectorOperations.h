@@ -82,10 +82,12 @@ public:
     static void combineHash(Vector &hashes, Vector &B, idx_t count);
     static void combineHash(Vector &hashes, Vector &B, const SelectionVector &rsel, idx_t count);
     //
-    static void generateSequence(Vector &result, idx_t count, int64_t start = 0, int64_t increment = 1);
-    // generate only in the index inside the selection vector ( loc ignoring the idx)
+    static void generateSequence(Vector &result, idx_t count, int64_t start, int64_t increment);
+    static void generateSequence(Vector &result, idx_t count, int64_t start, int64_t offset,  int64_t stride, int64_t end);
+    // generate sequence only in the index inside the selection vector
     // do the computation only for the sel index
-    static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start = 0, int64_t increment = 1);
+    static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start, int64_t increment);
+    static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start, int64_t offset, int64_t stride, int64_t end );
     //
     // static bool tryCast(Vector &source, Vector &result, idx_t count, string *error_message, bool strict = false);
     // static void cast(Vector &source, Vector &result, idx_t count, bool strict = false);

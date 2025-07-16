@@ -68,6 +68,9 @@ public:
 	inline void setCapacity(const DataChunk &other) {
 		capacity_ = other.capacity_;
 	}
+	inline void setCapacity(idx_t capacity) {
+    	capacity_ = capacity;
+    }
 	inline idx_t getCapacity() const {
     	return capacity_;
     }
@@ -91,6 +94,8 @@ public:
 	// TODO move sel vector to shared ptr
 	void append(const DataChunk &other, bool resize = false, SelectionVector *sel = nullptr,
 	                       idx_t count = 0);
+	// Resize all the vectors
+	void resize(idx_t size);
 
 	// Destroy all data and columns owned by this DataChunk
 	void destroy();

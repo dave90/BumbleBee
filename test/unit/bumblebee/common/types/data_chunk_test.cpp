@@ -113,6 +113,7 @@ TEST(DataChunkTests, AppendWithoutResizeInt32) {
     }
 }
 
+
 TEST(DataChunkTests, AppendWithSelectionVectorInt32) {
     DataChunk chunk1;
     chunk1.initialize({ConstantType::INTEGER, ConstantType::UBIGINT});

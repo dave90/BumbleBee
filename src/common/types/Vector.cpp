@@ -168,6 +168,15 @@ string Vector::toString(idx_t count) const {
             s += std::to_string(start +increment * i) + ", ";
         }
     }
+    if (vtype_ == VectorType::SEQUENCE_CIRCULAR_VECTOR) {
+        int64_t start, offset, stride , end;
+        CircularSequenceVector::getSequence(*this, start, offset, stride, end);
+        int64_t size = end - start + 1;
+        for (unsigned int i = 0; i < count; i++) {
+            int64_t val = start + (i+offset) / stride % size;
+            s += std::to_string(val) + ", ";
+        }
+    }
 
     return s + "]";
 
@@ -177,6 +186,7 @@ string Vector::toString() const {
     string s = "Vector type("+std::to_string(static_cast<int>(vtype_))+"), Type("+std::to_string(ctype_)+ ") [";
     switch (vtype_) {
         case VectorType::SEQUENCE_VECTOR:
+        case VectorType::SEQUENCE_CIRCULAR_VECTOR:
         case VectorType::FLAT_VECTOR:
         case VectorType::DICTIONARY_VECTOR:
             break;
@@ -214,6 +224,14 @@ void Vector::normalify(idx_t count) {
         dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
         data_ = dataMngr_->getData();
         VectorOperations::generateSequence(*this, count, start, increment);
+        return;
+    }
+    if (vtype_ == VectorType::SEQUENCE_CIRCULAR_VECTOR) {
+        int64_t start, stride, end, offset;
+        CircularSequenceVector::getSequence(*this, start,offset, stride, end);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
+        data_ = dataMngr_->getData();
+        VectorOperations::generateSequence(*this, count, start, offset, stride, end);
         return;
     }
     if (vtype_ == VectorType::CONSTANT_VECTOR) {
@@ -277,7 +295,14 @@ void Vector::normalify(const SelectionVector &sel, idx_t count) {
         data_ = dataMngr_->getData();
         VectorOperations::generateSequence(*this, count, sel, start, increment );
         return;
-
+    }
+    if (vtype_ == VectorType::SEQUENCE_CIRCULAR_VECTOR) {
+        int64_t start, stride, end,offset;
+        CircularSequenceVector::getSequence(*this, start,offset, stride, end);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType());
+        data_ = dataMngr_->getData();
+        VectorOperations::generateSequence(*this, count, sel, start, offset, stride, end );
+        return;
     }
     ErrorHandler::errorNotImplemented("Vector::normalify not implemented");
 }
@@ -319,6 +344,18 @@ void Vector::sequence(int64_t start, int64_t increment) {
     data[1] = increment;
 }
 
+void Vector::sequence(int64_t start, int64_t offset, int64_t stride, int64_t end) {
+    BB_ASSERT(start < end );
+    vtype_ = VectorType::SEQUENCE_CIRCULAR_VECTOR;
+    auxDataMngr_.reset();
+    dataMngr_  = vector_data_mngr_ptr_t(new VectorDataMngr(4 * sizeof(int64_t)));
+    auto data = (int64_t*) dataMngr_->getData();
+    data[0] = start;
+    data[1] = offset;
+    data[2] = stride;
+    data[3] = end;
+}
+
 void Vector::verify(idx_t count) {
     //TODO
 }
@@ -352,6 +389,13 @@ Value Vector::getValue(idx_t index) const {
             int64_t start, increment;
             SequenceVector::getSequence(*this, start, increment);
             return Value( start + index * increment);
+        }
+        case VectorType::SEQUENCE_CIRCULAR_VECTOR: {
+            int64_t start, stride, end, offset;
+            CircularSequenceVector::getSequence(*this, start, offset, stride, end);
+            int64_t size = end - start + 1;
+            int64_t val = start + ((int64_t)index + offset) / stride % size;
+            return Value( val);
         }
         case VectorType::FLAT_VECTOR:
             ;
@@ -398,6 +442,7 @@ void Vector::setValue(idx_t index, const Value &val) {
             return child.setValue(index, val);
         }
         case VectorType::SEQUENCE_VECTOR:
+        case VectorType::SEQUENCE_CIRCULAR_VECTOR:
             ErrorHandler::errorNotImplemented("Unimplemented set type on constant");
         case VectorType::FLAT_VECTOR:
         case VectorType::CONSTANT_VECTOR:
@@ -546,5 +591,14 @@ void SequenceVector::getSequence(const Vector &vector, int64_t &start, int64_t &
     auto data = (int64_t *)vector.dataMngr_->getData();
     start = data[0];
     increment = data[1];
+}
+
+void CircularSequenceVector::getSequence(const Vector &vector, int64_t &start, int64_t &offset, int64_t &stride, int64_t &end) {
+    BB_ASSERT(vector.getVectorType() == VectorType::SEQUENCE_CIRCULAR_VECTOR);
+    auto data = (int64_t *)vector.dataMngr_->getData();
+    start = data[0];
+    offset = data[1];
+    stride = data[2];
+    end = data[3];
 }
 }

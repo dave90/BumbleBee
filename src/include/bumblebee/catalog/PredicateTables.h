@@ -38,10 +38,11 @@ public:
     // move the atom in the fact vector
     void addFact(Atom& atom);
     // Move the fact into the chunk if any
+    // Call before sourcing the chunks
     void initializeChunks();
     // The amount of rows in the ChunkCollection
     idx_t getCount() const {
-        return atoms_.getCount();
+        return chunks_.getCount();
     }
     // The amount of columns
     idx_t columnCount() const {
@@ -49,12 +50,15 @@ public:
     }
     // The amount of chunks
     idx_t chunkCount() const {
-        return atoms_.chunkCount();
+        return chunks_.chunkCount();
     }
     // Gets a reference to the chunk at the given index
     DataChunk & getChunk(idx_t index) {
-        return atoms_.getChunk(index);
+        return chunks_.getChunk(index);
     }
+    // Get a value given a row and column index
+    Value getValue(idx_t column, idx_t index);
+
     // Append a data chunk
     void append(DataChunk &chunk);
     // Return the Constat types for each column
@@ -70,14 +74,21 @@ public:
 protected:
     // Update current types based on new types
     void updateTypes(std::vector<ConstantType> &newTypes);
+    void loadFacts();
+    void loadRanges();
 
     // Types of the columns
     std::vector<ConstantType> types_;
 
     // Data Chunk collections of atoms (columnar version)
-    ChunkCollection atoms_;
-    // Fact cached during the parsing not loaded
+    ChunkCollection chunks_;
+    // Fact cached during the parsing (not loaded)
+    // after the initializeChunks() will be cleared
+    // TODO posible optimization store in a row chunks
     std::vector<Atom> facts_;
+    // facts that contains ranges
+    // after the initializeChunks() will be cleared
+    std::vector<Atom> ranges_;
 
     // cache output
     // hash tables etc

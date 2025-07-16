@@ -78,6 +78,7 @@ public:
     void setBinop(Binop binop);
     bool containsAnonymous() const;
     bool containsRange() const;
+    bool containsArith() const;
     std::vector<ConstantType> getTermsCType();
 
     inline const Value& getValue(idx_t idx) const {

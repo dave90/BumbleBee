@@ -36,7 +36,7 @@ Value DataChunk::getValue(idx_t col, idx_t index) const {
 
 void DataChunk::setValue(idx_t col, idx_t index, const Value &val) {
     BB_ASSERT(col < columnCount());
-    BB_ASSERT(index < getSize());
+    BB_ASSERT(index < getCapacity());
     return data_[col].setValue(index, val);
 }
 
@@ -95,6 +95,11 @@ void DataChunk::append(const DataChunk &other, bool resize, SelectionVector *sel
     setCardinality(newSize);
 }
 
+void DataChunk::resize(idx_t size) {
+    for (auto& v:data_)
+        v.resize(count_, size);
+}
+
 void DataChunk::destroy() {
     data_.clear();
     capacity_ = 0;
@@ -103,7 +108,7 @@ void DataChunk::destroy() {
 
 void DataChunk::copy(DataChunk &other, idx_t offset) const {
     BB_ASSERT(columnCount() == other.columnCount());
-    BB_ASSERT((other.getSize() - offset) <= getSize());
+    BB_ASSERT(other.getSize() == 0); // other is the target chunk so size should be 0
 
     for (idx_t i = 0; i < columnCount(); i++) {
         BB_ASSERT(other.data_[i].getVectorType() == VectorType::FLAT_VECTOR);

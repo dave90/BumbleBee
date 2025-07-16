@@ -59,11 +59,19 @@ void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCo
             SequenceVector::getSequence(source, start, increment);
             Vector flattened(source.getType());
             VectorOperations::generateSequence(flattened, sourceCount, start, increment);
-
             VectorOperations::copy(flattened, target, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,
                                    targetOffset);
             break;
         }
+    	case VectorType::SEQUENCE_CIRCULAR_VECTOR: {
+        	int64_t start, offset, stride, end;
+        	CircularSequenceVector::getSequence(source, start, offset, stride, end);
+        	Vector flattened(source.getType());
+        	VectorOperations::generateSequence(flattened, sourceCount, start, offset, stride, end);
+        	VectorOperations::copy(flattened, target, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,
+								   targetOffset);
+        	break;
+    	}
         default:
             ErrorHandler::errorNotImplemented("Error: unimplemented vector type for VectorOperations::Copy");
     }
@@ -95,6 +103,14 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 		VectorOperations::copy(seq, target, sel, sourceCount, sourceOffset, targetOffset);
 		return;
 	}
+	case VectorType::SEQUENCE_CIRCULAR_VECTOR: {
+		int64_t start, stride, end, offset;
+		Vector seq(source.getType());
+		CircularSequenceVector::getSequence(source, start,offset, stride, end);
+		VectorOperations::generateSequence(seq, sourceCount, sel, start, offset, stride, end);
+		VectorOperations::copy(seq, target, sel, sourceCount, sourceOffset, targetOffset);
+		return;
+		}
 	case VectorType::CONSTANT_VECTOR:
 		// sel SHOULD BE a ZERO SELECTION VECTOR
 		break; // carry on with below code

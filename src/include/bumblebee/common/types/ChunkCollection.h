@@ -44,10 +44,9 @@ public:
 		return types_.size();
 	}
 
-	// Append a new DataChunk to this ChunkCollection handling type checks and partial fills,
+	// Append a new DataChunk to this ChunkCollection handling type checks and partial fills (NOTE: this append copy the chunk)
 	void append(DataChunk &chunk);
-
-	// Append a new DataChunk directly to this ChunkCollection
+	// Append a new DataChunk directly to this ChunkCollection (NOTE: this append do not copy the chunk)
 	void append(data_chunk_ptr_t chunk);
 
 	// Append another ChunkCollection directly to this ChunkCollection
