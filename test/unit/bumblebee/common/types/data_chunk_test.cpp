@@ -155,6 +155,7 @@ TEST(DataChunkTests, CopyDataChunkInt32) {
         }
     }
 
+    chunk1.setCardinality(0);
     chunk2.copy(chunk1);
     EXPECT_EQ(chunk2.getSize(), 100);
     // expected same values in chunk1 and chunk2
@@ -204,11 +205,11 @@ TEST(DataChunkTests, ResetInt32) {
 TEST(DataChunkTests, SplitInt32) {
     DataChunk chunk1;
     chunk1.initialize({ConstantType::INTEGER, ConstantType::INTEGER, ConstantType::INTEGER});
-    fillChunk(chunk1, 100);
     // copy the chunk
     DataChunk originalChunk;
     originalChunk.initialize({ConstantType::INTEGER, ConstantType::INTEGER, ConstantType::INTEGER});
     originalChunk.setCardinality(100);
+    fillChunk(originalChunk, 100);
     originalChunk.copy(chunk1);
 
     DataChunk chunk2;

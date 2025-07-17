@@ -198,7 +198,7 @@ TEST_F(PredicateTablesTest, TestSmallSequence) {
     }
 }
 
-TEST_F(PredicateTablesTest, TestSmallSequenceWithConstant) {
+TEST_F(PredicateTablesTest, TestSmallSequenceWithConstantAndFact) {
     IntervalTerm i1 = {1,2};
     IntervalTerm i2 = {5,  5};
     IntervalTerm i3 = {-1,1};
@@ -206,15 +206,28 @@ TEST_F(PredicateTablesTest, TestSmallSequenceWithConstant) {
     auto fact = generateRangeAtom(table->predicate_.get(), intervals);
     table->addFact(fact);
 
+    terms_vector_t terms;
+    terms.emplace_back((uint32_t)100);
+    terms.emplace_back(200);
+    terms.emplace_back((int64_t)300);
+    Atom fact1(table->predicate_.get(), std::move(terms), AtomType::CLASSICAL);
+    table->addFact(fact1);
+    terms.clear();
+
     table->initializeChunks();
-    ASSERT_EQ(table->getCount(), 2*3);
+    ASSERT_EQ(table->getCount(), 2*3 + 1);
     std::cout << table->getChunk(0).toString() <<std::endl;
+
+    // Check the first row should be fact1
+    EXPECT_EQ(Value((int64_t)100),table->getChunk(0).getValue(0,0));
+    EXPECT_EQ(Value((int64_t)200),table->getChunk(0).getValue(1,0));
+    EXPECT_EQ(Value((int64_t)300),table->getChunk(0).getValue(2,0));
 
     // check results
     auto cartesianTable = generateCartesianProduct(i1,i2,i3);
     for (unsigned i =0; i < cartesianTable.size() ; ++i) {
         for (unsigned j =0; j < cartesianTable[i].size() ; ++j) {
-            EXPECT_EQ(Value((int64_t)cartesianTable[i][j]),table->getChunk(0).getValue(j,i));
+            EXPECT_EQ(Value((int64_t)cartesianTable[i][j]),table->getChunk(0).getValue(j,i + 1));
         }
     }
 }
