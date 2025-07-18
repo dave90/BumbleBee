@@ -143,6 +143,6 @@ private:
 };
 
 using data_chunk_ptr_t = std::unique_ptr<DataChunk>;
-
+using data_chunk_vector_t = std::vector<data_chunk_ptr_t>;
 
 }

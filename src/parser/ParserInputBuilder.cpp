@@ -66,6 +66,8 @@ void ParserInputBuilder::onRule() {
         // TODO add the fact in the predicate table
         Atom fact = std::move(currentRule.getHead()[0]);
         std::cout<<fact.toString()<< "." <<std::endl;
+        auto& pt = currentSchema_.get().getPredicateTable(fact.getPredicate());
+        pt->addFact(fact);
         currentRule = {};
         return;
     }

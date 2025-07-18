@@ -17,30 +17,36 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <map>
-#include <string>
-
-#include "PredicateTables.h"
+#include "PhysicalRule.h"
 
 namespace bumblebee{
 
-using predicates_tables_map = std::unordered_map<PredicateMapEntry, predicate_table_ptr_t, PredicateMapEntry::PEHash>;
-
-class Schema {
-public:
-    explicit Schema(const std::string &name);
-
-    ~Schema() = default;
-
-    Schema(const Schema &other) = delete;
-    Schema & operator=(const Schema &other) = delete;
-    Predicate* createPredicate(char* predicateName, unsigned arity);
-    predicate_table_ptr_t& getPredicateTable(Predicate*);
-
+// Executor of Physical Rule.
+// Each execution is a thread
+// Handle the local state of the operators
+// Flow:
+// - Init the states
+// - Call the get data from the source operator
+// - Call the operators
+// - Call the Sink
+// Finalize ???
+class PhysicalRuleExecutor {
 private:
-    std::string name_;
-    predicates_tables_map ptables_;
+    prule_ptr_t prule_;
 
+    pstate_ptr_vector_t states_;
+    // intermediate chunks
+    data_chunk_vector_t chunks_;
+
+    pstate_ptr_t sourceState_;
+    pstate_ptr_t sinkState_;
+
+    // final chunk to send into the sink
+    DataChunk finalChunk_;
+    // result type for each intermediate physical atom
+    std::vector<AtomResultType> atomResults_;
+
+    // TODO Execution context with a  profiler
 };
 
 

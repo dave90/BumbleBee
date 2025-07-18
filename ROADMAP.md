@@ -1,17 +1,15 @@
 ## TODOLIST
 - binary operators
 - design the operators (states and functions)
-- How to store fact in predicate table (and find for each column the type)
 - Query predicates (parsing) set all predicates internal
 - Hash map (look the umbra version)
 
 ## First draft
-- Data structure class (Data chunk and vector)
-- Vector operations
 - Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner
 - Executor
 - Aggregation
+- Profiler
 
 ## Next
 - Benchmarks
@@ -31,5 +29,5 @@
 - ASP?
 
 ## v1
-- Master and slave architecture
+- Master and slave architecture?
 - Serialize/ Deserialize data to disk

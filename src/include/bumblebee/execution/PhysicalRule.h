@@ -17,31 +17,23 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <map>
-#include <string>
 
-#include "PredicateTables.h"
+#include "PhysicalAtom.h"
 
 namespace bumblebee{
 
-using predicates_tables_map = std::unordered_map<PredicateMapEntry, predicate_table_ptr_t, PredicateMapEntry::PEHash>;
-
-class Schema {
-public:
-    explicit Schema(const std::string &name);
-
-    ~Schema() = default;
-
-    Schema(const Schema &other) = delete;
-    Schema & operator=(const Schema &other) = delete;
-    Predicate* createPredicate(char* predicateName, unsigned arity);
-    predicate_table_ptr_t& getPredicateTable(Predicate*);
-
+// Physical Rule contains the source sink and atoms
+// Contains also the global states shared by all the threads
+class PhysicalRule {
 private:
-    std::string name_;
-    predicates_tables_map ptables_;
+    patom_ptr_t source_;
+    patom_ptr_t sink_;
+    patom_ptr_vector_t patoms_;
 
+    gpstate_ptr_t sourceGlobalState_;
+    gpstate_ptr_t sinkGlobalState_;
 };
 
+using prule_ptr_t = std::shared_ptr<PhysicalRule>;
 
 }

@@ -36,4 +36,10 @@ Predicate * Schema::createPredicate(char *predicateName, unsigned arity) {
     return p;
 }
 
+predicate_table_ptr_t & Schema::getPredicateTable(Predicate* p) {
+    PredicateMapEntry pe {p->getName(), p->getArity()};
+    auto it = ptables_.find(pe);
+    BB_ASSERT(it != ptables_.end());
+    return it->second;
+}
 }

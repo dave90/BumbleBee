@@ -63,7 +63,7 @@ private:
     // if is EDB (facts) or IDB
     bool edb_{false};
     // if is used only for internal computation (no printing or stored)
-    bool internal_{false};
+    bool internal_{true};
     // If the predicated is solved or undefined
     bool solved_{true};
 };
