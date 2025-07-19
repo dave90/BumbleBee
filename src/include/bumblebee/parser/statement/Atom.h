@@ -60,7 +60,7 @@ public:
     hash_t hash();
     void getVariables(set_term_variable_t &variables);
     bool isGround();
-    std::string toString();
+    std::string toString() const;
 
 
     friend bool operator==(const Atom &lhs, const Atom &rhs);

@@ -85,7 +85,7 @@ public:
 		return *chunks_[chunk_index];
 	}
 
-	const std::vector<data_chunk_ptr_t> &chunks() {
+	std::vector<data_chunk_ptr_t> &chunks() {
 		return chunks_;
 	}
 

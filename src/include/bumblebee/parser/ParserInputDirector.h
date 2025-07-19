@@ -30,7 +30,7 @@ using builder_ptr_t = std::shared_ptr<ParserInputBuilder>;
 class ParserInputDirector {
 
 public:
-    ParserInputDirector();
+    ParserInputDirector(OutputType type);
     ~ParserInputDirector() = default;
 
     void configureBuilder( builder_ptr_t );
@@ -53,6 +53,7 @@ private:
     bool parserStateInternal_;
     builder_ptr_t builder_;
     bool findError_;
+    OutputType outputType_;
 };
 };
 

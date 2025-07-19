@@ -49,6 +49,24 @@ void DataChunk::reference(DataChunk &chunk) {
     }
 }
 
+void DataChunk::reference(DataChunk &chunk, const std::vector<idx_t>& cols) {
+    BB_ASSERT(columnCount() >= cols.size());
+    setCapacity(chunk);
+    setCardinality(chunk);
+    for (idx_t i = 0; i < cols.size(); ++i) {
+        auto idx = cols[i];
+        BB_ASSERT(idx < columnCount());
+        data_[i].reference(chunk.data_[idx]);
+    }
+}
+
+std::unique_ptr<DataChunk> DataChunk::clone() {
+    data_chunk_ptr_t chunk = std::make_unique<DataChunk>();
+    chunk->initializeEmpty(getTypes());
+    chunk->reference(*this);
+    return chunk;
+}
+
 void DataChunk::initialize(const std::vector<ConstantType> &types) {
     BB_ASSERT(data_.empty());
     capacity_ = STANDARD_VECTOR_SIZE;

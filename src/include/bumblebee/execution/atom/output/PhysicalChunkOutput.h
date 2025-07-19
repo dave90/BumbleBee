@@ -18,36 +18,40 @@
  */
 #pragma once
 #include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/catalog/Schema.h"
 #include "bumblebee/execution/PhysicalAtom.h"
-#include "bumblebee/parser/statement/Predicate.h"
+#include "bumblebee/output/OutputBuilder.h"
 
 namespace bumblebee{
 
-
-// Scan the chunks and return the input to be processed
-// The operator can also do a projection is cols to fetch are passed in the constructor
-// The global state return the chunks to be processed of the operator (sync with mutex)
-class PhysicalChunkScan : public PhysicalAtom {
+// Sink Physical Atom (patom) that receive a data chunk and push in
+// predicate table and if is not internal output it
+class PhysicalChunkOutput : PhysicalAtom {
 public:
-    PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t>& colsToProject, idx_t estimated_cardinality, PredicateTables* pt);
-    PhysicalChunkScan(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables* pt);
+    PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables *pt,
+        OutputBuilder& obuilder);
+    PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables *pt,
+        std::vector<idx_t> &cols, OutputBuilder& obuilder);
 
-    ~PhysicalChunkScan() override;
-
-    AtomResultType getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
-    bool isSource() const override;
+    ~PhysicalChunkOutput() override;
+    AtomResultType sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+    void finalize(GlobalPhysicalAtomState& gstate) const override;
+    DataChunk projectColumns(DataChunk &input) const;
+    bool isSink() const override;
     string getName() const override;
     string toString() const override;
     pstate_ptr_t getState() const override;
     gpstate_ptr_t getGlobalState() const override;
 
 private:
-    // pointer to the predicate table to source the data
+    // output the chunk
+    void outputChunk(data_chunk_ptr_t& chunk) const;
+
+    // pointer to the predicate table to store the data
     PredicateTables* pt_;
     // cols to project
     std::vector<idx_t> cols_;
-
+    // Reference of the Output builder
+    OutputBuilder& obuilder_;
 };
 
 

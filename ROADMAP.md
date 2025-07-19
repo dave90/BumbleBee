@@ -1,7 +1,6 @@
 ## TODOLIST
 - binary operators
 - design the operators (states and functions)
-- Query predicates (parsing) set all predicates internal
 - Hash map (look the umbra version)
 
 ## First draft

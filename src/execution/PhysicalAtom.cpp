@@ -31,8 +31,9 @@ AtomResultType PhysicalAtom::execute(DataChunk &input, DataChunk &chunk, Physica
     return AtomResultType::FINISHED;
 }
 
-void PhysicalAtom::getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
+AtomResultType PhysicalAtom::getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
     ErrorHandler::errorNotImplemented("Calling getData on general physical atom");
+    return AtomResultType::FINISHED;
 }
 
 AtomResultType PhysicalAtom::sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
@@ -40,7 +41,7 @@ AtomResultType PhysicalAtom::sink(DataChunk &input, PhysicalAtomState &state, Gl
     return AtomResultType::FINISHED;
 }
 
-void PhysicalAtom::finalize() const {
+void PhysicalAtom::finalize(GlobalPhysicalAtomState& gstate) const {
 }
 
 bool PhysicalAtom::isSource() const {

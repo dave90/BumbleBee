@@ -54,7 +54,7 @@ void BumbleBeeDB::run() {
         ErrorHandler::errorGeneric("Error, only single shot mode is avaliable.");
     }
     // Parse the program
-    ParserInputDirector inputDirector;
+    ParserInputDirector inputDirector(TEXT); // DEFAULT TEXT output
     inputDirector.parse(inputFiles_);
     // Check errors during parsing
     if (inputDirector.getBuilder()->isFoundASafetyError()) {

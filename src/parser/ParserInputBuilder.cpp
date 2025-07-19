@@ -26,7 +26,10 @@
 namespace bumblebee {
 
 
-ParserInputBuilder::ParserInputBuilder(): currentSchema_(Catalog::instance().getDefaultSchema()), hiddenNewPredicate(false) {
+ParserInputBuilder::ParserInputBuilder(): ParserInputBuilder(NONE) {
+}
+
+ParserInputBuilder::ParserInputBuilder(OutputType type): currentSchema_(Catalog::instance().getDefaultSchema()), hiddenNewPredicate(false),output_builder_(type) {
 }
 
 ParserInputBuilder::~ParserInputBuilder() {
@@ -63,9 +66,10 @@ bool ParserInputBuilder::checkRuleSafety() {
 void ParserInputBuilder::onRule() {
     if(foundASafetyError_) return;
     if (currentRule.isFact()) {
-        // TODO add the fact in the predicate table
         Atom fact = std::move(currentRule.getHead()[0]);
-        std::cout<<fact.toString()<< "." <<std::endl;
+        // print if is not internal atom
+        if (!fact.getPredicate()->isInternal())
+            output_builder_.outputAtom(fact);
         auto& pt = currentSchema_.get().getPredicateTable(fact.getPredicate());
         pt->addFact(fact);
         currentRule = {};
@@ -87,6 +91,15 @@ void ParserInputBuilder::onWeakConstraint() {
 }
 
 void ParserInputBuilder::onQuery() {
+    if (currentAtom.getPredicate()->isInternal()) {
+        // predicate was internal so print all the facts
+        auto & facts = currentSchema_.get().getPredicateTable(currentAtom.getPredicate())->getFacts();
+        for (auto& fact: facts){
+            output_builder_.outputAtom(fact);
+        }
+
+    }
+    currentAtom.getPredicate()->setInternal(false);
 }
 
 void ParserInputBuilder::onHeadAtom() {

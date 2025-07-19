@@ -21,15 +21,18 @@
 
 namespace bumblebee{
 
-// Executor of Physical Rule.
-// Each execution is a thread
-// Handle the local state of the operators
-// Flow:
-// - Init the states
-// - Call the get data from the source operator
-// - Call the operators
-// - Call the Sink
-// Finalize ???
+// Executor of a Physical Rule.
+// Each execution runs in its own thread.
+// Manages the local state of the physical atom (patom).
+//
+// Execution flow:
+// - Initialize patom states
+// - Retrieve data from the source patom
+// - Process data through the chain
+// - Send output to the sink
+//
+// The `finalize` method of the patom is called by the scheduler
+// once all threads have completed execution.
 class PhysicalRuleExecutor {
 private:
     prule_ptr_t prule_;

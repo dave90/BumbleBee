@@ -160,7 +160,7 @@ Term & Atom::operator[](unsigned i) {
     return terms_[i];
 }
 
-std::string Atom::toString() {
+std::string Atom::toString() const {
     if (type_ == AtomType::CLASSICAL) {
         std::string s = negative_ ? "not " : "";
         s += predicate_->toString() + "( ";

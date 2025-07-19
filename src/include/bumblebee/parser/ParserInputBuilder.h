@@ -22,6 +22,7 @@
 
 #include "bumblebee/catalog/Catalog.h"
 #include "bumblebee/catalog/Schema.h"
+#include "bumblebee/output/OutputBuilder.h"
 #include "bumblebee/parser/statement/Term.h"
 #include "statement/Atom.h"
 #include "statement/Rule.h"
@@ -32,6 +33,7 @@ namespace bumblebee {
 	class ParserInputBuilder {
 public:
 	ParserInputBuilder();
+	ParserInputBuilder(OutputType type);
 	virtual ~ParserInputBuilder();
 
 	virtual void onDirective( char* directiveName, char* directiveValue );
@@ -93,6 +95,7 @@ public:
 	rules_vector_t& getProgram();
 
 protected:
+	OutputBuilder output_builder_{NONE};
 	std::reference_wrapper<Schema> currentSchema_;
 	bool foundARangeAtomInCurrentRule_{false};
 	bool currentRuleIsUnsafe_{false};

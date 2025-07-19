@@ -18,6 +18,7 @@
  */
 #pragma once
 #include "bumblebee/common/Hash.h"
+#include "bumblebee/common/Mutex.h"
 #include "bumblebee/common/types/ChunkCollection.h"
 #include "bumblebee/parser/statement/Predicate.h"
 #include "bumblebee/parser/statement/Atom.h"
@@ -56,11 +57,16 @@ public:
     DataChunk & getChunk(idx_t index) {
         return chunks_.getChunk(index);
     }
+    const std::vector<Atom>& getFacts() const {
+        return facts_;
+    }
     // Get a value given a row and column index
     Value getValue(idx_t column, idx_t index);
 
     // Append a data chunk
-    void append(DataChunk &chunk);
+    void append(data_chunk_ptr_t chunk);
+    void append(DataChunk& chunk);
+
     // Return the Constat types for each column
     std::vector<ConstantType> getTypes();
 
@@ -89,6 +95,9 @@ protected:
     // facts that contains ranges
     // after the initializeChunks() will be cleared
     std::vector<Atom> ranges_;
+
+    // mutex for sync functions
+    mutex mutex_;
 
     // cache output
     // hash tables etc

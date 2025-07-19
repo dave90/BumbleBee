@@ -29,7 +29,11 @@ namespace bumblebee{
 //   and will be called again with the same input.
 // - FINISHED: The operator has completed the entire pipeline.
 //   No further processing is required, and no other operators in the pipeline will be invoked.
-enum class AtomResultType : uint8_t { NEED_MORE_INPUT, HAVE_MORE_OUTPUT, FINISHED };
+enum class AtomResultType : uint8_t {
+	NEED_MORE_INPUT = 0,
+	HAVE_MORE_OUTPUT = 1,
+	FINISHED = 2
+};
 
 
 // Represents the state of the physical operator.
@@ -44,12 +48,12 @@ public:
 // Represents the Global state of the physical operator.
 // Initialized and updated by the atom itself during execution,
 // effectively store the data shared among ALL the thread operatos.
+// NOTE: in case you need the partitions numbers create the ExecutorContext and store there
 class GlobalPhysicalAtomState {
 public:
-	GlobalPhysicalAtomState() = default;
+	explicit GlobalPhysicalAtomState() = default;
 	~GlobalPhysicalAtomState() = default;
 
-	idx_t partitions;
 };
 
 using pstate_ptr_t =std::unique_ptr<PhysicalAtomState>;
@@ -73,13 +77,13 @@ public:
 	virtual AtomResultType execute(DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const;
 	// GetData source data and produce new chunks.
 	// CAN be called in parallel, proper locking is needed when accessing global state
-	virtual void getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
+	virtual AtomResultType getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
 	// Sink store data in a data structure or print the output.
 	// CAN be called in parallel, proper locking is needed when accessing global state
 	virtual AtomResultType sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
 	// The finalize and initialize is called when ALL threads are finished execution. It is called only once per pipeline, and is
 	// entirely single threaded.
-	virtual void finalize() const;
+	virtual void finalize(GlobalPhysicalAtomState& gstate) const;
 
 	virtual bool isSource() const;
 	virtual bool isSink() const;

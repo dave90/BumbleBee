@@ -18,6 +18,7 @@
  */
 #include "bumblebee/catalog/PredicateTables.h"
 
+#include "bumblebee/common/Log.h"
 #include "bumblebee/parser/statement/Atom.h"
 #include "bumblebee/parser/statement/Rule.h"
 
@@ -70,6 +71,9 @@ std::vector<ConstantType> PredicateTables::getTypes() {
 
 
 void PredicateTables::initializeChunks() {
+    // sync the functions as multiple source operators can call the init
+    lock_guard lock(mutex_);
+    LOG_DEBUG("Initializing PredicateTables %s", predicate_->toString().c_str());
     if (!facts_.empty()) loadFacts();
     if (!ranges_.empty()) loadRanges();
     facts_.clear();
@@ -111,6 +115,7 @@ void PredicateTables::loadFacts() {
         // insert last chunk
         chunks_.append(std::move(chunk));
     }
+    LOG_DEBUG("Fact PredicateTables loaded, fact: %d,chunks: %d", chunks_.getCount(), chunks_.chunkCount());
 }
 
 
@@ -224,12 +229,23 @@ Value PredicateTables::getValue(idx_t column, idx_t index) {
     return chunks_.getValue(column, index);
 }
 
-void PredicateTables::append(DataChunk &chunk) {
-    // TODO mutex
-    chunks_.append(chunk);
+void PredicateTables::append(data_chunk_ptr_t chunk) {
+    BB_ASSERT(chunk->columnCount() == predicate_->getArity());
+    lock_guard guard(mutex_);
+    if (types_.size() > 0 && types_[0] == UNKNOWN) {
+        // set the types as the chunk types
+        types_ = chunk->getTypes();
+    }
+    chunks_.append(std::move(chunk));
+}
+
+void PredicateTables::append(DataChunk& chunk) {
+    BB_ASSERT(chunk.columnCount() == predicate_->getArity());
+    lock_guard guard(mutex_);
     if (types_.size() > 0 && types_[0] == UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk.getTypes();
     }
+    chunks_.append(chunk);
 }
 }
