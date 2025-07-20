@@ -21,14 +21,6 @@
 
 namespace bumblebee{
 
-template<class LEFT_TYPE, class RIGHT_TYPE, class OP>
-struct ComparisonCommonCast {
-	static inline bool operation(LEFT_TYPE left, RIGHT_TYPE right) {
-		using Common = typename std::common_type<LEFT_TYPE, RIGHT_TYPE>::type;
-		return OP::operation(static_cast<Common>(left), static_cast<Common>(right));
-	}
-};
-
 //===--------------------------------------------------------------------===//
 // Comparison Operations
 //===--------------------------------------------------------------------===//

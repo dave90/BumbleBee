@@ -26,7 +26,8 @@ namespace bumblebee {
 template <class OP>
 idx_t templatedSelectOperationEqualType(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
     BB_ASSERT(left.getType() == right.getType());
-    switch (left.getType()) {
+    auto commonType = getBumpedType(left.getType(), right.getType());
+    switch (commonType) {
         case ConstantType::TINYINT:
             return BinaryExecution::select<int8_t,int8_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::SMALLINT:
@@ -51,14 +52,40 @@ idx_t templatedSelectOperationEqualType(Vector &left, Vector &right, const Selec
             return BinaryExecution::select<string_t,string_t,OP>(left, right, sel, count, trueSel);
         }
         default:
-            ErrorHandler::errorNotImplemented("Unimplemented type '%s' for select operation!");
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
     return 0;
 }
 
+
+template<class LEFT_TYPE, class RIGHT_TYPE, class COMMON_TYPE, class OP>
+    struct ComparisonCommonCast {
+    static inline bool operation(LEFT_TYPE left, RIGHT_TYPE right) {
+        return OP::operation(static_cast<COMMON_TYPE>(left), static_cast<COMMON_TYPE>(right));
+    }
+};
+
 template <class LEFT_TYPE, class RIGHT_TYPE,  class OP>
 idx_t templatedSelectOperationLeftRight(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
-    return BinaryExecution::select<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, OP>>(left, right, sel, count, trueSel);
+    auto commonType = getBumpedType(left.getType(), right.getType());
+
+    switch (commonType) {
+        case ConstantType::TINYINT:
+        case ConstantType::SMALLINT:
+        case ConstantType::INTEGER:
+        case ConstantType::UTINYINT:
+        case ConstantType::USMALLINT:
+        case ConstantType::UINTEGER:
+        case ConstantType::UBIGINT:
+        case ConstantType::BIGINT:
+            return BinaryExecution::select<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, int64_t, OP>>(left, right, sel, count, trueSel);
+        case ConstantType::FLOAT:
+        case ConstantType::DOUBLE:
+            return BinaryExecution::select<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, double, OP>>(left, right, sel, count, trueSel);
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+    }
+    return 0;
 }
 
 template <class LEFT_TYPE, class OP>
@@ -85,7 +112,7 @@ idx_t templatedSelectOperationLeft(Vector &left, Vector &right, const SelectionV
         case ConstantType::DOUBLE:
             return templatedSelectOperationLeftRight<LEFT_TYPE,double,OP>(left, right, sel, count, trueSel);
         default:
-            ErrorHandler::errorNotImplemented("Unimplemented type '%s' for select operation!");
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
     return 0;
 }
@@ -116,10 +143,11 @@ idx_t templatedSelectOperation(Vector &left, Vector &right, const SelectionVecto
         case ConstantType::DOUBLE:
             return templatedSelectOperationLeft<double,OP>(left, right, sel, count, trueSel);
         default:
-            ErrorHandler::errorNotImplemented("Unimplemented type '%s' for select operation!");
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
     return 0;
 }
+
 
 
 idx_t VectorOperations::equals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
