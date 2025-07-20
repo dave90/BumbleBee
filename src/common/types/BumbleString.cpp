@@ -40,15 +40,6 @@ BumbleString::BumbleString(const char *data, uint32_t len) {
 
 BumbleString::BumbleString(const BumbleString &other): BumbleString(other.c_str(), other.size()) {}
 
-bool BumbleString::isInlined() const {
-    return isInlined(value_.length);
-}
-
-const char * BumbleString::getDataUnsafe() const {
-    if (isInlined())
-        return value_.prefix;
-    return value_.ptr;
-}
 
 char * BumbleString::getDataWriteable() const {
     if (isInlined())
@@ -56,17 +47,6 @@ char * BumbleString::getDataWriteable() const {
     return value_.ptr;
 }
 
-const char * BumbleString::getPrefix() const {
-    return value_.prefix;
-}
-
-idx_t BumbleString::size() const {
-    return value_.length;
-}
-
-idx_t BumbleString::length() const {
-    return size();
-}
 string BumbleString::getString() const {
     return string(getDataUnsafe());
 }

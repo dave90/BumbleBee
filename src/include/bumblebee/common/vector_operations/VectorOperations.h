@@ -28,11 +28,6 @@ class VectorOperations {
 public:
     // static void addInPlace(Vector &A, int64_t B, idx_t count);
     //
-    // static void isNotNull(Vector &A, Vector &result, idx_t count);
-    // static void isNull(Vector &A, Vector &result, idx_t count);
-    // static bool hasNull(Vector &A, idx_t count);
-    // static bool hasNotNull(Vector &A, idx_t count);
-    //
     // static void boolAnd(Vector &A, Vector &B, Vector &result, idx_t count);
     // static void boolOr(Vector &A, Vector &B, Vector &result, idx_t count);
     // static void boolNot(Vector &A, Vector &result, idx_t count);
@@ -51,12 +46,12 @@ public:
     // static void distinctLessThan(Vector &left, Vector &right, Vector &result, idx_t count);
     // static void distinctLessThanEquals(Vector &left, Vector &right, Vector &result, idx_t count);
     //
-    // static idx_t equals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t notEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t greaterThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t greaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t lessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
+    static idx_t equals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel);
+    static idx_t notEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel);
+    static idx_t greaterThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel);
+    static idx_t greaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel);
+    static idx_t lessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel);
+    static idx_t lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel);
     //
     // static idx_t distinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
     // static idx_t notDistinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);

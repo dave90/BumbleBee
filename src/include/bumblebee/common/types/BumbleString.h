@@ -50,13 +50,25 @@ public:
     BumbleString(const char* data, uint32_t len);
     BumbleString(const BumbleString& other);
 
-    bool isInlined() const;
-    const char *getDataUnsafe() const ;
+    inline bool isInlined() const {
+        return isInlined(size());
+    }
+    inline const char *getDataUnsafe() const {
+        if (isInlined())
+            return value_.prefix;
+        return value_.ptr;
+    }
     char * getDataWriteable() const ;
-    const char * getPrefix() const;
+    inline const char * getPrefix() const {
+        return value_.prefix;
+    }
     // names convention of string
-    idx_t length() const;
-    idx_t size() const;
+    inline idx_t length() const {
+        return size();
+    }
+    inline idx_t size() const {
+        return value_.length;
+    }
     string getString() const;
 
     bool operator<(const BumbleString &r) const;
