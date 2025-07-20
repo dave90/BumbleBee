@@ -38,16 +38,7 @@ void PredicateTables::updateTypes(std::vector<ConstantType>& newTypes) {
     BB_ASSERT(newTypes.size() == types_.size() && "Wrong number of terms for Fact");
     for (idx_t i = 0; i < newTypes.size(); i++) {
         if (newTypes[i] == types_[i]) continue;
-        // if types is UNKNOWN
-        // or different types take the one with the greatest size
-        if (types_[i] == UNKNOWN || getCTypeSize( types_[i]) < getCTypeSize(newTypes[i]) ) {
-            types_[i] = newTypes[i];
-            continue;
-        }
-        // different types but same sizeof take the not unsigned
-        // and bump up
-        auto signedType = (!isUnsigned(types_[i]))?types_[i]:newTypes[i];
-        types_[i] = getBumpedType(signedType);
+        types_[i] = getBumpedType(types_[i], newTypes[i]);
     }
 }
 

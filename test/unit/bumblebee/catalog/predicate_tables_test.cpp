@@ -94,14 +94,14 @@ TEST_F(PredicateTablesTest, PromoteSmallerSize) {
     table->callUpdateTypes({INTEGER, INTEGER, UINTEGER});
     EXPECT_EQ(table->getTypes()[0], INTEGER);
     EXPECT_EQ(table->getTypes()[1], INTEGER);
-    EXPECT_EQ(table->getTypes()[2], UINTEGER);
+    EXPECT_EQ(table->getTypes()[2], BIGINT);
 }
 
 TEST_F(PredicateTablesTest, MixedSignednessSameSize) {
-    table->callUpdateTypes({UINTEGER, INTEGER, UINTEGER});
-    table->callUpdateTypes({INTEGER, INTEGER, INTEGER});
+    table->callUpdateTypes({UINTEGER, FLOAT, UINTEGER});
+    table->callUpdateTypes({INTEGER, UINTEGER, SMALLINT});
     EXPECT_EQ(table->getTypes()[0], BIGINT);  // bumped
-    EXPECT_EQ(table->getTypes()[1], INTEGER);
+    EXPECT_EQ(table->getTypes()[1], DOUBLE);
     EXPECT_EQ(table->getTypes()[2], BIGINT);  // bumped
 }
 

@@ -57,13 +57,12 @@ public:
 
 
 PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
-    PredicateTables *pt, OutputBuilder& obuilder): PhysicalAtom(types, estimated_cardinality),
-                                           pt_(pt),
-                                           obuilder_(obuilder) {
+    PredicateTables *pt): PhysicalAtom(types, estimated_cardinality),
+                                           pt_(pt){
 }
 
 PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
-    PredicateTables *pt, std::vector<idx_t> &cols, OutputBuilder& obuilder): PhysicalChunkOutput(types, estimated_cardinality, pt, obuilder){
+    PredicateTables *pt, std::vector<idx_t> &cols): PhysicalChunkOutput(types, estimated_cardinality, pt){
     cols_ = std::move(cols);
 }
 

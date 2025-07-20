@@ -49,7 +49,6 @@ public:
     void outputAtom(const Atom& atom) {
         switch(type_) {
             case TEXT: {
-                lock_guard lock(mutex_);
                 TextOutputBuilder::outputAtom(atom);
                 break;
             }
@@ -64,7 +63,6 @@ public:
     void outputAtoms(const DataChunk& chunk, Predicate * predicate) {
         switch(type_) {
             case TEXT: {
-                lock_guard lock(mutex_);
                 TextOutputBuilder::outputAtoms(chunk, predicate);
                 break;
             }
@@ -78,9 +76,6 @@ public:
 
 private:
     OutputType type_;
-    // mutex for the std output as this struct is
-    // called by multiple threads
-    mutex mutex_;
 };
 
 }

@@ -160,11 +160,13 @@ void Term::setType(TermType type) {
 }
 
 bool Term::isGround() {
+    if (type_ == TermType::VARIABLE) return false;
     if (type_ == TermType::CONSTANT || type_ == TermType::RANGE) return true;
     if (type_ == TermType::ARITH) {
-
+        for (auto &t:terms_)
+            if (!t.isGround()) return false;
     }
-    return false;
+    return true;
 }
 
 
@@ -227,23 +229,6 @@ Operator Term::getOperator(char sop) {
     return PLUS;
 }
 
-char Term::getOperatorChar(Operator op) {
-    switch (op) {
-        case PLUS:
-            return '+';
-        case MINUS:
-            return '-';
-        case DIV:
-            return '/';
-        case TIMES:
-            return '*';
-        case MODULO:
-            return '%';
-        default:
-           ;
-    }
-    ErrorHandler::errorNotImplemented("Invalid operator conversion from Operator");
-}
 
 void Term::setConstantNumericTerm(Term &term, long long num) {
 

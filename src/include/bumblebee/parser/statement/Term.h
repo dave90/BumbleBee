@@ -37,15 +37,6 @@ enum TermType{
 };
 
 
-
-enum Operator {
-	PLUS=0,
-	MINUS=1,
-	DIV=2,
-	TIMES=3,
-	MODULO=4
-};
-
 struct IntervalTerm {
 	int from;
 	int to;
@@ -140,7 +131,6 @@ public:
 	// static functions
 	static Term createVariable(std::string&& value);
 	static Operator getOperator(char sop);
-	static char getOperatorChar(Operator op);
 	static Term createRange(int from, int to);
 	static Term createArith(Term&& t1,Term&& t2, char op );
 	static void setConstantNumericTerm(Term& term, long long value);

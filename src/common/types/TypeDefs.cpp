@@ -19,8 +19,45 @@
 
 #include "bumblebee/common/TypeDefs.h"
 
+#include "bumblebee/common/ErrorHandler.h"
 #include "bumblebee/common/types/BumbleString.h"
 namespace bumblebee {
+
+
+char getOperatorChar(Operator op) {
+    switch (op) {
+        case PLUS:
+            return '+';
+        case MINUS:
+            return '-';
+        case DIV:
+            return '/';
+        case TIMES:
+            return '*';
+        case MODULO:
+            return '%';
+        default:
+            ;
+    }
+    ErrorHandler::errorNotImplemented("Invalid operator conversion from Operator");
+    return ' ';
+}
+
+
+std::string getBinopStr(Binop binop) {
+    switch (binop) {
+        case NONE_OP:        return "";
+        case EQUAL:          return "==";
+        case UNEQUAL:        return "!=";
+        case LESS:           return "<";
+        case GREATER:        return ">";
+        case LESS_OR_EQ:     return "<=";
+        case GREATER_OR_EQ:  return ">=";
+        case ASSIGNMENT:     return "=";
+    }
+    ErrorHandler::errorNotImplemented("Binop not implemented");
+    return "";
+}
 
 idx_t getCTypeSize(ConstantType type) {
     switch (type) {
@@ -51,6 +88,17 @@ bool isUnsigned(ConstantType type) {
     }
 }
 
+ConstantType getSignedBumpedType(ConstantType type) {
+    switch (type) {
+        case UTINYINT:   return SMALLINT;
+        case USMALLINT:  return INTEGER;
+        case UINTEGER:   return BIGINT;
+        case UBIGINT:    return BIGINT;  // Already largest unsigned int
+
+        default:         return type;
+    }
+}
+
 ConstantType getBumpedType(ConstantType type) {
     switch (type) {
         case TINYINT:    return SMALLINT;
@@ -68,6 +116,22 @@ ConstantType getBumpedType(ConstantType type) {
 
         default:         return type;
     }
+}
+
+ConstantType getBumpedType(ConstantType t1, ConstantType t2) {
+    if (t1 == t2)return t1;
+    if (t1 == UNKNOWN && t2 != UNKNOWN) return t2;
+    if (t2 == UNKNOWN && t1 != UNKNOWN) return t1;
+    // if one of the type is float or double return double
+    if (t1 == FLOAT || t1 == DOUBLE || t2 == FLOAT || t2 == DOUBLE) return DOUBLE;
+    // if the sign is different bump the unsigned one
+    if (isUnsigned(t1) && !isUnsigned(t2))
+        t1 = getSignedBumpedType(t1);
+    if (isUnsigned(t2) && !isUnsigned(t1))
+        t2 = getSignedBumpedType(t2);
+    if (getCTypeSize(t1) >= getCTypeSize(t2))
+        return t1;
+    return t2;
 }
 
 }

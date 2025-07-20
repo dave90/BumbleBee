@@ -25,17 +25,6 @@
 
 namespace bumblebee {
 
-enum Binop {
-    NONE_OP = 0,
-    EQUAL = 1,
-    UNEQUAL = 2,
-    LESS = 3,
-    GREATER = 4,
-    LESS_OR_EQ = 5,
-    GREATER_OR_EQ = 6,
-    ASSIGNMENT = 7,
-};
-
 enum AtomType {
     CLASSICAL = 0,
     BUILTIN = 1,
@@ -74,8 +63,8 @@ public:
     void setType(AtomType type);
     bool isNegative() const;
     void setNegative(bool negative);
-    Binop getBinop() const;
     void setBinop(Binop binop);
+    Binop getBinop() const;
     bool containsAnonymous() const;
     bool containsRange() const;
     bool containsArith() const;

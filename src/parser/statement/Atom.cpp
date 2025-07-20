@@ -171,7 +171,7 @@ std::string Atom::toString() const {
         return s+" )";
     }
     if (type_ == AtomType::BUILTIN) {
-        return terms_[0].toString() + " "+ getBinop(binop_) + " " + terms_[1].toString();
+        return terms_[0].toString() + " "+ getBinopStr(binop_) + " " + terms_[1].toString();
     }
     ErrorHandler::errorNotImplemented("Atom type not implemented");
     return "";
@@ -195,19 +195,5 @@ Atom Atom::createBuiltinAtom(terms_vector_t &&t, Binop binop) {
     return Atom(std::move(t), binop);
 }
 
-std::string Atom::getBinop(Binop binop) {
-    switch (binop) {
-        case NONE_OP:        return "";
-        case EQUAL:          return "==";
-        case UNEQUAL:        return "!=";
-        case LESS:           return "<";
-        case GREATER:        return ">";
-        case LESS_OR_EQ:     return "<=";
-        case GREATER_OR_EQ:  return ">=";
-        case ASSIGNMENT:     return "=";
-    }
-    ErrorHandler::errorNotImplemented("Binop not implemented");
-    return "";
-}
 
 }

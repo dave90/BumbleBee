@@ -38,6 +38,27 @@ enum ConstantType: uint8_t  {
     UNKNOWN = 11
 };
 
+
+enum Operator {
+    PLUS=0,
+    MINUS=1,
+    DIV=2,
+    TIMES=3,
+    MODULO=4
+};
+
+
+enum Binop {
+    NONE_OP = 0,
+    EQUAL = 1,
+    UNEQUAL = 2,
+    LESS = 3,
+    GREATER = 4,
+    LESS_OR_EQ = 5,
+    GREATER_OR_EQ = 6,
+    ASSIGNMENT = 7,
+};
+
 using hash_t = uint64_t;
 using idx_t = uint64_t;
 
@@ -52,5 +73,11 @@ using string = std::string;
 idx_t getCTypeSize(ConstantType type);
 bool isUnsigned(ConstantType type);
 ConstantType getBumpedType(ConstantType type);
+ConstantType getSignedBumpedType(ConstantType type);
+// Determines the dominant constant type between two types, resolving UNKNOWN values,
+// adjusting for signedness differences, and returning the type with the larger size.
+ConstantType getBumpedType(ConstantType t1, ConstantType t2);
+char getOperatorChar(Operator op);
+std::string getBinopStr(Binop binop);
 
 }
