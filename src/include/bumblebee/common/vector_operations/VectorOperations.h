@@ -26,67 +26,39 @@ namespace bumblebee{
 // vectors.
 class VectorOperations {
 public:
-    // static void addInPlace(Vector &A, int64_t B, idx_t count);
-    //
-    // static void boolAnd(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void boolOr(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void boolNot(Vector &A, Vector &result, idx_t count);
-    //
-    // static void equals(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void notEquals(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void greaterThan(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void greaterThanEquals(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void lessThan(Vector &A, Vector &B, Vector &result, idx_t count);
-    // static void lessThanEquals(Vector &A, Vector &B, Vector &result, idx_t count);
-    //
-    // static void distinctFrom(Vector &left, Vector &right, Vector &result, idx_t count);
-    // static void notDistinctFrom(Vector &left, Vector &right, Vector &result, idx_t count);
-    // static void distinctGreaterThan(Vector &left, Vector &right, Vector &result, idx_t count);
-    // static void distinctGreaterThanEquals(Vector &left, Vector &right, Vector &result, idx_t count);
-    // static void distinctLessThan(Vector &left, Vector &right, Vector &result, idx_t count);
-    // static void distinctLessThanEquals(Vector &left, Vector &right, Vector &result, idx_t count);
-    //
+
+    // Comparison operations
     static idx_t equals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t notEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t greaterThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t greaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t lessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
-    //
-    // static idx_t distinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t notDistinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t distinctGreaterThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t distinctGreaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t distinctLessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t distinctLessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    //
-    // static idx_t distinctGreaterThanNullsFirst(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t distinctLessThanNullsFirst(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    //
-    // static idx_t nestedNotEquals(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t nestedEquals(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t nestedGreaterThan(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t nestedGreaterThanEquals(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t nestedLessThan(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    // static idx_t nestedLessThanEquals(Vector &left, Vector &right, idx_t vcount, const SelectionVector &sel, idx_t count, SelectionVector *true_sel, SelectionVector *false_sel);
-    //
+
+    // Arithmetic operations
+    static void sum(Vector &left, Vector &right, Vector &result, idx_t count);
+    static void dot(Vector &left, Vector &right, Vector &result, idx_t count);
+    static void division(Vector &left, Vector &right, Vector &result, idx_t count);
+    static void difference(Vector &left, Vector &right, Vector &result, idx_t count);
+    static void modulo(Vector &left, Vector &right, Vector &result, idx_t count);
+
+
+    // Hash the vector
     static void hash(Vector &input, Vector &hashes, idx_t count);
     // hash only in the index inside the selection vector ( loc ignoring the idx)
     // do the computation only for the sel index
     static void hash(Vector &input, Vector &hashes, const SelectionVector &rsel, idx_t count);
     static void combineHash(Vector &hashes, Vector &B, idx_t count);
     static void combineHash(Vector &hashes, Vector &B, const SelectionVector &rsel, idx_t count);
-    //
+
+    // Sequence generations
     static void generateSequence(Vector &result, idx_t count, int64_t start, int64_t increment);
     static void generateSequence(Vector &result, idx_t count, int64_t start, int64_t offset,  int64_t stride, int64_t end);
     // generate sequence only in the index inside the selection vector
-    // do the computation only for the sel index
     static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start, int64_t increment);
     static void generateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start, int64_t offset, int64_t stride, int64_t end );
-    //
-    // static bool tryCast(Vector &source, Vector &result, idx_t count, string *error_message, bool strict = false);
-    // static void cast(Vector &source, Vector &result, idx_t count, bool strict = false);
-    //
+
+    // Copy
     static void copy(const Vector &source, Vector &target, idx_t source_count, idx_t source_offset, idx_t target_offset);
     static void copy(const Vector &source, Vector &target, const SelectionVector &sel, idx_t source_count, idx_t source_offset, idx_t target_offset);
 

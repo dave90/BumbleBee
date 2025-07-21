@@ -24,10 +24,9 @@
 namespace bumblebee {
 
 template <class OP>
-idx_t templatedSelectOperationEqualType(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+idx_t templatedSelectOperationSwitchEqualType(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
     BB_ASSERT(left.getType() == right.getType());
-    auto commonType = getBumpedType(left.getType(), right.getType());
-    switch (commonType) {
+    switch (left.getType()) {
         case ConstantType::TINYINT:
             return BinaryExecution::select<int8_t,int8_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::SMALLINT:
@@ -66,9 +65,11 @@ template<class LEFT_TYPE, class RIGHT_TYPE, class COMMON_TYPE, class OP>
 };
 
 template <class LEFT_TYPE, class RIGHT_TYPE,  class OP>
-idx_t templatedSelectOperationLeftRight(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
-    auto commonType = getBumpedType(left.getType(), right.getType());
+idx_t templatedSelectOperationSwitchCommon(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+    auto commonType = getCommonType(left.getType(), right.getType());
 
+    // for int and uint collapse to int 64 bit
+    // for decimal collapse to double
     switch (commonType) {
         case ConstantType::TINYINT:
         case ConstantType::SMALLINT:
@@ -89,59 +90,59 @@ idx_t templatedSelectOperationLeftRight(Vector &left, Vector &right, const Selec
 }
 
 template <class LEFT_TYPE, class OP>
-idx_t templatedSelectOperationLeft(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+idx_t templatedSelectOperationSwitchRight(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
     switch (right.getType()) {
         case ConstantType::TINYINT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,int8_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,int8_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::SMALLINT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,int16_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,int16_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::INTEGER:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,int32_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,int32_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::BIGINT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,int64_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,int64_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::UTINYINT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,uint8_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint8_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::USMALLINT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,uint16_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint16_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::UINTEGER:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,uint32_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint32_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::UBIGINT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,uint64_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint64_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::FLOAT:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,float,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,float,OP>(left, right, sel, count, trueSel);
         case ConstantType::DOUBLE:
-            return templatedSelectOperationLeftRight<LEFT_TYPE,double,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchCommon<LEFT_TYPE,double,OP>(left, right, sel, count, trueSel);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
     return 0;
 }
 template <class OP>
-idx_t templatedSelectOperation(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+idx_t templatedSelectOperationSwitchLeft(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
     // cannot compare string with different types
     BB_ASSERT(left.getType() != ConstantType::STRING && right.getType() != ConstantType::STRING);
     // left type != right type
     switch (left.getType()) {
         case ConstantType::TINYINT:
-            return templatedSelectOperationLeft<int8_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<int8_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::SMALLINT:
-            return templatedSelectOperationLeft<int16_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<int16_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::INTEGER:
-            return templatedSelectOperationLeft<int32_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<int32_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::BIGINT:
-            return templatedSelectOperationLeft<int64_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<int64_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::UTINYINT:
-            return templatedSelectOperationLeft<uint8_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<uint8_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::USMALLINT:
-            return templatedSelectOperationLeft<uint16_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<uint16_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::UINTEGER:
-            return templatedSelectOperationLeft<uint32_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<uint32_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::UBIGINT:
-            return templatedSelectOperationLeft<uint64_t,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<uint64_t,OP>(left, right, sel, count, trueSel);
         case ConstantType::FLOAT:
-            return templatedSelectOperationLeft<float,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<float,OP>(left, right, sel, count, trueSel);
         case ConstantType::DOUBLE:
-            return templatedSelectOperationLeft<double,OP>(left, right, sel, count, trueSel);
+            return templatedSelectOperationSwitchRight<double,OP>(left, right, sel, count, trueSel);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
@@ -152,36 +153,36 @@ idx_t templatedSelectOperation(Vector &left, Vector &right, const SelectionVecto
 
 idx_t VectorOperations::equals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
     if (left.getType() == right.getType())
-        return templatedSelectOperationEqualType<Equals>(left, right, sel, count, trueSel);
-    return templatedSelectOperation<Equals>(left, right, sel, count, trueSel);
+        return templatedSelectOperationSwitchEqualType<Equals>(left, right, sel, count, trueSel);
+    return templatedSelectOperationSwitchLeft<Equals>(left, right, sel, count, trueSel);
 }
 idx_t VectorOperations::notEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
     if (left.getType() == right.getType())
-        return templatedSelectOperationEqualType<NotEquals>(left, right, sel, count, trueSel);
-    return templatedSelectOperation<NotEquals>(left, right, sel, count, trueSel);
+        return templatedSelectOperationSwitchEqualType<NotEquals>(left, right, sel, count, trueSel);
+    return templatedSelectOperationSwitchLeft<NotEquals>(left, right, sel, count, trueSel);
 }
 idx_t VectorOperations::greaterThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
     if (left.getType() == right.getType())
-        return templatedSelectOperationEqualType<GreaterThan>(left, right, sel, count, trueSel);
-    return templatedSelectOperation<GreaterThan>(left, right, sel, count, trueSel);
+        return templatedSelectOperationSwitchEqualType<GreaterThan>(left, right, sel, count, trueSel);
+    return templatedSelectOperationSwitchLeft<GreaterThan>(left, right, sel, count, trueSel);
 
 }
 idx_t VectorOperations::greaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
     if (left.getType() == right.getType())
-        return templatedSelectOperationEqualType<GreaterThanEquals>(left, right, sel, count, trueSel);
-    return templatedSelectOperation<GreaterThanEquals>(left, right, sel, count, trueSel);
+        return templatedSelectOperationSwitchEqualType<GreaterThanEquals>(left, right, sel, count, trueSel);
+    return templatedSelectOperationSwitchLeft<GreaterThanEquals>(left, right, sel, count, trueSel);
 
 }
 idx_t VectorOperations::lessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
     if (left.getType() == right.getType())
-        return templatedSelectOperationEqualType<LessThan>(left, right, sel, count, trueSel);
-    return templatedSelectOperation<LessThan>(left, right, sel, count, trueSel);
+        return templatedSelectOperationSwitchEqualType<LessThan>(left, right, sel, count, trueSel);
+    return templatedSelectOperationSwitchLeft<LessThan>(left, right, sel, count, trueSel);
 
 }
 idx_t VectorOperations::lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel){
     if (left.getType() == right.getType())
-        return templatedSelectOperationEqualType<LessThanEquals>(left, right, sel, count, trueSel);
-    return templatedSelectOperation<LessThanEquals>(left, right, sel, count, trueSel);
+        return templatedSelectOperationSwitchEqualType<LessThanEquals>(left, right, sel, count, trueSel);
+    return templatedSelectOperationSwitchLeft<LessThanEquals>(left, right, sel, count, trueSel);
 }
 
 

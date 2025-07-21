@@ -76,7 +76,7 @@ ConstantType getBumpedType(ConstantType type);
 ConstantType getSignedBumpedType(ConstantType type);
 // Determines the dominant constant type between two types, resolving UNKNOWN values,
 // adjusting for signedness differences, and returning the type with the larger size.
-ConstantType getBumpedType(ConstantType t1, ConstantType t2);
+ConstantType getCommonType(ConstantType t1, ConstantType t2);
 char getOperatorChar(Operator op);
 std::string getBinopStr(Binop binop);
 

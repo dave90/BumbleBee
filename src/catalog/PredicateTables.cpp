@@ -38,7 +38,7 @@ void PredicateTables::updateTypes(std::vector<ConstantType>& newTypes) {
     BB_ASSERT(newTypes.size() == types_.size() && "Wrong number of terms for Fact");
     for (idx_t i = 0; i < newTypes.size(); i++) {
         if (newTypes[i] == types_[i]) continue;
-        types_[i] = getBumpedType(types_[i], newTypes[i]);
+        types_[i] = getCommonType(types_[i], newTypes[i]);
     }
 }
 

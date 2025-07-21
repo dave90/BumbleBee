@@ -22,31 +22,40 @@
 
 namespace bumblebee{
 
+// Represents the operands and associated operators used in a compound expression.
+// `cols_` holds the indices of the input columns involved in the expression.
+// These are evaluated in the order they appear.
+// `operators_` specifies the binary operations to apply between consecutive columns.
+// The number of operators must be one less than the number of columns.
 struct Operands {
     std::vector<idx_t> cols_;
     std::vector<Operator> operators_;
 };
 
-class Expression {
-public:
-    Expression(Binop op, const Operands &left, const Operands &right);
-    std::string toString();
-    // execute the expression
-    void execute(DataChunk &input, DataChunk &output);
-
-    // Execute a operands and set the result in result vector
-    Vector executeOperands(DataChunk &input, Operands& op);
-    // Execute the binop operation and set the results in the selection vector
-    // and returns the numbers of rows filtered
-    idx_t executeBinop(Vector& left,Vector& right, SelectionVector& sel);
-    // verify the expression
-    bool verify();
-
-private:
-    Binop op_;
-    // if is assignment the column to set in the datachunk
+struct Expression {
+    Binop op_{NONE_OP};
     Operands left_;
     Operands right_;
+
+    Expression(Binop op, const Operands &left, const Operands &right);
+    Expression(Binop op, std::vector<idx_t>& leftCols, std::vector<Operator>& leftOps,std::vector<idx_t> &rightCols, std::vector<Operator>& rightOps );
+    Expression(Expression &&other) noexcept;
+
+    std::string toString() const;
+    // Execute the binop operation and set the results in the selection vector
+    // and returns the numbers of rows filtered
+    idx_t executeBinop(Vector& left,Vector& right, SelectionVector& sel, idx_t count) const;
+    // verify the expression
+    bool verify() const;
+    inline Vector executeRight(vector_vector_t& vectors, idx_t count) const {
+        return executeOperands(vectors, right_, count);
+    }
+    inline Vector executeLeft(vector_vector_t& vectors, idx_t count) const{
+        return executeOperands(vectors, left_, count);
+    }
+    // Execute a operands and set the result in result vector
+    static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count);
+
 
 };
 

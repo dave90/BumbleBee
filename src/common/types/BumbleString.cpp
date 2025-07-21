@@ -21,6 +21,8 @@
 
 #include <locale>
 
+#include "bumblebee/common/ErrorHandler.h"
+
 namespace bumblebee {
 BumbleString::BumbleString(const char *data): BumbleString(data, strlen(data)) {}
 
@@ -65,4 +67,5 @@ const char * BumbleString::c_str() const {
 bool BumbleString::isInlined( uint32_t len) {
     return len <= PREFIX_LENGTH;
 }
+
 }

@@ -118,7 +118,7 @@ ConstantType getBumpedType(ConstantType type) {
     }
 }
 
-ConstantType getBumpedType(ConstantType t1, ConstantType t2) {
+ConstantType getCommonType(ConstantType t1, ConstantType t2) {
     if (t1 == t2)return t1;
     if (t1 == UNKNOWN && t2 != UNKNOWN) return t2;
     if (t2 == UNKNOWN && t1 != UNKNOWN) return t1;

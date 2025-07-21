@@ -29,15 +29,26 @@ struct BinaryExecution {
 protected:
 	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP,
 	          bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
-	static void executeFlat(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
+	static void executeFlatLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
 	                            RESULT_TYPE *__restrict result_data, idx_t count) {
 
 		for (idx_t i = 0; i < count; i++) {
 			auto lentry = ldata[LEFT_CONSTANT ? 0 : i];
 			auto rentry = rdata[RIGHT_CONSTANT ? 0 : i];
-			result_data[i] = OP::operation(*lentry, *rentry);
+			result_data[i] = OP::operation(lentry, rentry);
 		}
 
+	}
+
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP,
+			  bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
+	static void executeFlat(Vector &left, Vector &right, Vector &result, idx_t count) {
+		BB_ASSERT(!LEFT_CONSTANT || !RIGHT_CONSTANT );
+		result.setVectorType(VectorType::FLAT_VECTOR);
+		auto result_data = FlatVector::getData<RESULT_TYPE>(result);
+		auto ldata = FlatVector::getData<LEFT_TYPE>(left);
+		auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
+		executeFlatLoop<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT>(ldata, rdata, result_data, count);
 	}
 
 	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
@@ -59,7 +70,7 @@ protected:
 		for (idx_t i = 0; i < count; i++) {
 			auto lentry = ldata[lsel->getIndex(i)];
 			auto rentry = rdata[rsel->getIndex(i)];
-			result_data[i] = OP::operation(*lentry, *rentry);
+			result_data[i] = OP::operation(lentry, rentry);
 		}
 
 	}
@@ -199,17 +210,39 @@ protected:
 	}
 
 public:
-
-	// Execute a binary operation based on template struct OP
+	// Applies a binary arithmetic or logical operation (defined by the OP template) between two input vectors.
+	// The result is stored in the output vector.
+	//
+	// Parameters:
+	// - left:   Left-hand side input vector.
+	// - right:  Right-hand side input vector.
+	// - result: Output vector where the result of the operation is stored.
+	// - count:  Number of elements to process.
+	// Notes:
+	// - This function handles all combinations of vector types (constant, flat, generic).
+	// - OP must define a static method `operation(a, b)` implementing the desired operation (e.g., addition, multiplication).
 	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
 	static void execute(Vector &left, Vector &right, Vector &result, idx_t count) {
-		executeSwitch<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP, bool>(left, right, result, count);
+		executeSwitch<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP>(left, right, result, count);
 	}
 
-	// Execute a filter operation based on template struct OP
-	// sel can be null, if null  is set to INCREMENTAL_SELECTION_VECTOR
-	// trueSel can be null,then is ignored and return only the counter of matched rows
-	// return the count of the rows
+	// Applies a binary comparison operation (defined by the OP template) between two input vectors,
+	// returning the number of elements that satisfy the condition. Optionally outputs the indices of matching rows.
+	//
+	// Parameters:
+	// - left:     Left-hand side input vector.
+	// - right:    Right-hand side input vector.
+	// - sel:      Optional input selection vector (can be nullptr to use full input).
+	// - count:    Number of elements to process.
+	// - trueSel:  Optional output selection vector for indices of elements satisfying the condition.
+	//
+	// Returns:
+	// - The number of elements that satisfy the condition defined by OP.
+	//
+	// Notes:
+	// - OP must define a static method `operation(a, b)` returning a boolean result.
+	// - Supports all vector types and combinations (constant, flat, generic).
+	// - If `trueSel` is nullptr, only the count of matching elements is returned without writing any indices.
     template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
     static idx_t select(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
         if (!sel) {

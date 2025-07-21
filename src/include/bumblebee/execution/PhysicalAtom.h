@@ -64,7 +64,6 @@ using gpstate_ptr_t =std::unique_ptr<GlobalPhysicalAtomState>;
 // execution plan
 class PhysicalAtom {
 public:
-
 	std::vector<ConstantType> types_;
 	// TODO populate this value
 	idx_t estimatedCardinality_;

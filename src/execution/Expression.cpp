@@ -18,6 +18,8 @@
  */
 #include "bumblebee/execution/Expression.h"
 
+#include "bumblebee/common/vector_operations/VectorOperations.h"
+
 namespace bumblebee{
 Expression::Expression(Binop op, const Operands &left, const Operands &right): op_(op),
     left_(left),
@@ -25,7 +27,19 @@ Expression::Expression(Binop op, const Operands &left, const Operands &right): o
     BB_ASSERT(verify() && "Expression verification failed");
 }
 
-std::string Expression::toString() {
+Expression::Expression(Binop op, std::vector<idx_t>& leftCols, std::vector<Operator>& leftOps, std::vector<idx_t> &rightCols, std::vector<Operator> &rightOps) : op_(op) {
+    left_.cols_ = std::move(leftCols);
+    left_.operators_ = std::move(leftOps);
+    right_.cols_ = std::move(rightCols);
+    right_.operators_ = std::move(rightOps);
+}
+
+Expression::Expression(Expression &&other) noexcept: op_(other.op_),
+                                                     left_(std::move(other.left_)),
+                                                     right_(std::move(other.right_)) {
+}
+
+std::string Expression::toString() const{
     std::string result ="";
     for (idx_t i=0;i<left_.operators_.size();++i) {
         result += std::to_string(left_.cols_[i]) + " "+getOperatorChar(left_.operators_[i]) + " "+ std::to_string(left_.cols_[i+1]) ;
@@ -37,50 +51,99 @@ std::string Expression::toString() {
     return result;
 }
 
-bool Expression::verify() {
+bool Expression::verify() const{
     if (left_.cols_.size() == 0 || right_.cols_.size() == 0) return false;
     if (left_.cols_.size() != left_.operators_.size() +1) return false;
     if (right_.cols_.size() != right_.operators_.size() +1) return false;
     return true;
 }
 
-void Expression::execute(DataChunk &input, DataChunk &output) {
-    if (op_ == ASSIGNMENT) {
-        // execute the right operand and assign to left column
-        BB_ASSERT(left_.cols_.size() == 1);
-        BB_ASSERT(right_.cols_.size() > 1);
-        auto result = executeOperands(input, right_);
-        output.data_[left_.cols_[0]].reference(result);
-        return;
+
+
+void executeOperator(Vector& left, Vector& right, Vector& result, idx_t count, Operator op) {
+    switch (op) {
+        case PLUS:
+            VectorOperations::sum(left, right, result, count);
+            break;
+        case MINUS:
+            VectorOperations::difference(left, right, result, count);
+            break;
+        case TIMES:
+            VectorOperations::dot(left, right, result, count);
+            break;
+        case DIV:
+            VectorOperations::division(left, right, result, count);
+            break;
+        case MODULO:
+            VectorOperations::modulo(left, right, result, count);
+            break;
+        default:
+            ErrorHandler::errorNotImplemented("Operator not implemented");
     }
-    auto leftResult = executeOperands(input, left_);
-    auto rightResult = executeOperands(input, right_);
-    SelectionVector sel(STANDARD_VECTOR_SIZE);
-    idx_t count = executeBinop(leftResult, rightResult, sel);
-    output.reference(input);
-    output.slice(sel, count);
-    output.setCardinality(count);
 }
 
-Vector Expression::executeOperands(DataChunk &input, Operands &op) {
+Vector Expression::executeOperands(vector_vector_t& vectors, const Operands &op, idx_t count){
     if (op.cols_.size() == 1) {
-        Vector result(input.data_[op.cols_[0]]);
+        Vector result(vectors[op.cols_[0]]);
         return result;
     }
-    vector_vector_t vectors;
-    std::vector<ConstantType> types;
+
+    // Find the result type of the final vector
     ConstantType resultType = UNKNOWN;
     for (auto c: op.cols_) {
-        vectors.emplace_back(input.data_[c]);
-        resultType = getBumpedType(resultType, input.data_[c].getType());
+        vectors.emplace_back(vectors[c]);
+        resultType = getCommonType(resultType, vectors[c].getType());
+        // we need bump the common type as operation can overflow the data
+        resultType = getBumpedType(resultType);
     }
-    Vector result(resultType);
-    // TODO
+    // if result type is unsigned, and we have subtraction
+    // set result type as bigint
+    bool diff = std::find(op.operators_.begin(), op.operators_.end(), MINUS) != op.operators_.end();
+    if (diff && isUnsigned(resultType))
+        resultType = BIGINT;
+
+    Vector v3(resultType);
+    // make first operation
+    executeOperator(vectors[0], vectors[1], v3, count, op.operators_[0]);
+    if (op.operators_.size() == 1)
+        return v3;
+
+    // Multiple operators to execute, create a temp vector
+    // to be swaped with the result
+    Vector temp(resultType);
+    Vector * resultPtr = &temp;
+    Vector * tempPtr = &v3;
+    BB_ASSERT(op.operators_.size() + 1 == vectors.size());
+    for (idx_t i=1;i<op.operators_.size();++i) {
+        executeOperator(*tempPtr, vectors[i+1], *resultPtr, count, op.operators_[i]);
+        // swap the tmp and result pointer
+        std::swap(resultPtr, tempPtr);
+    }
+
+    // reference to the result vector
+    Vector result(*resultPtr);
     return result;
 }
 
-idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel) {
-    // TODO
+idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel, idx_t count) const{
+    BB_ASSERT(op_ != ASSIGNMENT && op_ != NONE_OP);
+    switch (op_) {
+        case EQUAL:
+            return VectorOperations::equals(left, right, nullptr, count, &sel);
+        case UNEQUAL:
+            return VectorOperations::notEquals(left, right, nullptr, count, &sel);
+        case GREATER:
+            return VectorOperations::greaterThan(left, right, nullptr, count, &sel);
+        case GREATER_OR_EQ:
+            return VectorOperations::greaterThanEquals(left, right, nullptr, count, &sel);
+        case LESS:
+            return VectorOperations::lessThan(left, right, nullptr, count, &sel);
+        case LESS_OR_EQ:
+            return VectorOperations::lessThanEquals(left, right, nullptr, count, &sel);
+        default:
+            ErrorHandler::errorNotImplemented("Binop not implemented");
+            return 0;
+    }
     return 0;
 }
 

@@ -65,6 +65,26 @@ TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectors) {
 
 }
 
+
+TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectorsWithSel) {
+    vector<int32_t> values = {1,2,3,4};
+    Vector v1 = generateVector(INTEGER, values);
+    Vector v2 = generateVector(INTEGER, values);
+
+
+    SelectionVector sel(STANDARD_VECTOR_SIZE);
+    SelectionVector selResult(STANDARD_VECTOR_SIZE);
+    selResult.setIndex(0,3);
+    selResult.setIndex(1,2);
+    selResult.setIndex(2,1);
+    selResult.setIndex(3,0);
+
+    auto match = VectorOperations::equals(v1,v2,&selResult,values.size(), &sel);
+    std::cout << sel.toString(10) << std::endl;
+    EXPECT_EQ(match, values.size());
+
+}
+
 TEST_F(VectorOperationsComparisonTest, CompareNotEqualFlatVectors) {
     vector<int32_t> values = {1,2,3,4};
     Vector v1 = generateVector(INTEGER, values);
