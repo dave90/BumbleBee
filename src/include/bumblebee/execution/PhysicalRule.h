@@ -25,6 +25,19 @@ namespace bumblebee{
 // Physical Rule contains the source sink and atoms
 // Contains also the global states shared by all the threads
 class PhysicalRule {
+
+    friend class PhysicalRuleExecutor;
+
+public:
+    PhysicalRule(patom_ptr_t &source, patom_ptr_t &sink, patom_ptr_vector_t &patoms, idx_t priority );
+
+    idx_t getSourceSize() const;
+    idx_t getPriority() const;
+    void setPriority(idx_t priority);
+    idx_t getPartitions() const;
+    void setpartitions(idx_t partition);
+
+
 private:
     patom_ptr_t source_;
     patom_ptr_t sink_;
@@ -32,6 +45,9 @@ private:
 
     gpstate_ptr_t sourceGlobalState_;
     gpstate_ptr_t sinkGlobalState_;
+
+    // decreasing priority, 0 "highest priority"
+    idx_t priority_;
 };
 
 using prule_ptr_t = std::shared_ptr<PhysicalRule>;

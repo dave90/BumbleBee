@@ -82,17 +82,19 @@ void executeOperator(Vector& left, Vector& right, Vector& result, idx_t count, O
     }
 }
 
-Vector Expression::executeOperands(vector_vector_t& vectors, const Operands &op, idx_t count){
+Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &op, idx_t count){
     if (op.cols_.size() == 1) {
-        Vector result(vectors[op.cols_[0]]);
+        Vector result(allColumns[op.cols_[0]]);
         return result;
     }
 
     // Find the result type of the final vector
     ConstantType resultType = UNKNOWN;
+
+    vector_vector_t vectors;
     for (auto c: op.cols_) {
-        vectors.emplace_back(vectors[c]);
-        resultType = getCommonType(resultType, vectors[c].getType());
+        vectors.emplace_back(allColumns[c]);
+        resultType = getCommonType(resultType, allColumns[c].getType());
         // we need bump the common type as operation can overflow the data
         resultType = getBumpedType(resultType);
     }
@@ -111,13 +113,13 @@ Vector Expression::executeOperands(vector_vector_t& vectors, const Operands &op,
     // Multiple operators to execute, create a temp vector
     // to be swaped with the result
     Vector temp(resultType);
-    Vector * resultPtr = &temp;
-    Vector * tempPtr = &v3;
+    Vector * resultPtr = &v3;
+    Vector * tempPtr = &temp;
     BB_ASSERT(op.operators_.size() + 1 == vectors.size());
     for (idx_t i=1;i<op.operators_.size();++i) {
-        executeOperator(*tempPtr, vectors[i+1], *resultPtr, count, op.operators_[i]);
         // swap the tmp and result pointer
         std::swap(resultPtr, tempPtr);
+        executeOperator(*tempPtr, vectors[i+1], *resultPtr, count, op.operators_[i]);
     }
 
     // reference to the result vector

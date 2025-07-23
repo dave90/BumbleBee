@@ -27,7 +27,7 @@ public:
     PhysicalExpression(Expression& expr, std::vector<ConstantType>& types, idx_t estimated_cardinality);
     ~PhysicalExpression() override;
 
-    AtomResultType execute(DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const override;
+    AtomResultType execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const override;
     string getName() const override;
     string toString() const override;
 

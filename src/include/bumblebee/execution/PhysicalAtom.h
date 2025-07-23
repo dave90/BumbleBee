@@ -19,6 +19,7 @@
 #pragma once
 #include "bumblebee/common/TypeDefs.h"
 #include "bumblebee/common/types/DataChunk.h"
+#include "bumblebee/parallel/ThreadContext.h"
 
 namespace bumblebee{
 
@@ -73,16 +74,20 @@ public:
 
 	// Execute is called during the execution and accept input chunks and produce output chunks.
 	// Execute modify the internal state PhysicalAtomState but should NOT access to shared global states
-	virtual AtomResultType execute(DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const;
+	virtual AtomResultType execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const;
 	// GetData source data and produce new chunks.
 	// CAN be called in parallel, proper locking is needed when accessing global state
-	virtual AtomResultType getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
+	virtual AtomResultType getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
 	// Sink store data in a data structure or print the output.
 	// CAN be called in parallel, proper locking is needed when accessing global state
-	virtual AtomResultType sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
-	// The finalize and initialize is called when ALL threads are finished execution. It is called only once per pipeline, and is
+	virtual AtomResultType sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const;
+	// The finalize is called when ALL threads are finished execution. It is called only once per pipeline, and is
 	// entirely single threaded.
-	virtual void finalize(GlobalPhysicalAtomState& gstate) const;
+	virtual void finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const;
+
+	// Return and set the maximum number of threads that can run this physical atom
+	virtual idx_t getMaxThreads() const;
+	virtual void setMaxThreads(idx_t threads) const;
 
 	virtual bool isSource() const;
 	virtual bool isSink() const;

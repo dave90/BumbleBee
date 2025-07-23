@@ -71,6 +71,7 @@ void Vector::reference(Vector &other) {
 }
 
 void Vector::reinterpret(Vector &other) {
+    ctype_ = other.ctype_;
     vtype_ = other.vtype_;
     data_ = other.data_;
     assignSharedPointer(dataMngr_, other.dataMngr_);

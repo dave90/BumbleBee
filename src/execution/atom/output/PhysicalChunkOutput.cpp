@@ -64,6 +64,7 @@ PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types,
 PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
     PredicateTables *pt, std::vector<idx_t> &cols): PhysicalChunkOutput(types, estimated_cardinality, pt){
     cols_ = std::move(cols);
+    BB_ASSERT(cols_.size() == types_.size());
 }
 
 PhysicalChunkOutput::~PhysicalChunkOutput() {}
@@ -108,7 +109,7 @@ DataChunk PhysicalChunkOutput::projectColumns(DataChunk &input) const{
 
 }
 
-AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
+AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
     /**
      * Handles input data chunk processing and forwarding in a chunked execution pipeline.
      *
@@ -126,10 +127,12 @@ AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &st
      * return AtomResultType indicating whether more input is needed or more output is available (cache is not empty).
      */
 
+    context.profiler_.startPhysicalAtom(this);
 
     auto& cstate = (ChunkOutputState&)state;
     auto& gcstate = (GlobalChunkOutputState&)gstate;
     if (input.getSize() == 0 && cstate.cachedChunk_.getSize() == 0) {
+        context.profiler_.endPhysicalAtom(input);
         return AtomResultType::NEED_MORE_INPUT;
     }
 
@@ -137,6 +140,7 @@ AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &st
         // input is empty and cache not, send the cache to global state
         gcstate.sinkChunk(cstate.cachedChunk_);
         cstate.cachedChunk_.destroy();
+        context.profiler_.endPhysicalAtom(input);
         return AtomResultType::NEED_MORE_INPUT;
     }
     BB_ASSERT(input.getSize() > 0);
@@ -147,9 +151,11 @@ AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &st
         // chunk is full push in the global state
         data_chunk_ptr_t cptr = pinput.clone();
         gcstate.sinkChunk(cptr);
+        auto resultState = AtomResultType::HAVE_MORE_OUTPUT;
         if (cstate.cachedChunk_.getSize() == 0)
-            return AtomResultType::NEED_MORE_INPUT;
-        return AtomResultType::HAVE_MORE_OUTPUT;
+            resultState =  AtomResultType::NEED_MORE_INPUT;
+        context.profiler_.endPhysicalAtom(input);
+        return resultState;
     }
 
     // pinput chunk is not full so we need to flat it
@@ -158,6 +164,7 @@ AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &st
     if (cstate.cachedChunk_.getSize() == 0) {
         cstate.cachedChunk_.initializeEmpty(types_);
         cstate.cachedChunk_.reference(pinput);
+        context.profiler_.endPhysicalAtom(input);
         return AtomResultType::HAVE_MORE_OUTPUT;
     }
 
@@ -171,6 +178,7 @@ AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &st
             gcstate.sinkChunk(cptr);
             cstate.cachedChunk_.destroy();
         }
+        context.profiler_.endPhysicalAtom(input);
         return AtomResultType::NEED_MORE_INPUT;
     }
 
@@ -186,21 +194,16 @@ AtomResultType PhysicalChunkOutput::sink(DataChunk &input, PhysicalAtomState &st
     input.setCardinality(oldSize);
     auto inputOffset = spaceAvailable;
     cstate.cachedChunk_.copy(input, inputOffset);
+    context.profiler_.endPhysicalAtom(input);
     return AtomResultType::HAVE_MORE_OUTPUT;
 }
 
 
-void PhysicalChunkOutput::outputChunk(data_chunk_ptr_t& chunk) const{
-    // TODO
-}
-
-void PhysicalChunkOutput::finalize(GlobalPhysicalAtomState& gstate) const {
+void PhysicalChunkOutput::finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const {
+    context.profiler_.startPhysicalAtom(this);
     // send the chunks from the global state to predicate table
     auto& gcstate = (GlobalChunkOutputState&)gstate;
-    auto output = pt_->predicate_->isInternal();
     for (auto& chunk: gcstate.chunks_.chunks()) {
-        if (output)
-            outputChunk(chunk);
 
         if (chunk->getSize() == chunk->getCapacity()) {
             data_chunk_ptr_t cptr = chunk->clone();
@@ -209,5 +212,7 @@ void PhysicalChunkOutput::finalize(GlobalPhysicalAtomState& gstate) const {
         }
         pt_->append(*chunk);
     }
+    context.profiler_.endPhysicalAtomFinalize();
+
 }
 }

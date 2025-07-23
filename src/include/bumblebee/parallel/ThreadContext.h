@@ -16,30 +16,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/PhysicalRule.h"
+#pragma once
+#include "bumblebee/ClientContext.h"
+#include "bumblebee/execution/PhysicalAtomProfiler.h"
 
 namespace bumblebee{
-    PhysicalRule::PhysicalRule(patom_ptr_t &source, patom_ptr_t &sink, patom_ptr_vector_t &patoms, idx_t priority): source_(std::move(source)),
-        sink_(std::move(sink)),
-        patoms_(std::move(patoms)),
-        priority_(priority){
-        BB_ASSERT(source->isSource());
-        BB_ASSERT(sink->isSink());
-        // set global states
-        sinkGlobalState_ = sink->getGlobalState();
-        sourceGlobalState_ = source->getGlobalState();
+
+
+class ThreadContext {
+public:
+    explicit ThreadContext(ClientContext &context)
+        : context_(context) {
     }
 
-idx_t PhysicalRule::getPriority() const {
-        return priority_;
-}
+    ClientContext& context_;
+    PhysicalAtomProfiler profiler_;
+};
 
-void PhysicalRule::setPriority(idx_t priority) {
-    priority_ = priority;
-}
-
-idx_t PhysicalRule::getSourceSize() const {
-    return source_->estimatedCardinality_;
-}
 
 }

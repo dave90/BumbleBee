@@ -49,4 +49,7 @@ namespace bumblebee {
 // Default size of morsel (chunk to process in one thread)
 #define MORSEL_SIZE (STANDARD_VECTOR_SIZE*4)
 
+// 1 enable the profiling 0 disable it
+#define PROFILING 1
+
 }

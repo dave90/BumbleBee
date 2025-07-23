@@ -47,11 +47,13 @@ struct Expression {
     idx_t executeBinop(Vector& left,Vector& right, SelectionVector& sel, idx_t count) const;
     // verify the expression
     bool verify() const;
-    inline Vector executeRight(vector_vector_t& vectors, idx_t count) const {
-        return executeOperands(vectors, right_, count);
+    // Execute the right side of the expression (expected vector of all the columns of the data chunk)
+    inline Vector executeRight(vector_vector_t& allColumns, idx_t count) const {
+        return executeOperands(allColumns, right_, count);
     }
-    inline Vector executeLeft(vector_vector_t& vectors, idx_t count) const{
-        return executeOperands(vectors, left_, count);
+    // Execute the left side of the expression (expected vector of all the columns of the data chunk)
+    inline Vector executeLeft(vector_vector_t& allColumns, idx_t count) const{
+        return executeOperands(allColumns, left_, count);
     }
     // Execute a operands and set the result in result vector
     static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count);

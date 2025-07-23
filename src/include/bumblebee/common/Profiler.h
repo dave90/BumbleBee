@@ -31,7 +31,7 @@ public:
         start_ = Tick();
     }
     // Finishes timing
-    void End() {
+    void end() {
         end_ = Tick();
         finished_ = true;
     }
@@ -39,7 +39,7 @@ public:
     // Returns the elapsed time in seconds. If End() has been called, returns
     // the total elapsed time. Otherwise returns how far along the timer is
     // right now.
-    double Elapsed() const {
+    double elapsed() const {
         auto end = finished_ ? end_ : Tick();
         return std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count();
     }
@@ -52,7 +52,6 @@ private:
     std::chrono::time_point<std::chrono::system_clock> start_;
     std::chrono::time_point<std::chrono::system_clock> end_;
     bool finished_ = false;
-
 
 };
 

@@ -36,7 +36,8 @@ string PhysicalExpression::toString() const {
     return result;
 }
 
-AtomResultType PhysicalExpression::execute(DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
+AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
+    context.profiler_.startPhysicalAtom(this);
     auto &vectors = input.data_;
     if (expression_.op_ == ASSIGNMENT) {
         // execute the right operand and assign to left column
@@ -44,8 +45,10 @@ AtomResultType PhysicalExpression::execute(DataChunk &input, DataChunk &chunk, P
         BB_ASSERT(expression_.right_.cols_.size() >= 1);
         auto result = expression_.executeRight(vectors, input.getSize());
         chunk.reference(input);
-        chunk.data_[expression_.left_.cols_[0]].reference(result);
+        BB_ASSERT(types_[expression_.left_.cols_[0]] == result.getType());
 
+        chunk.data_[expression_.left_.cols_[0]].reference(result);
+        context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }
     auto leftResult = expression_.executeLeft(vectors, input.getSize());
@@ -56,6 +59,7 @@ AtomResultType PhysicalExpression::execute(DataChunk &input, DataChunk &chunk, P
     chunk.reference(input);
     chunk.slice(sel, count);
     chunk.setCardinality(count);
+    context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
 
 }

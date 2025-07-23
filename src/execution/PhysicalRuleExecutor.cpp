@@ -19,6 +19,93 @@
 #include "bumblebee/execution/PhysicalRuleExecutor.h"
 
 namespace bumblebee{
+PhysicalRuleExecutor::PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext & context): prule_(std::move(prule)), tcontext_(context) {
+    atomResults_.resize(prule->patoms_.size());
 
+    states_.reserve(prule->patoms_.size());
+    chunks_.reserve(prule->patoms_.size() + 2); // +2 for sink and source
+    initializeStates();
+    initializeChunks();
+}
+
+void PhysicalRuleExecutor::initializeStates() {
+    for (auto& patom : prule_->patoms_) {
+        states_.push_back(patom->getState());
+    }
+}
+
+void PhysicalRuleExecutor::initializeChunks() {
+    chunks_.emplace_back(new DataChunk());
+    chunks_.back()->initializeEmpty(prule_->source_->getTypes());
+
+    for (auto& patom : prule_->patoms_) {
+        chunks_.emplace_back(new DataChunk());
+        chunks_.back()->initializeEmpty(patom->getTypes());
+    }
+
+    chunks_.emplace_back(new DataChunk());
+    chunks_.back()->initializeEmpty(prule_->sink_->getTypes());
+}
+
+void PhysicalRuleExecutor::fetchFromSource(DataChunk &input) {
+    sourceResult_ = prule_->source_->getData(tcontext_, input, *sourceState_, *prule_->sourceGlobalState_);
+}
+
+void PhysicalRuleExecutor::finalize() {
+    prule_->source_->finalize(tcontext_, *prule_->sourceGlobalState_);
+    prule_->sink_->finalize(tcontext_, *prule_->sinkGlobalState_);
+}
+
+void PhysicalRuleExecutor::execute() {
+    while (!finished_) {
+
+        fetchFromSource(*chunks_[0]);
+        if (sourceResult_ == AtomResultType::FINISHED) {
+            // no more data to source
+            finished_ = true;
+            break;
+        }
+        executePush();
+
+    }
+}
+
+
+void PhysicalRuleExecutor::executePush() {
+    // current index of the patom to exeecute
+    idx_t idx = 0;
+    // queue of index of patom that have more output, to execute again with same input
+    std::vector<idx_t> idxMoreOutput;
+    while (true) {
+
+        auto result = prule_->patoms_[idx]->execute(tcontext_, *chunks_[idx], *chunks_[idx + 1], *states_[idx]);
+        if (result == AtomResultType::FINISHED) {
+            // the patom request to end
+            finished_ = true;
+            break;
+        }
+        if (result == AtomResultType::HAVE_MORE_OUTPUT) {
+            idxMoreOutput.push_back(idx);
+        }
+        atomResults_[idx++] = result;
+
+        if (idx == prule_->patoms_.size() ) {
+            // we reach the end of the pipeline, call the sink
+            sinkResult_ = prule_->sink_->sink(tcontext_, *chunks_[idx], *sinkState_, *prule_->sinkGlobalState_);
+            if (sinkResult_ == AtomResultType::FINISHED) {
+                // the sink requested to end
+                finished_ = true;
+                break;
+            }
+            if (idxMoreOutput.empty()) {
+                // no patom with more output to call, so break the push and ask to the source more input
+                break;
+            }
+            // pop back the index of the last atom that have more output
+            idx = idxMoreOutput.back();
+            idxMoreOutput.pop_back();
+        }
+    }
+}
 
 }

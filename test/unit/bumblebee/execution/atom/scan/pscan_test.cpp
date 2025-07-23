@@ -38,7 +38,8 @@ class PhysicalScanTest : public ::testing::Test {
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
     shared_ptr<PredicateTables> ptable;
-
+    ClientContext client_context;
+    ThreadContext context{client_context};
 
     void SetUp() override{
         ptable = make_shared<PredicateTables>("a",3);
@@ -79,7 +80,7 @@ TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
     input.initializeEmpty(testTypes);
     auto scanRows = 0;
     auto chunksCounter = 0;
-    while (pcs.getData(input, *state, *gstate) != AtomResultType::FINISHED) {
+    while (pcs.getData(context, input, *state, *gstate) != AtomResultType::FINISHED) {
         scanRows+= input.getSize();
         chunksCounter++;
         // check first row value
@@ -102,7 +103,7 @@ TEST_F(PhysicalScanTest, PhysicalScanProjSimpleTest) {
     input.initializeEmpty(types);
     auto scanRows = 0;
     auto chunksCounter = 0;
-    while (pcs.getData(input, *state, *gstate) != AtomResultType::FINISHED) {
+    while (pcs.getData(context, input, *state, *gstate) != AtomResultType::FINISHED) {
         scanRows+= input.getSize();
         chunksCounter++;
         // check first row value
@@ -135,7 +136,7 @@ TEST_F(PhysicalScanTest, PhysicalScanMultiThreadTest) {
             auto state = pcs.getState(); // Local state for each thread
             DataChunk chunk;
             chunk.initializeEmpty(testTypes);
-            while (pcs.getData(chunk, *state, *gstate) != AtomResultType::FINISHED) {
+            while (pcs.getData(context, chunk, *state, *gstate) != AtomResultType::FINISHED) {
                 threadRowCounts[t] += chunk.getSize();
             }
         });

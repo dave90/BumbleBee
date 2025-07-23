@@ -38,7 +38,8 @@ class PhysicalOutputTest : public ::testing::Test {
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
     shared_ptr<PredicateTables> ptable;
-
+    ClientContext client_context;
+    ThreadContext context{client_context};
 
     void SetUp() override{
         ptable = make_shared<PredicateTables>("a",3);
@@ -74,11 +75,11 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputSingleThreadedTest) {
     auto state = pco.getState();
 
     DataChunk chunk = createChunkWithValue(STANDARD_VECTOR_SIZE, 0, true);
-    auto result = pco.sink(chunk, *state, *gstate);
+    auto result = pco.sink(context, chunk, *state, *gstate);
 
     EXPECT_EQ(result, AtomResultType::NEED_MORE_INPUT);
 
-    pco.finalize(*gstate);
+    pco.finalize(context, *gstate);
 
     ASSERT_EQ(ptable->chunkCount(), 1);
     EXPECT_EQ(ptable->getChunk(0).getSize(), STANDARD_VECTOR_SIZE);
@@ -99,7 +100,7 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputMultiThreadedTest) {
             auto state = pco.getState();
             for (int i = 0; i < TOTAL_CHUNKS / NUM_THREADS; ++i) {
                 DataChunk chunk = createChunkWithValue(STANDARD_VECTOR_SIZE, 0 , false);
-                pco.sink(chunk, *state, *gstate);
+                pco.sink(context, chunk, *state, *gstate);
             }
         });
     }
@@ -108,7 +109,7 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputMultiThreadedTest) {
         th.join();
     }
 
-    pco.finalize(*gstate);
+    pco.finalize(context, *gstate);
 
     EXPECT_EQ(ptable->chunkCount(), TOTAL_CHUNKS);
     for (idx_t i = 0; i < ptable->chunkCount(); ++i) {
@@ -132,13 +133,13 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputFlushPartialChunksTest) {
             AtomResultType result;
             for (int i = 0; i < ROWS_PER_THREAD; i += STANDARD_VECTOR_SIZE / 2) {
                 DataChunk chunk = createChunkWithValue(STANDARD_VECTOR_SIZE / 2, 0 , false);
-                result = pco.sink(chunk, *state, *gstate);
+                result = pco.sink(context, chunk, *state, *gstate);
             }
             // final chunk is not full so expected have more output
             EXPECT_EQ(result, AtomResultType::HAVE_MORE_OUTPUT);
             // Call passing empty chunk
             DataChunk chunk = createChunkWithValue(0, 0, false);
-            result = pco.sink(chunk, *state, *gstate);
+            result = pco.sink(context, chunk, *state, *gstate);
             EXPECT_EQ(result, AtomResultType::NEED_MORE_INPUT);
         });
     }
@@ -147,7 +148,7 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputFlushPartialChunksTest) {
         th.join();
     }
 
-    pco.finalize(*gstate);
+    pco.finalize(context, *gstate);
 
     // Check total rows (each thread = 3 half-sized chunks)
     idx_t expectedRows = NUM_THREADS * ROWS_PER_THREAD;

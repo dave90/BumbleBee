@@ -35,12 +35,15 @@ public:
 
     ~PhysicalChunkScan() override;
 
-    AtomResultType getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+    AtomResultType getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+
     bool isSource() const override;
     string getName() const override;
     string toString() const override;
     pstate_ptr_t getState() const override;
     gpstate_ptr_t getGlobalState() const override;
+    idx_t getMaxThreads() const override;
+
 
 private:
     // pointer to the predicate table to source the data

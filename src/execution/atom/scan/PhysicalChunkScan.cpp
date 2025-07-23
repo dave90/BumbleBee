@@ -31,7 +31,7 @@ public:
     }
 
     // return the start and end index of the next chunks to read
-    // return false if no chunks are avaliable to read , otherwise true
+    // return false if no chunks are available to read , otherwise true
     bool getNextChunksToRead(idx_t& start,idx_t& end) {
         // sync the function
         lock_guard lock(mutex_);
@@ -83,6 +83,7 @@ public:
 PhysicalChunkScan::PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t> &colsToProject,
     idx_t estimated_cardinality, PredicateTables *pt) : PhysicalAtom(types, estimated_cardinality) {
     cols_ = std::move(colsToProject);
+    BB_ASSERT(cols_.size() == types_.size());
     pt_ = pt;
 }
 
@@ -120,8 +121,12 @@ gpstate_ptr_t PhysicalChunkScan::getGlobalState() const {
     return gpstate_ptr_t(new GlobalChunkScanState(pt_));
 }
 
+idx_t PhysicalChunkScan::getMaxThreads() const {
+    return estimatedCardinality_ / MORSEL_SIZE + 1; // for cardinality not multiple of morsel size
+}
 
-AtomResultType PhysicalChunkScan::getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
+AtomResultType PhysicalChunkScan::getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
     auto& cstate = (ChunkScanState&)state;
     auto& cgstate = (GlobalChunkScanState&)gstate;
     if (!cstate.isInitialized_) {
@@ -130,6 +135,7 @@ AtomResultType PhysicalChunkScan::getData(DataChunk &chunk, PhysicalAtomState &s
         if (!cgstate.getNextChunksToRead(start, end)) {
             // no more data to read, return empty Chunk
             chunk.setCardinality(0);
+            context.profiler_.endPhysicalAtom(chunk);
             return AtomResultType::FINISHED;
         }
         cstate.currentIdx_ = start;
@@ -139,16 +145,20 @@ AtomResultType PhysicalChunkScan::getData(DataChunk &chunk, PhysicalAtomState &s
     if (cstate.currentIdx_ > cstate.endIdx_) {
         // no more data to read return empty chunk
         chunk.setCardinality(0);
+        context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::FINISHED;
     }
     auto& ptChunk = pt_->getChunk(cstate.currentIdx_);
     ++cstate.currentIdx_;
     if (cols_.empty()) {
         chunk.reference(ptChunk);
+        context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::HAVE_MORE_OUTPUT;
     }
     // project the columns
     chunk.reference(ptChunk, cols_);
+    context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::HAVE_MORE_OUTPUT;
 }
+
 }

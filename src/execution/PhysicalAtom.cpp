@@ -26,22 +26,22 @@ PhysicalAtom::PhysicalAtom(const std::vector<ConstantType> &types, idx_t estimat
     estimatedCardinality_(estimated_cardinality) {
 }
 
-AtomResultType PhysicalAtom::execute(DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
+AtomResultType PhysicalAtom::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
     ErrorHandler::errorNotImplemented("Calling execute on general physical atom");
     return AtomResultType::FINISHED;
 }
 
-AtomResultType PhysicalAtom::getData(DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
+AtomResultType PhysicalAtom::getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
     ErrorHandler::errorNotImplemented("Calling getData on general physical atom");
     return AtomResultType::FINISHED;
 }
 
-AtomResultType PhysicalAtom::sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
+AtomResultType PhysicalAtom::sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState& gstate) const {
     ErrorHandler::errorNotImplemented("Calling sink on general physical atom");
     return AtomResultType::FINISHED;
 }
 
-void PhysicalAtom::finalize(GlobalPhysicalAtomState& gstate) const {
+void PhysicalAtom::finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const {
 }
 
 bool PhysicalAtom::isSource() const {
@@ -78,5 +78,12 @@ bool operator==(const PhysicalAtom &lhs, const PhysicalAtom &rhs) {
 
 bool operator!=(const PhysicalAtom &lhs, const PhysicalAtom &rhs) {
     return !(lhs == rhs);
+}
+
+idx_t PhysicalAtom::getMaxThreads() const {
+    return INT_MAX;
+}
+
+void PhysicalAtom::setMaxThreads(idx_t threads) const {
 }
 }

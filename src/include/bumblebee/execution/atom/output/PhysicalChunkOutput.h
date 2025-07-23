@@ -32,8 +32,8 @@ public:
         std::vector<idx_t> &cols);
 
     ~PhysicalChunkOutput() override;
-    AtomResultType sink(DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
-    void finalize(GlobalPhysicalAtomState& gstate) const override;
+    AtomResultType sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+    void finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const override;
     DataChunk projectColumns(DataChunk &input) const;
     bool isSink() const override;
     string getName() const override;
@@ -42,8 +42,6 @@ public:
     gpstate_ptr_t getGlobalState() const override;
 
 private:
-    // output the chunk
-    void outputChunk(data_chunk_ptr_t& chunk) const;
 
     // pointer to the predicate table to store the data
     PredicateTables* pt_;
