@@ -20,6 +20,12 @@
 
 #include "bumblebee/common/Log.h"
 
+enum TaskStatus : uint8_t {
+    RUNNING = 0,
+    FINALIZING = 1,
+    COMPLETED = 2
+};
+
 namespace bumblebee{
 Scheduler::Scheduler(ClientContext &context):context_(context) {
 }
@@ -62,29 +68,32 @@ void Scheduler::schedulePriorityRules(prule_ptr_vector_t &bucket) {
         LOG_DEBUG("Generate %d tasks for rule: %s.", taskExpected, rule->toString().c_str());
     }
 
-    std::vector<bool> completed;
-    completed.resize(bucket.size(), false);
+    std::vector<TaskStatus> taskStatus;
+    taskStatus.resize(bucket.size(), RUNNING);
     bool allCompleted = false;
     while (!allCompleted) {
         allCompleted = true;
         // wait for a signal with a timeout; the timeout allows us to periodically check
         queue_.semaphore.wait(WAIT_TIMEOUT_USECS);
         for (idx_t idx = 0;idx < bucket.size();++idx) {
-            if (completed[idx]) continue;
+            if (taskStatus[idx] == COMPLETED) continue;
             if ( bucket[idx]->isFinalized() ) {
+                BB_ASSERT(taskStatus[idx] == FINALIZING);
                 // finalization task also completed
-                completed[idx] = true;
+                taskStatus[idx] = COMPLETED;
                 LOG_DEBUG("Rule %s completed.",bucket[idx]->toString().c_str() );
                 continue;
             }
             // if is finalized we expect completed <= expected,
-            BB_ASSERT(bucket[idx]->getCompletedCount() <= rulesTaskExpected[idx]);
             allCompleted = false;
+            // if FINALIZING waiting the finalize task
+            if (taskStatus[idx] == FINALIZING) continue;
+            BB_ASSERT(taskStatus[idx] == RUNNING);
             // if completed task are >= to the scheduled tasks then run the finalization task
-            // in theory cannot be > but we keep to catch possible bug ;)
             if ( bucket[idx]->getCompletedCount() >= rulesTaskExpected[idx]) {
                 LOG_DEBUG("Schedule finalization for rule: %s.",bucket[idx]->toString().c_str() );
                 scheduleFinalize(bucket[idx]);
+                taskStatus[idx] = FINALIZING;
             }
         }
     }

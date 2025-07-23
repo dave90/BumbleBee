@@ -52,6 +52,7 @@ void PhysicalRuleExecutor::fetchFromSource(DataChunk &input) {
 }
 
 void PhysicalRuleExecutor::finalize() {
+    if (prule_->isFinalized()) return;
     prule_->source_->finalize(*tcontext_, *prule_->sourceGlobalState_);
     prule_->sink_->finalize(*tcontext_, *prule_->sinkGlobalState_);
     prule_->incrementCompleted();
