@@ -20,5 +20,40 @@
 
 namespace bumblebee{
 
+TaskExecutor::TaskExecutor(ConcurrentQueue &queue, idx_t thread): queue_(queue), threadsNumber_(thread) {
+    BB_ASSERT(threadsNumber_ > 0);
+}
 
+void TaskExecutor::executeForeverTask(ConcurrentQueue *queue_, std::atomic<bool> *marker) {
+    task_ptr_t task;
+    // loop until the marker is true
+    while (*marker) {
+        bool res = queue_->q.wait_dequeue_timed(task ,WAIT_TIMEOUT_USECS);
+        // if res is false no data in the queue, continue to spin if marker is true
+        if (!res) continue;
+        // task to execute
+        task->execute();
+        // signal the scheduler that the task is completed
+        queue_->semaphore.signal();
+    }
+}
+
+void TaskExecutor::startThreads() {
+    for (idx_t i = 0; i < threadsNumber_; ++i) {
+        auto marker = std::make_unique<std::atomic<bool>>(true);
+        auto thread = make_unique<std::thread>(TaskExecutor::executeForeverTask, &queue_, marker.get());
+        threads_.push_back(std::move(thread));
+        markers_.push_back(std::move(marker));
+    }
+    BB_ASSERT(threads_.size() == markers_.size());
+}
+
+void TaskExecutor::stopThreadsAndJoin() {
+    for (auto& marker: markers_) {
+        marker->store(false);
+    }
+    for (auto& thread: threads_) {
+        thread->join();
+    }
+}
 }

@@ -22,7 +22,7 @@
 
 namespace bumblebee{
 
-
+// Context information of the current thread execution
 class ThreadContext {
 public:
     explicit ThreadContext(ClientContext &context)
@@ -30,8 +30,10 @@ public:
     }
 
     ClientContext& context_;
+    // profiler for each physical atoms
     PhysicalAtomProfiler profiler_;
 };
 
+using thread_context_ptr_t = std::unique_ptr<ThreadContext>;
 
 }

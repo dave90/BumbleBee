@@ -17,12 +17,40 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "Task.h"
 
 namespace bumblebee{
 
-
+// Responsible for scheduling and managing the execution of physical rules.
+// - Groups rules by priority.
+// - Generates execution tasks for each rule based on the source size and morsel size.
+// - Tracks completion of tasks using atomic counters.
+// - Schedules a finalization task for each rule once all its execution tasks are completed.
+// The scheduler enqueues all tasks into the shared concurrent queue.
 class Scheduler {
+public:
+	ClientContext& context_;
+	ConcurrentQueue queue_;
 
+
+	constexpr static int64_t WAIT_TIMEOUT_USECS = 100000; // 100ms
+    Scheduler(ClientContext& context);
+
+    // Schedule all the rules
+    void scheduleRules(PhysicalRulesBucket& bucket);
+    // Schedule the rules for one priority
+    void schedulePriorityRules(prule_ptr_vector_t& bucket);
+    // Schedule a single rule, return the number of the tasks generated
+    idx_t scheduleRule(prule_ptr_t& rule);
+    // Schedule a finalize task for single rule
+    void scheduleFinalize(prule_ptr_t& rule);
+    // Groups rules into separate vectors based on their priority.
+    // Returns a vector of vectors, where each inner vector contains rules with the same priority.
+    // The outer vector is indexed by priority, i.e., index 0 holds rules with priority 0, index 1 with priority 1, etc.
+    std::vector<prule_ptr_vector_t> bucketByPriority(prule_ptr_vector_t& rules);
+	// List of thread context of all the tasks
+	// contains the execution time of the rules
+	std::vector<thread_context_ptr_t> tcontexts_;
 
 
 };

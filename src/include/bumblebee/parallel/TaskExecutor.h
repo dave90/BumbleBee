@@ -17,13 +17,37 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "Task.h"
 
 namespace bumblebee{
 
-
+// Manages a pool of worker threads that consume and execute tasks from the queue.
+// - Spawns a fixed number of threads.
+// - Each thread waits for tasks and executes them in a loop.
+// - Uses atomic markers to gracefully shut down threads.
+// - Notifies the scheduler via a semaphore when tasks are completed.
 class TaskExecutor {
+    constexpr static int64_t WAIT_TIMEOUT_USECS = 100000; // 100ms
+    using thread_ptr_t = std::unique_ptr<std::thread>;
+    using vector_thread_ptr_t = std::vector<thread_ptr_t>;
 
+public:
+
+    explicit TaskExecutor(ConcurrentQueue &queue, idx_t threads);
+    void startThreads();
+    void stopThreadsAndJoin();
+
+    static void executeForeverTask(ConcurrentQueue* queue_, std::atomic<bool> *marker);
+
+private:
+    // numbers of threads to spin
+    idx_t threadsNumber_;
+    // queue
+    ConcurrentQueue& queue_;
+    // list of internal threads
+    vector_thread_ptr_t threads_;
+    // vector of markers, usefull to stop the threads
+    std::vector<std::unique_ptr<std::atomic<bool>>> markers_;
 };
-
 
 }

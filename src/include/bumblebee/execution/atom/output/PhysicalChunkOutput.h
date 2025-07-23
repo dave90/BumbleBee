@@ -25,7 +25,7 @@ namespace bumblebee{
 
 // Sink Physical Atom (patom) that receive a data chunk and push in
 // predicate table and if is not internal output it
-class PhysicalChunkOutput : PhysicalAtom {
+class PhysicalChunkOutput : public PhysicalAtom {
 public:
     PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables *pt);
     PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables *pt,

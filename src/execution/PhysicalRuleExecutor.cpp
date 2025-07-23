@@ -19,11 +19,11 @@
 #include "bumblebee/execution/PhysicalRuleExecutor.h"
 
 namespace bumblebee{
-PhysicalRuleExecutor::PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext & context): prule_(std::move(prule)), tcontext_(context) {
-    atomResults_.resize(prule->patoms_.size());
+PhysicalRuleExecutor::PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext* context): prule_(std::move(prule)), tcontext_(context) {
+    atomResults_.resize(prule_->patoms_.size());
 
-    states_.reserve(prule->patoms_.size());
-    chunks_.reserve(prule->patoms_.size() + 2); // +2 for sink and source
+    states_.reserve(prule_->patoms_.size());
+    chunks_.reserve(prule_->patoms_.size());
     initializeStates();
     initializeChunks();
 }
@@ -32,6 +32,8 @@ void PhysicalRuleExecutor::initializeStates() {
     for (auto& patom : prule_->patoms_) {
         states_.push_back(patom->getState());
     }
+    sourceState_ = prule_->source_->getState();
+    sinkState_ = prule_->sink_->getState();
 }
 
 void PhysicalRuleExecutor::initializeChunks() {
@@ -43,17 +45,17 @@ void PhysicalRuleExecutor::initializeChunks() {
         chunks_.back()->initializeEmpty(patom->getTypes());
     }
 
-    chunks_.emplace_back(new DataChunk());
-    chunks_.back()->initializeEmpty(prule_->sink_->getTypes());
 }
 
 void PhysicalRuleExecutor::fetchFromSource(DataChunk &input) {
-    sourceResult_ = prule_->source_->getData(tcontext_, input, *sourceState_, *prule_->sourceGlobalState_);
+    sourceResult_ = prule_->source_->getData(*tcontext_, input, *sourceState_, *prule_->sourceGlobalState_);
 }
 
 void PhysicalRuleExecutor::finalize() {
-    prule_->source_->finalize(tcontext_, *prule_->sourceGlobalState_);
-    prule_->sink_->finalize(tcontext_, *prule_->sinkGlobalState_);
+    prule_->source_->finalize(*tcontext_, *prule_->sourceGlobalState_);
+    prule_->sink_->finalize(*tcontext_, *prule_->sinkGlobalState_);
+    prule_->incrementCompleted();
+    prule_->setFinalized();
 }
 
 void PhysicalRuleExecutor::execute() {
@@ -68,17 +70,28 @@ void PhysicalRuleExecutor::execute() {
         executePush();
 
     }
+    prule_->incrementCompleted();
 }
 
 
 void PhysicalRuleExecutor::executePush() {
+    if (prule_->patoms_.size() == 0) {
+        // no intermediate patoms, sink immediately
+        sinkResult_ = prule_->sink_->sink(*tcontext_, *chunks_[0], *sinkState_, *prule_->sinkGlobalState_);
+        if (sinkResult_ == AtomResultType::FINISHED) {
+            // the sink requested to end
+            finished_ = true;
+        }
+        return;
+    }
+
     // current index of the patom to exeecute
     idx_t idx = 0;
     // queue of index of patom that have more output, to execute again with same input
     std::vector<idx_t> idxMoreOutput;
     while (true) {
 
-        auto result = prule_->patoms_[idx]->execute(tcontext_, *chunks_[idx], *chunks_[idx + 1], *states_[idx]);
+        auto result = prule_->patoms_[idx]->execute(*tcontext_, *chunks_[idx], *chunks_[idx + 1], *states_[idx]);
         if (result == AtomResultType::FINISHED) {
             // the patom request to end
             finished_ = true;
@@ -91,7 +104,7 @@ void PhysicalRuleExecutor::executePush() {
 
         if (idx == prule_->patoms_.size() ) {
             // we reach the end of the pipeline, call the sink
-            sinkResult_ = prule_->sink_->sink(tcontext_, *chunks_[idx], *sinkState_, *prule_->sinkGlobalState_);
+            sinkResult_ = prule_->sink_->sink(*tcontext_, *chunks_[idx], *sinkState_, *prule_->sinkGlobalState_);
             if (sinkResult_ == AtomResultType::FINISHED) {
                 // the sink requested to end
                 finished_ = true;

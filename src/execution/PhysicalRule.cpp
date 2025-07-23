@@ -23,11 +23,12 @@ namespace bumblebee{
         sink_(std::move(sink)),
         patoms_(std::move(patoms)),
         priority_(priority){
-        BB_ASSERT(source->isSource());
-        BB_ASSERT(sink->isSink());
+
+        BB_ASSERT(source_->isSource());
+        BB_ASSERT(sink_->isSink());
         // set global states
-        sinkGlobalState_ = sink->getGlobalState();
-        sourceGlobalState_ = source->getGlobalState();
+        sinkGlobalState_ = sink_->getGlobalState();
+        sourceGlobalState_ = source_->getGlobalState();
     }
 
 idx_t PhysicalRule::getPriority() const {
@@ -42,4 +43,27 @@ idx_t PhysicalRule::getSourceSize() const {
     return source_->estimatedCardinality_;
 }
 
+void PhysicalRule::incrementCompleted() {
+    ++completed_;
+}
+
+idx_t PhysicalRule::getCompletedCount() const {
+    return completed_.load();
+}
+
+std::string PhysicalRule::toString() const {
+    std::string result = sink_->toString() + " :- " + source_->toString();
+    for (auto & patom: patoms_) {
+        result += ", "+ patom->toString() ;
+    }
+    return result;
+}
+
+bool PhysicalRule::isFinalized() const {
+    return finalized_.load();
+}
+
+void PhysicalRule::setFinalized() {
+    finalized_.store(true);
+}
 }

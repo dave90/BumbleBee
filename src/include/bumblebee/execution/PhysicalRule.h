@@ -22,8 +22,11 @@
 
 namespace bumblebee{
 
-// Physical Rule contains the source sink and atoms
-// Contains also the global states shared by all the threads
+// Represents a compiled physical rule consisting of source, sink, and intermediate atoms.
+// - Holds shared global state and priority metadata.
+// - Tracks the number of completed task executions.
+// - Tracks whether the rule has been finalized.
+// Used by the scheduler to manage rule execution lifecycle.
 class PhysicalRule {
 
     friend class PhysicalRuleExecutor;
@@ -34,22 +37,41 @@ public:
     idx_t getSourceSize() const;
     idx_t getPriority() const;
     void setPriority(idx_t priority);
-    idx_t getPartitions() const;
-    void setpartitions(idx_t partition);
+    void incrementCompleted();
+    idx_t getCompletedCount() const;
+    bool isFinalized() const;
+    void setFinalized();
 
+    std::string toString()const;
 
 private:
+    // The patom that generates the chunks
     patom_ptr_t source_;
+    // The patom that sink the output chunks
     patom_ptr_t sink_;
+    // Intermediate patoms (filters, hash join etc.)
     patom_ptr_vector_t patoms_;
 
+    // The global states shared among tasks
     gpstate_ptr_t sourceGlobalState_;
     gpstate_ptr_t sinkGlobalState_;
 
     // decreasing priority, 0 "highest priority"
     idx_t priority_;
+
+    // counter of the completed execution
+    std::atomic<idx_t> completed_{0};
+    // if the finalze was called
+    std::atomic<bool> finalized_{false};
 };
 
 using prule_ptr_t = std::shared_ptr<PhysicalRule>;
+using prule_ptr_vector_t = std::vector<prule_ptr_t>;
+
+struct PhysicalRulesBucket {
+    prule_ptr_vector_t rules_;
+    prule_ptr_vector_t constraints_;
+    prule_ptr_vector_t recursiveRules_;
+};
 
 }

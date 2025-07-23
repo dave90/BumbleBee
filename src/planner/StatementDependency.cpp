@@ -110,6 +110,11 @@ void StatementDependency::createDependencyGraph() {
     for (auto& p : unstratPredicates_)
         LOG_DEBUG("Unstratified predicate: %s",p.c_str());
 
+    if (!unstratPredicates_.empty()) {
+        // TODO support unstrat predicates
+        ErrorHandler::errorNotImplemented("Unstratified predicates currently not supported :(");
+    }
+
 
 }
 
@@ -320,6 +325,10 @@ rules_bucket_vector_t StatementDependency::orderRules() {
                         bucket.constraints.push_back(std::move(program_[ruleIndex]));
                 }
             }
+        }
+        if (!bucket.constraints.empty()) {
+            // TODO support constraints
+            ErrorHandler::errorNotImplemented("Constraints rules currently not supported :(");
         }
         orderedRules.push_back(std::move(bucket));
     }

@@ -55,7 +55,7 @@ void DataChunk::reference(DataChunk &chunk, const std::vector<idx_t>& cols) {
     setCardinality(chunk);
     for (idx_t i = 0; i < cols.size(); ++i) {
         auto idx = cols[i];
-        BB_ASSERT(idx < columnCount());
+        BB_ASSERT(idx < chunk.columnCount());
         data_[i].reference(chunk.data_[idx]);
     }
 }

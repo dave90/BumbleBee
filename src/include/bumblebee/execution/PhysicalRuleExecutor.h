@@ -35,10 +35,8 @@ namespace bumblebee{
 // once all threads have completed execution.
 class PhysicalRuleExecutor {
 public:
-    explicit PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext &context);
-
-    void initializeStates();
-    void initializeChunks();
+    explicit PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext *context);
+    PhysicalRuleExecutor(PhysicalRuleExecutor&& other) = default;
 
     // Execute the Physical rule
     void execute();
@@ -49,8 +47,11 @@ public:
     // Call the finalize on the sink and source patoms, It is called only once per pipeline
     void finalize();
 
+    void initializeStates();
+    void initializeChunks();
 private:
-    ThreadContext& tcontext_;
+    ThreadContext* tcontext_;
+    // The physical rule to be executed
     prule_ptr_t prule_;
 
     pstate_ptr_vector_t states_;
@@ -69,5 +70,6 @@ private:
     // TODO Execution context with a  profiler
 };
 
+using rule_executor_ptr_t = std::shared_ptr<PhysicalRuleExecutor>;
 
 }
