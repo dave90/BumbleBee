@@ -18,6 +18,7 @@
  */
 #include "bumblebee/parser/statement/Term.h"
 
+#include "CLI11.hpp"
 #include "bumblebee/common/Hash.h"
 #include "bumblebee/common/Log.h"
 #include "bumblebee/common/types/Assert.h"
@@ -209,6 +210,23 @@ Term Term::createVariable(std::string &&value) {
 
 bool Term::containsAnonymous() const {
     return anonymous_;
+}
+
+void Term::replaceVariable(const string &var,const string &newVar) {
+
+    if (type_ == CONSTANT || type_ == RANGE )return;
+    if (type_ == VARIABLE) {
+        if (value_.stringValue_ == var) {
+            value_.stringValue_ = newVar;
+            anonymous_ = newVar == anonymous_variable;
+        }
+        return;
+    }
+    if (type_ == ARITH) {
+        for (auto& t:terms_)
+            t.replaceVariable(var, newVar);
+    }
+    ErrorHandler::errorNotImplemented("Replace variable for term type not supported");
 }
 
 Operator Term::getOperator(char sop) {

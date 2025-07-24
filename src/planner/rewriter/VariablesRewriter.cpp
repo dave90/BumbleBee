@@ -1,0 +1,97 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "bumblebee/planner/rewriter/VariablesRewriter.h"
+
+#include "bumblebee/common/types/Assert.h"
+
+namespace bumblebee{
+
+
+void VariablesRewriter::pushAnonymous(Rule &rule) {
+    set_term_variable_t headVariables;
+    rule.getVariablesInHead(headVariables);
+    // collect all the variables for each atom in the body
+    std::vector<set_term_variable_t> variablesInBody;
+    set_term_variable_t allVariables;
+    variablesInBody.resize(rule.getBody().size());
+    for (idx_t i = 0; i < rule.getBody().size(); ++i) {
+        rule.getBody()[i].getVariables(variablesInBody[i]);
+        allVariables.insert(variablesInBody[i].begin(), variablesInBody[i].end());
+    }
+
+    set_term_variable_t unusedRuleVariables;
+    for (idx_t i = 0; i < variablesInBody.size(); ++i) {
+        // count the vars present in the atom, if multiple terms share the same variable will increment the counter
+        std::unordered_map<string,idx_t> variableCounter;
+        for (auto& term: rule.getBody()[i].getTerms()) {
+            set_term_variable_t termVariables;
+            term.getVariables(termVariables);
+            for (auto& var : termVariables) {
+                if (!variableCounter.contains(var))
+                    variableCounter[var] = 0;
+                ++variableCounter[var];
+            }
+        }
+        // fin the vars shared with other atoms
+        set_term_variable_t varsShared;
+        for (idx_t j = i +1; j < variablesInBody.size(); ++j)
+            Term::intersetVariables(variableCounter, variablesInBody[j], varsShared);
+
+        for (auto& [var, count]: variableCounter) {
+            if (count > 1)continue;
+            if (varsShared.contains(var))continue;
+            if (headVariables.contains(var)) continue;
+            // variable is only used in this atom, so drop it
+            unusedRuleVariables.insert(var);
+        }
+    }
+
+    for (auto& var : unusedRuleVariables)
+        rule.replaceVariable(var, Term::anonymous_variable);
+}
+
+void VariablesRewriter::rewrite(Rule &rule) {
+    // start with the variables in the head
+    pushAnonymous(rule);
+    // check no anonymous in head and binop and remove atoms all anonymous
+    verifyAndPruneAtoms(rule);
+}
+
+void VariablesRewriter::verifyAndPruneAtoms(Rule &rule) {
+    // check no anonymous in head
+    // check if all atoms has anonymous if yes prune it
+    // check if it is a binop atom that not contains anonymous
+    for (auto& atom : rule.getHead())
+        if (atom.containsAnonymous())
+            ErrorHandler::errorParsing("Error while rewriting rule with VariablesRewriter. Anonymous variable in head atom. Please report the issue.");
+    for (idx_t i = 0; i < rule.getBody().size(); ++i) {
+        auto& atom = rule.getBody()[i];
+        if (!atom.containsAnonymous())continue;
+        if (atom.getType() == AtomType::BUILTIN)
+            ErrorHandler::errorParsing("Error while rewriting rule with VariablesRewriter. Anonymous in BINOP. Please report the issue.");
+        set_term_variable_t vars;
+        atom.getVariables(vars);
+        if (vars.size() == 0) {
+            // atom contains only anonymouse variable, remove it
+            rule.getBody().erase(rule.getBody().begin() + i);
+            --i; // decrement as we are removing one atom
+        }
+    }
+}
+}

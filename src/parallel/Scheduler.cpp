@@ -121,7 +121,7 @@ void Scheduler::scheduleFinalize(prule_ptr_t& rule) {
 }
 
 void Scheduler::scheduleRules(PhysicalRulesBucket &bucket) {
-    auto rulesByPriorities = bucketByPriority(bucket.rules_);
+    auto rulesByPriorities = bucketByPriority(bucket.exit_);
     for (auto& prules : rulesByPriorities) {
         schedulePriorityRules(prules);
     }

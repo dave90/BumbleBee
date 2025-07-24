@@ -44,6 +44,15 @@ bool Rule::isGround() {
 
 }
 
+void Rule::replaceVariable(const string &var, const string &newVar) {
+    for (auto& atom:head_) atom.replaceVariable(var, newVar);
+    for (auto& atom:body_) atom.replaceVariable(var, newVar);
+}
+
+void Rule::setBody(atoms_vector_t &body) {
+    body_ = std::move(body);
+}
+
 void Rule::getPredicatesInHead(predicates_ptr_set_t &predicates) {
     for (auto& atom :head_)
         atom.getPredicates(predicates);

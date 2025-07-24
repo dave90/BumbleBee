@@ -54,6 +54,13 @@ bool ParserInputBuilder::checkRuleSafety() {
             currentRuleIsUnsafe_ = true;
             break;
         }
+    // check that range are not in the rule
+    for (auto&a : currentRule.getHead())
+        if (a.containsRange())
+            currentRuleIsUnsafe_ = true;
+    for (auto&a : currentRule.getBody())
+        if (a.containsRange())
+            currentRuleIsUnsafe_ = true;
 
     if(currentRuleIsUnsafe_){
         safetyErrorMessage="--> Safety Error: "+currentRule.toString();

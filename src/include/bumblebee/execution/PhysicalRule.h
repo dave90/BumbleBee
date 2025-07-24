@@ -69,9 +69,9 @@ using prule_ptr_t = std::shared_ptr<PhysicalRule>;
 using prule_ptr_vector_t = std::vector<prule_ptr_t>;
 
 struct PhysicalRulesBucket {
-    prule_ptr_vector_t rules_;
+    prule_ptr_vector_t exit_;
     prule_ptr_vector_t constraints_;
-    prule_ptr_vector_t recursiveRules_;
+    prule_ptr_vector_t recursive_;
 };
 
 }

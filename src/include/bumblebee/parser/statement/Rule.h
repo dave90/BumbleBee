@@ -55,6 +55,8 @@ public:
     void getVariablesInHead(set_term_variable_t &variables);
     void getVariablesInBody(set_term_variable_t &variables);
     predicates_ptr_set_t getPredicates();
+    void replaceVariable(const string& var,const string& newVar);
+    void setBody(atoms_vector_t &body);
 
 private:
 
@@ -66,9 +68,9 @@ using rules_vector_t = std::vector<Rule>;
 
 // Bucket of rules divided based on the type
 struct RulesBucket {
-    rules_vector_t exit;
-    rules_vector_t recursive;
-    rules_vector_t constraints;
+    rules_vector_t exit_;
+    rules_vector_t recursive_;
+    rules_vector_t constraints_;
 };
 
 using rules_bucket_vector_t = std::vector<RulesBucket>;

@@ -45,6 +45,7 @@ public:
 
     Atom & operator=(const Atom &other) = delete;
     Atom & operator=(Atom &&other) noexcept;
+    Binop getBinop() const;
 
     hash_t hash();
     void getVariables(set_term_variable_t &variables);
@@ -64,11 +65,12 @@ public:
     bool isNegative() const;
     void setNegative(bool negative);
     void setBinop(Binop binop);
-    Binop getBinop() const;
     bool containsAnonymous() const;
     bool containsRange() const;
     bool containsArith() const;
+    bool containsConstant() const;
     std::vector<ConstantType> getTermsCType();
+    void replaceVariable(const string& var, const string& newVar);
 
     inline const Value& getValue(idx_t idx) const {
         return terms_[idx].getValue();

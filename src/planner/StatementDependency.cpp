@@ -315,18 +315,18 @@ rules_bucket_vector_t StatementDependency::orderRules() {
                 for (auto ruleIndex : predicate_head_mapping_[predicate->getLabel()]) {
                     Rule &rule = program_[ruleIndex];
                     if (isExitRule(component, rule ))
-                        bucket.exit.push_back(std::move(rule));
+                        bucket.exit_.push_back(std::move(rule));
                     else
-                        bucket.recursive.push_back(std::move(rule));
+                        bucket.recursive_.push_back(std::move(rule));
                 }
                 // check if some constraints can be evaluated in this stage
                 for (auto ruleIndex:constraintsPredicateMap[predicate]) {
                     if (--constraintsCounter[ruleIndex] == 0)
-                        bucket.constraints.push_back(std::move(program_[ruleIndex]));
+                        bucket.constraints_.push_back(std::move(program_[ruleIndex]));
                 }
             }
         }
-        if (!bucket.constraints.empty()) {
+        if (!bucket.constraints_.empty()) {
             // TODO support constraints
             ErrorHandler::errorNotImplemented("Constraints rules currently not supported :(");
         }

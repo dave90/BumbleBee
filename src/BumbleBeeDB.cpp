@@ -83,8 +83,8 @@ void BumbleBeeDB::run() {
 
 void BumbleBeeDB::processBucketRules( RulesBucket &bucket) {
     LOG_INFO("Processing bucket of rules...");
-    for (auto& rule : bucket.exit)LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
-    for (auto& rule : bucket.recursive)LOG_DEBUG("Recursive rule: %s", rule.toString().c_str());
-    for (auto& rule : bucket.constraints)LOG_DEBUG("Constraint rule: %s", rule.toString().c_str());
+    for (auto& rule : bucket.exit_)LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
+    for (auto& rule : bucket.recursive_)LOG_DEBUG("Recursive rule: %s", rule.toString().c_str());
+    for (auto& rule : bucket.constraints_)LOG_DEBUG("Constraint rule: %s", rule.toString().c_str());
 }
 } // bumblebee

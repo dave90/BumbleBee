@@ -23,6 +23,7 @@
 
 #include "bumblebee/common/ErrorHandler.h"
 #include "bumblebee/common/TypeDefs.h"
+#include "bumblebee/common/types/Assert.h"
 #include "bumblebee/common/types/BumbleString.h"
 #include "bumblebee/common/types/Value.h"
 
@@ -93,13 +94,27 @@ public:
 	void addInArithTerm(Term&& term, Operator op);
 	void addInArithTerm(Term&& term, char op);
 	bool containsAnonymous()const;
+	void replaceVariable(const string& var,const string& newVar);
 
 	inline const Value& getValue()const {
 		return value_;
 	}
 
+	inline const string& getVariable()const {
+		BB_ASSERT(getType() == VARIABLE);
+		return value_.stringValue_;
+	}
+
 	inline const IntervalTerm& getInterval()const {
 		return interval_;
+	}
+
+	inline term_vector_t& getTerms() {
+		return terms_;
+	}
+
+	inline op_vector_t getOperators() {
+		return operators_;
 	}
 
 	// template
@@ -137,6 +152,22 @@ public:
 	static void setConstantNumericTerm(Term& term, unsigned long long value);
 	static Term createSmallestConstantNumericTerm(unsigned long long value);
 	static Term createSmallestConstantNumericTerm(long long value);
+
+	template <class T>
+	static void intersetVariables(T& s1, set_term_variable_t& s2, set_term_variable_t& result) {
+		for (auto& v2 : s2)
+			if (s1.contains(v2))
+				result.insert(v2);
+	}
+	template <class T>
+	static bool subset(T& set, set_term_variable_t& subset) {
+		for (auto& v2 : subset)
+			if (!set.contains(v2))
+				return false;
+		return true;
+	}
+
+
 
 	static constexpr const char* anonymous_variable = "_";
 };

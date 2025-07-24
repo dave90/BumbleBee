@@ -103,6 +103,14 @@ bool Atom::containsArith() const {
             return true;
     return false;
 }
+
+bool Atom::containsConstant() const {
+    for (auto& term : terms_)
+        if (term.getType() == TermType::CONSTANT)
+            return true;
+    return false;
+}
+
 std::vector<ConstantType> Atom::getTermsCType() {
     std::vector<ConstantType> types;
     types.reserve(terms_.size());
@@ -110,6 +118,12 @@ std::vector<ConstantType> Atom::getTermsCType() {
         types.push_back(term.getConstantType());
     }
     return types;
+}
+
+void Atom::replaceVariable(const string &var,const string &newVar) {
+    for (auto& term : terms_) {
+        term.replaceVariable(var, newVar);
+    }
 }
 
 Atom & Atom::operator=(Atom &&other) noexcept {
