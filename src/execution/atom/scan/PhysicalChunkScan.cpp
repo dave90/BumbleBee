@@ -25,8 +25,13 @@ namespace bumblebee{
 class GlobalChunkScanState : public  GlobalPhysicalAtomState {
 public:
     GlobalChunkScanState(PredicateTables* pt): pt_(pt) {
-        for (idx_t i = 0; i < pt->chunkCount(); ++i) {
-            chunksSize_.push_back(pt->getChunk(i).getSize());
+    }
+
+    void initPredicateTable() {
+        pt_->initializeChunks();
+        isPtInitialized_ = true;
+        for (idx_t i = 0; i < pt_->chunkCount(); ++i) {
+            chunksSize_.push_back(pt_->getChunk(i).getSize());
         }
     }
 
@@ -35,13 +40,13 @@ public:
     bool getNextChunksToRead(idx_t& start,idx_t& end) {
         // sync the function
         lock_guard lock(mutex_);
+        if (!isPtInitialized_) {
+            initPredicateTable();
+        }
         if (chunksRead_ >= chunksSize_.size()) {
             return false;
         }
-        if (!isPtInitialized_) {
-            pt_->initializeChunks();
-            isPtInitialized_ = true;
-        }
+
         auto size = chunksSize_[0];
         start = chunksRead_;
         end = start;

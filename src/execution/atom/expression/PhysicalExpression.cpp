@@ -24,7 +24,7 @@ PhysicalExpression::PhysicalExpression(Expression& expr, std::vector<ConstantTyp
 
 }
 
-PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue) : PhysicalAtom({constantValue.getConstantType()}, 1), constantAssignment_(true), constantValue_(std::move(constantValue)) {
+PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue, std::vector<ConstantType>& types) : PhysicalAtom(types, 1), constantAssignment_(true), constantValue_(std::move(constantValue)) {
     // put the col in the left side of the expression
     expression_.left_.cols_.push_back(col);
 }
@@ -51,6 +51,7 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
         BB_ASSERT(expression_.left_.cols_.size() == 1);
         auto col = expression_.left_.cols_[0];
         Vector vec(constantValue_);
+        chunk.reference(input);
         chunk.data_[col].reference(vec);
         return AtomResultType::NEED_MORE_INPUT;
     }

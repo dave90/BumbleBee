@@ -50,12 +50,35 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
         body[i].getVariables(currentVariables);
         newBody.push_back(std::move(body[i]));
 
+        // first check the possible assignment
+        // we need to loop again and again for cascade assignment ( X = Y, Z = X, etc.)
+        for (idx_t j=0; j< builtIntAtoms.size();) {
+            auto ba = builtIntAtoms[j];
+            // if is nullptr builtin already inserted in the new body
+            if (ba == nullptr) {
+                ++j;
+                continue;
+            }
+            // if is equal or assignment and is possible to evaluate now (so only one variable is not bounded)
+            // then evaluate it now
+            if ((ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)  && isAssignmePossibleToEvaluate(currentVariables, builtInVariables[j], *ba)) {
+                ba->setBinop(ASSIGNMENT);
+                ba->getVariables(currentVariables);
+                newBody.push_back(std::move(*ba));
+                builtIntAtoms[j] = nullptr;
+                // new assignment found restart from 0
+                j = 0;
+                continue;
+            }
+            ++j;
+        }
+
         // now check the builtin atoms if is possible to insert one
-        for (idx_t j=0; j< builtIntAtoms.size(); j++) {
+        // and while true until no more new atoms is possible to insert
+        for (idx_t j=0; j< builtIntAtoms.size();++j) {
             auto ba = builtIntAtoms[j];
             // if is nullptr builtin already inserted in the new body
             if (ba == nullptr)continue;
-
             // if all the variables are present, we can execute as filter
             if (Term::subset(currentVariables, builtInVariables[j])) {
                 if (ba->getBinop() == ASSIGNMENT) {
@@ -64,17 +87,8 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
                 }
                 newBody.push_back(std::move(*ba));
                 builtIntAtoms[j] = nullptr;
-                continue;
-            }
-            // if is equal or assignment and is possible to evaluate now (so only one variable is not bounded)
-            // then evaluate it
-            if ((ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)  && isAssignmePossibleToEvaluate(currentVariables, builtInVariables[j], *ba)) {
-                ba->setBinop(ASSIGNMENT);
-                newBody.push_back(std::move(*ba));
-                builtIntAtoms[j] = nullptr;
             }
         }
-
 
     }
 
@@ -93,6 +107,8 @@ bool FilterPushDownRewriter::isAssignmePossibleToEvaluate(set_term_variable_t &c
     BB_ASSERT(assignment.getBinop() == EQUAL || assignment.getBinop() == ASSIGNMENT);
     // TODO rewrite the arith; for now we do not rewrite the formula we work with assignment
     // only if left or right has one variable
+
+    if (assignment.isConstantAssignment())return true;
 
     set_term_variable_t intersection;
     Term::intersetVariables(currentVariables, builtinVars, intersection );

@@ -23,18 +23,33 @@
 namespace bumblebee{
 
 void ArithRewriter::rewrite(Rule &rule) {
-    std::vector<Atom> newAtoms ;
+    std::vector<Atom> builtins ;
     // extract arith term or constant
     for (auto& atom: rule.getHead()) {
         while (atom.containsArith() || atom.containsConstant()) {
             auto builtinAtom = extractArith(atom);
-            newAtoms.push_back(std::move(builtinAtom));
+            builtins.push_back(std::move(builtinAtom));
         }
     }
+
+    // separate the builtin with the classical atoms
+    // and put the arith in the builtins vector
+    std::vector<Atom> newBody;
+    for (auto& atom: rule.getBody()) {
+        if (atom.getType() == CLASSICAL)
+            newBody.push_back(std::move(atom));
+        else if (atom.getType() == BUILTIN)
+            builtins.push_back(std::move(atom));
+        else
+            BB_ASSERT(false && "Atom type not supported");
+    }
+    rule.setBody(newBody);
+
+
     for (auto& atom: rule.getBody()) {
         while (atom.containsArith() || atom.containsConstant()) {
             auto builtinAtom = extractArith(atom);
-            newAtoms.push_back(std::move(builtinAtom));
+            builtins.push_back(std::move(builtinAtom));
         }
     }
     for (auto& atom: rule.getBody()) {
@@ -42,22 +57,22 @@ void ArithRewriter::rewrite(Rule &rule) {
         while (containsSharedVariables(atom, var)) {
             auto builtinAtoms = removeSharedVariables(atom, var);
             for (auto& builtinAtom: builtinAtoms)
-                newAtoms.push_back(std::move(builtinAtom));
+                builtins.push_back(std::move(builtinAtom));
         }
     }
     // finally extract the constant in the arith formula
-    auto size = newAtoms.size(); // store the size because new atoms will be pushed
+    auto size = builtins.size(); // store the size because new atoms will be pushed
     for (idx_t i = 0; i < size; ++i) {
-        auto& atom = newAtoms[i];
+        auto& atom = builtins[i];
         if (atom.getType() != BUILTIN || atom.isConstantAssignment())continue;
         auto& left = atom.getTerms()[0];
         auto& right = atom.getTerms()[1];
         while (left.containsOrIsConstant() || right.containsOrIsConstant()) {
             auto builtinAtom = extractConstantBuiltinArith(atom);
-            newAtoms.push_back(std::move(builtinAtom));
+            builtins.push_back(std::move(builtinAtom));
         }
     }
-    for (auto& atom: newAtoms)
+    for (auto& atom: builtins)
         rule.addAtomInBody(std::move(atom));
 }
 
@@ -175,7 +190,7 @@ Atom ArithRewriter::extractConstantBuiltinArith(Atom &atom) {
     binopTerms.push_back(std::move(cterm));
     counter_++;
 
-    return Atom::createBuiltinAtom(std::move(binopTerms), EQUAL);
+    return Atom::createBuiltinAtom(std::move(binopTerms), ASSIGNMENT);
 }
 
 ArithRewriter::~ArithRewriter() {}

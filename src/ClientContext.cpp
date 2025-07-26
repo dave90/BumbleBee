@@ -21,7 +21,10 @@
 #include "bumblebee/catalog/Catalog.h"
 
 namespace bumblebee{
-ClientContext::ClientContext():defaultSchema_(Catalog::instance().getDefaultSchema()) {
+ClientContext::ClientContext():
+    defaultSchema_(Catalog::instance().getDefaultSchema()),
+    printLog_(false),
+    threads_(1),
+    singleShot_(false){}
 
-}
 }

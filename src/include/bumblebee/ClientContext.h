@@ -24,8 +24,13 @@ namespace bumblebee{
 // The ClientContext holds information relevant to the current session
 class ClientContext {
 public:
-    ClientContext();
+    std::string logFilename_;
+    std::vector<std::string> inputFiles_;
+    bool printLog_;
+    bool singleShot_;
     Schema& defaultSchema_;
+    idx_t threads_;
+    ClientContext();
 };
 
 

@@ -109,6 +109,30 @@ TEST_F(SchedulerTest, ScheduleSingleRuleTest) {
 }
 
 
+TEST_F(SchedulerTest, ScheduleSingleRulePartialChunkTest) {
+    int THREADS = 10;
+    // populate with 100 chunks
+    populatePTable(1, 100);
+    // create PRule
+    std::vector<idx_t> cols = {0,1,2};
+    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols, sourcePtable->getCount(), sourcePtable.get() ));
+    // we do not care of estimated cardinality of sink and other patom
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes, 0, sinkPtable.get(), cols_to_project));
+    patom_ptr_vector_t patoms;
+    prule_ptr_t rule = prule_ptr_t(new PhysicalRule(source, sink, patoms, 0 ));
+
+    Scheduler scheduler(cc);
+    TaskExecutor executor(scheduler.queue_, THREADS);
+    executor.startThreads();
+
+    prule_ptr_vector_t rules = {rule};
+    scheduler.schedulePriorityRules(rules);
+
+    executor.stopThreadsAndJoin();
+    EXPECT_EQ(sinkPtable->getCount(), sourcePtable->getCount());
+}
+
+
 TEST_F(SchedulerTest, ScheduleRuleSourceAndSinkTest) {
     int THREADS = 10;
     // populate with 100 chunks

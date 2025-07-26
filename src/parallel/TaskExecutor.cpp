@@ -18,6 +18,8 @@
  */
 #include "bumblebee/parallel/TaskExecutor.h"
 
+#include "bumblebee/common/Log.h"
+
 namespace bumblebee{
 
 TaskExecutor::TaskExecutor(ConcurrentQueue &queue, idx_t thread): queue_(queue), threadsNumber_(thread) {
@@ -39,21 +41,26 @@ void TaskExecutor::executeForeverTask(ConcurrentQueue *queue_, std::atomic<bool>
 }
 
 void TaskExecutor::startThreads() {
+    LOG_DEBUG("Starting %d threads...",threadsNumber_);
     for (idx_t i = 0; i < threadsNumber_; ++i) {
         auto marker = std::make_unique<std::atomic<bool>>(true);
         auto thread = make_unique<std::thread>(TaskExecutor::executeForeverTask, &queue_, marker.get());
         threads_.push_back(std::move(thread));
         markers_.push_back(std::move(marker));
     }
+    LOG_DEBUG("Thread started");
     BB_ASSERT(threads_.size() == markers_.size());
 }
 
 void TaskExecutor::stopThreadsAndJoin() {
+    LOG_DEBUG("Stopping %d threads...",threadsNumber_);
+
     for (auto& marker: markers_) {
         marker->store(false);
     }
     for (auto& thread: threads_) {
         thread->join();
     }
+    LOG_DEBUG("Thread stopped");
 }
 }

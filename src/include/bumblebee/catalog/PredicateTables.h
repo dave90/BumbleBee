@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "bumblebee/common/Hash.h"
 #include "bumblebee/common/Mutex.h"
 #include "bumblebee/common/types/ChunkCollection.h"
 #include "bumblebee/parser/statement/Predicate.h"

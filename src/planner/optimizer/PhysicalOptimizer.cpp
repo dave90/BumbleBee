@@ -41,7 +41,18 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
     BB_ASSERT(atom.getTerms().size() == 2);
     std::vector<string> vars;
 
-    if (atom.getBinop() != ASSIGNMENT) {
+    if (atom.isConstantAssignment()) {
+        // is an ssignment with constant value
+        auto& left = atom.getTerms()[0];
+        auto& right = atom.getTerms()[1];
+        BB_ASSERT(left.getType() == VARIABLE);
+        BB_ASSERT(right.getType() == CONSTANT);
+        BB_ASSERT(!colsMap_.contains(left.getVariable()));
+        // we need to calculate the type of the left side
+        typesMap_[left.getVariable()] = right.getConstantType();
+        colsMap_[left.getVariable()] = colsMap_.size();
+        vars.insert(vars.begin(),left.getVariable());
+    }else if (atom.getBinop() != ASSIGNMENT) {
         // is not assignment so all the variables should be present in the col and types map
         for (auto &term: atom.getTerms()) {
             if (term.getType() == VARIABLE) {
@@ -58,7 +69,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
             }
         }
     }else {
-        // if is assignment the left part is a new variable and we need to inster in th
+        // if is assignment the left part is a new variable and we need to insert in the
         // map and type cols
         auto& left = atom.getTerms()[0];
         auto& right = atom.getTerms()[1];
@@ -153,7 +164,7 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
 void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms ) {
     BB_ASSERT(atom.getType() == BUILTIN);
     if (atom.isConstantAssignment()) {
-        auto patom = patom_ptr_t(new PhysicalExpression(cols[0], atom.getTerms()[1].getValue()));
+        auto patom = patom_ptr_t(new PhysicalExpression(cols[0], atom.getTerms()[1].getValue(), types));
         patoms.push_back(std::move(patom));
         return;
     }

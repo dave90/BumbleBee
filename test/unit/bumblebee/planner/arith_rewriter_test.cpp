@@ -66,3 +66,20 @@ TEST(ArithRewriterTest, RewriteArith) {
     EXPECT_NE(rule.toString(), beforeRewriting);
     EXPECT_EQ(rule.getBody().size(), 7);
 }
+
+TEST(ArithRewriterTest, RewriteArithWithConstant) {
+    ParserInputDirector pid(TEXT);
+
+    auto program = getRulesFromFile("rule6");
+    EXPECT_EQ(program.size(), 1);
+    auto& rule = program[0];
+
+    string beforeRewriting = rule.toString();
+    std::cout << beforeRewriting << std::endl;
+
+    ArithRewriter rewriter;
+    rewriter.rewrite(rule);
+    std::cout << rule.toString() << std::endl;
+    EXPECT_NE(rule.toString(), beforeRewriting);
+    EXPECT_EQ(rule.toString(), "a( X ) :- b( X ),X > #ARITH_0,#ARITH_0 = 1.");
+}

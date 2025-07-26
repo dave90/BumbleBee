@@ -193,7 +193,7 @@ std::string Atom::toString() const {
         for (unsigned i = 1; i < terms_.size(); ++i) {
             s += ", "+terms_[i].toString();
         }
-        return s+" )";
+        return s+" ).";
     }
     if (type_ == AtomType::BUILTIN) {
         return terms_[0].toString() + " "+ getBinopStr(binop_) + " " + terms_[1].toString();

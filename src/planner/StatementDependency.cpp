@@ -59,6 +59,11 @@ void StatementDependency::createDependencyGraph() {
             predComponentsMap_[v] = i;
     }
 
+    LOG_DEBUG("%s",depGraph_.getDotFormat("DepGraph").c_str());
+    for (const auto& [key, value] : predComponentsMap_) {
+        LOG_DEBUG("(Predicate, Component): (%s, %d)", key.c_str(), value);
+    }
+
 
     // calculate the unstrat predicates
     if (stratDepGraph_.getNumVertices() == 0)return;
@@ -73,10 +78,6 @@ void StatementDependency::createDependencyGraph() {
         }
     }
 
-    LOG_DEBUG("%s",depGraph_.getDotFormat("DepGraph").c_str());
-    for (const auto& [key, value] : predComponentsMap_) {
-        LOG_DEBUG("(Predicate, Component): (%s, %d)", key.c_str(), value);
-    }
 
     LOG_DEBUG("Calculating unstrat predicates...");
 
@@ -181,6 +182,7 @@ void StatementDependency::createAndOrderComponentGraph() {
     for (const auto& [key, value] : predComponentsMap_) {
         // add a vertex in case of rules composed by facts in body
         compGraph_.addVertex(std::to_string(value));
+        if (!predicate_head_mapping_.contains(key))continue;
         for (auto& ruleIndex: predicate_head_mapping_[key]) {
             // fo each rule where the predicate is in head iterate the body atoms
             Rule& rule = program_[ruleIndex];
@@ -312,12 +314,14 @@ rules_bucket_vector_t StatementDependency::orderRules() {
         RulesBucket bucket;
         for (auto component : components) {
             for (auto predicate: componentsPredicatesMap[component]) {
-                for (auto ruleIndex : predicate_head_mapping_[predicate->getLabel()]) {
-                    Rule &rule = program_[ruleIndex];
-                    if (isExitRule(component, rule ))
-                        bucket.exit_.push_back(std::move(rule));
-                    else
-                        bucket.recursive_.push_back(std::move(rule));
+                if (predicate_head_mapping_.contains(predicate->getLabel())) {
+                    for (auto ruleIndex : predicate_head_mapping_[predicate->getLabel()]) {
+                        Rule &rule = program_[ruleIndex];
+                        if (isExitRule(component, rule ))
+                            bucket.exit_.push_back(std::move(rule));
+                        else
+                            bucket.recursive_.push_back(std::move(rule));
+                    }
                 }
                 // check if some constraints can be evaluated in this stage
                 for (auto ruleIndex:constraintsPredicateMap[predicate]) {
@@ -339,14 +343,14 @@ rules_bucket_vector_t StatementDependency::orderRules() {
 
 bool StatementDependency::isExitRule(idx_t component, Rule &rule) {
     // is a recursive rule if the predicates in the body are predicates to be processed
-    // of the same component
+    // of the same component and is present in the head of some rule
     predicates_ptr_set_t preds;
     for (auto& atom : rule.getBody()) {
         if (atom.isNegative())continue;
         atom.getPredicates(preds);
     }
     for (auto& p: preds)
-        if (predComponentsMap_[p->getLabel()] == component)
+        if (predicate_head_mapping_.contains(p->getLabel()) && predComponentsMap_[p->getLabel()] == component)
             return false;
 
     return true;

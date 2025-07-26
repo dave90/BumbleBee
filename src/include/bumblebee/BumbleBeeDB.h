@@ -17,9 +17,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <string>
-#include <vector>
 
+#include "ClientContext.h"
+#include "parallel/Scheduler.h"
 #include "planner/StatementDependency.h"
 
 namespace bumblebee {
@@ -32,16 +32,16 @@ public:
     int parseArgs(int, char **);
     void printArgs();
 
+    void parseProgram(rules_vector_t &program);
+    void processProgram(rules_vector_t& program, Scheduler& scheduler);
     void run();
-
+    void printIDB();
 
 private:
-    void processBucketRules( RulesBucket & bucket);
+    void processBucketRules( RulesBucket & bucket, Scheduler& scheduler);
 
-    std::string logFilename_;
-    std::vector<std::string> inputFiles_;
-    bool printLog_;
-    bool singleShot_;
+    ClientContext context_;
+
 
 };
 } // bumblebee

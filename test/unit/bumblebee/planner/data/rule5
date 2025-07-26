@@ -1,1 +1,1 @@
-a( X, Y ) :- X = Y, X = Z, W > 100,  b( X, Y, T ), b( Z, 100, W ), T+Z = O.
+a( X, Y ) :- T+Z = O, X = Y, X = Z, W > 100,  b( X, Y, T ), b( Z, 100, W ).

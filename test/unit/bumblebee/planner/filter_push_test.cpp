@@ -23,6 +23,7 @@
 #include "bumblebee/parser/ParserInputDirector.h"
 #include "bumblebee/parser/statement/Rule.h"
 #include "utils.h"
+#include "bumblebee/planner/rewriter/ArithRewriter.h"
 #include "bumblebee/planner/rewriter/FilterPushDownRewriter.h"
 
 using namespace bumblebee;
@@ -60,5 +61,24 @@ TEST(FilterRewriterTest, OrderBuiltin) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(), "a( X, Y ) :- b( X, Y, T ),X == Y,Z = X,b( Z, 100, W ),W > 100,O = T+Z.");
+    EXPECT_EQ(rule.toString(), "a( X, Y ) :- b( X, Y, T ),Z = X,O = T+Z,X == Y,b( Z, 100, W ),W > 100.");
+}
+
+TEST(FilterRewriterTest, OrderOneBuiltin) {
+    ParserInputDirector pid(TEXT);
+
+    auto program = getRulesFromFile("rule6");
+    EXPECT_EQ(program.size(), 1);
+    auto& rule = program[0];
+
+    string beforeRewriting = rule.toString();
+    std::cout << beforeRewriting << std::endl;
+
+    ArithRewriter arithRewriter;
+    FilterPushDownRewriter filterRewriter;
+    arithRewriter.rewrite(rule);
+    std::cout << rule.toString() << std::endl;
+    filterRewriter.rewrite(rule);
+    std::cout << rule.toString() << std::endl;
+    EXPECT_NE(rule.toString(), beforeRewriting);
 }
