@@ -152,7 +152,7 @@ TermType Term::getType() const{
 
 ConstantType Term::getConstantType() {
     if ( type_ == RANGE)
-        return ConstantType::INTEGER;
+        return ConstantType::BIGINT;
     BB_ASSERT(type_ == CONSTANT);
     return value_.ctype_;
 }

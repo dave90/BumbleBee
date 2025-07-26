@@ -571,20 +571,20 @@ static const yytype_int8 yyrhs[] =
 static const yytype_uint16 yyrline[] =
 {
        0,    73,    73,    75,    77,    78,    83,    84,    88,    89,
-      93,    97,   101,   105,   109,   113,   123,   127,   135,   142,
-     147,   155,   160,   164,   174,   178,   182,   186,   193,   197,
-     204,   205,   206,   207,   211,   218,   225,   226,   230,   234,
-     241,   248,   252,   259,   263,   270,   274,   278,   285,   286,
-     290,   297,   303,   304,   308,   313,   318,   327,   328,   332,
-     333,   337,   344,   348,   355,   356,   357,   362,   363,   367,
-     368,   369,   373,   377,   382,   388,   392,   397,   402,   407,
-     414,   415,   421,   422,   430,   431,   437,   438,   439,   443,
-     448,   453,   458,   466,   471,   478,   486,   490,   497,   501,
-     508,   517,   522,   526,   531,   539,   540,   541,   545,   554,
-     561,   568,   575,   576,   580,   587,   591,   592,   596,   603,
-     607,   614,   621,   622,   626,   627,   628,   629,   630,   634,
-     638,   645,   649,   656,   657,   661,   662,   667,   674,   679,
-     684,   689
+      93,    97,   101,   105,   109,   113,   121,   125,   133,   140,
+     145,   153,   158,   162,   172,   176,   180,   184,   191,   195,
+     202,   203,   204,   205,   209,   216,   223,   224,   228,   232,
+     239,   246,   250,   257,   261,   268,   272,   276,   283,   284,
+     288,   295,   301,   302,   306,   311,   316,   325,   326,   330,
+     331,   335,   342,   346,   353,   354,   355,   360,   361,   365,
+     366,   367,   371,   375,   380,   386,   390,   395,   400,   405,
+     412,   413,   419,   420,   428,   429,   435,   436,   437,   441,
+     446,   451,   456,   464,   469,   476,   484,   488,   495,   499,
+     506,   515,   520,   524,   529,   537,   538,   539,   543,   552,
+     559,   566,   573,   574,   578,   585,   589,   590,   594,   601,
+     605,   612,   619,   620,   624,   625,   626,   627,   628,   632,
+     636,   643,   647,   654,   655,   659,   660,   665,   672,   677,
+     682,   687
 };
 #endif
 
@@ -1742,22 +1742,20 @@ yyreduce:
   case 15:
 #line 114 "src/parser/aspcore2.y"
     {
-			if(!queryFound)
-				{ queryFound=true; director.getBuilder()->onQuery(); }
-			else
-				{ yyerror(director,"A query has been already found"); }
+			queryFound=true;
+			director.getBuilder()->onQuery();
 		}
     break;
 
   case 16:
-#line 124 "src/parser/aspcore2.y"
+#line 122 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onHead();
         }
     break;
 
   case 17:
-#line 128 "src/parser/aspcore2.y"
+#line 126 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceAtom();
             director.getBuilder()->onHead();
@@ -1765,14 +1763,14 @@ yyreduce:
     break;
 
   case 18:
-#line 136 "src/parser/aspcore2.y"
+#line 134 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onBody();
         }
     break;
 
   case 19:
-#line 143 "src/parser/aspcore2.y"
+#line 141 "src/parser/aspcore2.y"
     {
             // There is only the weight. No level and terms.
             director.getBuilder()->onWeightAtLevels(1,0,0);
@@ -1780,7 +1778,7 @@ yyreduce:
     break;
 
   case 20:
-#line 148 "src/parser/aspcore2.y"
+#line 146 "src/parser/aspcore2.y"
     {
             // There are also a level and/or some terms.
             // The finalization has been postponed to "level_and_terms".
@@ -1788,7 +1786,7 @@ yyreduce:
     break;
 
   case 21:
-#line 156 "src/parser/aspcore2.y"
+#line 154 "src/parser/aspcore2.y"
     {
             // There is no terms following the level.
             director.getBuilder()->onWeightAtLevels(1,1,0);
@@ -1796,14 +1794,14 @@ yyreduce:
     break;
 
   case 22:
-#line 161 "src/parser/aspcore2.y"
+#line 159 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onWeightAtLevels(1,1,(yyvsp[(4) - (4)].integer));
         }
     break;
 
   case 23:
-#line 165 "src/parser/aspcore2.y"
+#line 163 "src/parser/aspcore2.y"
     {
             // The level is omitted.
             // Thus, the first term, recognized as the
@@ -1813,164 +1811,164 @@ yyreduce:
     break;
 
   case 24:
-#line 175 "src/parser/aspcore2.y"
+#line 173 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onHeadAtom();
         }
     break;
 
   case 25:
-#line 179 "src/parser/aspcore2.y"
+#line 177 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onHeadAtom();
         }
     break;
 
   case 26:
-#line 183 "src/parser/aspcore2.y"
+#line 181 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onHeadAtom();
         }
     break;
 
   case 27:
-#line 187 "src/parser/aspcore2.y"
+#line 185 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onHeadAtom();
         }
     break;
 
   case 28:
-#line 194 "src/parser/aspcore2.y"
+#line 192 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onBodyLiteral();
         }
     break;
 
   case 29:
-#line 198 "src/parser/aspcore2.y"
+#line 196 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onBodyLiteral();
         }
     break;
 
   case 34:
-#line 212 "src/parser/aspcore2.y"
+#line 210 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceLowerGuard();
         }
     break;
 
   case 35:
-#line 219 "src/parser/aspcore2.y"
+#line 217 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceUpperGuard();
         }
     break;
 
   case 38:
-#line 231 "src/parser/aspcore2.y"
+#line 229 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceElement();
         }
     break;
 
   case 39:
-#line 235 "src/parser/aspcore2.y"
+#line 233 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceElement();
         }
     break;
 
   case 40:
-#line 242 "src/parser/aspcore2.y"
+#line 240 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceElementAtom();
         }
     break;
 
   case 41:
-#line 249 "src/parser/aspcore2.y"
+#line 247 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceElementLiteral();
         }
     break;
 
   case 42:
-#line 253 "src/parser/aspcore2.y"
+#line 251 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onChoiceElementLiteral();
         }
     break;
 
   case 43:
-#line 260 "src/parser/aspcore2.y"
+#line 258 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateNafLiteral();
         }
     break;
 
   case 44:
-#line 264 "src/parser/aspcore2.y"
+#line 262 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateNafLiteral();
         }
     break;
 
   case 45:
-#line 271 "src/parser/aspcore2.y"
+#line 269 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onNafLiteral();
         }
     break;
 
   case 46:
-#line 275 "src/parser/aspcore2.y"
+#line 273 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onNafLiteral(true);
         }
     break;
 
   case 47:
-#line 279 "src/parser/aspcore2.y"
+#line 277 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onNafLiteral();
         }
     break;
 
   case 49:
-#line 287 "src/parser/aspcore2.y"
+#line 285 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregate();
         }
     break;
 
   case 50:
-#line 291 "src/parser/aspcore2.y"
+#line 289 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregate(true);
         }
     break;
 
   case 51:
-#line 298 "src/parser/aspcore2.y"
+#line 296 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onExistentialAtom();
         }
     break;
 
   case 52:
-#line 303 "src/parser/aspcore2.y"
+#line 301 "src/parser/aspcore2.y"
     { director.getBuilder()->onAtom(); }
     break;
 
   case 53:
-#line 304 "src/parser/aspcore2.y"
+#line 302 "src/parser/aspcore2.y"
     { director.getBuilder()->onAtom(true); }
     break;
 
   case 54:
-#line 309 "src/parser/aspcore2.y"
+#line 307 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onPredicateName((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -1978,7 +1976,7 @@ yyreduce:
     break;
 
   case 55:
-#line 314 "src/parser/aspcore2.y"
+#line 312 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onPredicateName((yyvsp[(1) - (4)].string));
             delete[] (yyvsp[(1) - (4)].string);
@@ -1986,7 +1984,7 @@ yyreduce:
     break;
 
   case 56:
-#line 319 "src/parser/aspcore2.y"
+#line 317 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onPredicateName((yyvsp[(1) - (3)].string));
             delete[] (yyvsp[(1) - (3)].string);
@@ -1994,70 +1992,70 @@ yyreduce:
     break;
 
   case 57:
-#line 327 "src/parser/aspcore2.y"
+#line 325 "src/parser/aspcore2.y"
     { (yyval.integer) = 1; }
     break;
 
   case 58:
-#line 328 "src/parser/aspcore2.y"
+#line 326 "src/parser/aspcore2.y"
     { (yyval.integer) = (yyvsp[(1) - (3)].integer) + 1; }
     break;
 
   case 61:
-#line 338 "src/parser/aspcore2.y"
+#line 336 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onBuiltinAtom();
         }
     break;
 
   case 62:
-#line 345 "src/parser/aspcore2.y"
+#line 343 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onEqualOperator();
         }
     break;
 
   case 63:
-#line 349 "src/parser/aspcore2.y"
+#line 347 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onUnequalOperator();
         }
     break;
 
   case 67:
-#line 362 "src/parser/aspcore2.y"
+#line 360 "src/parser/aspcore2.y"
     { (yyval.single_char) = '+'; }
     break;
 
   case 68:
-#line 363 "src/parser/aspcore2.y"
+#line 361 "src/parser/aspcore2.y"
     { (yyval.single_char) = '-'; }
     break;
 
   case 69:
-#line 367 "src/parser/aspcore2.y"
+#line 365 "src/parser/aspcore2.y"
     { (yyval.single_char) = '*'; }
     break;
 
   case 70:
-#line 368 "src/parser/aspcore2.y"
+#line 366 "src/parser/aspcore2.y"
     { (yyval.single_char) = '/'; }
     break;
 
   case 71:
-#line 369 "src/parser/aspcore2.y"
+#line 367 "src/parser/aspcore2.y"
     { (yyval.single_char) = '\\'; }
     break;
 
   case 72:
-#line 374 "src/parser/aspcore2.y"
+#line 372 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onUnknownVariable();
         }
     break;
 
   case 73:
-#line 378 "src/parser/aspcore2.y"
+#line 376 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onFunction((yyvsp[(1) - (4)].string), (yyvsp[(3) - (4)].integer));
             delete[] (yyvsp[(1) - (4)].string);
@@ -2065,7 +2063,7 @@ yyreduce:
     break;
 
   case 74:
-#line 383 "src/parser/aspcore2.y"
+#line 381 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onTermRange((yyvsp[(1) - (3)].string), (yyvsp[(3) - (3)].string));
             delete[] (yyvsp[(1) - (3)].string);
@@ -2074,14 +2072,14 @@ yyreduce:
     break;
 
   case 75:
-#line 389 "src/parser/aspcore2.y"
+#line 387 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onTermDash();
         }
     break;
 
   case 77:
-#line 398 "src/parser/aspcore2.y"
+#line 396 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onTerm((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2089,7 +2087,7 @@ yyreduce:
     break;
 
   case 78:
-#line 403 "src/parser/aspcore2.y"
+#line 401 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onTerm((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2097,38 +2095,38 @@ yyreduce:
     break;
 
   case 79:
-#line 408 "src/parser/aspcore2.y"
+#line 406 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onTermParams();
         }
     break;
 
   case 80:
-#line 414 "src/parser/aspcore2.y"
+#line 412 "src/parser/aspcore2.y"
     {}
     break;
 
   case 83:
-#line 423 "src/parser/aspcore2.y"
+#line 421 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onArithmeticOperation((yyvsp[(2) - (3)].single_char));
         }
     break;
 
   case 84:
-#line 430 "src/parser/aspcore2.y"
+#line 428 "src/parser/aspcore2.y"
     {}
     break;
 
   case 85:
-#line 432 "src/parser/aspcore2.y"
+#line 430 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onArithmeticOperation((yyvsp[(2) - (3)].single_char));
         }
     break;
 
   case 89:
-#line 444 "src/parser/aspcore2.y"
+#line 442 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateGroundTerm((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2136,7 +2134,7 @@ yyreduce:
     break;
 
   case 90:
-#line 449 "src/parser/aspcore2.y"
+#line 447 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateGroundTerm((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2144,7 +2142,7 @@ yyreduce:
     break;
 
   case 91:
-#line 454 "src/parser/aspcore2.y"
+#line 452 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateGroundTerm((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2152,7 +2150,7 @@ yyreduce:
     break;
 
   case 92:
-#line 459 "src/parser/aspcore2.y"
+#line 457 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateGroundTerm((yyvsp[(2) - (2)].string),true);
             delete[] (yyvsp[(2) - (2)].string);
@@ -2160,7 +2158,7 @@ yyreduce:
     break;
 
   case 93:
-#line 467 "src/parser/aspcore2.y"
+#line 465 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateVariableTerm((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2168,14 +2166,14 @@ yyreduce:
     break;
 
   case 94:
-#line 472 "src/parser/aspcore2.y"
+#line 470 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateUnknownVariable();
         }
     break;
 
   case 95:
-#line 479 "src/parser/aspcore2.y"
+#line 477 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateFunctionalTerm((yyvsp[(1) - (4)].string),(yyvsp[(3) - (4)].integer));
             delete[] (yyvsp[(1) - (4)].string);
@@ -2183,35 +2181,35 @@ yyreduce:
     break;
 
   case 96:
-#line 487 "src/parser/aspcore2.y"
+#line 485 "src/parser/aspcore2.y"
     {
                director.getBuilder()->onListTerm(0);
        }
     break;
 
   case 97:
-#line 491 "src/parser/aspcore2.y"
+#line 489 "src/parser/aspcore2.y"
     {
                director.getBuilder()->onListTerm((yyvsp[(2) - (3)].integer));
        }
     break;
 
   case 98:
-#line 498 "src/parser/aspcore2.y"
+#line 496 "src/parser/aspcore2.y"
     {
                 (yyval.integer) = (yyvsp[(1) - (1)].integer);
         }
     break;
 
   case 99:
-#line 502 "src/parser/aspcore2.y"
+#line 500 "src/parser/aspcore2.y"
     {
                 (yyval.integer) = 2;
         }
     break;
 
   case 100:
-#line 509 "src/parser/aspcore2.y"
+#line 507 "src/parser/aspcore2.y"
     {
 
                 director.getBuilder()->onHeadTailList();
@@ -2220,7 +2218,7 @@ yyreduce:
     break;
 
   case 101:
-#line 518 "src/parser/aspcore2.y"
+#line 516 "src/parser/aspcore2.y"
     {
                 director.getBuilder()->onTerm((yyvsp[(1) - (1)].string));
                 delete[] (yyvsp[(1) - (1)].string);
@@ -2228,7 +2226,7 @@ yyreduce:
     break;
 
   case 103:
-#line 527 "src/parser/aspcore2.y"
+#line 525 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onExistentialVariable((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2236,7 +2234,7 @@ yyreduce:
     break;
 
   case 104:
-#line 532 "src/parser/aspcore2.y"
+#line 530 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onExistentialVariable((yyvsp[(3) - (3)].string));
             delete[] (yyvsp[(3) - (3)].string);
@@ -2244,22 +2242,22 @@ yyreduce:
     break;
 
   case 105:
-#line 539 "src/parser/aspcore2.y"
+#line 537 "src/parser/aspcore2.y"
     { (yyval.string) = (yyvsp[(1) - (1)].string); }
     break;
 
   case 106:
-#line 540 "src/parser/aspcore2.y"
+#line 538 "src/parser/aspcore2.y"
     { (yyval.string) = (yyvsp[(1) - (1)].string); }
     break;
 
   case 107:
-#line 541 "src/parser/aspcore2.y"
+#line 539 "src/parser/aspcore2.y"
     { (yyval.string) = (yyvsp[(1) - (1)].string); }
     break;
 
   case 108:
-#line 546 "src/parser/aspcore2.y"
+#line 544 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onDirective((yyvsp[(1) - (2)].string),(yyvsp[(2) - (2)].string));
             delete[] (yyvsp[(1) - (2)].string);
@@ -2268,91 +2266,91 @@ yyreduce:
     break;
 
   case 109:
-#line 555 "src/parser/aspcore2.y"
+#line 553 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAtom();
         }
     break;
 
   case 110:
-#line 562 "src/parser/aspcore2.y"
+#line 560 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateLowerGuard();
         }
     break;
 
   case 111:
-#line 569 "src/parser/aspcore2.y"
+#line 567 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateUpperGuard();
         }
     break;
 
   case 114:
-#line 581 "src/parser/aspcore2.y"
+#line 579 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateLowerGuard();
         }
     break;
 
   case 118:
-#line 597 "src/parser/aspcore2.y"
+#line 595 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateLowerGuard();
         }
     break;
 
   case 120:
-#line 608 "src/parser/aspcore2.y"
+#line 606 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateUpperGuard();
         }
     break;
 
   case 121:
-#line 615 "src/parser/aspcore2.y"
+#line 613 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateUpperGuard();
         }
     break;
 
   case 129:
-#line 635 "src/parser/aspcore2.y"
+#line 633 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onLessOperator();
         }
     break;
 
   case 130:
-#line 639 "src/parser/aspcore2.y"
+#line 637 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onLessOrEqualOperator();
         }
     break;
 
   case 131:
-#line 646 "src/parser/aspcore2.y"
+#line 644 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onGreaterOperator();
         }
     break;
 
   case 132:
-#line 650 "src/parser/aspcore2.y"
+#line 648 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onGreaterOrEqualOperator();
         }
     break;
 
   case 137:
-#line 668 "src/parser/aspcore2.y"
+#line 666 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateElement();
         }
     break;
 
   case 138:
-#line 675 "src/parser/aspcore2.y"
+#line 673 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2360,7 +2358,7 @@ yyreduce:
     break;
 
   case 139:
-#line 680 "src/parser/aspcore2.y"
+#line 678 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2368,7 +2366,7 @@ yyreduce:
     break;
 
   case 140:
-#line 685 "src/parser/aspcore2.y"
+#line 683 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2376,7 +2374,7 @@ yyreduce:
     break;
 
   case 141:
-#line 690 "src/parser/aspcore2.y"
+#line 688 "src/parser/aspcore2.y"
     {
             director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
             delete[] (yyvsp[(1) - (1)].string);
@@ -2385,7 +2383,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 2389 "src/parser/aspcore2_parser.c"
+#line 2387 "src/parser/aspcore2_parser.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);

@@ -36,7 +36,7 @@ struct NoneOutputBuilder {
 
 struct TextOutputBuilder {
     static inline void outputAtom(const Atom& atom) {
-        std::cout << atom.toString() << "." << std::endl;
+        std::cout << atom.toString() << std::endl;
     }
     static void outputAtoms(const DataChunk& chunk, Predicate * predicate) ;
 };

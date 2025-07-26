@@ -112,10 +112,8 @@ simple_rule
         }
   	| query
     	{
-			if(!queryFound)
-				{ queryFound=true; director.getBuilder()->onQuery(); }
-			else
-				{ yyerror(director,"A query has been already found"); }
+			queryFound=true;
+			director.getBuilder()->onQuery();
 		}
     ;
 
