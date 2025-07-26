@@ -211,6 +211,17 @@ Term Term::createVariable(std::string &&value) {
 bool Term::containsAnonymous() const {
     return anonymous_;
 }
+bool Term::containsConstant() const {
+    for (auto& term : terms_)
+        if (term.getType() == TermType::CONSTANT)
+            return true;
+    return false;
+}
+
+bool Term::containsOrIsConstant() const {
+    if (type_ == TermType::CONSTANT) return true;
+    return containsConstant();
+}
 
 void Term::replaceVariable(const string &var,const string &newVar) {
 

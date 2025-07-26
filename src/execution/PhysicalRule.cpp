@@ -19,17 +19,17 @@
 #include "bumblebee/execution/PhysicalRule.h"
 
 namespace bumblebee{
-    PhysicalRule::PhysicalRule(patom_ptr_t &source, patom_ptr_t &sink, patom_ptr_vector_t &patoms, idx_t priority): source_(std::move(source)),
-        sink_(std::move(sink)),
-        patoms_(std::move(patoms)),
-        priority_(priority){
+PhysicalRule::PhysicalRule(patom_ptr_t &source, patom_ptr_t &sink, patom_ptr_vector_t &patoms, idx_t priority): source_(std::move(source)),
+    sink_(std::move(sink)),
+    patoms_(std::move(patoms)),
+    priority_(priority){
 
-        BB_ASSERT(source_->isSource());
-        BB_ASSERT(sink_->isSink());
-        // set global states
-        sinkGlobalState_ = sink_->getGlobalState();
-        sourceGlobalState_ = source_->getGlobalState();
-    }
+    BB_ASSERT(source_->isSource());
+    BB_ASSERT(sink_->isSink());
+    // set global states
+    sinkGlobalState_ = sink_->getGlobalState();
+    sourceGlobalState_ = source_->getGlobalState();
+}
 
 idx_t PhysicalRule::getPriority() const {
         return priority_;
@@ -57,6 +57,10 @@ std::string PhysicalRule::toString() const {
         result += ", "+ patom->toString() ;
     }
     return result;
+}
+
+idx_t PhysicalRule::getPhysicalAtomsSize() const {
+    return patoms_.size();
 }
 
 bool PhysicalRule::isFinalized() const {

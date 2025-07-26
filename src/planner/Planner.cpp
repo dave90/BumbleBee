@@ -27,6 +27,7 @@
 
 namespace bumblebee {
 
+
 PhysicalRulesBucket Planner::plan(RulesBucket &rules) {
     executeRewriters(rules);
 
@@ -47,7 +48,7 @@ PhysicalRulesBucket Planner::plan(RulesBucket &rules) {
 }
 
 void Planner::executeOptimizer(RulesBucket & rules, PhysicalRulesBucket & prules) {
-    PhysicalOptimizer optimizer;
+    PhysicalOptimizer optimizer(context);
     for (auto& rule: rules.exit_) {
         for (auto& prule: optimizer.optimize(rule))
             prules.exit_.emplace_back(prule);
@@ -64,6 +65,13 @@ void Planner::executeOptimizer(RulesBucket & rules, PhysicalRulesBucket & prules
 
 void Planner::executeRewriters(RulesBucket &rules) {
     // logical -> logical rewrite
+
+    /*TODO:
+     *- constant evaluate , bot X = 2 +2 and 10 > 20
+     *- rule ordering
+     *- common subexpression , i.e. X = Y +1, Z = Y +1
+     *- arith simplication , X * 1 > Y -> X > Y
+     */
 
     std::vector<rewriter_ptr_t> rewriters;
     rewriters.emplace_back(new VariablesRewriter());

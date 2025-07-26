@@ -69,6 +69,8 @@ public:
     bool containsRange() const;
     bool containsArith() const;
     bool containsConstant() const;
+    // return true if is constant assignment , i.e X == 10
+    bool isConstantAssignment();
     std::vector<ConstantType> getTermsCType();
     void replaceVariable(const string& var, const string& newVar);
 

@@ -31,7 +31,6 @@ namespace bumblebee{
 class PhysicalChunkScan : public PhysicalAtom {
 public:
     PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t>& colsToProject, idx_t estimated_cardinality, PredicateTables* pt);
-    PhysicalChunkScan(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables* pt);
 
     ~PhysicalChunkScan() override;
 
@@ -49,7 +48,6 @@ private:
     // pointer to the predicate table to source the data
     PredicateTables* pt_;
     // cols to project
-    std::vector<idx_t> cols_;
 
 };
 

@@ -41,12 +41,16 @@ Expression::Expression(Expression &&other) noexcept: op_(other.op_),
 
 std::string Expression::toString() const{
     std::string result ="";
+    result += std::to_string(left_.cols_[0])+" ";
     for (idx_t i=0;i<left_.operators_.size();++i) {
-        result += std::to_string(left_.cols_[i]) + " "+getOperatorChar(left_.operators_[i]) + " "+ std::to_string(left_.cols_[i+1]) ;
+        result += getOperatorChar(left_.operators_[i]);
+        result +=   " "+ std::to_string(left_.cols_[i+1]) ;
     }
-    result += getBinopStr(op_);
+    result += " "+getBinopStr(op_)+" ";
+    result += std::to_string(right_.cols_[0]) + " ";
     for (idx_t i=0;i<right_.operators_.size();++i) {
-        result += std::to_string(right_.cols_[i]) + " "+getOperatorChar(right_.operators_[i]) + " " +std::to_string(right_.cols_[i+1]) ;
+        result += getOperatorChar(right_.operators_[i]);
+        result += " " +std::to_string(right_.cols_[i+1]) ;
     }
     return result;
 }
@@ -82,27 +86,29 @@ void executeOperator(Vector& left, Vector& right, Vector& result, idx_t count, O
     }
 }
 
-Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &op, idx_t count){
+Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &op, idx_t count, ConstantType resultType){
     if (op.cols_.size() == 1) {
         Vector result(allColumns[op.cols_[0]]);
         return result;
     }
 
-    // Find the result type of the final vector
-    ConstantType resultType = UNKNOWN;
-
     vector_vector_t vectors;
     for (auto c: op.cols_) {
         vectors.emplace_back(allColumns[c]);
-        resultType = getCommonType(resultType, allColumns[c].getType());
-        // we need bump the common type as operation can overflow the data
-        resultType = getBumpedType(resultType);
     }
-    // if result type is unsigned, and we have subtraction
-    // set result type as bigint
-    bool diff = std::find(op.operators_.begin(), op.operators_.end(), MINUS) != op.operators_.end();
-    if (diff && isUnsigned(resultType))
-        resultType = BIGINT;
+    // Find the result type of the final vector if is not passed
+    if (resultType == UNKNOWN) {
+        for (auto c: op.cols_) {
+            resultType = getCommonType(resultType, allColumns[c].getType());
+            // we need bump the common type as operation can overflow the data
+            resultType = getBumpedType(resultType);
+        }
+        // if result type is unsigned, and we have subtraction
+        // set result type as bigint
+        bool diff = std::find(op.operators_.begin(), op.operators_.end(), MINUS) != op.operators_.end();
+        if (diff && isUnsigned(resultType))
+            resultType = BIGINT;
+    }
 
     Vector v3(resultType);
     // make first operation

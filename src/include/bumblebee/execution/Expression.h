@@ -36,6 +36,7 @@ struct Expression {
     Binop op_{NONE_OP};
     Operands left_;
     Operands right_;
+    Expression() = default;
 
     Expression(Binop op, const Operands &left, const Operands &right);
     Expression(Binop op, std::vector<idx_t>& leftCols, std::vector<Operator>& leftOps,std::vector<idx_t> &rightCols, std::vector<Operator>& rightOps );
@@ -48,15 +49,15 @@ struct Expression {
     // verify the expression
     bool verify() const;
     // Execute the right side of the expression (expected vector of all the columns of the data chunk)
-    inline Vector executeRight(vector_vector_t& allColumns, idx_t count) const {
+    inline Vector executeRight(vector_vector_t& allColumns, idx_t count, ConstantType resultType = UNKNOWN) const {
         return executeOperands(allColumns, right_, count);
     }
     // Execute the left side of the expression (expected vector of all the columns of the data chunk)
-    inline Vector executeLeft(vector_vector_t& allColumns, idx_t count) const{
+    inline Vector executeLeft(vector_vector_t& allColumns, idx_t count, ConstantType resultType = UNKNOWN) const{
         return executeOperands(allColumns, left_, count);
     }
     // Execute a operands and set the result in result vector
-    static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count);
+    static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count, ConstantType resultType = UNKNOWN);
 
 
 };

@@ -57,14 +57,8 @@ public:
 
 
 PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
-    PredicateTables *pt): PhysicalAtom(types, estimated_cardinality),
-                                           pt_(pt){
-}
-
-PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
-    PredicateTables *pt, std::vector<idx_t> &cols): PhysicalChunkOutput(types, estimated_cardinality, pt){
-    cols_ = std::move(cols);
-    BB_ASSERT(cols_.size() == types_.size());
+PredicateTables *pt, std::vector<idx_t> &cols): PhysicalAtom(types, cols, estimated_cardinality),
+                                       pt_(pt){
 }
 
 PhysicalChunkOutput::~PhysicalChunkOutput() {}
@@ -80,11 +74,12 @@ string PhysicalChunkOutput::getName() const {
 
 string PhysicalChunkOutput::toString() const {
     auto result = getName();
-    if (cols_.empty())
-        return result + " (" + pt_->predicate_.get()->toString() + ")";
-    result += " (" + pt_->predicate_.get()->toString();
+    result += " (" + pt_->predicate_.get()->toString()+"; ";
     for (auto c : cols_) {
         result += std::to_string(c) + ", ";
+    }
+    for (auto c : colsType_) {
+        result += ctypeToString(c) + ", ";
     }
     return result + ")";
 
@@ -99,12 +94,10 @@ gpstate_ptr_t PhysicalChunkOutput::getGlobalState() const {
 }
 
 DataChunk PhysicalChunkOutput::projectColumns(DataChunk &input) const{
+
     DataChunk newChunk;
-    newChunk.initializeEmpty(types_);
-    if (cols_.size() > 0)
-        newChunk.reference(input, cols_);
-    else
-        newChunk.reference(input);
+    newChunk.initializeEmpty(colsType_);
+    newChunk.reference(input, cols_);
     return newChunk;
 
 }
@@ -145,7 +138,7 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     }
     BB_ASSERT(input.getSize() > 0);
     DataChunk pinput = projectColumns(input);
-    BB_ASSERT(pinput.columnCount() == types_.size());
+    BB_ASSERT(pinput.columnCount() == colsType_.size());
 
     if ( pinput.getSize() == pinput.getCapacity()) {
         // chunk is full push in the global state
@@ -162,7 +155,7 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     pinput.normalify();
     // if cache is empty set to cache
     if (cstate.cachedChunk_.getSize() == 0) {
-        cstate.cachedChunk_.initializeEmpty(types_);
+        cstate.cachedChunk_.initializeEmpty(colsType_);
         cstate.cachedChunk_.reference(pinput);
         context.profiler_.endPhysicalAtom(input);
         return AtomResultType::HAVE_MORE_OUTPUT;

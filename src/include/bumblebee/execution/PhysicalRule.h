@@ -43,6 +43,7 @@ public:
     void setFinalized();
 
     std::string toString()const;
+    idx_t getPhysicalAtomsSize() const;
 
 private:
     // The patom that generates the chunks

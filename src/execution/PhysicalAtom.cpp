@@ -26,6 +26,12 @@ PhysicalAtom::PhysicalAtom(const std::vector<ConstantType> &types, idx_t estimat
     estimatedCardinality_(estimated_cardinality) {
 }
 
+PhysicalAtom::PhysicalAtom(const std::vector<ConstantType> &types, std::vector<idx_t> cols,
+idx_t estimated_cardinality): types_(types), estimatedCardinality_(estimated_cardinality), cols_(std::move(cols)) {
+    BB_ASSERT(cols_.size() <= types_.size());
+    for (auto c : cols_) colsType_.push_back(types_[c]);
+}
+
 AtomResultType PhysicalAtom::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
     ErrorHandler::errorNotImplemented("Calling execute on general physical atom");
     return AtomResultType::FINISHED;

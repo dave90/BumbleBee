@@ -72,7 +72,8 @@ protected:
 
 TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
     populatePTable(10, STANDARD_VECTOR_SIZE);
-    PhysicalChunkScan pcs(testTypes, 0, ptable.get());
+    std::vector<idx_t> cols = {0,1,2};
+    PhysicalChunkScan pcs(testTypes, cols, 0, ptable.get());
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
 
@@ -93,14 +94,15 @@ TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
 
 TEST_F(PhysicalScanTest, PhysicalScanProjSimpleTest) {
     populatePTable(10, STANDARD_VECTOR_SIZE);
-    std::vector<ConstantType> types{ConstantType::INTEGER, ConstantType::UINTEGER};
     std::vector<idx_t> cols = {0,1};
-    PhysicalChunkScan pcs(types, cols, 0, ptable.get());
+    PhysicalChunkScan pcs(testTypes, cols, 0, ptable.get());
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
 
+    std::vector<ConstantType> sourceTypes;
+    for (auto c : cols) sourceTypes.push_back(testTypes[c]);
     DataChunk input;
-    input.initializeEmpty(types);
+    input.initializeEmpty(sourceTypes);
     auto scanRows = 0;
     auto chunksCounter = 0;
     while (pcs.getData(context, input, *state, *gstate) != AtomResultType::FINISHED) {
@@ -123,7 +125,8 @@ TEST_F(PhysicalScanTest, PhysicalScanMultiThreadTest) {
     populatePTable(CHUNK_COUNT, ELEMENTS_PER_CHUNK);
 
     // Create the scan operator and shared global state
-    PhysicalChunkScan pcs(testTypes, 0, ptable.get());
+    std::vector<idx_t> cols = {0,1,2};
+    PhysicalChunkScan pcs(testTypes,cols, 0, ptable.get());
     auto gstate = pcs.getGlobalState();
 
     // Use a vector to collect total rows processed by each thread

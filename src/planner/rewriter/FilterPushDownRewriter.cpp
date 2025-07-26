@@ -113,7 +113,10 @@ bool FilterPushDownRewriter::isAssignmePossibleToEvaluate(set_term_variable_t &c
         return true;
     }
     if (rightVariables.size() == 1 && rightVariables.contains(varsNotBounded[0])) {
-        // left side is the assignment
+        // right side is the assignment, swap it
+        assignment.getTerms()[1] = std::move(assignment.getTerms()[0]);
+        Term assignVar(varsNotBounded[0].c_str(), true);
+        assignment.getTerms()[0] = std::move(assignVar);
         assignment.setBinop(ASSIGNMENT);
         return true;
     }

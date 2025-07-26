@@ -111,6 +111,17 @@ bool Atom::containsConstant() const {
     return false;
 }
 
+bool Atom::isConstantAssignment() {
+    if (type_ != BUILTIN) return false;
+    if (binop_ != EQUAL && binop_ != ASSIGNMENT) return false;
+    auto lType = terms_[0].getType();
+    auto rType = terms_[1].getType();
+
+    return (lType == CONSTANT && rType == VARIABLE) ||
+           (lType == VARIABLE && rType == CONSTANT);
+
+}
+
 std::vector<ConstantType> Atom::getTermsCType() {
     std::vector<ConstantType> types;
     types.reserve(terms_.size());

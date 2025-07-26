@@ -20,13 +20,8 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 
-#include "bumblebee/common/Constants.h"
 #include "bumblebee/parser/ParserInputDirector.h"
-#include "bumblebee/parser/statement/Atom.h"
-#include "bumblebee/parser/statement/Predicate.h"
 #include "bumblebee/parser/statement/Rule.h"
-#include "bumblebee/planner/rewriter/ArithRewriter.h"
-#include "bumblebee/planner/rewriter/VariablesRewriter.h"
 #include "utils.h"
 #include "bumblebee/planner/rewriter/FilterPushDownRewriter.h"
 
@@ -65,5 +60,5 @@ TEST(FilterRewriterTest, OrderBuiltin) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(), "a( X, Y ) :- b( X, Y, T ),X == Y,X = Z,b( Z, 100, W ),W > 100,T+Z = O.");
+    EXPECT_EQ(rule.toString(), "a( X, Y ) :- b( X, Y, T ),X == Y,Z = X,b( Z, 100, W ),W > 100,O = T+Z.");
 }

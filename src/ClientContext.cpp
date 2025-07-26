@@ -18,7 +18,10 @@
  */
 #include "bumblebee/ClientContext.h"
 
+#include "bumblebee/catalog/Catalog.h"
+
 namespace bumblebee{
+ClientContext::ClientContext():defaultSchema_(Catalog::instance().getDefaultSchema()) {
 
-
+}
 }

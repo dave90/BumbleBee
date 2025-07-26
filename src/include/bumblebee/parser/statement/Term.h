@@ -95,8 +95,13 @@ public:
 	void addInArithTerm(Term&& term, char op);
 	bool containsAnonymous()const;
 	void replaceVariable(const string& var,const string& newVar);
+	bool containsConstant() const;
+	bool containsOrIsConstant() const;
 
 	inline const Value& getValue()const {
+		return value_;
+	}
+	inline Value& getValue() {
 		return value_;
 	}
 
@@ -123,6 +128,7 @@ public:
 	T getNumericValue() {
 		return value_.getValueUnsafe<T>();
 	}
+
 
 
 private:

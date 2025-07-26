@@ -56,7 +56,6 @@ protected:
 
 
     std::vector<ConstantType> sourceTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<ConstantType> sinkTypes{ConstantType::INTEGER, ConstantType::BIGINT};
     std::vector<idx_t> cols_to_project = {0,2};
     ClientContext cc;
 
@@ -92,9 +91,10 @@ TEST_F(SchedulerTest, ScheduleSingleRuleTest) {
     // populate with 100 chunks
     populatePTable(100);
     // create PRule
-    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, sourcePtable->getCount(), sourcePtable.get() ));
+    std::vector<idx_t> cols = {0,1,2};
+    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols, sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sinkTypes, 0, sinkPtable.get(), cols_to_project));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes, 0, sinkPtable.get(), cols_to_project));
     patom_ptr_vector_t patoms;
     prule_ptr_t rule = prule_ptr_t(new PhysicalRule(source, sink, patoms, 0 ));
 
@@ -114,9 +114,10 @@ TEST_F(SchedulerTest, ScheduleRuleSourceAndSinkTest) {
     // populate with 100 chunks
     populatePTable(100);
     // create PRule
-    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, sourcePtable->getCount(), sourcePtable.get() ));
+    std::vector<idx_t> cols = {0,1,2};
+    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols, sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sinkTypes, 0, sinkPtable.get(), cols_to_project));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes, 0, sinkPtable.get(), cols_to_project));
     patom_ptr_vector_t patoms;
     prule_ptr_t rule = prule_ptr_t(new PhysicalRule(source, sink, patoms, 0 ));
 
@@ -140,9 +141,10 @@ TEST_F(SchedulerTest, ScheduleRuleWithFilterTest) {
     // populate with 100 chunks
     populatePTable(100);
     // create PRule
-    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, sourcePtable->getCount(), sourcePtable.get() ));
+    std::vector<idx_t> cols = {0,1,2};
+    auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols, sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sinkTypes, 0, sinkPtable.get(), cols_to_project));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes, 0, sinkPtable.get(), cols_to_project));
     patom_ptr_vector_t patoms;
     auto expr = generateExpression(EQUAL, {0}, {}, {2}, {});
     patoms.emplace_back(  new PhysicalExpression(expr, sourceTypes, 0));

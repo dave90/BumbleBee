@@ -134,4 +134,21 @@ ConstantType getCommonType(ConstantType t1, ConstantType t2) {
     return t2;
 }
 
+string ctypeToString(ConstantType type) {
+    switch (type) {
+        case TINYINT:    return "TINYINT";
+        case SMALLINT:   return "SMALLINT";
+        case INTEGER:    return "INTEGER";
+        case BIGINT:     return "BIGINT";
+        case UTINYINT:   return "UTINYINT";
+        case USMALLINT:  return "USMALLINT";
+        case UINTEGER:   return "UINTEGER";
+        case UBIGINT:    return "UBIGINT";
+        case FLOAT:      return "FLOAT";
+        case DOUBLE:     return "DOUBLE";
+        case STRING:     return "STRING";
+        case UNKNOWN:    return "UNKNOWN";
+        default:         return "INVALID_CONSTANT_TYPE";
+    }
+}
 }

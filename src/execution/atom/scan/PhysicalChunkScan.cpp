@@ -81,16 +81,10 @@ public:
 };
 
 PhysicalChunkScan::PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t> &colsToProject,
-    idx_t estimated_cardinality, PredicateTables *pt) : PhysicalAtom(types, estimated_cardinality) {
-    cols_ = std::move(colsToProject);
-    BB_ASSERT(cols_.size() == types_.size());
+    idx_t estimated_cardinality, PredicateTables *pt) : PhysicalAtom(types, colsToProject, estimated_cardinality) {
     pt_ = pt;
 }
 
-PhysicalChunkScan::PhysicalChunkScan(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
-    PredicateTables *pt) : PhysicalAtom(types, estimated_cardinality) {
-    pt_ = pt;
-}
 
 PhysicalChunkScan::~PhysicalChunkScan() = default;
 
@@ -104,11 +98,12 @@ string PhysicalChunkScan::getName() const {
 
 string PhysicalChunkScan::toString() const {
     auto result = getName();
-    if (cols_.empty())
-        return result + " (" + pt_->predicate_.get()->toString() + ")";
-    result += " (" + pt_->predicate_.get()->toString();
+    result += " (" + pt_->predicate_.get()->toString()+"; ";
     for (auto c : cols_) {
         result += std::to_string(c) + ", ";
+    }
+    for (auto c : colsType_) {
+        result += ctypeToString(c) + ", ";
     }
     return result + ")";
 }
@@ -150,11 +145,6 @@ AtomResultType PhysicalChunkScan::getData(ThreadContext& context, DataChunk &chu
     }
     auto& ptChunk = pt_->getChunk(cstate.currentIdx_);
     ++cstate.currentIdx_;
-    if (cols_.empty()) {
-        chunk.reference(ptChunk);
-        context.profiler_.endPhysicalAtom(chunk);
-        return AtomResultType::HAVE_MORE_OUTPUT;
-    }
     // project the columns
     chunk.reference(ptChunk, cols_);
     context.profiler_.endPhysicalAtom(chunk);

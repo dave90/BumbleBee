@@ -1,29 +1,36 @@
 ## TODOLIST
-- binary operators
-- design the operators (states and functions)
-- Hash map (look the umbra version)
-
-## First draft
-- Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner
-- Executor
-- Aggregation
-- Profiler
+- Output
 
 ## Next
 - Benchmarks
 - E2E Tests
+- unit test 
+
+## First draft
+Process a simple datalog program with aggregation joins and negative atoms.
+ 
+- Hash map (look the umbra version)
+- Statistics / Predicate Tables data structures (hash , intermediate results)
+- Aggregation
+- Planner with statistics
+
+
 
 ## 0.1
-- CSV and Parquet
+- CSV
 - DB
+- server mode
+- sql
+- python lib
+- directives
 
 ## 0.2
+- parquet
+- DB
 - compiled operators
 - cascade?
 - multi join predicates?
-- server mode
-- sql support(basic instructions)
 - list + array?
 - ASP?
 

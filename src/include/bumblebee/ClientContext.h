@@ -17,12 +17,15 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "catalog/Schema.h"
 
 namespace bumblebee{
 
 // The ClientContext holds information relevant to the current session
 class ClientContext {
-    // TODO
+public:
+    ClientContext();
+    Schema& defaultSchema_;
 };
 
 

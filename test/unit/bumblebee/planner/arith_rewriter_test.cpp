@@ -64,5 +64,5 @@ TEST(ArithRewriterTest, RewriteArith) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.getBody().size(), 5);
+    EXPECT_EQ(rule.getBody().size(), 7);
 }

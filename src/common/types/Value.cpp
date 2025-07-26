@@ -95,7 +95,7 @@ bool operator!=(const Value &lhs, const Value &rhs) {
     return !(lhs == rhs);
 }
 
-ConstantType Value::getConstantType() {
+ConstantType Value::getConstantType() const{
     return ctype_;
 }
 

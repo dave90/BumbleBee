@@ -29,6 +29,13 @@ public:
     void rewrite(Rule &rule) override;
 
 private:
+    // return true if contains variables shared in terms
+    bool containsSharedVariables(Atom& atom, string& sharedVar);
+    // remove the duplicates variables sharedVar creating a new binop
+    atoms_vector_t removeSharedVariables(Atom& atom,string& sharedVar);
+    // extract constant values from arith term
+    Atom extractConstantBuiltinArith(Atom& atom);
+
     // extract the first arith term found in the atom and replace with
     // a fresh variable and return the builtin created with the arith term
     Atom extractArith(Atom& atom);

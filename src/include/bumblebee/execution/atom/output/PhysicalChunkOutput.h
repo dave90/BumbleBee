@@ -27,7 +27,6 @@ namespace bumblebee{
 // predicate table and if is not internal output it
 class PhysicalChunkOutput : public PhysicalAtom {
 public:
-    PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables *pt);
     PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality, PredicateTables *pt,
         std::vector<idx_t> &cols);
 
@@ -45,8 +44,6 @@ private:
 
     // pointer to the predicate table to store the data
     PredicateTables* pt_;
-    // cols to project
-    std::vector<idx_t> cols_;
 };
 
 

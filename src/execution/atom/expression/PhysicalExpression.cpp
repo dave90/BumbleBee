@@ -21,6 +21,12 @@
 namespace bumblebee{
 
 PhysicalExpression::PhysicalExpression(Expression& expr, std::vector<ConstantType>& types, idx_t estimated_cardinality) : PhysicalAtom(types, estimated_cardinality), expression_(std::move(expr)) {
+
+}
+
+PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue) : PhysicalAtom({constantValue.getConstantType()}, 1), constantAssignment_(true), constantValue_(std::move(constantValue)) {
+    // put the col in the left side of the expression
+    expression_.left_.cols_.push_back(col);
 }
 
 PhysicalExpression::~PhysicalExpression() {}
@@ -32,20 +38,31 @@ string PhysicalExpression::getName() const {
 
 string PhysicalExpression::toString() const {
     std::string result = getName();
-    result += "( " + expression_.toString() + " )";
-    return result;
+    if (!constantAssignment_)
+        return result += "( " + expression_.toString() + " )";
+    return result += "( " + std::to_string(expression_.left_.cols_[0]) + " = Value(" + constantValue_.toString() + ") )";
 }
 
 AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
     context.profiler_.startPhysicalAtom(this);
     auto &vectors = input.data_;
+    if (constantAssignment_) {
+        // constant assignment, assign in the data chunk the constant
+        BB_ASSERT(expression_.left_.cols_.size() == 1);
+        auto col = expression_.left_.cols_[0];
+        Vector vec(constantValue_);
+        chunk.data_[col].reference(vec);
+        return AtomResultType::NEED_MORE_INPUT;
+    }
     if (expression_.op_ == ASSIGNMENT) {
         // execute the right operand and assign to left column
         BB_ASSERT(expression_.left_.cols_.size() == 1);
+        auto colToAssign = expression_.left_.cols_[0];
         BB_ASSERT(expression_.right_.cols_.size() >= 1);
-        auto result = expression_.executeRight(vectors, input.getSize());
+        BB_ASSERT(colToAssign < types_.size());
+        auto result = expression_.executeRight(vectors, input.getSize(), types_[colToAssign] );
         chunk.reference(input);
-        BB_ASSERT(types_[expression_.left_.cols_[0]] == result.getType());
+        BB_ASSERT(types_[colToAssign] == result.getType());
 
         chunk.data_[expression_.left_.cols_[0]].reference(result);
         context.profiler_.endPhysicalAtom(chunk);

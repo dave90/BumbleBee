@@ -28,7 +28,6 @@ Predicate * Schema::createPredicate(char *predicateName, unsigned arity) {
         return it->second.get()->predicate_.get();
     }
     // create new predicate table
-    // auto pt = make_predicate_tables_uptr(static_cast<const char*>(predicateName), arity);
     auto pt = predicate_table_ptr_t(new PredicateTables(predicateName, arity));
     Predicate *p = pt.get()->predicate_.get();
     entry.name_ = p->getName();

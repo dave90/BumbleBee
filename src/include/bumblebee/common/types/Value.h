@@ -34,8 +34,7 @@ class Value {
 public:
     Value();
 	Value(Value&& term);
-	Value(const Value& term) = delete;
-	Value(int8_t c);
+    Value(int8_t c);
 	Value(int16_t c);
 	Value(int32_t c);
 	Value(int64_t c);
@@ -56,7 +55,7 @@ public:
 	friend bool operator==(const Value &lhs, const Value &rhs);
 	friend bool operator!=(const Value &lhs, const Value &rhs);
 
-	ConstantType getConstantType();
+	ConstantType getConstantType() const;
 	void setConstantType(ConstantType type);
 	std::string toString()const;
 	// Create a new Value casted base on type
