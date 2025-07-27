@@ -1,11 +1,9 @@
 ## TODOLIST
-- Planner
-- Output
+- E2E Tests
+- unit test
 
 ## Next
 - Benchmarks
-- E2E Tests
-- unit test 
 
 ## First draft
 Process a simple datalog program with aggregation joins and negative atoms.

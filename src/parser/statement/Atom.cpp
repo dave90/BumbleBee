@@ -188,12 +188,12 @@ Term & Atom::operator[](unsigned i) {
 std::string Atom::toString() const {
     if (type_ == AtomType::CLASSICAL) {
         std::string s = negative_ ? "not " : "";
-        s += predicate_->toString() + "( ";
+        s += predicate_->toString() + "(";
         if (!terms_.empty()) s += terms_[0].toString();
         for (unsigned i = 1; i < terms_.size(); ++i) {
-            s += ", "+terms_[i].toString();
+            s += ","+terms_[i].toString();
         }
-        return s+" ).";
+        return s+")";
     }
     if (type_ == AtomType::BUILTIN) {
         return terms_[0].toString() + " "+ getBinopStr(binop_) + " " + terms_[1].toString();

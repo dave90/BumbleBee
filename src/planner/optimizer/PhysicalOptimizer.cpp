@@ -77,8 +77,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         if (right.getType() == VARIABLE) {
             BB_ASSERT(colsMap_.contains(right.getVariable()));
             vars.push_back(right.getVariable());
-            resultType = getCommonType(resultType, typesMap_[right.getVariable()]);
-            resultType = getBumpedType(resultType);
+            resultType = typesMap_[right.getVariable()];
         }else {
             // expected ARITH (no constant or range)
             BB_ASSERT(right.getType() == ARITH);
@@ -86,6 +85,10 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
             for (auto& t: right.getTerms()) {
                 BB_ASSERT(t.getType() == VARIABLE);
                 vars.push_back(t.getVariable());
+                if (resultType == UNKNOWN) {
+                    resultType = typesMap_[t.getVariable()];
+                    continue;
+                }
                 resultType = getCommonType(resultType, typesMap_[t.getVariable()]);
                 resultType = getBumpedType(resultType);
             }

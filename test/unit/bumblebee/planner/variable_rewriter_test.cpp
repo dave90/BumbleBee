@@ -35,7 +35,6 @@ using namespace filesystem;
 
 
 TEST(ViariableRewriterTest, NoRewriting) {
-    ParserInputDirector pid(TEXT);
 
     auto program = getRulesFromFile("rule1");
     EXPECT_EQ(program.size(), 1);

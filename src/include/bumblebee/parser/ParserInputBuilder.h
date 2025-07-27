@@ -32,8 +32,8 @@ namespace bumblebee {
 
 	class ParserInputBuilder {
 public:
-	ParserInputBuilder();
-	ParserInputBuilder(OutputType type);
+	// TODO refactor pass client context
+	ParserInputBuilder(OutputType type, bool hiddenNewPredicates);
 	virtual ~ParserInputBuilder();
 
 	virtual void onDirective( char* directiveName, char* directiveValue );
@@ -107,7 +107,7 @@ protected:
 	Rule currentRule{};
 
 	bool foundARangeAtomInCurrentRule{false};
-	bool hiddenNewPredicate{false};
+	bool hiddenNewPredicate{true};
 	bool currentRewriteArith{false};
 
 	std::string safetyErrorMessage;

@@ -34,9 +34,10 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
 
     app.add_option("-l,--log-file", context_.logFilename_, "Log file")->default_val(DEFAULT_LOG_FILE);
     app.add_flag("-p,--print-log", context_.printLog_, "Print log")->default_val(0);
-    app.add_flag("-s,--single-shot", context_.singleShot_, "Single shot run")->default_val(1);
+    // app.add_flag("-s,--single-shot", context_.singleShot_, "Single shot run")->default_val(1);
     app.add_option("-i,--input-files", context_.inputFiles_, "Single shot run")->expected(1, -1);
     app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(1);
+    app.add_flag("-a,--print-all", context_.printAll_, "Print all predicates")->default_val(0);
 
     CLI11_PARSE(app, argc, argv);
     init_logger(context_.logFilename_.c_str()  , context_.printLog_);
@@ -45,16 +46,17 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
 }
 
 void BumbleBeeDB::printArgs() {
-    LOG_INFO("Arguments:\n\tLog Filename: %s\n\tPrint Log: %d\n\tSingle shot: %d \n\tThreads:%d",
+    LOG_INFO("Arguments:\n\tLog Filename: %s\n\tPrint Log: %d\n\tSingle shot: %d \n\tThreads:%d \n\tPrint all predicates:%d",
         context_.logFilename_.c_str(),
         context_.printLog_,
         context_.singleShot_,
-        context_.threads_);
+        context_.threads_,
+        context_.printAll_);
 }
 
 void BumbleBeeDB::parseProgram(rules_vector_t &program) {
     // Parse the program
-    ParserInputDirector inputDirector(TEXT); // DEFAULT TEXT output
+    ParserInputDirector inputDirector(TEXT, !context_.printAll_); // DEFAULT TEXT output
     inputDirector.parse(context_.inputFiles_);
     // Check errors during parsing
     if (inputDirector.getBuilder()->isFoundASafetyError()) {

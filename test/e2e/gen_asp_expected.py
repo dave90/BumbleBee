@@ -2,8 +2,8 @@ import os
 import subprocess
 
 # Define input and output directories
-INPUT_DIR = 'test/files/asp/input'
-OUTPUT_DIR = 'test/files/asp/expected'
+INPUT_DIR = 'files/asp/input'
+OUTPUT_DIR = 'files/asp/expected'
 
 # Ensure output directory exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)

@@ -26,10 +26,10 @@
 namespace bumblebee {
 
 
-ParserInputBuilder::ParserInputBuilder(): ParserInputBuilder(NONE) {
-}
-
-ParserInputBuilder::ParserInputBuilder(OutputType type): currentSchema_(Catalog::instance().getDefaultSchema()), hiddenNewPredicate(false),output_builder_(type) {
+ParserInputBuilder::ParserInputBuilder(OutputType type,bool hiddenNewPredicates):
+    currentSchema_(Catalog::instance().getDefaultSchema()),
+    hiddenNewPredicate(hiddenNewPredicates),
+    output_builder_(type) {
 }
 
 ParserInputBuilder::~ParserInputBuilder() {
@@ -143,14 +143,10 @@ void ParserInputBuilder::onExistentialAtom() {
 void ParserInputBuilder::onPredicateName(char *name) {
     if(foundASafetyError_) return;
 
-    // TODO keep track of the type of the terms and keep the largest one in predicate tables to calculate the type of a column
-    //
-    // std::cout << "Parsed terms: ";
-    // for (auto&t : terms_parsered) {
-    //     std::cout<< "( " << t.toString() <<" , "<< t.getType() << " , " << t.getConstantType() << " , " << t.isAnonymous() << " ) " ;
-    // }
-    // std::cout<<std::endl;
     Predicate *predicate = currentSchema_.get().createPredicate(name, terms_parsered.size());
+    if (!hiddenNewPredicate) {
+        predicate->setInternal(false);
+    }
     currentAtom = Atom::createClassicalAtom(predicate, std::move(terms_parsered));
     terms_parsered.clear();
 }
@@ -211,7 +207,8 @@ void ParserInputBuilder::onTermDash() {
     term.setNegative(true);
     if (term.getType() == CONSTANT && term.getConstantType() != ConstantType::STRING) {
         // multiply the constant numeric value to -1
-        Term::setConstantNumericTerm(term, term.getNumericValue<int64_t>() * -1);
+        auto newValue = term.getValue().cast(BIGINT).getNumericValue<int64_t>() * -1;
+        Term::setConstantNumericTerm(term, newValue);
         return;
     }
     if (term.getType() == ARITH) {
@@ -228,6 +225,10 @@ void ParserInputBuilder::onTermDash() {
         Term newArith = Term::createArith(std::move(term), std::move(moneTerm), '*');
         terms_parsered.pop_back();
         terms_parsered.push_back(std::move(newArith));
+    }
+    if (term.getType() == RANGE) {
+        auto& interval = term.getInterval();
+        interval.from = interval.from*-1;
     }
 }
 

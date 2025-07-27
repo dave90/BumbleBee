@@ -30,7 +30,8 @@ using builder_ptr_t = std::shared_ptr<ParserInputBuilder>;
 class ParserInputDirector {
 
 public:
-    ParserInputDirector(OutputType type);
+    // TODO refactor pass client context
+    ParserInputDirector(OutputType type, bool hiddenNewPredicates);
     ~ParserInputDirector() = default;
 
     void configureBuilder( builder_ptr_t );

@@ -25,11 +25,11 @@ namespace bumblebee {
 void TextOutputBuilder::outputAtoms(const DataChunk &chunk, Predicate *predicate) {
     auto arity = predicate->getArity();
     for (idx_t row = 0; row < chunk.getSize();++row) {
-        std::cout << predicate->getName() << "( " << chunk.getValue(0, row).toString();
+        std::cout << predicate->getName() << "(" << chunk.getValue(0, row).toString();
         for (idx_t col = 1; col < arity; ++col) {
-            std::cout << ", " << chunk.getValue(row, col).toString();
+            std::cout << "," << chunk.getValue(col, row).toString();
         }
-        std::cout << " )." <<std::endl;
+        std::cout << ")." <<std::endl;
     }
 
 }

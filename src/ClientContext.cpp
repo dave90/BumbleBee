@@ -25,6 +25,7 @@ ClientContext::ClientContext():
     defaultSchema_(Catalog::instance().getDefaultSchema()),
     printLog_(false),
     threads_(1),
-    singleShot_(false){}
+    printAll_(false),
+    singleShot_(true){}
 
 }

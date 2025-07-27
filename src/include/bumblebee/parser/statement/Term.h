@@ -113,6 +113,9 @@ public:
 	inline const IntervalTerm& getInterval()const {
 		return interval_;
 	}
+	inline IntervalTerm& getInterval() {
+		return interval_;
+	}
 
 	inline term_vector_t& getTerms() {
 		return terms_;

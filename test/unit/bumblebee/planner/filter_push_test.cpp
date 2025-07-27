@@ -33,7 +33,7 @@ using namespace filesystem;
 
 
 TEST(FilterRewriterTest, NoRewriting) {
-    ParserInputDirector pid(TEXT);
+    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule3");
     EXPECT_EQ(program.size(), 1);
@@ -48,7 +48,7 @@ TEST(FilterRewriterTest, NoRewriting) {
 }
 
 TEST(FilterRewriterTest, OrderBuiltin) {
-    ParserInputDirector pid(TEXT);
+    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule5");
     EXPECT_EQ(program.size(), 1);
@@ -61,11 +61,11 @@ TEST(FilterRewriterTest, OrderBuiltin) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(), "a( X, Y ) :- b( X, Y, T ),Z = X,O = T+Z,X == Y,b( Z, 100, W ),W > 100.");
+    EXPECT_EQ(rule.toString(), "a(X,Y) :- b(X,Y,T),Z = X,O = T+Z,X == Y,b(Z,100,W),W > 100.");
 }
 
 TEST(FilterRewriterTest, OrderOneBuiltin) {
-    ParserInputDirector pid(TEXT);
+    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule6");
     EXPECT_EQ(program.size(), 1);

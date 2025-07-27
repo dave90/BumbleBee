@@ -30,6 +30,7 @@ public:
     bool singleShot_;
     Schema& defaultSchema_;
     idx_t threads_;
+    bool printAll_;
     ClientContext();
 };
 

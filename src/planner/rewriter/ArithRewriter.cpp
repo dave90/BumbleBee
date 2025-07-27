@@ -31,6 +31,15 @@ void ArithRewriter::rewrite(Rule &rule) {
             builtins.push_back(std::move(builtinAtom));
         }
     }
+    // extract shared variables
+    for (auto& atom: rule.getHead()) {
+        string var;
+        while (containsSharedVariables(atom, var)) {
+            auto builtinAtoms = removeSharedVariables(atom, var);
+            for (auto& builtinAtom: builtinAtoms)
+                builtins.push_back(std::move(builtinAtom));
+        }
+    }
 
     // separate the builtin with the classical atoms
     // and put the arith in the builtins vector

@@ -36,7 +36,7 @@ using namespace filesystem;
 
 
 TEST(ArithRewriterTest, NoRewriting) {
-    ParserInputDirector pid(TEXT);
+    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule3");
     EXPECT_EQ(program.size(), 1);
@@ -51,7 +51,7 @@ TEST(ArithRewriterTest, NoRewriting) {
 }
 
 TEST(ArithRewriterTest, RewriteArith) {
-    ParserInputDirector pid(TEXT);
+    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule4");
     EXPECT_EQ(program.size(), 1);
@@ -68,7 +68,7 @@ TEST(ArithRewriterTest, RewriteArith) {
 }
 
 TEST(ArithRewriterTest, RewriteArithWithConstant) {
-    ParserInputDirector pid(TEXT);
+    ParserInputDirector pid(TEXT,true );
 
     auto program = getRulesFromFile("rule6");
     EXPECT_EQ(program.size(), 1);
@@ -81,5 +81,5 @@ TEST(ArithRewriterTest, RewriteArithWithConstant) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(), "a( X ) :- b( X ),X > #ARITH_0,#ARITH_0 = 1.");
+    EXPECT_EQ(rule.toString(), "a(X) :- b(X),X > #ARITH_0,#ARITH_0 = 1.");
 }
