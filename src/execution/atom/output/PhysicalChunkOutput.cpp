@@ -157,7 +157,7 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     if (cstate.cachedChunk_.getSize() == 0) {
         cstate.cachedChunk_.initializeEmpty(colsType_);
         cstate.cachedChunk_.reference(pinput);
-        context.profiler_.endPhysicalAtom(input);
+        context.profiler_.endPhysicalAtom(pinput);
         return AtomResultType::HAVE_MORE_OUTPUT;
     }
 
@@ -170,10 +170,10 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
             data_chunk_ptr_t cptr = cstate.cachedChunk_.clone();
             gcstate.sinkChunk(cptr);
             cstate.cachedChunk_.destroy();
-            context.profiler_.endPhysicalAtom(input);
+            context.profiler_.endPhysicalAtom(pinput);
             return AtomResultType::NEED_MORE_INPUT;
         }
-        context.profiler_.endPhysicalAtom(input);
+        context.profiler_.endPhysicalAtom(pinput);
         return AtomResultType::HAVE_MORE_OUTPUT;
     }
 
@@ -186,10 +186,10 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     gcstate.sinkChunk(cptr);
     cstate.cachedChunk_.reset();
 
-    input.setCardinality(oldSize);
+    pinput.setCardinality(oldSize);
     auto inputOffset = spaceAvailable;
-    input.copy(cstate.cachedChunk_, inputOffset);
-    context.profiler_.endPhysicalAtom(input);
+    pinput.copy(cstate.cachedChunk_, inputOffset);
+    context.profiler_.endPhysicalAtom(pinput);
     return AtomResultType::HAVE_MORE_OUTPUT;
 }
 
