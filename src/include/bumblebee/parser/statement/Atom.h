@@ -58,6 +58,7 @@ public:
     inline Term& operator[](unsigned i);
 
     terms_vector_t& getTerms();
+    const terms_vector_t& getTerms()const;
     Predicate* getPredicate();
     void getPredicates(predicates_ptr_set_t &predicates);
     AtomType getType() const;

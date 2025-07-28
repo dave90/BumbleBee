@@ -31,6 +31,7 @@ public:
     Schema& defaultSchema_;
     idx_t threads_;
     bool printAll_;
+    bool printProfiling_;
     ClientContext();
 };
 

@@ -183,7 +183,7 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t
     }
     right.cols_.push_back(cols[idx++]);
     for (auto& o: rightTerm.getOperators()) {
-        BB_ASSERT(cols.size() > idx);
+        BB_ASSERT(cols.size() > idx - leftTerm.getOperators().size() - 1); // subtract the left iterms counter
         right.cols_.push_back(cols[idx++]);
         right.operators_.push_back(o);
     }
@@ -228,5 +228,13 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     prule->setPriority(0);
     prules.push_back(prule);
     return prules;
+}
+
+void PhysicalOptimizer::clear() {
+    cols_.clear();
+    headCols_.clear();
+    types_.clear();
+    colsMap_.clear();
+    typesMap_.clear();
 }
 }

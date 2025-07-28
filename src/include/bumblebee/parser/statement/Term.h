@@ -121,7 +121,7 @@ public:
 		return terms_;
 	}
 
-	inline op_vector_t getOperators() {
+	inline op_vector_t& getOperators() {
 		return operators_;
 	}
 

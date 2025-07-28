@@ -47,6 +47,9 @@ terms_vector_t& Atom::getTerms() {
     return terms_;
 }
 
+const terms_vector_t& Atom::getTerms() const {
+    return terms_;
+}
 Predicate* Atom::getPredicate() {
     return predicate_;
 }

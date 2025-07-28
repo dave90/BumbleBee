@@ -34,6 +34,7 @@ public:
 
 
     virtual prule_ptr_vector_t optimize(Rule& rule);
+    virtual void clear();
 
 
 private:

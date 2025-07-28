@@ -26,6 +26,7 @@ ClientContext::ClientContext():
     printLog_(false),
     threads_(1),
     printAll_(false),
+    printProfiling_(false),
     singleShot_(true){}
 
 }

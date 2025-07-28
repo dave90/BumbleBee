@@ -43,6 +43,7 @@ public:
     patom_profiling_map_t& getProfilingMap() {
         return profilingInfo_;
     }
+    string toString()const;
 
 private:
     const PhysicalAtom *active_patom_{nullptr};

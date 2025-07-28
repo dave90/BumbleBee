@@ -33,7 +33,6 @@ using namespace filesystem;
 
 
 TEST(FilterRewriterTest, NoRewriting) {
-    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule3");
     EXPECT_EQ(program.size(), 1);
@@ -48,7 +47,6 @@ TEST(FilterRewriterTest, NoRewriting) {
 }
 
 TEST(FilterRewriterTest, OrderBuiltin) {
-    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule5");
     EXPECT_EQ(program.size(), 1);
@@ -65,7 +63,6 @@ TEST(FilterRewriterTest, OrderBuiltin) {
 }
 
 TEST(FilterRewriterTest, OrderOneBuiltin) {
-    ParserInputDirector pid(TEXT, true);
 
     auto program = getRulesFromFile("rule6");
     EXPECT_EQ(program.size(), 1);

@@ -52,14 +52,17 @@ void Planner::executeOptimizer(RulesBucket & rules, PhysicalRulesBucket & prules
     for (auto& rule: rules.exit_) {
         for (auto& prule: optimizer.optimize(rule))
             prules.exit_.emplace_back(prule);
+        optimizer.clear();
     }
     for (auto& rule: rules.constraints_) {
         for (auto& prule: optimizer.optimize(rule))
             prules.constraints_.emplace_back(prule);
+        optimizer.clear();
     }
     for (auto& rule: rules.recursive_) {
         for (auto& prule: optimizer.optimize(rule))
             prules.recursive_.emplace_back(prule);
+        optimizer.clear();
     }
 }
 
@@ -73,6 +76,7 @@ void Planner::executeRewriters(RulesBucket &rules) {
      *- arith simplication , X * 1 > Y -> X > Y
      */
 
+    LOG_DEBUG("Rewriting rules...");
     std::vector<rewriter_ptr_t> rewriters;
     rewriters.emplace_back(new VariablesRewriter());
     rewriters.emplace_back(new ArithRewriter());
@@ -92,6 +96,16 @@ void Planner::executeRewriters(RulesBucket &rules) {
         for (auto& rewriter : rewriters) {
             rewriter->rewrite(rule);
         }
+    }
+
+    for (auto& rule: rules.exit_) {
+        LOG_DEBUG("Rule rewrited: %s", rule.toString().c_str());
+    }
+    for (auto& rule: rules.constraints_) {
+        LOG_DEBUG("Rule rewrited: %s", rule.toString().c_str());
+    }
+    for (auto& rule: rules.recursive_) {
+        LOG_DEBUG("Rule rewrited: %s", rule.toString().c_str());
     }
 }
 }

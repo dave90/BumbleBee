@@ -40,10 +40,9 @@ public:
     // Move the fact into the chunk if any
     // Call before sourcing the chunks
     void initializeChunks();
-    // The amount of rows in the ChunkCollection
-    idx_t getCount() const {
-        return chunks_.getCount();
-    }
+    // The amount of rows in the ChunkCollection or facts or range
+    idx_t getCount() const;
+
     // The amount of columns
     idx_t columnCount() const {
         return predicate_->getArity();
@@ -96,6 +95,7 @@ protected:
     std::vector<Atom> ranges_;
 
     // mutex for sync functions
+    // TODO test with light semaphore
     mutex mutex_;
 
     // cache output

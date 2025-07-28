@@ -19,6 +19,7 @@
 #include "bumblebee/execution/PhysicalAtomProfiler.h"
 #include "bumblebee/common/Constants.h"
 #include "bumblebee/common/types/DataChunk.h"
+#include "bumblebee/execution/PhysicalAtom.h"
 
 namespace bumblebee{
 
@@ -52,10 +53,21 @@ void PhysicalAtomProfiler::endPhysicalAtomFinalize() {
     }
 }
 
+string PhysicalAtomProfiler::toString() const {
+    string result;
+    for (auto& [key, value]:profilingInfo_) {
+        result += key->toString() + "\t" + std::to_string(value.elements_) + "\t"  + std::to_string(value.time_) + "\t" + std::to_string(value.finalizeTime_) + "\n";
+    }
+    return result;
+}
+
 #else
 void PhysicalAtomProfiler::startPhysicalAtom(PhysicalAtom *patom) {}
 
 void PhysicalAtomProfiler::endPhysicalAtom(DataChunk &chunk, bool isFinalize) {}
+
+
+string PhysicalAtomProfiler::toString() const {}
 #endif
 
 }

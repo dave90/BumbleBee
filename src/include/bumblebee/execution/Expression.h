@@ -50,11 +50,11 @@ struct Expression {
     bool verify() const;
     // Execute the right side of the expression (expected vector of all the columns of the data chunk)
     inline Vector executeRight(vector_vector_t& allColumns, idx_t count, ConstantType resultType = UNKNOWN) const {
-        return executeOperands(allColumns, right_, count);
+        return executeOperands(allColumns, right_, count, resultType);
     }
     // Execute the left side of the expression (expected vector of all the columns of the data chunk)
     inline Vector executeLeft(vector_vector_t& allColumns, idx_t count, ConstantType resultType = UNKNOWN) const{
-        return executeOperands(allColumns, left_, count);
+        return executeOperands(allColumns, left_, count, resultType);
     }
     // Execute a operands and set the result in result vector
     static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count, ConstantType resultType = UNKNOWN);

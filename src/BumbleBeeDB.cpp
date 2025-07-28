@@ -38,6 +38,7 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
     app.add_option("-i,--input-files", context_.inputFiles_, "Single shot run")->expected(1, -1);
     app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(1);
     app.add_flag("-a,--print-all", context_.printAll_, "Print all predicates")->default_val(0);
+    app.add_flag("-r,--print-profiling", context_.printProfiling_, "Print profilings")->default_val(0);
 
     CLI11_PARSE(app, argc, argv);
     init_logger(context_.logFilename_.c_str()  , context_.printLog_);
@@ -120,6 +121,12 @@ void BumbleBeeDB::processBucketRules( RulesBucket &bucket, Scheduler& scheduler)
     LOG_INFO("Planner completed");
     LOG_INFO("Starting execution...");
     scheduler.scheduleRules(pruleBucket);
+
+    if (context_.printProfiling_) {
+        // print the profiling result
+        LOG_INFO("Profiling:\n%s",scheduler.profilingAsString().c_str());
+    }
+    scheduler.clearThreadContexts();
 
     if (!bucket.recursive_.empty()) {
         ErrorHandler::errorNotImplemented("Recursive rule execution not implemented :(");

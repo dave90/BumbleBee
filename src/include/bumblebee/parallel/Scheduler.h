@@ -36,6 +36,9 @@ public:
 	constexpr static int64_t WAIT_TIMEOUT_USECS = 100000; // 100ms
     Scheduler(ClientContext& context);
 
+	string profilingAsString() const;
+	void clearThreadContexts();
+
     // Schedule all the rules
     void scheduleRules(PhysicalRulesBucket& bucket);
     // Schedule the rules for one priority

@@ -64,14 +64,32 @@ std::vector<ConstantType> PredicateTables::getTypes() {
 void PredicateTables::initializeChunks() {
     // sync the functions as multiple source operators can call the init
     lock_guard lock(mutex_);
-    LOG_DEBUG("Initializing PredicateTables %s", predicate_->toString().c_str());
+    LOG_DEBUG("Initializing PredicateTables %s...", predicate_->toString().c_str());
     if (!facts_.empty()) loadFacts();
     if (!ranges_.empty()) loadRanges();
     facts_.clear();
     ranges_.clear();
+    LOG_DEBUG("Initializing PredicateTables %s completed", predicate_->toString().c_str());
+}
+
+idx_t PredicateTables::getCount() const {
+    if (facts_.empty() && ranges_.empty())
+        return chunks_.getCount();
+    auto estimateCount = facts_.size();
+    for (auto& atom: ranges_) {
+        auto rangeSie = 1;
+        BB_ASSERT(atom.getType() == CLASSICAL);
+        for (auto& term : atom.getTerms()) {
+            if (term.getType() != RANGE)continue;
+            rangeSie *= (term.getInterval().to -term.getInterval().from);
+        }
+        estimateCount += rangeSie;
+    }
+    return estimateCount;
 }
 
 void PredicateTables::loadFacts() {
+    LOG_DEBUG("Loading facts of %s ...", predicate_->toString().c_str());
     auto types = getTypes();
     BB_ASSERT(types.size() == predicate_->getArity());
     data_chunk_ptr_t chunk = data_chunk_ptr_t(new DataChunk());
@@ -189,6 +207,7 @@ std::vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const std::vector<C
 }
 
 void PredicateTables::loadRanges() {
+    LOG_DEBUG("Loading ranges of %s ...", predicate_->toString().c_str());
 
     // process the range atoms
     for (auto& atom: ranges_) {

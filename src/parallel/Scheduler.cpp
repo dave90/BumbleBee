@@ -101,7 +101,6 @@ void Scheduler::schedulePriorityRules(prule_ptr_vector_t &bucket) {
 }
 
 idx_t Scheduler::scheduleRule(prule_ptr_t& rule) {
-
     // generate tasks based on morsel size and source cardinality
     auto partitions = rule->getSourceSize() / MORSEL_SIZE + 1;
     for (idx_t idx = 0; idx < partitions; ++idx) {
@@ -129,4 +128,14 @@ void Scheduler::scheduleRules(PhysicalRulesBucket &bucket) {
     // TODO schedule the recursive rules
 }
 
+string Scheduler::profilingAsString() const {
+    string result = "";
+    for (auto& tc: tcontexts_)
+        result += tc->profiler_.toString() + "\n";
+    return result;
+}
+
+void Scheduler::clearThreadContexts() {
+    tcontexts_.clear();
+}
 }
