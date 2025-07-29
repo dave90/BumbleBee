@@ -236,6 +236,7 @@ void Term::replaceVariable(const string &var,const string &newVar) {
     if (type_ == ARITH) {
         for (auto& t:terms_)
             t.replaceVariable(var, newVar);
+        return;
     }
     ErrorHandler::errorNotImplemented("Replace variable for term type not supported");
 }
