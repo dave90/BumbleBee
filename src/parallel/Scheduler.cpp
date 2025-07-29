@@ -128,11 +128,13 @@ void Scheduler::scheduleRules(PhysicalRulesBucket &bucket) {
     // TODO schedule the recursive rules
 }
 
-string Scheduler::profilingAsString() const {
+PhysicalAtomProfiler Scheduler::getAtomProfiler() const {
     string result = "";
+    PhysicalAtomProfiler finalProfiler;
     for (auto& tc: tcontexts_)
-        result += tc->profiler_.toString() + "\n";
-    return result;
+        finalProfiler.append( tc->profiler_);
+
+    return finalProfiler;
 }
 
 void Scheduler::clearThreadContexts() {

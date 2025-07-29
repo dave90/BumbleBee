@@ -99,13 +99,13 @@ void Planner::executeRewriters(RulesBucket &rules) {
     }
 
     for (auto& rule: rules.exit_) {
-        LOG_DEBUG("Rule rewrited: %s", rule.toString().c_str());
+        LOG_DEBUG("Rule rewrote: %s", rule.toString().c_str());
     }
     for (auto& rule: rules.constraints_) {
-        LOG_DEBUG("Rule rewrited: %s", rule.toString().c_str());
+        LOG_DEBUG("Rule rewrote: %s", rule.toString().c_str());
     }
     for (auto& rule: rules.recursive_) {
-        LOG_DEBUG("Rule rewrited: %s", rule.toString().c_str());
+        LOG_DEBUG("Rule rewrote: %s", rule.toString().c_str());
     }
 }
 }

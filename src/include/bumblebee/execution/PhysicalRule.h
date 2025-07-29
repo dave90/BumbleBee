@@ -20,6 +20,7 @@
 
 #include "PhysicalAtom.h"
 
+
 namespace bumblebee{
 
 // Represents a compiled physical rule consisting of source, sink, and intermediate atoms.
@@ -44,6 +45,7 @@ public:
 
     std::string toString()const;
     idx_t getPhysicalAtomsSize() const;
+    std::vector<PhysicalAtom*> getPhysicalAtoms() const;
 
 private:
     // The patom that generates the chunks

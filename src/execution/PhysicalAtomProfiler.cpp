@@ -61,6 +61,31 @@ string PhysicalAtomProfiler::toString() const {
     return result;
 }
 
+string PhysicalAtomProfiler::toString(std::vector<PhysicalAtom*>& patoms) const {
+    string result;
+
+    for (auto& patom: patoms) {
+        auto key = patom;
+        BB_ASSERT(profilingInfo_.contains(key));
+        auto value = profilingInfo_.find(key)->second;
+        result += key->toString() + "\t" + std::to_string(value.elements_) + "\t" + std::to_string(value.time_) + "\t" +
+                std::to_string(value.finalizeTime_) + "\n";
+    }
+
+    return result;
+}
+
+void PhysicalAtomProfiler::append(const PhysicalAtomProfiler &other) {
+    for (auto& [key, value]:other.profilingInfo_) {
+        if (!profilingInfo_.contains(key)) {
+            profilingInfo_[key] = ProfilingInformation();
+        }
+        profilingInfo_[key].elements_ += value.elements_;
+        profilingInfo_[key].time_ += value.time_;
+        profilingInfo_[key].finalizeTime_ += value.finalizeTime_;
+    }
+}
+
 #else
 void PhysicalAtomProfiler::startPhysicalAtom(PhysicalAtom *patom) {}
 

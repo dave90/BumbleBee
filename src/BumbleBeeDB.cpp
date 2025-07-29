@@ -124,7 +124,11 @@ void BumbleBeeDB::processBucketRules( RulesBucket &bucket, Scheduler& scheduler)
 
     if (context_.printProfiling_) {
         // print the profiling result
-        LOG_INFO("Profiling:\n%s",scheduler.profilingAsString().c_str());
+        auto atomProfiler = scheduler.getAtomProfiler();
+        for (auto& prule : pruleBucket.exit_) {
+            auto patoms = prule->getPhysicalAtoms();
+            LOG_INFO("Profile rule: %s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+        }
     }
     scheduler.clearThreadContexts();
 

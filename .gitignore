@@ -35,3 +35,4 @@
 *.log
 __pycache__/
 test.1
+benchmarks/*

@@ -36,7 +36,7 @@ public:
 	constexpr static int64_t WAIT_TIMEOUT_USECS = 100000; // 100ms
     Scheduler(ClientContext& context);
 
-	string profilingAsString() const;
+	PhysicalAtomProfiler getAtomProfiler() const;
 	void clearThreadContexts();
 
     // Schedule all the rules
