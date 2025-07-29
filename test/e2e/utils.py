@@ -28,3 +28,12 @@ def compare_files_no_duplicates(file1: Path, file2: Path) -> bool:
         lines1 = sorted(set(f1.readlines()))
         lines2 = sorted((f2.readlines()))
     return lines1 == lines2
+
+# return true is containing a query
+def contains_query(input_file:str):
+    f = open(input_file, "r")
+    lines = f.readlines()
+    for line in lines:
+        if "?" in line:
+            return True
+    return False

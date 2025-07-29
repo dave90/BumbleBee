@@ -45,6 +45,10 @@ string PhysicalExpression::toString() const {
 
 AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
     context.profiler_.startPhysicalAtom(this);
+    if (input.getSize() == 0) {
+        context.profiler_.endPhysicalAtom(chunk);
+        return AtomResultType::NEED_MORE_INPUT;
+    }
     auto &vectors = input.data_;
     if (constantAssignment_) {
         // constant assignment, assign in the data chunk the constant
@@ -53,6 +57,7 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
         Vector vec(constantValue_);
         chunk.reference(input);
         chunk.data_[col].reference(vec);
+        context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }
     if (expression_.op_ == ASSIGNMENT) {
@@ -77,6 +82,7 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
     chunk.reference(input);
     chunk.slice(sel, count);
     chunk.setCardinality(count);
+
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
 

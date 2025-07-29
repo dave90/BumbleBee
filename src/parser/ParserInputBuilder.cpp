@@ -98,6 +98,8 @@ void ParserInputBuilder::onWeakConstraint() {
 }
 
 void ParserInputBuilder::onQuery() {
+    // if aquery is present remove the print all options
+
     if (currentAtom.getPredicate()->isInternal()) {
         // predicate was internal so print all the facts
         auto & facts = currentSchema_.get().getPredicateTable(currentAtom.getPredicate())->getFacts();

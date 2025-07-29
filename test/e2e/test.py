@@ -2,7 +2,7 @@ import time
 import pytest
 import os
 from pathlib import Path
-from test.e2e.utils import run_process_on_file, compare_files_no_duplicates
+from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query
 
 
 EXE_PATH = os.path.join("..","..","cmake-build-debug","BumbleBee")
@@ -18,7 +18,11 @@ def test_asp(input_file: Path):
     output_file = actual_folder / input_file.name
     expected_file = expected_folder / input_file.name
 
-    run_process_on_file(EXE_PATH, ["-a", "-i"], input_file, output_file)
+    args = ["-a", "-i"]
+    if contains_query(str(input_file)):
+        args = ["-i"]
+
+    run_process_on_file(EXE_PATH, args, input_file, output_file)
 
     assert expected_file.exists(), f"Expected file missing: {expected_file}"
     assert output_file.exists(), f"Output file missing: {output_file}"

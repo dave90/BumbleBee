@@ -114,6 +114,7 @@ bool ArithRewriter::containsSharedVariables(Atom &atom, string& sharedVar) {
     set_term_variable_t sharedVariables;
     for (auto& term: atom.getTerms()) {
         BB_ASSERT(term.getType() == TermType::VARIABLE);
+        if (term.isAnonymous())continue;
         auto& var = term.getVariable();
         if (sharedVariables.contains(var)) {
             sharedVar = var;

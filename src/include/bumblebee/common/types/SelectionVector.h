@@ -60,6 +60,7 @@ public:
     }
     inline void initialize(sel_ptr_t data) {
         sel_data_ = data;
+        sel_vector_ = sel_data_.get();
     }
     inline void initialize(const SelectionVector &other) {
         sel_data_ = other.sel_data_;

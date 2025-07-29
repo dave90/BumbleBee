@@ -115,6 +115,46 @@ TEST(VectorTest, SliceWithSelectionVector) {
     EXPECT_EQ(dictVec.getValue(1), Value(20));
 }
 
+
+TEST(VectorTest, SliceOfSliceSelectionVector) {
+    Vector vec(ConstantType::INTEGER);
+    for (idx_t i = 0; i < 10; ++i) {
+        vec.setValue(i, Value(int32_t(i * 10)));
+    }
+
+    {
+        SelectionVector sel1(5);
+        sel1.setIndex(0, 3);
+        sel1.setIndex(1, 4);
+        sel1.setIndex(2, 5);
+        sel1.setIndex(3, 7);
+        sel1.setIndex(4, 8);
+        vec.slice(sel1, 5);
+    }
+    EXPECT_EQ(vec.getVectorType(), VectorType::DICTIONARY_VECTOR);
+    EXPECT_EQ(vec.getValue(0).getNumericValue<int32_t>(),  30);
+    EXPECT_EQ(vec.getValue(1).getNumericValue<int32_t>(),  40);
+    EXPECT_EQ(vec.getValue(2).getNumericValue<int32_t>(),  50);
+    EXPECT_EQ(vec.getValue(3).getNumericValue<int32_t>(),  70);
+    EXPECT_EQ(vec.getValue(4).getNumericValue<int32_t>(),  80);
+    std::cout << vec.toString(5) << std::endl;
+
+    {
+        SelectionVector sel2(3);
+        sel2.setIndex(0, 2);
+        sel2.setIndex(1, 3);
+        sel2.setIndex(2, 4);
+        vec.slice(sel2, 3);
+    }
+    std::cout << vec.toString(3) << std::endl;
+    EXPECT_EQ(vec.getVectorType(), VectorType::DICTIONARY_VECTOR);
+    EXPECT_EQ(vec.getValue(0).getNumericValue<int32_t>(),  50);
+    EXPECT_EQ(vec.getValue(1).getNumericValue<int32_t>(),  70);
+    EXPECT_EQ(vec.getValue(2).getNumericValue<int32_t>(),  80);
+
+
+}
+
 // ---------- Test value setting and retrieval ----------
 
 TEST(VectorTest, GetSetValuesInteger) {

@@ -1,0 +1,7 @@
+a(X)?
+b(X,Y,Z)?
+c(X,Y,Z,W)?
+a(X) :- col(X,Y,Z,W,K).
+b(X,Y,Z) :- col(X,Y,Z,W,K), X > Y, Y > Z.
+c(X,Y,Z,W) :- col(X,Y,Z,W,K), X > Y, Y > Z + 1, W > X * 2, W = K.
+col(1..5,1..5,1..5,1..5,1..5).

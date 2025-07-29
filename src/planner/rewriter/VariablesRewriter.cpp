@@ -24,8 +24,8 @@ namespace bumblebee{
 
 
 void VariablesRewriter::pushAnonymous(Rule &rule) {
-    set_term_variable_t headVariables;
-    rule.getVariablesInHead(headVariables);
+    set_term_variable_t usedVariables;
+    rule.getVariablesInHead(usedVariables);
     // collect all the variables for each atom in the body
     std::vector<set_term_variable_t> variablesInBody;
     set_term_variable_t allVariables;
@@ -35,7 +35,6 @@ void VariablesRewriter::pushAnonymous(Rule &rule) {
         allVariables.insert(variablesInBody[i].begin(), variablesInBody[i].end());
     }
 
-    set_term_variable_t unusedRuleVariables;
     for (idx_t i = 0; i < variablesInBody.size(); ++i) {
         // count the vars present in the atom, if multiple terms share the same variable will increment the counter
         std::unordered_map<string,idx_t> variableCounter;
@@ -48,22 +47,25 @@ void VariablesRewriter::pushAnonymous(Rule &rule) {
                 ++variableCounter[var];
             }
         }
-        // fin the vars shared with other atoms
-        set_term_variable_t varsShared;
+        // find the vars shared with other atoms, this vars are used varaibles
         for (idx_t j = i +1; j < variablesInBody.size(); ++j)
-            Term::intersetVariables(variableCounter, variablesInBody[j], varsShared);
+            Term::intersetVariables(variableCounter, variablesInBody[j], usedVariables);
 
         for (auto& [var, count]: variableCounter) {
-            if (count > 1)continue;
-            if (varsShared.contains(var))continue;
-            if (headVariables.contains(var)) continue;
-            // variable is only used in this atom, so drop it
-            unusedRuleVariables.insert(var);
+            if (count > 1) {
+                // count > 1 variables is shared in the same atoms, i.e a(X,X)
+                usedVariables.insert(var);
+                continue;
+            }
+            if (usedVariables.contains(var))continue;
         }
     }
 
-    for (auto& var : unusedRuleVariables)
+    for (auto& var : allVariables) {
+        if (usedVariables.contains(var))continue;
+        // unused variable, replace it
         rule.replaceVariable(var, Term::anonymous_variable);
+    }
 }
 
 void VariablesRewriter::rewrite(Rule &rule) {
