@@ -46,7 +46,10 @@ private:
     void findColsAndTypesClassicalAtom(Atom& atom);
     void findColsAndTypesBuiltin(Atom& atom);
 
+    // generate the patoms for the builtin atoms
     void generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms);
+    // generate the join patoms, vars is the variables seen so far in the rule used to calculate the join keys
+    void generatePhysicalJoin(const set_term_variable_t& vars, Atom& atom, std::vector<idx_t>& dcCols,std::vector<idx_t>& selCols, std::vector<ConstantType> types,patom_ptr_vector_t& patoms);
 
     // global client context
     ClientContext& context_;
@@ -54,7 +57,7 @@ private:
     cols_vector_t cols_;
     cols_vector_t headCols_;
     // for each atom in the body the column to project (for atoms with predicates)
-    cols_vector_t projectCols_;
+    cols_vector_t selectedCols_;
     // types for all the column, are the same for all the atoms. Atoms that use a subset of columns will
     // filter using cols_ field
     std::vector<ConstantType> types_;

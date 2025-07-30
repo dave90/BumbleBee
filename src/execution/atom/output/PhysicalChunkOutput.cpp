@@ -56,9 +56,10 @@ public:
 };
 
 
-PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, idx_t estimated_cardinality,
-PredicateTables *pt, std::vector<idx_t> &cols): PhysicalAtom(types, cols, estimated_cardinality),
-                                       pt_(pt){
+PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols, idx_t estimated_cardinality,
+PredicateTables *pt): PhysicalAtom(types,  estimated_cardinality), pt_(pt){
+    dcCols_ = std::move(dcCols);
+    for (auto c : dcCols_)colsType_.push_back(types_[c]);
 }
 
 PhysicalChunkOutput::~PhysicalChunkOutput() {}
@@ -75,9 +76,10 @@ string PhysicalChunkOutput::getName() const {
 string PhysicalChunkOutput::toString() const {
     auto result = getName();
     result += " (" + pt_->predicate_.get()->toString()+"; ";
-    for (auto c : cols_) {
+    for (auto c : dcCols_) {
         result += std::to_string(c) + ", ";
     }
+    result += ";";
     for (auto c : colsType_) {
         result += ctypeToString(c) + ", ";
     }
@@ -97,7 +99,7 @@ DataChunk PhysicalChunkOutput::projectColumns(DataChunk &input) const{
 
     DataChunk newChunk;
     newChunk.initializeEmpty(colsType_);
-    newChunk.reference(input, cols_);
+    newChunk.reference(input, dcCols_);
     return newChunk;
 
 }

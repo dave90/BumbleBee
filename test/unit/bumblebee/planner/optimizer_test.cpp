@@ -73,3 +73,22 @@ TEST(OptimizerTest, OptimizeBuiltinRule) {
     EXPECT_EQ(prule->getPhysicalAtomsSize(), 3);
 }
 
+
+TEST(OptimizerTest, OptimizeCrossProductRule) {
+    ParserInputDirector pid(TEXT, true);
+
+    auto program = getRulesFromFile("program3");
+    EXPECT_EQ(program.size(), 1);
+    auto& rule = program[0];
+
+    // set first binop as assignment
+    string beforeRewriting = rule.toString();
+    std::cout << beforeRewriting << std::endl;
+
+    ClientContext context;
+    PhysicalOptimizer optimizer(context);
+    auto prules = optimizer.optimize(rule);
+    EXPECT_EQ(prules.size(), 1);
+    auto prule = prules[0];
+    std::cout << prule->toString() << std::endl;
+}

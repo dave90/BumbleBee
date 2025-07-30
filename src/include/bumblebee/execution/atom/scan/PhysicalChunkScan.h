@@ -30,8 +30,7 @@ namespace bumblebee{
 // The global state return the chunks to be processed of the operator (sync with mutex)
 class PhysicalChunkScan : public PhysicalAtom {
 public:
-    PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t>& colsToProject, idx_t estimated_cardinality, PredicateTables* pt);
-
+    PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t>& dcCols,std::vector<idx_t>& selectedCols, idx_t estimated_cardinality, PredicateTables* pt);
     ~PhysicalChunkScan() override;
 
     AtomResultType getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;

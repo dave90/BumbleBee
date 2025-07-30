@@ -34,7 +34,9 @@ public:
 
 
 PhysicalCrossProduct::PhysicalCrossProduct(const std::vector<ConstantType> &types,
-    std::vector<idx_t> &colsToProject, idx_t estimated_cardinality, PredicateTables *pt): PhysicalAtom(types, colsToProject, estimated_cardinality), pt_(pt) {
+    std::vector<idx_t>& dcCols,std::vector<idx_t>& selectedCols, idx_t estimated_cardinality,
+    PredicateTables *pt): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt) {
+    BB_ASSERT(dcCols.size() == selectedCols.size());
 }
 
 string PhysicalCrossProduct::getName() const {
@@ -44,7 +46,11 @@ string PhysicalCrossProduct::getName() const {
 string PhysicalCrossProduct::toString() const {
     auto result = getName();
     result += " (" + pt_->predicate_.get()->toString()+"; ";
-    for (auto c : cols_) {
+    for (auto c : dcCols_) {
+        result += std::to_string(c) + ", ";
+    }
+    result += "; ";
+    for (auto c : selectCols_) {
         result += std::to_string(c) + ", ";
     }
     for (auto c : colsType_) {
@@ -80,15 +86,14 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
         chunk.data_[i].reference(leftChunk.data_[i]);
     }
     // find the row of right side and assign as constant
-    BB_ASSERT(input.columnCount() + cols_.size() == chunk.columnCount());
-    for (idx_t i = 0; i < cols_.size(); ++i) {
-        BB_ASSERT(pt_->predicate_->getArity() > cols_[i]);
-        auto value = pt_->getValue(cols_[i], cstate.rightIdx_);
-        chunk.data_[leftChunk.columnCount() + i].reference(value);
+    for (idx_t i = 0; i < selectCols_.size(); ++i) {
+        BB_ASSERT(pt_->predicate_->getArity() > selectCols_[i]);
+        BB_ASSERT(chunk.columnCount() > dcCols_[i] );
+        auto value = pt_->getValue(selectCols_[i], cstate.rightIdx_);
+        chunk.data_[dcCols_[i]].reference(value);
     }
     ++cstate.rightIdx_;
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::HAVE_MORE_OUTPUT;
-
 }
 }

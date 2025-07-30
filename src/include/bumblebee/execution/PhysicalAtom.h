@@ -65,17 +65,22 @@ using gpstate_ptr_t =std::unique_ptr<GlobalPhysicalAtomState>;
 // execution plan
 class PhysicalAtom {
 public:
+
+	// Information of the columns used by this patom. Why it is not in struct? because
+	// not all the patoms needs all these information
 	// types of all the columns of the data chunks
 	std::vector<ConstantType> types_;
-	// cols to project
-	std::vector<idx_t> cols_;
+	// cols selected in the predicate tables
+	std::vector<idx_t> selectCols_;
+	// for each selected cols the cols index in the data chunk
+	std::vector<idx_t> dcCols_;
 	// because type_ contains the type of all the columns colsType_ contains the type of the interested columns
 	std::vector<ConstantType> colsType_;
 	// TODO populate this value
 	idx_t estimatedCardinality_;
 
+	PhysicalAtom(const std::vector<ConstantType> &types,std::vector<idx_t>& dcCols,std::vector<idx_t>& selectedCols, idx_t estimated_cardinality);
 	PhysicalAtom(const std::vector<ConstantType> &types, idx_t estimated_cardinality);
-	PhysicalAtom(const std::vector<ConstantType> &types,std::vector<idx_t> cols, idx_t estimated_cardinality);
 	virtual ~PhysicalAtom() = default;
 
 	// Execute is called during the execution and accept input chunks and produce output chunks.

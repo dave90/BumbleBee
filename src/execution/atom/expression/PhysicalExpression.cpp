@@ -85,7 +85,6 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
 
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
-
 }
 
 }

@@ -79,8 +79,9 @@ protected:
 TEST_F(PhysicalCrossJoinTest, PhysicalCrossSimpleTest) {
     populatePTable(ptableLeft, testTypesLeft, 1, 10);
     populatePTable(ptableRight, testTypesRight, 1, 20);
-    std::vector<idx_t> cols = {0,1,2};
-    PhysicalCrossProduct pcj(testTypesRight, cols, 10, ptableRight.get());
+    std::vector<idx_t> dccols = {3,4,5};
+    std::vector<idx_t> selcols = {0,1,2};
+    PhysicalCrossProduct pcj(testTypesRight, dccols,selcols, 10, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
@@ -106,13 +107,14 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
     populatePTable(ptableLeft, testTypesLeft, 1, 10);
     populatePTable(ptableRight, testTypesRight, 1, 20);
     // select only column 0 and 2
-    std::vector<idx_t> cols = {0,2};
-    PhysicalCrossProduct pcj(testTypesRight, cols, 0, ptableRight.get());
+    std::vector<idx_t> dccols = {3,4};
+    std::vector<idx_t> selcols = {0,2};
+    PhysicalCrossProduct pcj(testTypesRight, dccols,selcols, 0, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
     std::vector<ConstantType> resultType = testTypesLeft;
-    for (auto c : cols)
+    for (auto c : {0,2})
         resultType.push_back(testTypesRight[c]);
 
     DataChunk output;
@@ -133,7 +135,7 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
 
 TEST_F(PhysicalCrossJoinTest, PhysicalCrossNoInputTest) {
     std::vector<idx_t> cols = {0,1};
-    PhysicalCrossProduct pcj(testTypesRight, cols, 10, ptableRight.get());
+    PhysicalCrossProduct pcj(testTypesRight, cols,cols, 10, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk input;

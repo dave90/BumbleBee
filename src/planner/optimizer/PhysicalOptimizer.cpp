@@ -22,6 +22,7 @@
 #include "bumblebee/catalog/PredicateTables.h"
 #include "bumblebee/execution/Expression.h"
 #include "bumblebee/execution/atom/expression/PhysicalExpression.h"
+#include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
 
@@ -32,7 +33,6 @@ PhysicalOptimizer::PhysicalOptimizer(ClientContext& context)
 
 prule_ptr_vector_t PhysicalOptimizer::optimize(Rule &rule) {
     findColsAndTypes(rule);
-
     return createPhysicalRules(rule);
 }
 
@@ -112,7 +112,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         atomCols.push_back(colsMap_[var]);
     }
     cols_.push_back(std::move(atomCols));
-    projectCols_.emplace_back(); // push empty array as builtin does not have predicates
+    selectedCols_.emplace_back(); // push empty array as builtin does not have predicates
 }
 
 void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
@@ -135,7 +135,7 @@ void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
         atomCols.push_back(colsMap_[term.getVariable()]);
         prjCols.push_back(i);
     }
-    projectCols_.push_back(std::move(prjCols));
+    selectedCols_.push_back(std::move(prjCols));
     cols_.push_back(std::move(atomCols));
 }
 
@@ -198,6 +198,32 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t
     patoms.push_back(std::move(patom));
 }
 
+
+void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars, Atom &atom, std::vector<idx_t> &dcCols, std::vector<idx_t> &selCols,
+    std::vector<ConstantType> types, patom_ptr_vector_t &patoms) {
+    auto& schema = context_.defaultSchema_;
+    // calculate the join keys
+    auto& terms = atom.getTerms();
+    std::vector<idx_t> keys;
+    for (idx_t i = 0; i < terms.size(); ++i) {
+        if (terms[i].isAnonymous())continue;
+        BB_ASSERT(terms[i].getType() == VARIABLE);
+        auto variable = terms[i].getVariable();
+        if (!vars.contains(variable)) continue;
+        keys.push_back(i);
+    }
+    if (keys.size() == 0) {
+        // cross product join
+        auto pred = schema.getPredicateTable(atom.getPredicate()).get();
+        auto cp = patom_ptr_t(new PhysicalCrossProduct(types, dcCols, selCols, 0, pred ));
+        patoms.push_back(std::move(cp));
+        return;
+    }
+    if (keys.size() > 0)
+        ErrorHandler::errorNotImplemented("Join currently not supported :(");
+
+}
+
 prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     // simple optimizer that takes the first atom as source, head as sink
     // and accept only filters in body
@@ -206,26 +232,37 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     patom_ptr_t source;
     patom_ptr_t sink;
     patom_ptr_vector_t patoms;
+    set_term_variable_t vars;
     auto& schema = context_.defaultSchema_;
     {
         BB_ASSERT(rule.getBody().size() > 0);
         auto& firstAtom = rule.getBody()[0];
+        firstAtom.getVariables(vars);
         auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
         auto types = types_;
-        source = patom_ptr_t(new PhysicalChunkScan(types, projectCols_[0], ptSource->getCount(), ptSource.get()));
+        source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource->getCount(), ptSource.get()));
     }
     {
         BB_ASSERT(rule.getHead().size() == 1);
         auto& headAtom = rule.getHead()[0];
         auto& ptSink = schema.getPredicateTable(headAtom.getPredicate());
         auto types = types_;
-        sink = patom_ptr_t(new PhysicalChunkOutput(types, 0, ptSink.get(), headCols_[0]));
+        sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols_[0], 0, ptSink.get()));
     }
     for (idx_t i=1;i<rule.getBody().size();++i) {
         auto& atom = rule.getBody()[i];
+        switch (atom.getType()) {
+            case BUILTIN:
+                generatePhysicalExpression(atom, cols_[i], types_, patoms);
+                break;
+            case CLASSICAL:
+                // find the physical join
+                generatePhysicalJoin(vars, atom, cols_[i], selectedCols_[i], types_, patoms);
+                break;
 
-        BB_ASSERT(atom.getType() == BUILTIN);
-        generatePhysicalExpression(atom, cols_[i], types_, patoms);
+        }
+        atom.getVariables(vars);
+
     }
 
     prule_ptr_t prule(new PhysicalRule(source, sink, patoms, 0));
@@ -240,6 +277,6 @@ void PhysicalOptimizer::clear() {
     types_.clear();
     colsMap_.clear();
     typesMap_.clear();
-    projectCols_.clear();
+    selectedCols_.clear();
 }
 }
