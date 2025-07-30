@@ -81,7 +81,7 @@ idx_t PredicateTables::getCount() const {
         BB_ASSERT(atom.getType() == CLASSICAL);
         for (auto& term : atom.getTerms()) {
             if (term.getType() != RANGE)continue;
-            rangeSie *= (term.getInterval().to -term.getInterval().from);
+            rangeSie *= (term.getInterval().to -term.getInterval().from +1);
         }
         estimateCount += rangeSie;
     }
