@@ -69,6 +69,7 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
     if (input.getSize() == 0) {
         context.profiler_.endPhysicalAtom(chunk);
         cstate.reset();
+        chunk.reset();
         return AtomResultType::NEED_MORE_INPUT;
     }
     if (!cstate.isInitialized_) {
@@ -78,6 +79,7 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
     if (cstate.rightIdx_ >= pt_->getCount()) {
         context.profiler_.endPhysicalAtom(chunk);
         cstate.reset();
+        chunk.reset();
         return AtomResultType::NEED_MORE_INPUT;
     }
     auto& leftChunk = input;
@@ -94,6 +96,6 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
     }
     ++cstate.rightIdx_;
     context.profiler_.endPhysicalAtom(chunk);
-    return AtomResultType::HAVE_MORE_OUTPUT;
+    return (cstate.rightIdx_ < pt_->getCount()) ? AtomResultType::HAVE_MORE_OUTPUT : AtomResultType::NEED_MORE_INPUT;
 }
 }

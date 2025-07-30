@@ -39,11 +39,14 @@ def create_expected():
         # Run the command and capture the output
         try:
             result = subprocess.run(command, capture_output=True, text=True, check=True)
+            cleaned_output = remove_comment_lines(result.stdout)
             with open(output_path, 'w') as f:
-                f.write(result.stdout)
+                f.write(cleaned_output)
 
             if contains_query(os.path.join(INPUT_DIR, filename)):
                 filter_output(output_path, filename)
+
+
             print(f"Output written to {output_path}")
         except subprocess.CalledProcessError as e:
             print(f"Error processing {filename}: {e}")
@@ -84,6 +87,10 @@ def filter_output(output_file:str, filename:str):
         for line in lines:
             if keep_line(line):
                 f.write(line)
+
+def remove_comment_lines(text: str) -> str:
+    """Removes lines that start with '#' from the given text."""
+    return '\n'.join(line for line in text.splitlines() if not line.strip().startswith('#')) + '\n'
 
 if __name__ == '__main__':
     create_expected()
