@@ -17,12 +17,25 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/execution/PhysicalAtom.h"
 
 namespace bumblebee{
 
+// Cross product simple implementation
+class PhysicalCrossProduct : PhysicalAtom {
+public:
+    PhysicalCrossProduct(const std::vector<ConstantType> &types, std::vector<idx_t>& colsToProject, idx_t estimated_cardinality, PredicateTables* pt);
+    ~PhysicalCrossProduct() override = default;
 
-class PhysicalCrossProduct {
-
+    string getName() const override;
+    string toString() const override;
+    pstate_ptr_t getState() const override;
+    AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
+            PhysicalAtomState &state) const override;
+private:
+    // pointer to the pt to join
+    PredicateTables* pt_;
 };
 
 

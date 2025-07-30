@@ -53,6 +53,8 @@ private:
     // for each atom in the body list of column to use in the data chunk
     cols_vector_t cols_;
     cols_vector_t headCols_;
+    // for each atom in the body the column to project (for atoms with predicates)
+    cols_vector_t projectCols_;
     // types for all the column, are the same for all the atoms. Atoms that use a subset of columns will
     // filter using cols_ field
     std::vector<ConstantType> types_;

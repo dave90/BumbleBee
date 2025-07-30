@@ -2,6 +2,7 @@ import os
 import subprocess
 import re
 import tempfile
+from utils import contains_query
 
 # Define input and output directories
 INPUT_DIR = 'files/asp/input'
@@ -11,7 +12,6 @@ OUTPUT_DIR = 'files/asp/expected'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # list of tests with filtered atoms (clingo does not support it)
-FILTER_TESTS =["filter.7"]
 
 FILTER_PREDICATES = {}
 
@@ -21,7 +21,7 @@ def create_expected():
         input_path = os.path.join(INPUT_DIR, filename)
         output_path = os.path.join(OUTPUT_DIR, filename)
 
-        if filename in FILTER_TESTS:
+        if contains_query(input_path):
             input_path = get_input_no_filters(input_path)
 
         if not os.path.isfile(input_path):
@@ -42,7 +42,7 @@ def create_expected():
             with open(output_path, 'w') as f:
                 f.write(result.stdout)
 
-            if filename in FILTER_TESTS:
+            if contains_query(os.path.join(INPUT_DIR, filename)):
                 filter_output(output_path, filename)
             print(f"Output written to {output_path}")
         except subprocess.CalledProcessError as e:

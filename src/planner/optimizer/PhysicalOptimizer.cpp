@@ -112,11 +112,13 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         atomCols.push_back(colsMap_[var]);
     }
     cols_.push_back(std::move(atomCols));
+    projectCols_.emplace_back(); // push empty array as builtin does not have predicates
 }
 
 void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
     BB_ASSERT(atom.getType() == CLASSICAL);
     std::vector<idx_t> atomCols;
+    std::vector<idx_t> prjCols;
     for (idx_t i=0;i<atom.getTerms().size();++i) {
         auto& term = atom.getTerms()[i];
         // expected variable
@@ -131,7 +133,9 @@ void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
             colsMap_[term.getVariable()] = colsMap_.size();
         }
         atomCols.push_back(colsMap_[term.getVariable()]);
+        prjCols.push_back(i);
     }
+    projectCols_.push_back(std::move(prjCols));
     cols_.push_back(std::move(atomCols));
 }
 
@@ -208,7 +212,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         auto& firstAtom = rule.getBody()[0];
         auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
         auto types = types_;
-        source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], ptSource->getCount(), ptSource.get()));
+        source = patom_ptr_t(new PhysicalChunkScan(types, projectCols_[0], ptSource->getCount(), ptSource.get()));
     }
     {
         BB_ASSERT(rule.getHead().size() == 1);
@@ -236,5 +240,6 @@ void PhysicalOptimizer::clear() {
     types_.clear();
     colsMap_.clear();
     typesMap_.clear();
+    projectCols_.clear();
 }
 }

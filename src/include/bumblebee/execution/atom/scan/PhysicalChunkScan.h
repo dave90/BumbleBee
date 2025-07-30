@@ -47,8 +47,6 @@ public:
 private:
     // pointer to the predicate table to source the data
     PredicateTables* pt_;
-    // cols to project
-
 };
 
 

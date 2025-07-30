@@ -1,9 +1,9 @@
 ## TODOLIST
-- E2E Tests
-- unit test
+- Cross product
 
 ## Next
 - Benchmarks
+- CSV
 
 ## First draft
 Process a simple datalog program with aggregation joins and negative atoms.
@@ -17,10 +17,9 @@ Process a simple datalog program with aggregation joins and negative atoms.
 
 ## 0.1
 - CSV
-- DB
 - server mode
-- sql
 - python lib
+- sql
 - directives
 
 ## 0.2
