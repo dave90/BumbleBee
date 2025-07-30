@@ -81,7 +81,7 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossSimpleTest) {
     populatePTable(ptableRight, testTypesRight, 1, 20);
     std::vector<idx_t> dccols = {3,4,5};
     std::vector<idx_t> selcols = {0,1,2};
-    PhysicalCrossProduct pcj(testTypesRight, dccols,selcols, 10, ptableRight.get());
+    PhysicalCrossProduct pcj(testTypesRight, dccols,selcols, 200, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
@@ -92,11 +92,14 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossSimpleTest) {
     auto scanRows = 0;
     auto chunksCounter = 0;
     while (pcj.execute(context, input, output, *state.get()) != AtomResultType::NEED_MORE_INPUT) {
-        scanRows+= input.getSize();
+        scanRows+= output.getSize();
         chunksCounter++;
         // check first row value
         std::cout << output.toString() << std::endl;
     }
+    scanRows+= output.getSize();
+    chunksCounter++;
+
     EXPECT_EQ(chunksCounter, 20); // number of chunks is based on size of the right side
     EXPECT_EQ(scanRows, 20*10);
 }
@@ -127,6 +130,9 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
         // check first row value
         std::cout << output.toString() << std::endl;
     }
+    scanRows+= output.getSize();
+    chunksCounter++;
+
     EXPECT_EQ(chunksCounter, 20);
     EXPECT_EQ(scanRows, 20*10);
 }
