@@ -4,6 +4,13 @@ project(BumbleBee)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
+# Enable AddressSanitizer only for Debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Building with AddressSanitizer in Debug mode")
+    add_compile_options(-fsanitize=address -g -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
+
 # Third-party includes
 include_directories(${CMAKE_SOURCE_DIR}/third_party)
 

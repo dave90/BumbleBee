@@ -70,7 +70,7 @@ TEST(VectorOperationsGenerateSequenceTest, BasicCircularSequenceGeneration) {
 
 TEST(VectorOperationsGenerateSequenceTest, BasicCircularSelectionSequenceGeneration) {
     const idx_t count = 7;
-    Vector result(ConstantType::INTEGER, count);
+    Vector result(ConstantType::INTEGER);
     SelectionVector sel(count);
     sel.setIndex(0, 0);
     sel.setIndex(1, 2);

@@ -222,7 +222,7 @@ void Vector::normalify(idx_t count) {
     if (vtype_ == VectorType::SEQUENCE_VECTOR) {
         int64_t start, increment;
         SequenceVector::getSequence(*this, start, increment);
-        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType());
         data_ = dataMngr_->getData();
         VectorOperations::generateSequence(*this, count, start, increment);
         return;
@@ -230,7 +230,7 @@ void Vector::normalify(idx_t count) {
     if (vtype_ == VectorType::SEQUENCE_CIRCULAR_VECTOR) {
         int64_t start, stride, end, offset;
         CircularSequenceVector::getSequence(*this, start,offset, stride, end);
-        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType());
         data_ = dataMngr_->getData();
         VectorOperations::generateSequence(*this, count, start, offset, stride, end);
         return;
@@ -239,7 +239,7 @@ void Vector::normalify(idx_t count) {
         // take old data manager otherwise will remove the old data
         auto oldDataMngr = dataMngr_;
         auto oldData = oldDataMngr->getData();
-        dataMngr_ = VectorDataMngr::createStandardVector(getType(), count);
+        dataMngr_ = VectorDataMngr::createStandardVector(getType());
         data_ = dataMngr_->getData();
         vtype_ = VectorType::FLAT_VECTOR;
         switch (ctype_) {

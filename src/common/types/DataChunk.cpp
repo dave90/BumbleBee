@@ -88,13 +88,11 @@ void DataChunk::append(const DataChunk &other, bool resize, SelectionVector *sel
         return;
     }
     idx_t newSize = sel ? getSize() + count : getSize() + other.getSize();
-    if (columnCount() != other.columnCount()) {
-        ErrorHandler::errorGeneric("Column counts of appending chunk doesn't match!");
-    }
+    BB_ASSERT(columnCount() == other.columnCount() && "Column counts of appending chunk doesn't match!");
+
     // check if resize is needed
     if (newSize > capacity_) {
-        if (!resize)
-            ErrorHandler::errorGeneric("Can't append chunk to other chunk without resizing");
+        BB_ASSERT(resize && "Can't append chunk to other chunk without resizing");
 
         for (idx_t i = 0; i < columnCount(); i++)
             data_[i].resize(getSize(), newSize);

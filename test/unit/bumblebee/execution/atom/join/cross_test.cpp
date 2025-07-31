@@ -81,12 +81,13 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossSimpleTest) {
     populatePTable(ptableRight, testTypesRight, 1, 20);
     std::vector<idx_t> dccols = {3,4,5};
     std::vector<idx_t> selcols = {0,1,2};
-    PhysicalCrossProduct pcj(testTypesRight, dccols,selcols, 200, ptableRight.get());
+    std::vector<ConstantType> resultType = testTypesLeft; // Start with vec1
+    resultType.insert(resultType.end(), testTypesRight.begin(), testTypesRight.end());
+
+    PhysicalCrossProduct pcj(resultType, dccols,selcols, 200, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
-    std::vector<ConstantType> resultType = testTypesLeft; // Start with vec1
-    resultType.insert(resultType.end(), testTypesRight.begin(), testTypesRight.end());
     DataChunk output;
     output.initializeEmpty(resultType);
     auto scanRows = 0;
@@ -112,13 +113,14 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
     // select only column 0 and 2
     std::vector<idx_t> dccols = {3,4};
     std::vector<idx_t> selcols = {0,2};
-    PhysicalCrossProduct pcj(testTypesRight, dccols,selcols, 0, ptableRight.get());
+    std::vector<ConstantType> resultType = testTypesLeft;
+    for (auto c : selcols)
+        resultType.push_back(testTypesRight[c]);
+
+    PhysicalCrossProduct pcj(resultType, dccols,selcols, 0, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
-    std::vector<ConstantType> resultType = testTypesLeft;
-    for (auto c : {0,2})
-        resultType.push_back(testTypesRight[c]);
 
     DataChunk output;
     output.initializeEmpty(resultType);
@@ -141,7 +143,8 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
 
 TEST_F(PhysicalCrossJoinTest, PhysicalCrossNoInputTest) {
     std::vector<idx_t> cols = {0,1};
-    PhysicalCrossProduct pcj(testTypesRight, cols,cols, 10, ptableRight.get());
+    auto dcCols = cols;
+    PhysicalCrossProduct pcj(testTypesRight, dcCols,cols, 10, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk input;

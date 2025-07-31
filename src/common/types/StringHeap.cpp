@@ -25,8 +25,9 @@ namespace bumblebee{
 
 string_t StringHeap::addBlob(const char *data, idx_t len) {
     BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
-    auto newString = addEmptyString(len);
+    auto newString = addEmptyString(len+1);
     memcpy(newString.getDataWriteable(), data, len);
+    newString.getDataWriteable()[len] = '\0';
     return newString;
 }
 

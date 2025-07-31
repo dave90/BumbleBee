@@ -72,7 +72,9 @@ idx_t getCTypeSize(ConstantType type) {
         case FLOAT:      return sizeof(float);
         case DOUBLE:     return sizeof(double);
         case STRING:     return sizeof(bumblebee::string_t);  // size of string_t object, not content ---> Make sure to not call for string
-        default:         return 0; // or throw an error
+        default:
+            ErrorHandler::errorNotImplemented("Invalid type conversion from ConstantType");
+            return 0; // or throw an error
     }
 }
 

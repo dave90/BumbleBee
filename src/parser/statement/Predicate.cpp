@@ -23,9 +23,10 @@
 namespace bumblebee {
 
 Predicate::Predicate(const char* name, unsigned arity): arity_(arity){
-    auto len = strlen(name);
+    auto len = strlen(name) + 1;
     name_ = std::make_unique<char[]>(len);
     std::memcpy(name_.get(), name, len);
+    name_.get()[len-1] = '\0';
 }
 
 const char* Predicate::getName() const {

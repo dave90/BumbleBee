@@ -53,13 +53,13 @@ public:
 private:
     // chunk where to store the strings in a unique block
     struct StringChunk {
-        explicit StringChunk(idx_t size) : current_position_(0), maximum_size_(size) {
+        explicit StringChunk(idx_t size) :  maximum_size_(size) {
             data_ = std::unique_ptr<char[]>(new char[maximum_size_]);
         }
 
         std::unique_ptr<char[]> data_;
-        idx_t current_position_;
-        idx_t maximum_size_;
+        idx_t current_position_{0};
+        idx_t maximum_size_{0};
         // previous chunk
         std::unique_ptr<StringChunk> prev_;
     };

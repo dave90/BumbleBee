@@ -331,7 +331,7 @@ TEST(VectorTest, OrrifyConstVector) {
 
 TEST(VectorTest, OrrifyDictionaryVector) {
     // Create base vector with 3 values
-    Vector baseVec(ConstantType::INTEGER, true);
+    Vector baseVec(ConstantType::INTEGER);
     baseVec.setValue(0, Value(100));
     baseVec.setValue(1, Value(200));
     baseVec.setValue(2, Value(300));
@@ -359,7 +359,7 @@ TEST(VectorTest, OrrifyDictionaryVector) {
 }
 
 TEST(VectorTest, OrrifyFlatVectorContents) {
-    Vector vec(ConstantType::INTEGER, true);
+    Vector vec(ConstantType::INTEGER);
     vec.setValue(0, Value(11));
     vec.setValue(1, Value(22));
     vec.setValue(2, Value(33));

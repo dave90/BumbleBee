@@ -36,7 +36,7 @@ public:
 PhysicalCrossProduct::PhysicalCrossProduct(const std::vector<ConstantType> &types,
     std::vector<idx_t>& dcCols,std::vector<idx_t>& selectedCols, idx_t estimated_cardinality,
     PredicateTables *pt): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt) {
-    BB_ASSERT(dcCols.size() == selectedCols.size());
+    BB_ASSERT(dcCols_.size() == selectCols_.size());
 }
 
 string PhysicalCrossProduct::getName() const {
@@ -96,6 +96,9 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
     }
     ++cstate.rightIdx_;
     context.profiler_.endPhysicalAtom(chunk);
-    return (cstate.rightIdx_ < pt_->getCount()) ? AtomResultType::HAVE_MORE_OUTPUT : AtomResultType::NEED_MORE_INPUT;
+    if (cstate.rightIdx_ < pt_->getCount())
+        return AtomResultType::HAVE_MORE_OUTPUT;
+    cstate.reset();
+    return AtomResultType::NEED_MORE_INPUT;
 }
 }
