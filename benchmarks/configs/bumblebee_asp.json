@@ -1,0 +1,49 @@
+{
+  "output_folder": "files/asp/actual",
+  "expected_folder": "files/asp/expected",
+  "input_folder": "files/asp/input",
+  "comparison_config": "clingo_asp.json",
+  "previous_comparison": true,
+  "tests": [
+    {
+      "test": "edge 1M",
+      "input_file": "edge1M",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "edge 1M Filter 1",
+      "input_file": "edge1M.filter.1",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "edge 1M Filter 2",
+      "input_file": "edge1M.filter.2",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "col500K",
+      "input_file": "col500K",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Cross product 1",
+      "input_file": "join_cp.1",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Cross product 2",
+      "input_file": "join_cp.2",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Cross product 3",
+      "input_file": "join_cp.3",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Cross product 3 Multithread",
+      "input_file": "join_cp.3",
+      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    }
+  ]
+}

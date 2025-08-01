@@ -206,30 +206,14 @@ Catalog tables hold:
 
 ---
 
-## Statistics
-???
+## Profiling
+
+To enable the profiling set  **PROFILING** to 1  in _src/include/bumblebee/common/Constants.h_ and compile **BumbleBee**
+
+Then to print the profiling use the option _- r_
 
 
-## 🧪 Benchmark Commands
-
-### Run Clingo (ASP Baseline)
-```bash
-/usr/bin/time -al clingo --mode=gringo --text benchmarks/files/asp/input/edge1M > /dev/null
-```
-
-## Commands
-
-example test clingo:
-```bash
-/usr/bin/time -al clingo --mode=gringo --text benchmarks/files/asp/input/edge1M > /dev/null
-```
-
-example test bb:
-```
-/usr/bin/time -al ./cmake-build-release/BumbleBee -i benchmarks/files/asp/input/edge1M > /dev/null
-```
-
-### Build parser
+## Build parser
 ```
 	flex -o src/parser/aspcore2_lexer.hpp src/parser/aspcore2.l
 	bison -y -d -o src/parser/aspcore2_parser.c src/parser/aspcore2.y
@@ -243,14 +227,50 @@ Sometime clean the cmake Tools -> Cmake -> Reset Cache and Reload
 If Clion cannot load the the CMake project then delete the .idea folder
 
 ## Build
-mkdir build
+
+### Release
+```bash
+mkdir cmake-build-release
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake build .
-
-## Test
-Run:
-```bash
-ctest
 ```
 
+### Debug
+```bash
+mkdir cmake-build-debug
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake build .
+```
+
+## 🧪 Benchmark Commands
+
+### Run Clingo (ASP Baseline)
+```bash
+cd benchmarks
+python benchmark_runner.py configs/clingo_asp.json 
+```
+
+### Run Bumblebee (ASP)
+
+```bash
+python benchmark_runner.py configs/bumblebee_asp.json
+```
+
+## Unit Test
+
+
+Run:
+```bash
+cd cmake-build-debug
+ctest -j
+```
+
+## End to End (E2E) Test
+
+Run:
+```bash
+cd test/e2e
+pytest test.py
+```

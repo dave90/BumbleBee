@@ -1,30 +1,41 @@
 ## TODOLIST
-- Cross product
+- Benchmarks
+- Nested loop join
+- Perfect hash join
+- Hash map (look the umbra version)
+- hash physical atom
+- Planner for hash join
 
 ## Next
-- Benchmarks
 - CSV
 
 ## First draft
 Process a simple datalog program with aggregation joins and negative atoms.
  
-- Hash map (look the umbra version)
-- Statistics / Predicate Tables data structures (hash , intermediate results)
 - Aggregation
+- Recursion
+- Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner with statistics
-
 
 
 ## 0.1
 - CSV
 - server mode
+- store data multi session
 - python lib
-- sql
+- sql (basic)
 - directives
+- profiling
+- hash + aggregate
+- recursion
+- vectorize ,multithread , SIMD and push
 
 ## 0.2
 - parquet
-- DB
+- sql (full)
+- date/timestamp
+- DB (postegress ,mysql, sqlite)
+- multi schema
 - compiled operators
 - cascade?
 - multi join predicates?

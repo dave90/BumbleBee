@@ -1,0 +1,42 @@
+{
+  "output_folder": "files/asp/expected",
+  "input_folder": "files/asp/input",
+  "clean_predicates": true,
+  "tests": [
+    {
+      "test": "edge 1M",
+      "input_file": "edge1M",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "edge 1M Filter 1",
+      "input_file": "edge1M.filter.1",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "edge 1M Filter 2",
+      "input_file": "edge1M.filter.2",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Col500K",
+      "input_file": "col500K",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Cross product 1",
+      "input_file": "join_cp.1",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Cross product 2",
+      "input_file": "join_cp.2",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Cross product 3",
+      "input_file": "join_cp.3",
+      "commands": ["clingo --mode=gringo --text $file"]
+    }
+  ]
+}
