@@ -119,6 +119,8 @@ public:
 	void slice(const SelectionVector &sel_vector, idx_t count);
 	// slice the vectors of other using a selection and set the results in data_
 	void slice(DataChunk &other, const SelectionVector &sel, idx_t count, idx_t colOffset = 0);
+	// slice the vectors of other using a selection and set the results in data_ setting the cols based on colsMap
+	void slice(DataChunk &other, const SelectionVector &sel, idx_t count, const std::vector<idx_t>& colsMap);
 
 	// Resets the DataChunk to its state right after the DataChunk::Initialize
 	// function was called. This sets the count to 0, and resets each member

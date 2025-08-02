@@ -155,4 +155,12 @@ idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel,
     return 0;
 }
 
+Expression Expression::generateExpression(Binop op, idx_t leftCol, idx_t rightCol) {
+    Operands left, right;
+    left.cols_.push_back(leftCol);
+    right.cols_.push_back(rightCol);
+    Expression exp(op, left, right);
+    return exp;
+}
+
 }

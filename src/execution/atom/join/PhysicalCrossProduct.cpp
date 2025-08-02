@@ -56,7 +56,8 @@ string PhysicalCrossProduct::toString() const {
     for (auto c : colsType_) {
         result += ctypeToString(c) + ", ";
     }
-    return result + ")";}
+    return result + ")";
+}
 
 pstate_ptr_t PhysicalCrossProduct::getState() const {
     return pstate_ptr_t(new CrossProductState());

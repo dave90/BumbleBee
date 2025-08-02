@@ -153,4 +153,19 @@ string ctypeToString(ConstantType type) {
         default:         return "INVALID_CONSTANT_TYPE";
     }
 }
+
+Binop getFlippedBinop(Binop op) {
+    switch (op) {
+        case EQUAL:         return EQUAL;
+        case UNEQUAL:       return UNEQUAL;
+        case LESS:          return GREATER;
+        case GREATER:       return LESS;
+        case LESS_OR_EQ:    return GREATER_OR_EQ;
+        case GREATER_OR_EQ: return LESS_OR_EQ;
+        case ASSIGNMENT:    return ASSIGNMENT;
+        case NONE_OP:       return NONE_OP;
+        default:            return NONE_OP;
+    }
+}
+
 }

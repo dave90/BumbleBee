@@ -49,7 +49,7 @@ private:
     // generate the patoms for the builtin atoms
     void generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms);
     // generate the join patoms, vars is the variables seen so far in the rule used to calculate the join keys
-    void generatePhysicalJoin(const set_term_variable_t& vars, Atom& atom, std::vector<idx_t>& dcCols,std::vector<idx_t>& selCols, std::vector<ConstantType> types,patom_ptr_vector_t& patoms);
+    void generatePhysicalJoin(const set_term_variable_t& vars, idx_t i, Rule& rule,patom_ptr_vector_t& patoms);
 
     // global client context
     ClientContext& context_;
@@ -65,6 +65,8 @@ private:
     std::unordered_map<std::string, idx_t> colsMap_;
     // Map of variable -> data type
     std::unordered_map<std::string, ConstantType> typesMap_;
+    // skip atom map, if true does not create physical atoms
+    std::unordered_map<idx_t, bool> skipAtom_;
 };
 
 

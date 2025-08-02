@@ -58,7 +58,8 @@ struct Expression {
     }
     // Execute a operands and set the result in result vector
     static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count, ConstantType resultType = UNKNOWN);
-
+    // Generate a simplified expression with a binop and 2 cols (left and right)
+    static Expression generateExpression(Binop op, idx_t leftCol, idx_t rightCol);
 
 };
 

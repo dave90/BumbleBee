@@ -21,8 +21,10 @@
 
 #include "bumblebee/catalog/PredicateTables.h"
 #include "bumblebee/execution/Expression.h"
+#include "bumblebee/execution/NestedLoopJoin.h"
 #include "bumblebee/execution/atom/expression/PhysicalExpression.h"
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
+#include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
 
@@ -199,29 +201,78 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t
 }
 
 
-void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars, Atom &atom, std::vector<idx_t> &dcCols, std::vector<idx_t> &selCols,
-    std::vector<ConstantType> types, patom_ptr_vector_t &patoms) {
+void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
+idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
+
+    auto& dcCols = cols_[i];
+    auto& selCols = selectedCols_[i];
+    auto& atom = rule.getBody()[i];
+    auto& types = types_;
     auto& schema = context_.defaultSchema_;
-    // calculate the join keys
+
+    // try to build a nested loop join
+    // calculate the join keys and conditions
     auto& terms = atom.getTerms();
-    std::vector<idx_t> keys;
+    std::vector<Expression> joinConditions;
+    std::unordered_map<string,idx_t> varMap; // for each variable the index term in the atom
+
     for (idx_t i = 0; i < terms.size(); ++i) {
         if (terms[i].isAnonymous())continue;
         BB_ASSERT(terms[i].getType() == VARIABLE);
         auto variable = terms[i].getVariable();
+        varMap[variable] = i;
         if (!vars.contains(variable)) continue;
-        keys.push_back(i);
+        BB_ASSERT(colsMap_.contains(variable));
+        joinConditions.emplace_back(Expression::generateExpression(EQUAL, colsMap_[variable], i ));
+        // remove from selCols and dcCols the keys column as are duplicate columns
+        auto index = std::distance(selCols.begin(), std::find(selCols.begin(), selCols.end(), i));
+        std::erase(selCols, i);
+        dcCols.erase(dcCols.begin() + index);
     }
-    if (keys.size() == 0) {
+    for (idx_t j = i+1;j < rule.getBody().size();++j) {
+        auto& nextAtom = rule.getBody()[j];
+        if (nextAtom.getType() != BUILTIN)break; // If a classical atom is found, stop the process as all possible built-ins have been evaluated
+        if (nextAtom.getBinop() == ASSIGNMENT) continue;
+        // check the size of conditions, for now is allowed only simplified condition
+        // TODO allow expression with arith
+        auto &left = nextAtom.getTerms()[0];
+        auto &right = nextAtom.getTerms()[1];
+        if (left.getType() != VARIABLE || right.getType() != VARIABLE) continue;
+        auto& lvar = left.getVariable();
+        auto& rvar = right.getVariable();
+
+        if (varMap.contains( rvar) && varMap.contains( lvar)) {
+            // skip this binop as the condition does not involve left side
+            continue;
+        }
+        if (varMap.contains( rvar) ) {
+            BB_ASSERT(colsMap_.contains(lvar));
+            joinConditions.emplace_back(Expression::generateExpression(nextAtom.getBinop(), colsMap_[lvar], varMap[rvar] ));
+        } else {
+            // right var point to left join
+            // then swap the condition to set the left index in left side and right index in right side
+            BB_ASSERT(colsMap_.contains(rvar));
+            BB_ASSERT(varMap.contains(lvar));
+            joinConditions.emplace_back(Expression::generateExpression(getFlippedBinop(nextAtom.getBinop()), colsMap_[rvar], varMap[lvar] ));
+        }
+        BB_ASSERT(colsMap_.contains(lvar));
+        BB_ASSERT(colsMap_.contains(rvar));
+        skipAtom_[j] = true; // skip the creation of physical atom j
+
+    }
+
+
+    auto pred = schema.getPredicateTable(atom.getPredicate()).get();
+    if (joinConditions.size() == 0 ) {
         // cross product join
-        auto pred = schema.getPredicateTable(atom.getPredicate()).get();
         auto cp = patom_ptr_t(new PhysicalCrossProduct(types, dcCols, selCols, 0, pred ));
         patoms.push_back(std::move(cp));
         return;
     }
-    if (keys.size() > 0)
-        ErrorHandler::errorNotImplemented("Join currently not supported :(");
 
+
+    auto nj = patom_ptr_t(new PhysicalNestedLoop(types, dcCols, selCols, 0, pred, joinConditions ));
+    patoms.push_back(std::move(nj));
 }
 
 prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
@@ -250,6 +301,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols_[0], 0, ptSink.get()));
     }
     for (idx_t i=1;i<rule.getBody().size();++i) {
+        if (skipAtom_.contains(i) && skipAtom_[i])continue;
         auto& atom = rule.getBody()[i];
         switch (atom.getType()) {
             case BUILTIN:
@@ -257,9 +309,8 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
                 break;
             case CLASSICAL:
                 // find the physical join
-                generatePhysicalJoin(vars, atom, cols_[i], selectedCols_[i], types_, patoms);
+                generatePhysicalJoin(vars, i, rule, patoms);
                 break;
-
         }
         atom.getVariables(vars);
 

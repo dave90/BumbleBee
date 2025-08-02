@@ -80,5 +80,5 @@ ConstantType getCommonType(ConstantType t1, ConstantType t2);
 char getOperatorChar(Operator op);
 string getBinopStr(Binop binop);
 string ctypeToString(ConstantType type);
-
+Binop getFlippedBinop(Binop op);
 }

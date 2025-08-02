@@ -195,6 +195,23 @@ void DataChunk::slice(DataChunk &other, const SelectionVector &sel, idx_t count,
     }
 }
 
+void DataChunk::slice(DataChunk &other, const SelectionVector &sel, idx_t count, const std::vector<idx_t>& colsMap) {
+    BB_ASSERT(colsMap.size() == other.columnCount());
+    count_ = count;
+    SelCache merge_cache;
+    for (idx_t c = 0; c < other.columnCount(); c++) {
+        auto index = colsMap[c];
+        BB_ASSERT(index < columnCount());
+        if (other.data_[c].getVectorType() == VectorType::DICTIONARY_VECTOR) {
+            // already a dictionary merge the dictionaries
+            data_[index].reference(other.data_[c]);
+            data_[index].slice(sel, count, merge_cache);
+        } else {
+            data_[index].slice(other.data_[c], sel, count);
+        }
+    }
+}
+
 void DataChunk::reset() {
     if (data_.empty()) {
         return;
