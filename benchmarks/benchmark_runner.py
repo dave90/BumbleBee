@@ -11,7 +11,8 @@ from pathlib import Path
 from glob import glob
 import tempfile
 
-NUM_TRIES = 5
+
+NUM_TRIES = 3
 RESULTS_FOLDER = Path("results")
 
 

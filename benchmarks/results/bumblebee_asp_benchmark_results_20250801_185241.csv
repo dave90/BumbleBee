@@ -1,9 +1,0 @@
-test,input_file,avg,min,max,delta_vs_cmp,delta_vs_prev,output_match
-edge 1M,edge1M,2.1862,2.1135,2.2400,-0.9631,1.5971,match
-edge 1M Filter 1,edge1M.filter.1,2.8168,2.7869,2.8428,-0.5650,2.1426,match
-edge 1M Filter 2,edge1M.filter.2,5.8212,5.7669,5.9099,1.1558,5.1583,match
-col500K,col500K,6.2697,6.1952,6.3942,-,0.0374,match
-Cross product 1,join_cp.1,14.5567,14.0224,15.3587,5.2692,0.3570,match
-Cross product 2,join_cp.2,3.0867,3.0689,3.1244,-0.2260,-0.0010,match
-Cross product 3,join_cp.3,9.0663,9.0227,9.1099,-79.0247,0.0255,match
-Cross product 3 Multithread,join_cp.3,2.8193,2.7451,2.9489,-,0.1363,match

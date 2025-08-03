@@ -115,3 +115,87 @@ TEST_F(PhysicalNLTest, PhysicalNLSimpleTest) {
     EXPECT_EQ(scanRows, 20*10);
 }
 
+TEST_F(PhysicalNLTest, EmptyLeftTableTest) {
+    populatePTable(ptableLeft, typesLeft, 0);  // No data
+    populatePTable(ptableRight, typesRight, 1, 10);
+
+    std::vector<idx_t> dccols = {3,4,5};
+    std::vector<idx_t> selcols = {0,1,2};
+    std::vector<ConstantType> resultType = typesLeft;
+    resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
+
+    vector<Expression> conditions;
+    conditions.emplace_back(Expression::generateExpression(EQUAL, 0, 0)); // a.col0 == b.col0
+
+    PhysicalNestedLoop pnl(resultType, dccols, selcols, 200, ptableRight.get(), conditions);
+    auto state = pnl.getState();
+
+    DataChunk input;
+    input.initializeEmpty(typesLeft);
+    input.setCardinality(0);
+
+    DataChunk output;
+    output.initializeEmpty(resultType);
+
+    auto res = pnl.execute(context, input, output, *state.get());
+    EXPECT_EQ(output.getSize(), 0);
+    EXPECT_EQ(res, AtomResultType::NEED_MORE_INPUT);
+}
+
+TEST_F(PhysicalNLTest, NoMatchingRowsTest) {
+    populatePTable(ptableLeft, typesLeft, 1, 5);    // Left: values 0..4
+    populatePTable(ptableRight, typesRight, 1, 5);  // Right: values 0..4
+
+    std::vector<idx_t> dccols = {3,4,5};
+    std::vector<idx_t> selcols = {0,1,2};
+    std::vector<ConstantType> resultType = typesLeft;
+    resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
+
+    vector<Expression> conditions;
+    conditions.emplace_back(Expression::generateExpression(LESS, 0, 0)); // a.col0 < b.col0
+    // Since all a.col0 == b.col0, this condition is never true
+
+    PhysicalNestedLoop pnl(resultType, dccols, selcols, 200, ptableRight.get(), conditions);
+    auto state = pnl.getState();
+
+    DataChunk& input = ptableLeft->getChunk(0);
+    DataChunk output;
+    output.initializeEmpty(resultType);
+
+    auto rows = 0;
+    while (pnl.execute(context, input, output, *state.get()) != AtomResultType::NEED_MORE_INPUT) {
+        rows += output.getSize();
+        EXPECT_EQ(output.getSize(), 0); // Each output chunk should be empty
+    }
+    EXPECT_EQ(rows, 0);
+}
+
+
+TEST_F(PhysicalNLTest, MultiChunkJoinTest) {
+    populatePTable(ptableLeft, typesLeft, 3 );
+    populatePTable(ptableRight, typesRight, 2);
+
+    std::vector<idx_t> dccols = {3,4,5};
+    std::vector<idx_t> selcols = {0,1,2};
+    std::vector<ConstantType> resultType = typesLeft;
+    resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
+
+    vector<Expression> conditions; // No predicate: Full cross product
+    conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 1)); // a.col1 == b.col1
+
+    PhysicalNestedLoop pnl(resultType, dccols, selcols, 200, ptableRight.get(), conditions);
+
+    auto state = pnl.getState();
+    DataChunk output;
+    output.initializeEmpty(resultType);
+
+    int64_t totalRows = 0;
+    for (idx_t i = 0; i < 3; ++i) {
+        DataChunk& input = ptableLeft->getChunk(i);
+        while (pnl.execute(context, input, output, *state.get()) != AtomResultType::NEED_MORE_INPUT) {
+            totalRows += output.getSize();
+        }
+    }
+
+    EXPECT_EQ(totalRows, STANDARD_VECTOR_SIZE * 2);
+}

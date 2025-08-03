@@ -21,7 +21,7 @@
       "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
     },
     {
-      "test": "col500K",
+      "test": "Col500K",
       "input_file": "col500K",
       "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
     },
@@ -44,6 +44,31 @@
       "test": "Cross product 3 Multithread",
       "input_file": "join_cp.3",
       "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    },
+    {
+      "test": "Join NL 1",
+      "input_file": "join_nl.1",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Join NL 2",
+      "input_file": "join_nl.2",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Join NL 3",
+      "input_file": "join_nl.3",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Join NL 4",
+      "input_file": "join_nl.4",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Join NL 5",
+      "input_file": "join_nl.5",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
     }
   ]
 }
