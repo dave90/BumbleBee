@@ -143,7 +143,7 @@ std::vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const std::vector<C
         auto &term = terms[i];
         if (term.getType() != RANGE) {
             // constant column
-            Vector v(term.getValue());
+            Vector v(term.getValue().cast(types[i]));
             chunk->data_.push_back(std::move(v));
             continue;
         }

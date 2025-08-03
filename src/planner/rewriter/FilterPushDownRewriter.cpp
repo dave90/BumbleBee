@@ -42,13 +42,26 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
         }
     }
 
+
+
     set_term_variable_t currentVariables;
     for (idx_t i=0; i< body.size(); i++) {
-        if (body[i].getType() == BUILTIN)continue;
+        if (body[i].getType() == BUILTIN) continue;
         // add the variables of this classical atoms in the current variables set
         // and push in the new body (not changing the order of classical atoms)
         body[i].getVariables(currentVariables);
         newBody.push_back(std::move(body[i]));
+
+        // first add the constant assignment
+        for (idx_t j=0; j< builtIntAtoms.size(); j++) {
+            auto atom = builtIntAtoms[j];
+            if (atom == nullptr)continue;
+            if (!atom->isConstantAssignment())continue;
+            atom->setBinop(ASSIGNMENT);
+            atom->getVariables(currentVariables);
+            newBody.push_back(std::move(*atom));
+            builtIntAtoms[j] = nullptr;
+        }
 
         // first check the possible assignment
         // we need to loop again and again for cascade assignment ( X = Y, Z = X, etc.)

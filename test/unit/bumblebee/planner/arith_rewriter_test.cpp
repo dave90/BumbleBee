@@ -64,7 +64,7 @@ TEST(ArithRewriterTest, RewriteArith) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.getBody().size(), 7);
+    EXPECT_EQ(rule.toString(),"a(X,Y) :- b(X,Y,T),b(Z,#ARITH_0,#ARITH_2),b(A,B,#ARITH_1),#ARITH_0 == #ARITH_3,#ARITH_1 == Y+#ARITH_4,Z == #ARITH_2,#ARITH_3 = 100,#ARITH_4 = 1.");
 }
 
 TEST(ArithRewriterTest, RewriteArithWithConstant) {

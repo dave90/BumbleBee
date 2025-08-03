@@ -22,6 +22,27 @@
 
 namespace bumblebee{
 
+bool isConstantAssignment(Atom& builtin, std::vector<Atom>& body) {
+    if (!builtin.isConstantAssignment()) return false;
+    // now check if the variable is shared in the classical atoms in the body
+    // if is shared we need to decouple
+    string var;
+    if (builtin.getTerms()[0].getType() == VARIABLE)
+        var = builtin.getTerms()[0].getVariable();
+    else {
+        BB_ASSERT(builtin.getTerms()[1].getType() == VARIABLE);
+        var = builtin.getTerms()[1].getVariable();
+    }
+
+    set_term_variable_t vars;
+    for (auto& atom : body) {
+        if (atom.getType() != CLASSICAL) continue;
+        atom.getVariables(vars);
+        if (vars.contains(var)) return false;
+    }
+    return true;
+}
+
 void ArithRewriter::rewrite(Rule &rule) {
     std::vector<Atom> builtins ;
     // extract arith term or constant
@@ -73,7 +94,7 @@ void ArithRewriter::rewrite(Rule &rule) {
     auto size = builtins.size(); // store the size because new atoms will be pushed
     for (idx_t i = 0; i < size; ++i) {
         auto& atom = builtins[i];
-        if (atom.getType() != BUILTIN || atom.isConstantAssignment())continue;
+        if (atom.getType() != BUILTIN || isConstantAssignment(atom, rule.getBody()))continue;
         auto& left = atom.getTerms()[0];
         auto& right = atom.getTerms()[1];
         while (left.containsOrIsConstant() || right.containsOrIsConstant()) {
@@ -160,7 +181,6 @@ atoms_vector_t ArithRewriter::removeSharedVariables(Atom &atom, string& sharedVa
 Atom ArithRewriter::extractConstantBuiltinArith(Atom &atom) {
     BB_ASSERT(atom.getType() == BUILTIN);
     BB_ASSERT(atom.getTerms().size() == 2);
-    BB_ASSERT(!atom.isConstantAssignment());
 
     auto& left = atom.getTerms()[0];
     auto& right = atom.getTerms()[1];

@@ -1,0 +1,10 @@
+a(X, Y)?
+
+b("a", "apple").
+b("b", "banana").
+b("c", "cherry").
+
+c("a", 1).
+c("c", 2).
+
+a(X, Y) :- b(X, Y), c(X, _).
