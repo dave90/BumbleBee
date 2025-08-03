@@ -348,6 +348,10 @@ void ParserInputBuilder::newTerm(char * value) {
             (value[0] >= 'a' && value[0] <='z') )   // String constant
     {
         std::string s(value);
+        if (value[0] == '\"')
+            // remove the quote
+            s = s.substr(1, s.size() - 2);
+
         Term term = Term(std::move(s));
         terms_parsered.push_back(std::move(term));
         return;

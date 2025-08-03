@@ -25,11 +25,12 @@ using namespace bumblebee;
 TEST(BumbleStringTest, InlineConstructorShortString) {
     const char* str = "short";  // length = 5
     BumbleString s(str);
+    string expected = "\"short\"";
 
     EXPECT_EQ(s.length(), 5);
     EXPECT_TRUE(s.isInlined());
     EXPECT_STREQ(s.c_str(), str);
-    EXPECT_STREQ(s.getString().c_str(), str);
+    EXPECT_STREQ(s.getString().c_str(), expected.c_str());
     EXPECT_EQ(strcmp(s.getDataUnsafe(), str), 0);
     EXPECT_EQ(strcmp(s.getPrefix(), str), 0);
 }
@@ -37,11 +38,12 @@ TEST(BumbleStringTest, InlineConstructorShortString) {
 TEST(BumbleStringTest, NonInlineConstructorLongString) {
     const char* str = "this_is_a_longer_string"; // > 11
     BumbleString s(str);
+    string exp = "\"this_is_a_longer_string\""; // > 11
 
     EXPECT_EQ(s.length(), strlen(str));
     EXPECT_FALSE(s.isInlined());
     EXPECT_STREQ(s.c_str(), str);
-    EXPECT_EQ(s.getString(), std::string(str));
+    EXPECT_EQ(s.getString(), exp);
 
     // prefix should contain the first 11 chars
     std::string expected_prefix(str, BumbleString::PREFIX_LENGTH);
@@ -50,12 +52,13 @@ TEST(BumbleStringTest, NonInlineConstructorLongString) {
 
 TEST(BumbleStringTest, ConstructorWithExplicitLength) {
     const char* str = "123456789012345"; // len = 15
+    string exp = "\"123456789012345\""; // len = 15
     BumbleString s(str, 15);
 
     EXPECT_EQ(s.length(), 15);
     EXPECT_FALSE(s.isInlined());
     EXPECT_STREQ(s.c_str(), str);
-    EXPECT_EQ(s.getString(), std::string(str, 15));
+    EXPECT_EQ(s.getString(), exp);
 }
 
 TEST(BumbleStringTest, CopyConstructor) {

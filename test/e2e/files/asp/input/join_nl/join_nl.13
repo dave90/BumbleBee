@@ -1,0 +1,11 @@
+a(Product, Category, Price)?
+
+inventory("laptop", "electronics", 1200).
+inventory("phone", "electronics", 800).
+inventory("book", "media", 20).
+inventory("camera", "electronics", 500).
+
+categories("electronics").
+categories("media").
+
+a(Product, Category, Price) :- inventory(Product, Category, Price), categories(Category), Price > 100, Product < "z".

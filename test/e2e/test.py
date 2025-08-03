@@ -10,8 +10,10 @@ input_folder = Path(os.path.join("files","asp","input"))
 expected_folder = Path(os.path.join("files","asp","expected"))
 actual_folder = Path(os.path.join("files","asp","actual"))
 
+input_files = [p for p in input_folder.rglob("*") if p.is_file()]
+
 # Main pytest function
-@pytest.mark.parametrize("input_file", list(Path(os.path.join("files","asp","input")).glob("*")))
+@pytest.mark.parametrize("input_file", input_files)
 def test_asp(input_file: Path):
     actual_folder.mkdir(exist_ok=True)
 

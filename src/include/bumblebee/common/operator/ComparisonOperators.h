@@ -81,7 +81,7 @@ struct StringComparisonOperators {
 	template <bool INVERSE>
 	static inline bool EqualsOrNot(const string_t a, const string_t b) {
 		auto size = a.size();
-		if (size != b.length()) return INVERSE ? false : true;
+		if (size != b.length()) return INVERSE ? true : false;
 		if (a.isInlined()) {
 			// small string: compare entire string
 			if (memcmp(a.getPrefix(), b.getPrefix(), size) == 0) {

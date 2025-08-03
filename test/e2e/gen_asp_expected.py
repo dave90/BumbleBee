@@ -17,41 +17,44 @@ FILTER_PREDICATES = {}
 
 def create_expected():
     # Iterate over all files in the input directory
-    for filename in os.listdir(INPUT_DIR):
-        input_path = os.path.join(INPUT_DIR, filename)
-        output_path = os.path.join(OUTPUT_DIR, filename)
+    for root, _, files in os.walk(INPUT_DIR):
+        for filename in files:
+            relative_path = os.path.relpath(root, INPUT_DIR)
+            input_path = os.path.join(INPUT_DIR, relative_path, filename)
+            output_path = os.path.join(OUTPUT_DIR, filename)
 
-        if contains_query(input_path):
-            input_path = get_input_no_filters(input_path)
+            if not os.path.isfile(input_path):
+                continue
 
-        if not os.path.isfile(input_path):
-            continue
-        print(f"Processing {filename}...")
+            if contains_query(input_path):
+                input_path = get_input_no_filters(input_path)
 
-        # Build the command
-        command = [
-            'clingo',
-            '--mode=gringo',
-            '--text',
-            input_path
-        ]
+            print(f"Processing {filename}...")
 
-        # Run the command and capture the output
-        try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
-            cleaned_output = remove_comment_lines(result.stdout)
-            with open(output_path, 'w') as f:
-                f.write(cleaned_output)
+            # Build the command
+            command = [
+                'clingo',
+                '--mode=gringo',
+                '--text',
+                input_path
+            ]
 
-            if contains_query(os.path.join(INPUT_DIR, filename)):
-                filter_output(output_path, filename)
+            # Run the command and capture the output
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, check=True)
+                cleaned_output = remove_comment_lines(result.stdout)
+                with open(output_path, 'w') as f:
+                    f.write(cleaned_output)
+
+                if filename in FILTER_PREDICATES:
+                    filter_output(output_path, filename)
 
 
-            print(f"Output written to {output_path}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error processing {filename}: {e}")
-            with open(output_path, 'w') as f:
-                f.write("")
+                print(f"Output written to {output_path}")
+            except subprocess.CalledProcessError as e:
+                print(f"Error processing {filename}: {e}")
+                with open(output_path, 'w') as f:
+                    f.write("")
 
 # return a test file without the
 def get_input_no_filters(input_file:str):

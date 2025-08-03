@@ -1,5 +1,4 @@
 ## TODOLIST
-- Nested loop join
 - Hash map (look the umbra version)
 - hash physical atom
 - Planner for hash join
@@ -7,6 +6,7 @@
 ## Next
 - CSV
 - Negative
+- CICD
 
 ## Next of Next
 Process a simple datalog program with aggregation joins and negative atoms.

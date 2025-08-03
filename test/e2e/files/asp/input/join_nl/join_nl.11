@@ -1,0 +1,10 @@
+a(X, Y, Z)?
+
+b("ant", "bee", "cat").
+b("dog", "elephant", "fox").
+b("goat", "hippo", "iguana").
+
+c("dog").
+c("goat").
+
+a(X, Y, Z) :- b(X, Y, Z), c(X), X < Y, Y < Z.

@@ -301,7 +301,7 @@ idx_t NestedLoopJoinInner::execute(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, 
 
         // now refine the join with the condition
         matchCount = nestedLoopJoinComparisonSwitch<RefineNestedLoopJoin>( lchunk.data_[lidx], rchunk.data_[ridx],
-            lchunk.getSize(), rchunk.getSize(),lpos, rpos, lsel, rsel, matchCount, icondition.op_);
+            lchunk.getSize(), rchunk.getSize(),lpos, rpos, lsel, rsel, matchCount, condition.op_);
 
     }
     return matchCount;

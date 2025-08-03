@@ -50,7 +50,17 @@ char * BumbleString::getDataWriteable() const {
 }
 
 string BumbleString::getString() const {
-    return string(getDataUnsafe());
+    const char* data = getDataUnsafe();
+    size_t len = std::strlen(data);
+
+    std::string result;
+    result.reserve(len + 2); // Reserve space for quotes + content
+
+    result.push_back('"');
+    result.append(data, len);
+    result.push_back('"');
+
+    return result;
 }
 
 

@@ -166,7 +166,7 @@ TEST(VectorTest, GetSetValuesInteger) {
 TEST(VectorTest, GetSetValuesString) {
     Vector vec(ConstantType::STRING);
     vec.setValue(0, Value("hello"));
-    EXPECT_EQ(vec.getValue(0), Value("hello"));
+    EXPECT_EQ(vec.getValue(0), Value("\"hello\""));
 }
 
 // ---------- Test flattening ----------
@@ -186,7 +186,7 @@ TEST(VectorTest, NormalifyStringConstantVector) {
     vec.normalify(3);
     EXPECT_EQ(vec.getVectorType(), VectorType::FLAT_VECTOR);
     for (idx_t i = 0; i < 3; ++i) {
-        EXPECT_EQ(vec.getValue(i), Value("MIAO"));
+        EXPECT_EQ(vec.getValue(i), Value("\"MIAO\""));
     }
 }
 
@@ -418,7 +418,7 @@ TEST(VectorTest, OrrifyConstStringVector) {
     auto sel = vdata.sel_->getData();
     auto data = (string_t*)vdata.data_;
     for (idx_t i = 0; i < 4; ++i) {
-        EXPECT_EQ(data[sel[i]].getString(), "buzz");
+        EXPECT_EQ(data[sel[i]].getString(), "\"buzz\"");
     }
 }
 
