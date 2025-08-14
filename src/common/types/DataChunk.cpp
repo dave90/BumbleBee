@@ -226,8 +226,18 @@ void DataChunk::hash(Vector &result) {
     BB_ASSERT(result.getType() == ConstantType::UBIGINT);
     VectorOperations::hash(data_[0], result, getSize());
     for (idx_t i = 1; i < columnCount(); i++) {
-        ;
         VectorOperations::combineHash(result, data_[i], getSize());
+    }
+}
+
+void DataChunk::hash(Vector &result, const std::vector<idx_t> &cols) {
+    BB_ASSERT(result.getType() == ConstantType::UBIGINT);
+    BB_ASSERT(cols.size() > 0);
+    BB_ASSERT(cols[0] < columnCount());
+    VectorOperations::hash(data_[cols[0]], result, getSize());
+    for (idx_t i = 1; i < cols.size(); i++) {
+        BB_ASSERT(cols[i] < columnCount());
+        VectorOperations::combineHash(result, data_[cols[i]], getSize());
     }
 }
 

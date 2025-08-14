@@ -21,6 +21,7 @@
 #include "bumblebee/common/Log.h"
 #include "bumblebee/parser/statement/Atom.h"
 #include "bumblebee/parser/statement/Rule.h"
+#include "bumblebee/execution/JoinHashTable.h"
 
 namespace bumblebee{
 PredicateTables::PredicateTables(const char* name, unsigned arity): predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
@@ -60,9 +61,25 @@ std::vector<ConstantType> PredicateTables::getTypes() {
     return types_;
 }
 
+JoinHashTable & PredicateTables::getJoinHashTable(const std::vector<idx_t>& keys) {
+    for (auto&ht: jhtables_)
+        if (ht.checkKeys(keys))
+            return ht;
+
+    jhtables_.emplace_back(predicate_.get(), keys, getCount());
+    return jhtables_.back();
+}
+
+bool PredicateTables::existJoinHashTable(const std::vector<idx_t>& keys) {
+    for (auto&ht: jhtables_)
+        if (ht.checkKeys(keys))
+            return true;
+    return false;
+}
 
 void PredicateTables::initializeChunks() {
     // sync the functions as multiple source operators can call the init
+    if (facts_.empty() && ranges_.empty())return;
     lock_guard lock(mutex_);
     LOG_DEBUG("Initializing PredicateTables %s...", predicate_->toString().c_str());
     if (!facts_.empty()) loadFacts();
@@ -97,7 +114,6 @@ void PredicateTables::loadFacts() {
 
     idx_t idx = 0;
     auto chunkCapacity = chunk->getCapacity();
-    auto factsSize = facts_.size();
     for (auto& fact : facts_) {
         auto factTypes = fact.getTermsCType();
         // set all the columns

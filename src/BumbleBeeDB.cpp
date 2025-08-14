@@ -91,7 +91,7 @@ void BumbleBeeDB::run() {
     processProgram(program, scheduler);
     executor.stopThreadsAndJoin();
 
-    printIDB();
+    print();
 }
 
 void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) {
@@ -142,17 +142,18 @@ void BumbleBeeDB::processBucketRules( RulesBucket &bucket, Scheduler& scheduler)
     // for (auto& rule : bucket.constraints_)LOG_DEBUG("Constraint rule: %s", rule.toString().c_str());
 }
 
-void BumbleBeeDB::printIDB() {
+void BumbleBeeDB::print() {
     auto predicates = context_.defaultSchema_.getPredicates();
     auto outputBuilder = OutputBuilder(TEXT); // //TODO extend with other format
     for (auto& predicate : predicates) {
         if (predicate->isInternal())continue;
-        if (predicate->isEdb())continue; // facts printed during the parsing
         auto& pt = context_.defaultSchema_.getPredicateTable(predicate);
+        pt->initializeChunks(); // init chunks if no rules initialized
         if (!pt->chunkCount())continue;
         for (idx_t i = 0; i < pt->chunkCount(); ++i) {
             outputBuilder.outputAtoms(pt->getChunk(i), predicate);
         }
     }
 }
+
 } // bumblebee

@@ -19,10 +19,13 @@
 #pragma once
 #include "bumblebee/common/Mutex.h"
 #include "bumblebee/common/types/ChunkCollection.h"
+#include "bumblebee/execution/JoinHashTable.h"
 #include "bumblebee/parser/statement/Predicate.h"
 #include "bumblebee/parser/statement/Atom.h"
 
 namespace bumblebee{
+
+class JoinHashTable;
 
 
 class PredicateTables {
@@ -68,6 +71,9 @@ public:
     // Return the Constat types for each column
     std::vector<ConstantType> getTypes();
 
+    // Return a join hash table with the same keys. If does not exist create it
+    JoinHashTable& getJoinHashTable(const std::vector<idx_t>& keys);
+    bool existJoinHashTable(const std::vector<idx_t>& keys);
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
@@ -98,8 +104,8 @@ protected:
     // TODO test with light semaphore
     mutex mutex_;
 
-    // cache output
-    // hash tables etc
+    // hash tables data structures
+    std::vector<JoinHashTable> jhtables_;
 
 };
 

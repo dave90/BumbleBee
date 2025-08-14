@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "bumblebee/common/ErrorHandler.h"
 #include "bumblebee/common/types/BumbleString.h"
 
 namespace bumblebee{
@@ -56,6 +57,17 @@ struct Modulo {
     template <class T>
     static inline T operation(T left, T right) {
         return left % right;
+    }
+};
+
+
+//===--------------------------------------------------------------------===//
+// Logic Operations
+//===--------------------------------------------------------------------===//
+struct And {
+    template <class T>
+    static inline T operation(T left, T right) {
+        return left & right;
     }
 };
 
@@ -99,6 +111,24 @@ inline string_t Difference::operation(string_t left, string_t right) {
 
 template<>
 inline string_t Modulo::operation(string_t left, string_t right) {
+    // TODO
+    return left;
+}
+
+template<>
+inline string_t And::operation(string_t left, string_t right) {
+    // TODO
+    return left;
+}
+
+template<>
+inline float And::operation(float left, float right) {
+    // TODO
+    return left;
+}
+
+template<>
+inline double And::operation(double left, double right) {
     // TODO
     return left;
 }

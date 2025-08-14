@@ -75,8 +75,6 @@ void ParserInputBuilder::onRule() {
     if (currentRule.isFact()) {
         Atom fact = std::move(currentRule.getHead()[0]);
         // print if is not internal atom
-        if (!fact.getPredicate()->isInternal())
-            output_builder_.outputAtom(fact);
         auto& pt = currentSchema_.get().getPredicateTable(fact.getPredicate());
         pt->addFact(fact);
         currentRule = {};
@@ -98,16 +96,6 @@ void ParserInputBuilder::onWeakConstraint() {
 }
 
 void ParserInputBuilder::onQuery() {
-    // if aquery is present remove the print all options
-
-    if (currentAtom.getPredicate()->isInternal()) {
-        // predicate was internal so print all the facts
-        auto & facts = currentSchema_.get().getPredicateTable(currentAtom.getPredicate())->getFacts();
-        for (auto& fact: facts){
-            output_builder_.outputAtom(fact);
-        }
-
-    }
     currentAtom.getPredicate()->setInternal(false);
 }
 
@@ -135,8 +123,6 @@ void ParserInputBuilder::onNafLiteral(bool naf) {
 }
 
 void ParserInputBuilder::onAtom(bool isStrongNeg) {
-    if(foundASafetyError_) return;
-
 }
 
 void ParserInputBuilder::onExistentialAtom() {

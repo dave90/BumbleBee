@@ -130,6 +130,8 @@ public:
 
 	// Hashes the DataChunk to the target vector
 	void hash(Vector &result);
+	void hash(Vector &result, const std::vector<idx_t> &cols);
+
 
 	// Returns a list of types of the vectors of this data chunk
 	std::vector<ConstantType> getTypes();

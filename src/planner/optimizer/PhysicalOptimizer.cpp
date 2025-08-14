@@ -24,8 +24,11 @@
 #include "bumblebee/execution/NestedLoopJoin.h"
 #include "bumblebee/execution/atom/expression/PhysicalExpression.h"
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
+#include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
+#include "bumblebee/execution/atom/join/PhysicalHJBuild.h"
 #include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
+#include "bumblebee/execution/atom/output/PhysicalNopeOutput.h"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
 
 namespace bumblebee {
@@ -200,9 +203,39 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t
     patoms.push_back(std::move(patom));
 }
 
+void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
+    std::vector<idx_t>& keys, prule_ptr_vector_t& prules, idx_t& priority) {
+
+    std::vector<idx_t> cols;
+    for (idx_t i = 0;i<pred->predicate_->getArity();++i)
+        cols.push_back(i);
+
+    auto types = pred->getTypes();
+
+    patom_ptr_vector_t empty;
+    {
+        auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
+        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred->getCount(), pred));
+        dbCols = cols; selCols = cols;
+        patom_ptr_t sink = patom_ptr_t(new PhysicalHJBuild(types, dbCols, selCols, 0 , pred, keys, true));
+        prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
+        prules.push_back(std::move(pruleStats));
+    }
+    {
+        auto dbCols = cols, selCols = cols;
+        auto estimatedBuckets = nextPowerOfTwo(pred->getCount());
+        patom_ptr_t source = patom_ptr_t(new PhysicalHJBuild(types, dbCols, selCols, estimatedBuckets , pred, keys, false));
+        dbCols = cols; selCols = cols;
+        patom_ptr_t sink = patom_ptr_t(new PhysicalNopeOutput(types, dbCols, selCols, 0 ));
+        prule_ptr_t pruleBuild(new PhysicalRule(source, sink, empty, 1));
+        prules.push_back(std::move(pruleBuild));
+    }
+    if (priority <= 1)priority = 2;
+}
 
 void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
-idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
+                                             idx_t i, Rule& rule, patom_ptr_vector_t &patoms,
+                                             prule_ptr_vector_t& prules, idx_t& priority) {
 
     auto& dcCols = cols_[i];
     auto& selCols = selectedCols_[i];
@@ -210,7 +243,7 @@ idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
     auto& types = types_;
     auto& schema = context_.defaultSchema_;
 
-    // try to build a nested loop join
+    // try to build a join
     // calculate the join keys and conditions
     auto& terms = atom.getTerms();
     std::vector<Expression> joinConditions;
@@ -222,6 +255,7 @@ idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
         auto variable = terms[i].getVariable();
         varMap[variable] = i;
         if (!vars.contains(variable)) continue;
+        // variable is a join variable
         BB_ASSERT(colsMap_.contains(variable));
         joinConditions.emplace_back(Expression::generateExpression(EQUAL, colsMap_[variable], i ));
         // remove from selCols and dcCols the keys column as are duplicate columns
@@ -229,6 +263,7 @@ idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
         std::erase(selCols, i);
         dcCols.erase(dcCols.begin() + index);
     }
+
     for (idx_t j = i+1;j < rule.getBody().size();++j) {
         auto& nextAtom = rule.getBody()[j];
         if (nextAtom.getType() != BUILTIN)break; // If a classical atom is found, stop the process as all possible built-ins have been evaluated
@@ -258,7 +293,6 @@ idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
         BB_ASSERT(colsMap_.contains(lvar));
         BB_ASSERT(colsMap_.contains(rvar));
         skipAtom_[j] = true; // skip the creation of physical atom j
-
     }
 
 
@@ -269,10 +303,36 @@ idx_t i, Rule& rule, patom_ptr_vector_t &patoms) {
         patoms.push_back(std::move(cp));
         return;
     }
+    // check if hash join is possible finding if there are common variables
+    std::vector<idx_t> keys; // keys on current predicate
+    std::vector<idx_t> dcKeys; // keys in the input data chunk of the hash patom
+    for (auto& condition: joinConditions)
+        if (condition.op_ == EQUAL && condition.right_.cols_.size() == 1) {
+            BB_ASSERT(condition.left_.cols_.size() == 1);
+            keys.push_back(condition.right_.cols_[0]);
+            dcKeys.push_back(condition.left_.cols_[0]);
+        }
 
+    if (keys.size() == 0) {
+        // no hash join possible
+        // TODO create sort merge join instead of nested loop
+        auto nj = patom_ptr_t(new PhysicalNestedLoop(types, dcCols, selCols, 0, pred, joinConditions ));
+        patoms.push_back(std::move(nj));
+        return;
+    }
+    // hash join possible, check if the hash table is present
 
-    auto nj = patom_ptr_t(new PhysicalNestedLoop(types, dcCols, selCols, 0, pred, joinConditions ));
+    if (!pred->existJoinHashTable(keys) ) {
+        // we need to build the hash table
+        generateHTBuildRules(pred, keys, prules, priority);
+    }
+    // check if the hash table is ready, otherwise we need to set the priority >= 2
+    if (!pred->getJoinHashTable(keys).isReady())
+        priority = (priority < 2)? 2 : priority;
+
+    auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, 0, pred, keys, dcKeys, joinConditions ));
     patoms.push_back(std::move(nj));
+
 }
 
 prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
@@ -284,6 +344,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     patom_ptr_t sink;
     patom_ptr_vector_t patoms;
     set_term_variable_t vars;
+    idx_t priority = 0;
     auto& schema = context_.defaultSchema_;
     {
         BB_ASSERT(rule.getBody().size() > 0);
@@ -309,15 +370,14 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
                 break;
             case CLASSICAL:
                 // find the physical join
-                generatePhysicalJoin(vars, i, rule, patoms);
+                generatePhysicalJoin(vars, i, rule, patoms, prules, priority);
                 break;
         }
         atom.getVariables(vars);
 
     }
 
-    prule_ptr_t prule(new PhysicalRule(source, sink, patoms, 0));
-    prule->setPriority(0);
+    prule_ptr_t prule(new PhysicalRule(source, sink, patoms, priority));
     prules.push_back(prule);
     return prules;
 }

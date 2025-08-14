@@ -168,4 +168,21 @@ Binop getFlippedBinop(Binop op) {
     }
 }
 
+idx_t nextPowerOfTwo(idx_t n) {
+    if (n == 0) return 1;
+    // If already a power of two, return n
+    if ((n & (n - 1)) == 0) return n;
+
+    // Fill all bits below the highest set bit
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n |= n >> 32; // Needed for 64-bit numbers
+    n++;
+    return n;
+}
+
 }

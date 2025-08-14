@@ -49,7 +49,10 @@ private:
     // generate the patoms for the builtin atoms
     void generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms);
     // generate the join patoms, vars is the variables seen so far in the rule used to calculate the join keys
-    void generatePhysicalJoin(const set_term_variable_t& vars, idx_t i, Rule& rule,patom_ptr_vector_t& patoms);
+    void generatePhysicalJoin(const set_term_variable_t& vars, idx_t i, Rule& rule,patom_ptr_vector_t& patoms, prule_ptr_vector_t& prules, idx_t& priority);
+
+    void generateHTBuildRules(PredicateTables* pred, std::vector<idx_t>& keys,
+        prule_ptr_vector_t& prules, idx_t& priority);
 
     // global client context
     ClientContext& context_;

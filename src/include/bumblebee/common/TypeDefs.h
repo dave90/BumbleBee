@@ -81,4 +81,5 @@ char getOperatorChar(Operator op);
 string getBinopStr(Binop binop);
 string ctypeToString(ConstantType type);
 Binop getFlippedBinop(Binop op);
+idx_t nextPowerOfTwo(idx_t n);
 }

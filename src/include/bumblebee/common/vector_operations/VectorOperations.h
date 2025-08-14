@@ -41,6 +41,7 @@ public:
     static void division(Vector &left, Vector &right, Vector &result, idx_t count);
     static void difference(Vector &left, Vector &right, Vector &result, idx_t count);
     static void modulo(Vector &left, Vector &right, Vector &result, idx_t count);
+    static void lAnd(Vector &left, Vector &right, Vector &result, idx_t count);
 
 
     // Hash the vector

@@ -226,4 +226,12 @@ void VectorOperations::modulo(Vector &left, Vector &right, Vector &result, idx_t
         templatedExecuteOperationSwitchLeft<Modulo>(left, right, result, count);
 }
 
+void VectorOperations::lAnd(Vector &left, Vector &right, Vector &result, idx_t count) {
+    if (left.getType() == right.getType() && left.getType() == result.getType())
+        templatedExecuteOperationSwitchEqualType<And>(left, right, result, count);
+    else
+        templatedExecuteOperationSwitchLeft<And>(left, right, result, count);
+}
+
+
 }
