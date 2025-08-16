@@ -24,13 +24,23 @@ namespace bumblebee {
 
 void TextOutputBuilder::outputAtoms(const DataChunk &chunk, Predicate *predicate) {
     auto arity = predicate->getArity();
+    std::string line;
+    line.reserve(OUTPUT_BUFFER_SIZE);
+
     for (idx_t row = 0; row < chunk.getSize();++row) {
-        std::cout << predicate->getName() << "(" << chunk.getValue(0, row).toString();
+        line.clear();
+        line.append(predicate->getName());
+        line.push_back('(');
+        line.append(chunk.getValue(0, row).toString());
+
         for (idx_t col = 1; col < arity; ++col) {
-            std::cout << "," << chunk.getValue(col, row).toString();
+            line.push_back(',');
+            line.append(chunk.getValue(col, row).toString());
         }
-        std::cout << ")." <<std::endl;
+        line.append(").\n");
+        std::cout.write(line.data(), static_cast<std::streamsize>(line.size()));
     }
+    std::cout.flush();
 
 }
 

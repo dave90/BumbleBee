@@ -4,17 +4,17 @@
 - Planner for hash join
 
 ## Next
+- Aggregation
 - CSV
-- Negative
 - CICD
 
 ## Next of Next
-Process a simple datalog program with aggregation joins and negative atoms.
  
 - Aggregation
+- Negative
 - Recursion
 - Statistics / Predicate Tables data structures (hash , intermediate results)
-- Planner with statistics
+- Planner with statistics better optimizer and rule ordering
 
 
 ## 0.1

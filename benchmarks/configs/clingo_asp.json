@@ -62,6 +62,11 @@
       "test": "Join NL 5",
       "input_file": "join_nl.5",
       "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Join HT 1",
+      "input_file": "join_ht.1",
+      "commands": ["clingo --mode=gringo --text $file"]
     }
   ]
 }

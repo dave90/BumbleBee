@@ -10,7 +10,7 @@ from statistics import mean
 from pathlib import Path
 from glob import glob
 import tempfile
-
+import shutil
 
 NUM_TRIES = 3
 RESULTS_FOLDER = Path("results")
@@ -192,6 +192,14 @@ def main():
 
     comparison_config_name = config.get("comparison_config")
     comparison_results = get_latest_results(Path(comparison_config_name).stem) if comparison_config_name else {}
+
+    output_folder = config["output_folder"]
+    # Remove the folder if it exists
+    if os.path.exists(output_folder):
+        shutil.rmtree(output_folder)
+
+    # Recreate the folder
+    os.makedirs(output_folder)
 
     all_results = []
     for test in config["tests"]:

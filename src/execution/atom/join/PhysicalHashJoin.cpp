@@ -35,14 +35,69 @@ public:
 };
 
 
+class GlobalHTJoinAtomState : public GlobalPhysicalAtomState {
+public:
+    JoinHashTable& ht_;
+    PredicateTables* pt_;
+
+    GlobalHTJoinAtomState(JoinHashTable& ht, PredicateTables* pt): ht_(ht), pt_(pt) {}
+
+    // return the start and end buckets to build
+    // return false if no buckets are available to build
+    bool getNextBucketsToProcess(idx_t& start,idx_t& end) {
+        // sync the function
+        lock_guard lock(mutex_);
+        if (!isPtInitialized_) {
+            initPredicateTable();
+        }
+        if (bucketsProcessed_ >= bucketsSize_.size()) {
+            return false;
+        }
+
+        start = bucketsProcessed_;
+        end = start;
+        auto size = bucketsSize_[start];
+        while (end < bucketsSize_.size() - 1) {
+            size += bucketsSize_[end];
+            if (size > MORSEL_SIZE) break;
+            ++end;
+        }
+        bucketsProcessed_ = end + 1;
+        return true;
+    }
+private:
+    void initPredicateTable() {
+        isPtInitialized_ = true;
+        bucketsProcessed_ = 0;
+        for (idx_t b=0; b < ht_.getBuckets();++b)
+            bucketsSize_.push_back(ht_.getStats().bucketSize_[b].load());
+    }
+
+    std::mutex mutex_;
+    bool isPtInitialized_{false};
+    idx_t bucketsProcessed_{0};
+    std::vector<idx_t> bucketsSize_;
+};
+
+
 PhysicalHashJoin::PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols,
     std::vector<idx_t> &selectedCols, idx_t estimated_cardinality,
-    PredicateTables *pt, std::vector<idx_t> keys, std::vector<idx_t> lkeys, std::vector<Expression>& conditions)
+    PredicateTables *pt, std::vector<idx_t> keys, std::vector<idx_t> lkeys,
+    std::vector<Expression>& conditions)
         :PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality),
         pt_(pt),
         conditions_(std::move(conditions)),
-        keys_(keys),
-        lkeys_(lkeys){
+        keys_(std::move(keys)),
+        type_(PROBE),
+        lkeys_(std::move(lkeys)){
+}
+
+PhysicalHashJoin::PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols,
+    std::vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt, std::vector<idx_t> keys,
+    PhysicalHashJoinType type):PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality),
+    pt_(pt),
+    keys_(std::move(keys)),
+    type_(type) {
 }
 
 PhysicalHashJoin::~PhysicalHashJoin() {}
@@ -55,11 +110,37 @@ string PhysicalHashJoin::toString() const {
     string result = getName() + "( "+pt_->predicate_->getName()+", ";
     for (auto k:keys_)
         result += std::to_string(k) + ", ";
+    for (auto c : dcCols_) {
+        result += std::to_string(c) + ", ";
+    }
+    result += "; ";
+    for (auto c : selectCols_) {
+        result += std::to_string(c) + ", ";
+    }
+    for (auto c : colsType_) {
+        result += ctypeToString(c) + ", ";
+    }
 
     return result + " )";}
 
 pstate_ptr_t PhysicalHashJoin::getState() const {
     return pstate_ptr_t(new HTJoinAtomState(pt_->getJoinHashTable(keys_)));
+}
+
+idx_t PhysicalHashJoin::getMaxThreads() const {
+    return estimatedCardinality_ / MORSEL_SIZE + 1;
+}
+
+bool PhysicalHashJoin::isSource() const {
+    return type_ == BUILD;
+}
+
+bool PhysicalHashJoin::isSink() const {
+    return type_ == STATS;
+}
+
+gpstate_ptr_t PhysicalHashJoin::getGlobalState() const {
+    return gpstate_ptr_t(new GlobalHTJoinAtomState(pt_->getJoinHashTable(keys_), pt_));
 }
 
 DataChunk PhysicalHashJoin::selectColumns(DataChunk &chunk) const{
@@ -117,4 +198,68 @@ AtomResultType PhysicalHashJoin::execute(ThreadContext &context, DataChunk &inpu
     return AtomResultType::HAVE_MORE_OUTPUT;
 
 }
+
+DataChunk PhysicalHashJoin::projectColumns(DataChunk &input) const{
+    DataChunk newChunk;
+    newChunk.initializeEmpty(colsType_);
+    newChunk.reference(input, dcCols_);
+    return newChunk;
+}
+
+void PhysicalHashJoin::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+    auto& cgstate = (GlobalHTJoinAtomState&)gstate;
+
+    if (type_ == BUILD) {
+        // Is running as source, clean the stats and set to ready
+        cgstate.ht_.clearStats();
+        cgstate.ht_.setReady();
+    }else if (type_ == STATS) {
+        // running as sink, build the directory
+        cgstate.ht_.initDirectory();
+    }
+
+    context.profiler_.endPhysicalAtomFinalize();}
+
+AtomResultType PhysicalHashJoin::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    auto& cgstate = (GlobalHTJoinAtomState&)gstate;
+    context.profiler_.startPhysicalAtom(this);
+
+    // build the hash table
+    idx_t start, end;
+    auto process = cgstate.getNextBucketsToProcess(start, end);
+    if (!process) {
+        chunk.setCardinality(0);
+        context.profiler_.endPhysicalAtom(chunk);
+        return AtomResultType::FINISHED;
+    }
+    for (idx_t i=start; i<=end; ++i) {
+        cgstate.ht_.build(i);
+    }
+    chunk.setCardinality(0);
+    context.profiler_.endPhysicalAtom(chunk);
+    return AtomResultType::FINISHED;
+}
+
+AtomResultType PhysicalHashJoin::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    auto& cgstate = (GlobalHTJoinAtomState&)gstate;
+
+    context.profiler_.startPhysicalAtom(this);
+    if (input.getSize() == 0 ) {
+        context.profiler_.endPhysicalAtom(input);
+        return AtomResultType::NEED_MORE_INPUT;
+    }
+
+    // filter the columns
+    auto pchunk = projectColumns(input);
+    Vector hash(UBIGINT);
+    pchunk.hash(hash, keys_);
+
+    cgstate.ht_.addDataChunkSel(hash, pchunk);
+    context.profiler_.endPhysicalAtom(input);
+    return AtomResultType::NEED_MORE_INPUT;
+}
+
 }

@@ -28,15 +28,21 @@ struct InitHashJoin {
 
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
     static idx_t operation( LEFT_TYPE*__restrict ldata,const SelectionVector* ldatasel, RIGHT_TYPE*__restrict rdata,
+        uint64_t*__restrict hdata, const SelectionVector* hdatasel,
         uint64_t*__restrict bdata, const SelectionVector* bdatasel, uint64_t*__restrict directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector& lsel, SelectionVector& rsel) {
 
         idx_t result_count = 0;
         for (; lpos < lsize; lpos++) {
-            auto bposition = bdatasel->getIndex(lpos);
-            auto bucket = bdata[bposition];
-            auto roffset = (!bucket)?0 :directory[bucket-1];
-            auto rsize = directory[bucket] - roffset;
+            auto bucket = bdata[bdatasel->getIndex(lpos)];
+            auto hash = hdata[hdatasel->getIndex(lpos)];
+            // check bloom filter
+            auto bloom = JoinHashTable::dirBloom(directory, bucket);
+            if (!bloom16CouldContains(bloom, hash)) continue;
+
+            auto roffset =  JoinHashTable::dirBegin(directory, bucket);
+            auto rend = JoinHashTable::dirEnd(directory, bucket);
+            auto rsize = rend - roffset;
             idx_t lposition = ldatasel->getIndex(lpos);
             for (;rpos < rsize; rpos++) {
                 if (result_count == STANDARD_VECTOR_SIZE) {
@@ -57,23 +63,26 @@ struct InitHashJoin {
     }
 
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
-    static idx_t operation( Vector& left, Vector& right, Vector& buckets, directory_t& directory,
+    static idx_t operation( Vector& left, Vector& right, Vector& lhash, Vector& buckets, directory_t& directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos,
         SelectionVector& lsel, SelectionVector& rsel, idx_t currentMatch) {
         BB_ASSERT(right.getVectorType() == VectorType::FLAT_VECTOR);
         BB_ASSERT(buckets.getType() == UBIGINT);
 
-        VectorData left_data, bucket_data;
+        VectorData left_data, bucket_data, hash_data;
         left.orrify(lsize, left_data);
         buckets.orrify(lsize, bucket_data);
+        lhash.orrify(lsize, hash_data);
 
         auto ldata = (LEFT_TYPE*) left_data.data_;
         auto ldatasel = left_data.sel_;
         auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
         auto bdata = (uint64_t*) bucket_data.data_;
         auto bdatasel = bucket_data.sel_;
+        auto hdata = (uint64_t*)hash_data.data_;
+        auto hdatasel = hash_data.sel_;
 
-        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, rdata, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel);
+        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, rdata, hdata, hdatasel, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel);
     }
 };
 
@@ -82,7 +91,8 @@ struct RefineHashJoin {
 
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
     static idx_t operation( LEFT_TYPE*__restrict ldata,const SelectionVector* ldatasel,
-        RIGHT_TYPE*__restrict rdata, uint64_t*__restrict bdata, const SelectionVector* bdatasel, uint64_t*__restrict directory,
+        RIGHT_TYPE*__restrict rdata, uint64_t*__restrict hdata, const SelectionVector* hdatasel,
+        uint64_t*__restrict bdata, const SelectionVector* bdatasel, uint64_t*__restrict directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector& lsel, SelectionVector& rsel, idx_t currentMatch) {
 
         idx_t result_count = 0;
@@ -101,54 +111,58 @@ struct RefineHashJoin {
     }
 
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
-    static idx_t operation( Vector& left, Vector& right, Vector& buckets, directory_t& directory,
+    static idx_t operation( Vector& left, Vector& right, Vector& lhash, Vector& buckets, directory_t& directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector& lsel, SelectionVector& rsel, idx_t currentMatch) {
         BB_ASSERT(right.getVectorType() == VectorType::FLAT_VECTOR);
         BB_ASSERT(buckets.getType() == UBIGINT);
 
-        VectorData left_data, bucket_data;
+        VectorData left_data, bucket_data, hash_data;
         left.orrify(lsize, left_data);
         buckets.orrify(lsize, bucket_data);
+        lhash.orrify(lsize, hash_data);
 
         auto ldata = (LEFT_TYPE*) left_data.data_;
         auto ldatasel = left_data.sel_;
         auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
         auto bdata = (uint64_t*)bucket_data.data_;
         auto bdatasel = bucket_data.sel_;
+        auto hdata = (uint64_t*)hash_data.data_;
+        auto hdatasel = hash_data.sel_;
 
-        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, rdata, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel, currentMatch);
+
+        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, rdata, hdata, hdatasel, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel, currentMatch);
     }
 };
 
 
 template <class NLTYPE, class OP>
-idx_t hashJoinEqualTypeSwitch(Vector &left, Vector &right, Vector &buckets, directory_t& directory,
+idx_t hashJoinEqualTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector &buckets, directory_t& directory,
                                                  idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                                  idx_t currentMatch) {
     BB_ASSERT(left.getType() == right.getType());
     switch (left.getType()) {
         case ConstantType::TINYINT:
-            return NLTYPE::template operation<int8_t,int8_t, OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<int8_t,int8_t, OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::SMALLINT:
-            return NLTYPE::template operation<int16_t,int16_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<int16_t,int16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::INTEGER:
-            return NLTYPE::template operation<int32_t,int32_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<int32_t,int32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::BIGINT:
-            return NLTYPE::template operation<int64_t,int64_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<int64_t,int64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UTINYINT:
-            return NLTYPE::template operation<uint8_t,uint8_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<uint8_t,uint8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::USMALLINT:
-            return NLTYPE::template operation<uint16_t,uint16_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<uint16_t,uint16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UINTEGER:
-            return NLTYPE::template operation<uint32_t,uint32_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<uint32_t,uint32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UBIGINT:
-            return NLTYPE::template operation<uint64_t,uint64_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<uint64_t,uint64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::FLOAT:
-            return NLTYPE::template operation<float,float,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<float,float,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::DOUBLE:
-            return NLTYPE::template operation<double,double,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<double,double,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::STRING:	{
-            return NLTYPE::template operation<string_t,string_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<string_t,string_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         }
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -165,7 +179,7 @@ struct ComparisonCommonCast {
 };
 
 template <class NLTYPE, class LEFT_TYPE, class RIGHT_TYPE , class OP>
-idx_t hashJoinCommonTypeSwitch(Vector &left, Vector &right, Vector &buckets, directory_t& directory,
+idx_t hashJoinCommonTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector &buckets, directory_t& directory,
                                              idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                              idx_t currentMatch) {
     auto commonType = getCommonType(left.getType(), right.getType());
@@ -181,10 +195,10 @@ idx_t hashJoinCommonTypeSwitch(Vector &left, Vector &right, Vector &buckets, dir
         case ConstantType::UINTEGER:
         case ConstantType::UBIGINT:
         case ConstantType::BIGINT:
-            return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, int64_t, OP>>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, int64_t, OP>>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::FLOAT:
         case ConstantType::DOUBLE:
-            return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, double, OP>>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, double, OP>>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
@@ -192,30 +206,30 @@ idx_t hashJoinCommonTypeSwitch(Vector &left, Vector &right, Vector &buckets, dir
 }
 
 template <class NLTYPE, class LEFT_TYPE, class OP>
-idx_t hashJoinRightTypeSwitch(Vector &left, Vector &right, Vector &buckets, directory_t& directory,
+idx_t hashJoinRightTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector &buckets, directory_t& directory,
                                              idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                              idx_t currentMatch) {
     switch (right.getType()) {
         case ConstantType::TINYINT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int8_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::SMALLINT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int16_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::INTEGER:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int32_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::BIGINT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int64_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UTINYINT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint8_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::USMALLINT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint16_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UINTEGER:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint32_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UBIGINT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint64_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::FLOAT:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,float,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,float,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::DOUBLE:
-            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,double,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,double,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
             return 0;
@@ -224,7 +238,7 @@ idx_t hashJoinRightTypeSwitch(Vector &left, Vector &right, Vector &buckets, dire
 
 
 template <class NLTYPE, class OP>
-idx_t hashJoinLeftTypeSwitch(Vector &left, Vector &right, Vector &buckets, directory_t& directory,
+idx_t hashJoinLeftTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector &buckets, directory_t& directory,
                                              idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                              idx_t currentMatch) {
     // cannot compare string with different types
@@ -232,25 +246,25 @@ idx_t hashJoinLeftTypeSwitch(Vector &left, Vector &right, Vector &buckets, direc
     // left type != right type
     switch (left.getType()) {
         case ConstantType::TINYINT:
-            return hashJoinRightTypeSwitch<NLTYPE,int8_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,int8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::SMALLINT:
-            return hashJoinRightTypeSwitch<NLTYPE,int16_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,int16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::INTEGER:
-            return hashJoinRightTypeSwitch<NLTYPE,int32_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,int32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::BIGINT:
-            return hashJoinRightTypeSwitch<NLTYPE,int64_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,int64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UTINYINT:
-            return hashJoinRightTypeSwitch<NLTYPE,uint8_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,uint8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::USMALLINT:
-            return hashJoinRightTypeSwitch<NLTYPE,uint16_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,uint16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UINTEGER:
-            return hashJoinRightTypeSwitch<NLTYPE,uint32_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,uint32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::UBIGINT:
-            return hashJoinRightTypeSwitch<NLTYPE,uint64_t,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,uint64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::FLOAT:
-            return hashJoinRightTypeSwitch<NLTYPE,float,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,float,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case ConstantType::DOUBLE:
-            return hashJoinRightTypeSwitch<NLTYPE,double,OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+            return hashJoinRightTypeSwitch<NLTYPE,double,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
@@ -260,31 +274,31 @@ idx_t hashJoinLeftTypeSwitch(Vector &left, Vector &right, Vector &buckets, direc
 
 
 template <class NLTYPE, class OP>
-idx_t hashJoinTypeSwitch(Vector &left, Vector &right, Vector &buckets, directory_t& directory,
+idx_t hashJoinTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector &buckets, directory_t& directory,
                                          idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                          idx_t currentMatch) {
     if (left.getType() == right.getType())
-        return hashJoinEqualTypeSwitch<NLTYPE, OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-    return hashJoinLeftTypeSwitch<NLTYPE, OP>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+        return hashJoinEqualTypeSwitch<NLTYPE, OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+    return hashJoinLeftTypeSwitch<NLTYPE, OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
 }
 
 template <class NLTYPE>
-idx_t hashJoinComparisonSwitch(Vector &left, Vector &right, Vector &buckets, directory_t& directory,
+idx_t hashJoinComparisonSwitch(Vector &left, Vector &right, Vector &lhash, Vector &buckets, directory_t& directory,
                                      idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                      idx_t currentMatch, Binop op) {
 	switch (op) {
 	    case EQUAL:
-	        return hashJoinTypeSwitch<NLTYPE, Equals>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+	        return hashJoinTypeSwitch<NLTYPE, Equals>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         case LESS:
-	        return hashJoinTypeSwitch<NLTYPE, LessThan>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+	        return hashJoinTypeSwitch<NLTYPE, LessThan>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
 	    case GREATER:
-	        return hashJoinTypeSwitch<NLTYPE, GreaterThan>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+	        return hashJoinTypeSwitch<NLTYPE, GreaterThan>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
 	    case LESS_OR_EQ:
-	        return hashJoinTypeSwitch<NLTYPE, LessThanEquals>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+	        return hashJoinTypeSwitch<NLTYPE, LessThanEquals>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
 	    case GREATER_OR_EQ:
-	        return hashJoinTypeSwitch<NLTYPE, GreaterThanEquals>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+	        return hashJoinTypeSwitch<NLTYPE, GreaterThanEquals>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
 	    case UNEQUAL:
-	        return hashJoinTypeSwitch<NLTYPE, NotEquals>(left, right, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
+	        return hashJoinTypeSwitch<NLTYPE, NotEquals>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
 
 	    default:
 		    ErrorHandler::errorNotImplemented("Error, join comparison not supported");
@@ -292,19 +306,38 @@ idx_t hashJoinComparisonSwitch(Vector &left, Vector &right, Vector &buckets, dir
 	}
 }
 
+uint16_t bloomFilter16BitVector(Vector& hash, SelectionVector& sel, idx_t size) {
+    BB_ASSERT(hash.getType() == UBIGINT);
+    VectorData vdata;
+    hash.orrify(size, vdata);
+    auto * data = (uint64_t*) vdata.data_;
+    uint16_t bloom = 0;
+    for (idx_t i = 0; i < size; i++) {
+        auto idx = sel.getIndex(i);
+        bloom16Add(bloom, data[idx]);
+    }
+    return bloom;
+}
 
 
-JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, SelectionVector &sel, idx_t size):
-    sel_(std::move(sel)),
+
+JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, Vector& hash, SelectionVector &sel, idx_t size):
+    sel_(sel),
+    hash_(hash.getType()),
     size_(size){
     chunk_.initializeEmpty(chunk.getTypes());
     chunk_.reference(chunk);
+    hash_.reference(hash);
 }
 
 JoinHashTable::JoinHashTable(Predicate *predicate, const std::vector<idx_t> &keys, idx_t buckets): predicate_(predicate),
     keys_(keys), buckets_(nextPowerOfTwo(buckets)), stats_(nextPowerOfTwo(buckets)) {
     // check that buckets is power of 2
     BB_ASSERT(buckets_ != 0 && (buckets_ & (buckets_ - 1)) == 0);
+    int bits = 64 - BLOOM_SIZE;
+    auto maxValue = (1ULL << bits) - 1ULL;
+    // check the buckets can fit in a uint of 64 - BLOOM_SIZE bits (as BLOOM_SIZE bits are used for bloom)
+    BB_ASSERT(buckets < maxValue);
 }
 
 
@@ -315,6 +348,12 @@ Vector JoinHashTable::calculateBucketVector(Vector &hash, idx_t size) {
     BB_ASSERT(mask.getVectorType() == VectorType::CONSTANT_VECTOR);
     VectorOperations::lAnd(hash, mask, bucket, size);
     return bucket;
+}
+
+JoinHashTable::JoinHashTableStats::JoinHashTableStats(idx_t buckets):bucketMutex_(buckets), bucketChunks_(buckets), bucketSize_(buckets) {
+    for (idx_t i = 0; i < buckets; i++) {
+        bucketSize_[i].store(0);
+    }
 }
 
 void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
@@ -341,7 +380,7 @@ void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
         incrementBucketSize(bucket, idxs.size());
 
         std::lock_guard lock(stats_.bucketMutex_[bucket]);
-        stats_.bucketChunks_[bucket].emplace_back(chunk, sel, idxs.size());
+        stats_.bucketChunks_[bucket].emplace_back(chunk, hash, sel, idxs.size());
     }
 }
 
@@ -369,32 +408,29 @@ void JoinHashTable::initDirectory() {
     chunkone_.setCardinality(size);
 }
 
-idx_t JoinHashTable::getBucketOffset(idx_t bucket) {
-    if (bucket == 0) return 0;
-    // remove the bloom filter
-    uint64_t result = directory_[bucket-1] & ((~0ULL >> BLOOM_SIZE));
-    return result;
-}
-
 
 void JoinHashTable::build(idx_t bucket) {
     BB_ASSERT(bucket < stats_.bucketChunks_.size());
-    auto bucketOffset = getBucketOffset(bucket);
+    auto bucketOffset = dirBegin(directory_.get(), bucket);
+    uint16_t accBloom = 0; // bloom across all chunks
     for (idx_t i = 0; i < stats_.bucketChunks_[bucket].size(); i++) {
         auto& stat = stats_.bucketChunks_[bucket][i];
         auto& dc = stat.chunk_;
         auto& sel = stat.sel_;
         auto size = stat.size_;
-
-        auto res = dc.data_[0].getValue(sel.getIndex(0)).toString();
+        auto& hash = stat.hash_;
 
         for (idx_t j = 0; j< dc.columnCount(); j++) {
             auto& sourceVector = dc.data_[j];
             auto& targetVector = chunkone_.data_[j];
             VectorOperations::copy(sourceVector,targetVector,sel,size, 0, bucketOffset);
         }
+        // calculate the bloom filter and add it in the directory
+        BB_ASSERT(BLOOM_SIZE == 16); // for now support only 16 bit bloom TODO support different bloom size
+        accBloom |= bloomFilter16BitVector(hash, sel, size);
         bucketOffset += size;
     }
+    directory_[bucket] = dirEnd(directory_.get(), bucket) | (uint64_t{accBloom} << BLOOM_SHIFT) ;
 }
 
 void JoinHashTable::clearStats() {
@@ -455,14 +491,18 @@ idx_t JoinHashTable::probe(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, Vector &
     BB_ASSERT(buckets.getType() == UBIGINT);
 
 
-    if (lpos >= lchunk.getSize() || rpos >= rchunk.getSize()) return 0;
+    if (lpos >= lchunk.getSize() || rpos >= rchunk.getSize()) {
+        // set the lpos at the end
+        lpos = lchunk.getSize();
+        return 0;
+    };
     // for first tuple we execute the InitHashLoopJoin to init the selection vectors
     auto& icondition = conditions[0];
     auto lidx = icondition.left_.cols_[0];
     auto ridx = icondition.right_.cols_[0];
 
     BB_ASSERT(rchunk.columnCount() > ridx);
-    auto matchCount = hashJoinComparisonSwitch<InitHashJoin>( lchunk.data_[lidx], rchunk.data_[ridx], buckets, directory_,
+    auto matchCount = hashJoinComparisonSwitch<InitHashJoin>( lchunk.data_[lidx], rchunk.data_[ridx], lhash, buckets, directory_,
         lchunk.getSize(),lpos, rpos, lsel, rsel, 0, icondition.op_);
 
 
@@ -474,7 +514,7 @@ idx_t JoinHashTable::probe(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, Vector &
         ridx = condition.right_.cols_[0];
 
         // now refine the join with the condition
-        matchCount = hashJoinComparisonSwitch<RefineHashJoin>( lchunk.data_[lidx], rchunk.data_[ridx], buckets, directory_,
+        matchCount = hashJoinComparisonSwitch<RefineHashJoin>( lchunk.data_[lidx], rchunk.data_[ridx], lhash, buckets, directory_,
             lchunk.getSize(),lpos, rpos, lsel, rsel, matchCount, condition.op_);
 
     }

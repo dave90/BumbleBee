@@ -86,3 +86,64 @@ TEST_F(VectorOperationsArithTest, DotCrossTypeVectors) {
         EXPECT_EQ(static_cast<double>(values1[i]) * static_cast<double>(values2[i]), v3.getValue(i).getNumericValue<double>());
     }
 }
+
+// We make the result type match the LEFT vector’s type, since dispatch is on the left.
+TEST_F(VectorOperationsArithTest, AndCrossTypeVectors) {
+    vector<uint32_t> left_vals  = {
+        0xFFFFFFFFu, // 11111111 11111111 11111111 11111111  -> all bits set (32 ones)
+        0xABCDEF01u, // 10101011 11001101 11101111 00000001  -> mixed pattern, high bits set
+        0x0000FFFFu, // 00000000 00000000 11111111 11111111  -> lower 16 bits set, upper 16 bits clear
+        0x13579BDFu  // 00010011 01010111 10011011 11011111  -> "checkerboard-ish" odd/even bits set
+    };
+    // Use values that fit in int16_t:
+    // 0x00FF  ->  255
+    // 0x0F0F  ->  3855
+    // 0xF0F0  -> -3856  (two's complement)
+    // -1      -> -1
+    vector<int16_t>  right_vals = {255, 3855, -3856, 1};
+
+    Vector v_left  = generateVector(UINTEGER, left_vals);
+    Vector v_right = generateVector(SMALLINT, right_vals);
+    Vector v_out(UINTEGER); // result wide enough and aligned with LEFT type
+
+    VectorOperations::lAnd(v_left, v_right, v_out, left_vals.size());
+
+    for (idx_t i = 0; i < left_vals.size(); i++) {
+        // Explicitly cast RIGHT to the LEFT's representation before &,
+        // mirroring what a left-dispatched implementation would effectively do.
+        auto rhs_as_left = static_cast<uint32_t>(static_cast<uint16_t>(right_vals[i]));
+        uint32_t expected = left_vals[i] & rhs_as_left;
+        EXPECT_EQ(expected, v_out.getValue(i).getNumericValue<uint32_t>())
+            << "Mismatch at index " << i;
+    }
+}
+
+
+TEST_F(VectorOperationsArithTest, AndCrossTypeConstantVectors) {
+    vector<uint32_t> left_vals  = {
+        0xFFFFFFFFu, // 11111111 11111111 11111111 11111111  -> all bits set (32 ones)
+        0xABCDEF01u, // 10101011 11001101 11101111 00000001  -> mixed pattern, high bits set
+        0x0000FFFFu, // 00000000 00000000 11111111 11111111  -> lower 16 bits set, upper 16 bits clear
+        0x13579BDFu  // 00010011 01010111 10011011 11011111  -> "checkerboard-ish" odd/even bits set
+    };
+    // Use values that fit in int16_t:
+    // 0x00FF  ->  255
+    int16_t  right_vals = 255;
+
+    Vector v_left  = generateVector(UINTEGER, left_vals);
+    Vector v_right(right_vals);
+    EXPECT_EQ(v_right.getVectorType() , VectorType::CONSTANT_VECTOR);
+
+    Vector v_out(UINTEGER); // result wide enough and aligned with LEFT type
+
+    VectorOperations::lAnd(v_left, v_right, v_out, left_vals.size());
+
+    for (idx_t i = 0; i < left_vals.size(); i++) {
+        // Explicitly cast RIGHT to the LEFT's representation before &,
+        // mirroring what a left-dispatched implementation would effectively do.
+        auto rhs_as_left = static_cast<uint32_t>(static_cast<uint16_t>(right_vals));
+        uint32_t expected = left_vals[i] & right_vals;
+        EXPECT_EQ(expected, v_out.getValue(i).getNumericValue<uint32_t>())
+            << "Mismatch at index " << i;
+    }
+}

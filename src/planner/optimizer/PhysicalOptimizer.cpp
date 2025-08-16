@@ -25,7 +25,6 @@
 #include "bumblebee/execution/atom/expression/PhysicalExpression.h"
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
 #include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
-#include "bumblebee/execution/atom/join/PhysicalHJBuild.h"
 #include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.h"
@@ -217,14 +216,14 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
         auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
         patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred->getCount(), pred));
         dbCols = cols; selCols = cols;
-        patom_ptr_t sink = patom_ptr_t(new PhysicalHJBuild(types, dbCols, selCols, 0 , pred, keys, true));
+        patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols, 0 , pred, keys, STATS));
         prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
         prules.push_back(std::move(pruleStats));
     }
     {
         auto dbCols = cols, selCols = cols;
         auto estimatedBuckets = nextPowerOfTwo(pred->getCount());
-        patom_ptr_t source = patom_ptr_t(new PhysicalHJBuild(types, dbCols, selCols, estimatedBuckets , pred, keys, false));
+        patom_ptr_t source = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols, estimatedBuckets , pred, keys, BUILD));
         dbCols = cols; selCols = cols;
         patom_ptr_t sink = patom_ptr_t(new PhysicalNopeOutput(types, dbCols, selCols, 0 ));
         prule_ptr_t pruleBuild(new PhysicalRule(source, sink, empty, 1));

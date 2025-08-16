@@ -28,7 +28,10 @@ using directory_t = std::unique_ptr<uint64_t[]>;
 
 
 class JoinHashTable {
+public:
     static constexpr idx_t BLOOM_SIZE = 16;
+    static constexpr int BLOOM_SHIFT = 64 - BLOOM_SIZE;
+    static constexpr uint64_t BLOOM_MASK64 = (~0ULL << BLOOM_SHIFT); // only high BLOOM_SIZE bits are 1
 
 public:
     JoinHashTable(Predicate *predicate, const std::vector<idx_t> &keys, idx_t buckets);
@@ -56,6 +59,8 @@ public:
     directory_t& getDirectory();
 
     idx_t getBuckets();
+
+
 private:
     // increment size of a bucket
     void incrementBucketSize(idx_t bucket, idx_t size){
@@ -67,22 +72,19 @@ private:
         return hash & (buckets_ -1);
     }
 
-    idx_t getBucketOffset(idx_t bucket);
+
     Vector calculateBucketVector(Vector& hash, idx_t size);
 
     // This struct store the statistics for the building of the hash table
     struct JoinHashTableStats {
-        JoinHashTableStats(idx_t buckets):bucketMutex_(buckets), bucketChunks_(buckets), bucketSize_(buckets) {
-            for (idx_t i = 0; i < buckets; i++) {
-                bucketSize_[i].store(0);
-            }
-        };
+        JoinHashTableStats(idx_t buckets);;
 
         struct DataChunkSel {
-            DataChunkSel(DataChunk &chunk_, SelectionVector &sel, idx_t size);
+            DataChunkSel(DataChunk &chunk_, Vector& hash_, SelectionVector &sel, idx_t size);
 
             DataChunk chunk_;
             SelectionVector sel_;
+            Vector hash_;
             idx_t size_;
         };
         // Number of elements for each bucket
@@ -108,6 +110,12 @@ public:
     JoinHashTableStats& getStats() {
         return stats_;
     }
+
+    // static functions
+    inline static uint64_t dirBegin(const uint64_t* d, idx_t b){ return (b ? (d[b-1] & ~BLOOM_MASK64) : 0); }
+    inline static uint64_t dirEnd(const uint64_t* d, idx_t b){ return d[b] & ~BLOOM_MASK64; }
+    inline static uint16_t dirBloom(const uint64_t* d, idx_t b){ return uint16_t(d[b] >> BLOOM_SHIFT); }
+
 
 };
 
