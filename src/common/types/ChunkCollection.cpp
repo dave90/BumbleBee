@@ -36,7 +36,7 @@ void ChunkCollection::append(DataChunk &chunk) {
         BB_ASSERT(types.size() == types_.size());
         for (idx_t i = 0; i < types_.size(); ++i) {
             if (types[i] != types_[i])
-                ErrorHandler::errorNotImplemented ("Type mismatch when combining rows");
+                ErrorHandler::errorNotImplemented ("Type mismatch: cannot combine rows containing both strings and numbers.");
         }
         // check available space in the last chunk
         auto& lastChunk = chunks_.back();

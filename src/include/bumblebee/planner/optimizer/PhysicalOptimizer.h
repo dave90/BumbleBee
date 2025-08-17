@@ -45,6 +45,8 @@ private:
     void findColsAndTypes(Rule& rule);
     void findColsAndTypesClassicalAtom(Atom& atom);
     void findColsAndTypesBuiltin(Atom& atom);
+    // return true if the rule can be not evaluated
+    bool canBeSkipped(Rule& rule);
 
     // generate the patoms for the builtin atoms
     void generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms);

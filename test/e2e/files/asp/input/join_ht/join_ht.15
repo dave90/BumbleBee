@@ -1,0 +1,30 @@
+res( S, I1, I2, T )?
+k("alpha", 1..3).
+k("beta",  2..4).
+k("gamma", 3..5).
+
+pair(1,10). pair(2,20). pair(3,30). pair(4,40).
+tag(10,"T1"). tag(20,"T2"). tag(30,"T3"). tag(40,"T4").
+
+thresh("alpha", 15).
+thresh("beta",  25).
+thresh("gamma", 35).
+
+% small projection rule (helps build 3+ rules)
+lift( J, L ) :- tag( J, L ).
+
+% 5-way star around (S, I1, I2):
+%   k self-join on same S with different I's
+%   pair joins on I1 and I2 -> J1, J2
+%   lift/tag provides T label
+%   thresh filters by per-S numeric threshold
+res( S, I1, I2, T ) :-
+  k( S, I1 ),
+  k( S, I2 ),
+  pair( I1, J1 ),
+  pair( I2, J2 ),
+  lift( J1, T ),
+  tag( J2, T ),
+  thresh( S, TH ),
+  I1 != I2, J1 != J2,
+  J1 > TH, J2 > J1, I2 > I1 + 0.

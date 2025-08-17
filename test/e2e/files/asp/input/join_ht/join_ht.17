@@ -1,0 +1,34 @@
+
+% Strings side (all-string columns)
+cat("alpha","A"). cat("beta","B"). cat("gamma","A").
+label("A","ok"). label("B","skip").
+topic("alpha","db"). topic("gamma","olap").
+
+% Numbers side (all-int columns)
+ix(1..4, 10..13).
+band(10, 100). band(12, 120).
+wh(1, 1000). wh(3, 3000).
+
+% Helper rules (keep types per column consistent)
+okv_str( V ) :- label( V, "ok" ).
+ok_k( K )    :- topic( K, _ ).
+
+ok_i( Vi )   :- band( Vi, _ ).
+ok_ki( Ki )  :- wh( Ki, _ ).
+
+ans2( K, V, T, W ) :-
+  cat( K, V ),
+  label( V, T ),
+  topic( K, W ),
+  okv_str( V ),
+  T = "ok".
+
+ans3( KS, VS, TS, WS ) :-
+  ix( KS, VS ),
+  band( VS, TS ),
+  wh( KS, WS ),
+  ok_i( VS ),
+  TS > 100, WS >= 1000.
+
+flt1( K ) :- ok_k( K ).
+flt2( Ki ) :- ok_ki( Ki ).

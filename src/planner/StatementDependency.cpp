@@ -194,6 +194,7 @@ void StatementDependency::createAndOrderComponentGraph() {
                 for (auto& bp: bps) {
                     // if is a fact predicate skip it or if is same predicate
                     auto bodyPredLabel = bp->getLabel();
+                    if (!predComponentsMap_.contains(bp->getLabel()))continue;
                     auto bpc = predComponentsMap_[bp->getLabel()];
                     if (!predicate_head_mapping_.contains(bp->getLabel()) || bpc == value)continue;
                     compGraph_.addEdge(std::to_string(bpc), std::to_string(value), ba.isNegative() ? -1 : 1);

@@ -1,0 +1,30 @@
+ans4( S, Tag, K1, V1, K2, V2 )?
+
+% String lane (strings only)
+hub("alpha","h1"). hub("beta","h2"). hub("gamma","h1").
+allow("h1").
+alias("alpha","a"). alias("gamma","g").
+
+% Numeric lane 1 (ints only)
+m1(1..4, 10..13).
+okv1(10). okv1(12).
+
+% Numeric lane 2 (ints only)
+m2(5..8, 20..23).
+okv2(21). okv2(23).
+
+% Helper projections
+hub_ok( S, Tag ) :- hub( S, Tag ), allow( Tag ).
+m1_ok( K1, V1 )  :- m1( K1, V1 ), okv1( V1 ), V1 >= 10.
+m2_ok( K2, V2 )  :- m2( K2, V2 ), okv2( V2 ), V2 > 20.
+
+% Long rule combines 6 joins across independent type lanes
+ans4( S, Tag, K1, V1, K2, V2 ) :-
+  hub_ok( S, Tag ),
+  alias( S, _ ),
+  m1_ok( K1, V1 ),
+  m2_ok( K2, V2 ),
+  K1 < V1, K2 * 2 > V2, V1 + V2 > 30.
+
+% Short “tightening” rule (still non-recursive)
+tight( V1, V2 ) :- okv1( V1 ), okv2( V2 ), V1 != V2.

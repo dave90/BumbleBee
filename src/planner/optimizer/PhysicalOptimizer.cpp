@@ -36,8 +36,20 @@ PhysicalOptimizer::PhysicalOptimizer(ClientContext& context)
 }
 
 prule_ptr_vector_t PhysicalOptimizer::optimize(Rule &rule) {
+    if (canBeSkipped(rule))return {};
     findColsAndTypes(rule);
     return createPhysicalRules(rule);
+}
+
+
+bool PhysicalOptimizer::canBeSkipped(Rule &rule) {
+    // skip rules with classical literal with no data
+    for (auto&atom : rule.getBody()) {
+        if (atom.getType() != CLASSICAL) continue;
+        auto& pt = context_.defaultSchema_.getPredicateTable(atom.getPredicate());
+        if (pt->getCount() == 0) return true;
+    }
+    return false;
 }
 
 void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
@@ -388,5 +400,6 @@ void PhysicalOptimizer::clear() {
     colsMap_.clear();
     typesMap_.clear();
     selectedCols_.clear();
+    skipAtom_.clear();
 }
 }

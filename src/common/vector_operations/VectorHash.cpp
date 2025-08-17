@@ -59,28 +59,28 @@ static inline void HashTypeSwitch(Vector &input, Vector &result, const Selection
 
     switch (input.getType()) {
         case ConstantType::TINYINT:
-		    TemplatedLoopHash<HAS_RSEL, uint8_t>(input, result, rsel, count);
-            break;
-        case ConstantType::SMALLINT:
-		    TemplatedLoopHash<HAS_RSEL, uint16_t>(input, result, rsel, count);
-            break;
-        case ConstantType::INTEGER:
-		    TemplatedLoopHash<HAS_RSEL, uint32_t>(input, result, rsel, count);
-            break;
-        case ConstantType::BIGINT:
-		    TemplatedLoopHash<HAS_RSEL, uint64_t>(input, result, rsel, count);
-            break;
-        case ConstantType::UTINYINT:
 		    TemplatedLoopHash<HAS_RSEL, int8_t>(input, result, rsel, count);
             break;
-        case ConstantType::USMALLINT:
+        case ConstantType::SMALLINT:
 		    TemplatedLoopHash<HAS_RSEL, int16_t>(input, result, rsel, count);
             break;
-        case ConstantType::UINTEGER:
+        case ConstantType::INTEGER:
 		    TemplatedLoopHash<HAS_RSEL, int32_t>(input, result, rsel, count);
             break;
-        case ConstantType::UBIGINT:
+        case ConstantType::BIGINT:
 		    TemplatedLoopHash<HAS_RSEL, int64_t>(input, result, rsel, count);
+            break;
+        case ConstantType::UTINYINT:
+		    TemplatedLoopHash<HAS_RSEL, uint8_t>(input, result, rsel, count);
+            break;
+        case ConstantType::USMALLINT:
+		    TemplatedLoopHash<HAS_RSEL, uint16_t>(input, result, rsel, count);
+            break;
+        case ConstantType::UINTEGER:
+		    TemplatedLoopHash<HAS_RSEL, uint32_t>(input, result, rsel, count);
+            break;
+        case ConstantType::UBIGINT:
+		    TemplatedLoopHash<HAS_RSEL, uint64_t>(input, result, rsel, count);
             break;
         case ConstantType::FLOAT:
 		    TemplatedLoopHash<HAS_RSEL, float>(input, result, rsel, count);

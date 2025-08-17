@@ -69,6 +69,11 @@
       "test": "Join HT 1",
       "input_file": "join_ht.1",
       "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Join HT 2",
+      "input_file": "join_ht.2",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
     }
   ]
 }

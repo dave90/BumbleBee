@@ -28,23 +28,37 @@ public:
     // Chunks to push in pt during finalize
     ChunkCollection chunks_;
 
-    explicit GlobalChunkOutputState(PredicateTables *pt) {}
+    explicit GlobalChunkOutputState(PredicateTables *pt): pt_(pt) {}
+
+    void initPredicateTable() {
+        pt_->initializeChunks();
+        isPtInitialized_ = true;
+    }
 
     // Copy the chunk (call if is not full)
     void sinkChunk(DataChunk &chunk) {
         lock_guard lock(chunksMutex_);
+        if (!isPtInitialized_) {
+            initPredicateTable();
+        }
         chunks_.append(chunk);
     }
 
     // Append the pointer in the chunk collection (without copying)
     void sinkChunk(data_chunk_ptr_t &chunk) {
         lock_guard lock(chunksMutex_);
+        if (!isPtInitialized_) {
+            initPredicateTable();
+        }
         chunks_.append(std::move(chunk));
     }
 
 private:
     // mutex for pushing data in predicate table
     mutex chunksMutex_;
+    bool isPtInitialized_{false};
+    // Predicate table
+    PredicateTables* pt_;
 };
 
 class ChunkOutputState : public  PhysicalAtomState {

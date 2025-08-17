@@ -1,0 +1,9 @@
+a( S, N, T )?
+b("gamma",1).
+b("gamma",2).
+b("gamma",3).
+b("delta",4).
+c("gamma","X").
+c("gamma","Y").
+c("delta","Z").
+a( S, N, T ) :- b( S, N ), c( S, T ).

@@ -110,6 +110,9 @@ string PhysicalHashJoin::toString() const {
     string result = getName() + "( "+pt_->predicate_->getName()+", ";
     for (auto k:keys_)
         result += std::to_string(k) + ", ";
+    result += "; ";
+    for (auto k:lkeys_)
+        result += std::to_string(k) + ", ";
     for (auto c : dcCols_) {
         result += std::to_string(c) + ", ";
     }
@@ -117,6 +120,7 @@ string PhysicalHashJoin::toString() const {
     for (auto c : selectCols_) {
         result += std::to_string(c) + ", ";
     }
+    result += "; ";
     for (auto c : colsType_) {
         result += ctypeToString(c) + ", ";
     }

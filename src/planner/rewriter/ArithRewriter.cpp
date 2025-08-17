@@ -98,7 +98,7 @@ void ArithRewriter::rewrite(Rule &rule) {
         auto& left = atom.getTerms()[0];
         auto& right = atom.getTerms()[1];
         while (left.containsOrIsConstant() || right.containsOrIsConstant()) {
-            auto builtinAtom = extractConstantBuiltinArith(atom);
+            auto builtinAtom = extractConstantBuiltinArith(builtins[i]); // pass builtins[i] as atom ref could change for the push_back
             builtins.push_back(std::move(builtinAtom));
         }
     }

@@ -99,6 +99,20 @@ void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) 
     StatementDependency sd(std::move(program));
     auto orderedBucketRules = sd.orderRules();
 
+    for (idx_t i = 0; i < orderedBucketRules.size(); i++) {
+        LOG_DEBUG("Bucket %d:", i);
+        for (auto& rule : orderedBucketRules[i].exit_) {
+            LOG_DEBUG("Rule: %s", rule.toString().c_str());
+        }
+        for (auto& rule : orderedBucketRules[i].constraints_) {
+            LOG_DEBUG("Rule: %s", rule.toString().c_str());
+        }
+        for (auto& rule : orderedBucketRules[i].recursive_) {
+            LOG_DEBUG("Rule: %s", rule.toString().c_str());
+        }
+        LOG_DEBUG("---------------------");
+    }
+
     // Process each bucket of rules
     for (auto &bucket : orderedBucketRules) {
         processBucketRules(bucket, scheduler);

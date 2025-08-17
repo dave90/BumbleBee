@@ -1,0 +1,34 @@
+
+% String lane (all strings)
+src("alpha","R1"). src("beta","R2"). src("gamma","R1").
+rtag("R1","keep"). rtag("R2","drop").
+
+% Numeric lane (all ints)
+d1(1..4, 10..13).      % d1(I1, J1)
+d2(2..5, 20..23).      % d2(I2, J2)
+d3(10..13, 100..103).  % d3(J1, K1)
+d4(20..23, 200..203).  % d4(J2, K2)
+gateK(100). gateK(202). gateK(203).
+
+% Helper numeric derivations
+nj1( I1, J1, K1 ) :- d1( I1, J1 ), d3( J1, K1 ), K1 >= 100.
+nj2( I2, J2, K2 ) :- d2( I2, J2 ), d4( J2, K2 ), K2 > 200.
+pass( K ) :- gateK( K ).
+
+% String filter helpers */
+keepR( R ) :- rtag( R, "keep" ).
+hasS( S )  :- src( S, _ ).
+
+% Long rule (5 joins): two numeric paths + string path + arithmetic */
+ans5( S, R, I1, I2, J ) :-
+  src( S, R ),
+  keepR( R ),
+  nj1( I1, J1, K1 ),
+  nj2( I2, J2, K2 ),
+  pass( K1 ), pass( K2 ),
+  J = J1 + J2,         % numeric expression (J is int column in head)
+  K2 > K1, I2 > I1.
+
+% Extra short rules to reach ≥5 total and to add constraints */
+smallI( I1 ) :- d1( I1, _ ), I1 <= 3.
+bigI( I2 )   :- d2( I2, _ ), I2 >= 3.

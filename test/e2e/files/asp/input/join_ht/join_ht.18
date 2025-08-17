@@ -1,0 +1,27 @@
+ans3( X, Y, Z, W, U )?
+
+a1(1..5, 100..104, 1000..1004).
+a2(100..104, 7..9).
+a3(7..9, 70..90).
+a4(1000..1004).
+a5(1..5, 1..5).
+
+% Helper filters
+fy( Y ) :- a2( Y, _ ), Y / 2 = 0.
+fw( W ) :- a3( W, _ ), W > 7.
+
+% Projected join fragments
+jA( X, Y, Z ) :- a1( X, Y, Z ), fy( Y ), Z > 1000.
+jB( Y, W )    :- a2( Y, W ), fw( W ).
+jC( W, U )    :- a3( W, U ), U >= W * 10.
+jD( Z )       :- a4( Z ).
+jE( X, T )    :- a5( X, T ), T < X + 2.
+
+% Long head rule (5 joins) + arithmetic
+ans3( X, Y, Z, W, U ) :-
+  jA( X, Y, Z ),
+  jB( Y, W ),
+  jC( W, U ),
+  jD( Z ),
+  jE( X, T ),
+  U > Z + 50, T != 0.

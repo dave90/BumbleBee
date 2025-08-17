@@ -1,0 +1,25 @@
+
+% EDB (all-int columns)
+p(1..6, 10..15).
+q(10..15, 100..105).
+r(100..105, 1000..1005).
+s(1..6, 2..7).
+t(2..7, 20..25).
+u(20..25, 200..205).
+
+% Short helpers
+j1( A, B, C ) :- p( A, B ), q( B, C ), A < B, C >= 102.
+j2( C, D )    :- r( C, D ), D != 1002.
+j3( A, E )    :- s( A, E ), E > A.
+j4( E, F )    :- t( E, F ), F / 2 = 0.
+
+j5( F, G )    :- u( F, G ), G > F * 8.
+
+% Long rule (6 joins) to produce final answers
+ans1( A, B, C, D, E, F, G ) :-
+  j1( A, B, C ),
+  j2( C, D ),
+  j3( A, E ),
+  j4( E, F ),
+  j5( F, G ),
+  D > C * 9, G > D + 50.
