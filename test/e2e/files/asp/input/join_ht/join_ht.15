@@ -1,4 +1,3 @@
-res( S, I1, I2, T )?
 k("alpha", 1..3).
 k("beta",  2..4).
 k("gamma", 3..5).
@@ -25,6 +24,4 @@ res( S, I1, I2, T ) :-
   pair( I2, J2 ),
   lift( J1, T ),
   tag( J2, T ),
-  thresh( S, TH ),
-  I1 != I2, J1 != J2,
-  J1 > TH, J2 > J1, I2 > I1 + 0.
+  thresh( S, TH ).

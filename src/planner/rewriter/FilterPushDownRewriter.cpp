@@ -108,8 +108,7 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
     // check the remaining builtin (if any) and throw error if are present
     for (idx_t j=0; j< builtIntAtoms.size(); j++) {
         auto ba = builtIntAtoms[j];
-        if (ba==nullptr)continue;
-        ErrorHandler::errorParsing("Error, builtin atom with variables not bounded. Rule is not safe. -->" +ba->toString());
+        BB_ASSERT(ba == nullptr);
     }
 
     rule.setBody(newBody);

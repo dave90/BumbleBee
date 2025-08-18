@@ -236,7 +236,6 @@ void PredicateTables::loadRanges() {
             if (lastChunk->getSize() < lastChunk->getCapacity()) {
                 // merge the last chunk created by this atom with the last chunk stored (copy needed :( )
                 chunks_.append(*chunks.back());
-                if (chunksSize == 1) return;
                 // remove the chunk appended
                 chunks.pop_back();
                 --chunksSize;
