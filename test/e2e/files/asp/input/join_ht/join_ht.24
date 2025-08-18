@@ -1,0 +1,31 @@
+% ==== Test 2: Multiple rules, integers only, diamond + self-join + non-equi guards ====
+% Shape:
+%   a1(X,Y)  a2(Y,Z)  a3(Z,W)  a4(W,X)
+% with branches that collapse back; we also test duplicates and gaps.
+
+% Base facts with overlaps & gaps
+a1(1..5, 100..104).
+a2(100..104, 7..9).
+a3(7..9, 70..90).
+a4(70..90, 1..5).
+
+% Duplicate generators (stress dedup and multi-hit hash buckets)
+dupY(100). dupY(102). dupY(102).           % 102 twice on purpose
+dupZ(8).
+
+% Projected branches
+p1(X,Y) :- a1(X,Y), dupY(Y).
+p2(Y,Z) :- a2(Y,Z), Z = 8.
+p3(Z,W) :- a3(Z,W), W >= 80.
+p4(W,X) :- a4(W,X), X != 3.
+
+% Self-join on p3 to ensure the same Z fans out to two different W
+p3b(Z,W2) :- p3(Z,W2), W2 > 80.
+
+% Diamond collapse with mixed joins and non-equi filter
+j(X,Y,Z,W,W2) :- p1(X,Y), p2(Y,Z), p3(Z,W), p3b(Z,W2), p4(W,X), W != W2.
+
+% Final answer: keep rows where (X+Z) == (W2 - W) to exercise arith on join outputs
+ans_join_multi_int(X,Y,Z,W,W2) :-
+  j(X,Y,Z,W,W2),
+  X + Z = W2 - W.

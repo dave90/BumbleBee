@@ -72,6 +72,21 @@
       "test": "Join HT 2",
       "input_file": "join_ht.2",
       "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Join HT 3",
+      "input_file": "join_ht.3",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Join HT 4",
+      "input_file": "join_ht.4",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Join HT 5",
+      "input_file": "join_ht.5",
+      "commands": ["clingo --mode=gringo --text $file"]
     }
   ]
 }

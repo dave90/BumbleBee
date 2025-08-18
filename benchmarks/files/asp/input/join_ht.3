@@ -1,0 +1,35 @@
+% ===== Query head =====
+%q1(A,C,P) ?
+
+% ===== EDB (moderate sizes; no huge cross products) =====
+ac(1..12000, 1..1200).          % A–C edges   (A , C in )
+
+cp(1..1200, 1..1500).           % C–P edges   (C ,  P )
+
+pa(1..1500, 1..1000).          % P–A edges   (P , A )
+
+% 6 facts — keeps selectivity tight via semi-join
+allow_region(1). allow_region(2). allow_region(3).
+allow_region(5). allow_region(8). allow_region(13).
+
+
+% ===== Rules =====
+c_ok(C) :- allow_region(C).
+
+% Stage 2: build star center with filters to control fanout
+star(A,C,P) :-
+  ac(A,C),
+  c_ok(C),
+  cp(C,P),
+  A > 10,      % drop tiny A keys (skew control)
+  P <= 1200.   % keep P in a tighter band
+
+% Stage 3: close the A–C–P cycle via (P,A) edge
+cycle(A,C,P) :-
+  star(A,C,P),
+  pa(P,A),
+  A <= 100.    % force join on a narrower A domain
+
+% Stage 4
+q1(A,C,P) :-
+  cycle(A,C,P), A < 100, C < 100, P < 100.

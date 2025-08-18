@@ -1,0 +1,39 @@
+ans_join_string_multi("Ada","ADA","ada@ex","db",101).
+ans_join_string_multi(" ada ","ADA","ada@ex","db",101).
+ans_join_string_multi("Боб","BOB","bob@ex","olap",202).
+auth_art("ADA","db",101).
+auth_art("BOB","olap",202).
+auth("ADA","ada@ex").
+auth("BOB","bob@ex").
+alias("Ada","ADA").
+alias(" ada ","ADA").
+alias("Боб","BOB").
+alias("","EMPTY").
+label("ADA","ok").
+label("BOB","ok").
+label("EMPTY","skip").
+norm("Ada","ADA").
+norm(" ada ","ADA").
+norm("","EMPTY").
+norm("Боб","BOB").
+email("ADA","ada@ex").
+email("BOB","bob@ex").
+email("EMPTY","noreply@ex").
+art("db",101).
+art("olap",202).
+art("misc",303).
+okC("ADA").
+okC("BOB").
+canon("Ada","ADA").
+canon(" ada ","ADA").
+canon("","EMPTY").
+canon("Боб","BOB").
+auth_topic("ADA","db").
+auth_topic("BOB","olap").
+topic("ADA","db").
+topic("BOB","olap").
+topic("EMPTY","misc").
+person("Ada").
+person(" ada ").
+person("").
+person("Боб").

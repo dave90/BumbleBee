@@ -14,14 +14,24 @@ import shutil
 
 NUM_TRIES = 3
 RESULTS_FOLDER = Path("results")
-
+TIMEOUT = 120
 
 def run_command(command, output_path):
     with open(output_path, 'w') as out_file:
         start = time.perf_counter()
-        subprocess.run(command, shell=True, stdout=out_file, stderr=subprocess.STDOUT)
-        end = time.perf_counter()
-    return end - start
+        try:
+            subprocess.run(
+                command,
+                shell=True,
+                stdout=out_file,
+                stderr=subprocess.STDOUT,
+                timeout=TIMEOUT  # Kill process if it runs longer than 2 minutes
+            )
+            end = time.perf_counter()
+            return end - start
+        except subprocess.TimeoutExpired:
+            out_file.write("\n[ERROR] Process timed out after 120 seconds and was killed.\n")
+            return TIMEOUT
 
 
 def normalize_output(file_path):

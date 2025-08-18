@@ -27,6 +27,9 @@ enum PhysicalHashJoinType : uint8_t {
     BUILD = 2
 };
 
+// Physical Atom for Hash Join. Can be used as:
+// - sink and source for build phase
+// - executor for probe phase
 class PhysicalHashJoin : public PhysicalAtom {
 public:
     PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t>& dcCols, std::vector<idx_t>& selectedCols,
@@ -45,15 +48,18 @@ public:
     bool isSink() const override;
     gpstate_ptr_t getGlobalState() const override;
 
+    // Colelct the stats to build the HT
+    AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const override;
+    // Build the HT bucket by bucket
+    AtomResultType getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+        GlobalPhysicalAtomState &gstate) const override;
+    // Finalize the build
     void finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const override;
+    // Execute probe
     AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
             PhysicalAtomState &state) const override;
 
-    AtomResultType getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
-        GlobalPhysicalAtomState &gstate) const override;
-
-    AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
-        GlobalPhysicalAtomState &gstate) const override;
 
 private:
     DataChunk selectColumns(DataChunk &chunk) const;

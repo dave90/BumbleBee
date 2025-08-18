@@ -26,6 +26,19 @@ namespace bumblebee{
 
 struct InitHashJoin {
 
+    static bool bloomCouldContains(uint64_t bloom, uint64_t hash) {
+        switch (JoinHashTable::BLOOM_SIZE) {
+            case 16:
+                return bloom16CouldContains(bloom, hash);
+            case 0:
+                return true;
+            default:
+                ErrorHandler::errorNotImplemented("Error, bloom filter size not supported");
+        }
+        return false;
+    }
+
+
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
     static idx_t operation( LEFT_TYPE*__restrict ldata,const SelectionVector* ldatasel, RIGHT_TYPE*__restrict rdata,
         uint64_t*__restrict hdata, const SelectionVector* hdatasel,
@@ -38,7 +51,7 @@ struct InitHashJoin {
             auto hash = hdata[hdatasel->getIndex(lpos)];
             // check bloom filter
             auto bloom = JoinHashTable::dirBloom(directory, bucket);
-            if (!bloom16CouldContains(bloom, hash)) continue;
+            if (!bloomCouldContains(bloom, hash)) continue;
 
             auto roffset =  JoinHashTable::dirBegin(directory, bucket);
             auto rend = JoinHashTable::dirEnd(directory, bucket);
@@ -319,6 +332,21 @@ uint16_t bloomFilter16BitVector(Vector& hash, SelectionVector& sel, idx_t size) 
     return bloom;
 }
 
+uint64_t bloomFilterBitVector(idx_t bloomSize, Vector& hash, SelectionVector& sel, idx_t size) {
+    BB_ASSERT(hash.getType() == UBIGINT);
+    uint64_t bloom ;
+    switch (bloomSize) {
+        case 16:
+            return bloomFilter16BitVector(hash, sel, size);
+        case 0:
+            return 0;
+        default:
+            ErrorHandler::errorNotImplemented("Error, bloom filter size not supported");
+    }
+    return 0;
+}
+
+
 
 
 JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, Vector& hash, SelectionVector &sel, idx_t size):
@@ -341,6 +369,13 @@ JoinHashTable::JoinHashTable(Predicate *predicate, const std::vector<idx_t> &key
 }
 
 
+JoinHashTable::JoinHashTableStats::JoinHashTableStats(idx_t buckets):bucketMutex_(buckets), bucketChunks_(buckets), bucketSize_(buckets) {
+    for (idx_t i = 0; i < buckets; i++) {
+        bucketSize_[i].store(0);
+    }
+}
+
+
 Vector JoinHashTable::calculateBucketVector(Vector &hash, idx_t size) {
     Vector bucket(hash.getType(), size);
     Value maskValue(buckets_-1);
@@ -348,12 +383,6 @@ Vector JoinHashTable::calculateBucketVector(Vector &hash, idx_t size) {
     BB_ASSERT(mask.getVectorType() == VectorType::CONSTANT_VECTOR);
     VectorOperations::lAnd(hash, mask, bucket, size);
     return bucket;
-}
-
-JoinHashTable::JoinHashTableStats::JoinHashTableStats(idx_t buckets):bucketMutex_(buckets), bucketChunks_(buckets), bucketSize_(buckets) {
-    for (idx_t i = 0; i < buckets; i++) {
-        bucketSize_[i].store(0);
-    }
 }
 
 void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
@@ -412,7 +441,7 @@ void JoinHashTable::initDirectory() {
 void JoinHashTable::build(idx_t bucket) {
     BB_ASSERT(bucket < stats_.bucketChunks_.size());
     auto bucketOffset = dirBegin(directory_.get(), bucket);
-    uint16_t accBloom = 0; // bloom across all chunks
+    uint64_t accBloom = 0; // bloom across all chunks
     for (idx_t i = 0; i < stats_.bucketChunks_[bucket].size(); i++) {
         auto& stat = stats_.bucketChunks_[bucket][i];
         auto& dc = stat.chunk_;
@@ -426,11 +455,10 @@ void JoinHashTable::build(idx_t bucket) {
             VectorOperations::copy(sourceVector,targetVector,sel,size, 0, bucketOffset);
         }
         // calculate the bloom filter and add it in the directory
-        BB_ASSERT(BLOOM_SIZE == 16); // for now support only 16 bit bloom TODO support different bloom size
-        accBloom |= bloomFilter16BitVector(hash, sel, size);
+        accBloom |= bloomFilterBitVector(BLOOM_SIZE, hash, sel, size);
         bucketOffset += size;
     }
-    directory_[bucket] = dirEnd(directory_.get(), bucket) | (uint64_t{accBloom} << BLOOM_SHIFT) ;
+    directory_[bucket] = dirEnd(directory_.get(), bucket) | (accBloom << BLOOM_SHIFT) ;
 }
 
 void JoinHashTable::clearStats() {

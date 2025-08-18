@@ -6,28 +6,13 @@
   "previous_comparison": true,
   "tests": [
     {
-      "test": "Cross product 1",
-      "input_file": "join_cp.1",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
-    },
-    {
-      "test": "Cross product 2",
-      "input_file": "join_cp.2",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
-    },
-    {
       "test": "Cross product 3",
       "input_file": "join_cp.3",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
     },
     {
       "test": "Join NL 1",
       "input_file": "join_nl.1",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
-    },
-    {
-      "test": "Join NL 2",
-      "input_file": "join_nl.2",
       "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
     },
     {
@@ -38,22 +23,27 @@
     {
       "test": "Join NL 4",
       "input_file": "join_nl.4",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
-    },
-    {
-      "test": "Join NL 5",
-      "input_file": "join_nl.5",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
     },
     {
       "test": "Join HT 1",
       "input_file": "join_ht.1",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
     },
     {
-      "test": "Join HT 2",
-      "input_file": "join_ht.2",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "test": "Join HT 3",
+      "input_file": "join_ht.3",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+    },
+    {
+      "test": "Join HT 4",
+      "input_file": "join_ht.4",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+    },
+    {
+      "test": "Join HT 5",
+      "input_file": "join_ht.5",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
     }
   ]
 }

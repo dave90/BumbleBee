@@ -26,10 +26,67 @@ namespace bumblebee{
 
 using directory_t = std::unique_ptr<uint64_t[]>;
 
-
+/**
+ * JoinHashTable
+ * Build-side hash table for hash joins with a compact directory layout and per-bucket Bloom filters.
+ * Inspired by: https://db.in.tum.de/~birler/papers/hashtable.pdf
+ *
+ * JoinHashTable materializes the “right” side of a join into a single contiguous
+ * DataChunk (chunkone_) and provides fast, bucketed probing for the “left” side.
+ * It is designed for parallel construction (per-bucket stats and locking) and
+ * vectorized probing, while keeping the directory metadata small and cache-friendly.
+ *
+ * High-level workflow
+ * 1) Stats collection (addDataChunkSel):
+ *    - For each incoming build chunk and its precomputed row hashes, the table
+ *      computes a bucket id as `hash & (buckets_ - 1)` (buckets_ is a power of two).
+ *    - Indices are grouped by bucket and recorded as `DataChunkSel` entries.
+ *    - Per-bucket sizes are atomically accumulated, guarded by per-bucket mutexes.
+ *
+ * 2) Directory allocation :
+ *    - Allocates directory of length buckets and computes a prefix sum of
+ *      per-bucket sizes.
+ *
+ * 3) Bucket build :
+ *    - Copies the selected rows for a single bucket from their source chunks into
+ *      the bucket’s assigned slice of chunkone.
+ *    - Computes a N-bit Bloom filter over that bucket’s hashes and packs it into
+ *      the directory entry (see “Directory encoding”).
+ *
+ * 4) Probing :
+ *    - For each left row (and its hash), compute the bucket id as above.
+ *    - Bloom check: quickly reject buckets whose Bloom filter cannot contain
+ *      the hash.
+ *    - Candidate scan: linearly traverse the bucket’s slice of `chunkone_`,
+ *      producing matches into selection vectors.
+ *    - Refinement: If multiple join predicates are supplied, the first
+ *      predicate seeds the candidate list; subsequent predicates refine it in place.
+ *
+ * Directory encoding
+ * Each entry `directory_[i]` is a 64-bit word that packs:
+ *   - Low (64 - BLOOM_SIZE) bits: the exclusive end offset of bucket `i`
+ *     within `chunkone_` (i.e., `dirEnd(i)`). The begin offset is derived from
+ *     the previous entry (`dirBegin(i)`).
+ *   - High BLOOM_SIZE bits: a per-bucket Bloom filter (16 bits by default).
+ *
+ *
+ *  Bloom filter
+ * - A lightweight, N-bit Bloom is accumulated per bucket at build time from the
+ *   bucket’s row hashes. The filter is stored in the high bits of the directory
+ *   word, so no extra memory is needed.
+ * - At probe time, `bloomCouldContains(bloom, hash)` guards the (small) linear
+ *   scan of the bucket’s slice in `chunkone_`.
+ *
+ * Data layout
+ * - chunkone: a single contiguous DataChunk holding all build rows, ordered
+ *   by bucket. Each bucket occupies `[dirBegin(i), dirEnd(i))`.
+ * - directory_: compact metadata array (length = buckets_), one word per bucket
+ *   with packed end offset + Bloom bits.
+ *
+ */
 class JoinHashTable {
 public:
-    static constexpr idx_t BLOOM_SIZE = 16;
+    static constexpr idx_t BLOOM_SIZE = 16; // supported size 0 (disabled) or 16
     static constexpr int BLOOM_SHIFT = 64 - BLOOM_SIZE;
     static constexpr uint64_t BLOOM_MASK64 = (~0ULL << BLOOM_SHIFT); // only high BLOOM_SIZE bits are 1
 
@@ -47,17 +104,20 @@ public:
     // get the data of the hash table
     DataChunk& getDataChunk();
 
+    // Get and set ready
     void setReady();
     bool isReady();
     // check if the keys are equal to the ht keys
     bool checkKeys(std::vector<idx_t> keys);
-
+    // Probe the left chunk
     idx_t probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,
                          SelectionVector &lsel, SelectionVector &rsel, const std::vector<Expression> &conditions);
 
+    // Return hash table as string
     string toString();
+    // Return directory of hash table
     directory_t& getDirectory();
-
+    // Get number of buckets
     idx_t getBuckets();
 
 
@@ -68,11 +128,7 @@ private:
         stats_.bucketSize_[bucket].fetch_add(size);
     }
 
-    inline idx_t getBucket(hash_t hash) {
-        return hash & (buckets_ -1);
-    }
-
-
+    // Calculate the bucket vector from the hash
     Vector calculateBucketVector(Vector& hash, idx_t size);
 
     // This struct store the statistics for the building of the hash table
@@ -94,15 +150,21 @@ private:
         // locks for each bucket
         std::vector<std::mutex> bucketMutex_;
     };
-
+    // Number of buckets
     idx_t buckets_;
+    // predicate of ht
     Predicate* predicate_;
+    // Keys of the HT
     std::vector<idx_t> keys_;
-    // store the index of elements in each bucket (for bucket i data are stored from directory[i-1] to directory[i],directory[i] excluded )
+    // Store the element indices for each bucket.
+    // For bucket i, the data range is [directory[i-1], directory[i])
+    // (start inclusive, end exclusive).
     directory_t directory_;
     // hash table data
     DataChunk chunkone_;
+    // Stats of HT
     JoinHashTableStats stats_;
+    // If is ready to use
     bool ready_{false};
 
 public:
@@ -112,8 +174,11 @@ public:
     }
 
     // static functions
+    // Return a begin range for a directory
     inline static uint64_t dirBegin(const uint64_t* d, idx_t b){ return (b ? (d[b-1] & ~BLOOM_MASK64) : 0); }
+    // Return a end range for a directory
     inline static uint64_t dirEnd(const uint64_t* d, idx_t b){ return d[b] & ~BLOOM_MASK64; }
+    // Return the bloom filter of a directory
     inline static uint16_t dirBloom(const uint64_t* d, idx_t b){ return uint16_t(d[b] >> BLOOM_SHIFT); }
 
 

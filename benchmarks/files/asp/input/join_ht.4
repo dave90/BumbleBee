@@ -1,0 +1,41 @@
+% ===== Query head =====
+%q2(O,C,Item,Band,Tier) ?
+
+% ===== EDB =====
+orders(1..10000, 1..10).          % (O,C)
+
+lines(1..10000, 1..20).           % (O,Item)
+
+price_band(1..20, 1..5).          % (Item,Band)
+
+vip(1..10, 1..3).                  % (C,Tier)
+
+ship_zone(1..10000, 1..10).       % (O,Zone)
+
+cust_zone(1..10, 1..10).          % (C,Zone)
+
+% ===== Rules =====
+% Prefilter by band/tier to shrink the most selective inputs early
+good_item(Item,Band) :-
+  price_band(Item,Band),
+  Band <= 3.
+
+good_cust(C,Tier) :-
+  vip(C,Tier),
+  Tier >= 2.
+
+% Composite key (O,C) via two atoms and a zone consistency check
+oc(O,C) :- orders(O,C).
+
+oz(O,Z) :- ship_zone(O,Z).
+cz(C,Z) :- cust_zone(C,Z).
+
+
+% Stitch items through orders; then attach (Band,Tier) via selective prefilters
+q2(O,C,Item,Band,Tier) :-
+  oc(O,C),
+  oz(O,Z),
+  cz(C,Z),
+  lines(O,Item),
+  good_item(Item,Band),
+  good_cust(C,Tier), O + C + Z > Tier * 2000 + Item.
