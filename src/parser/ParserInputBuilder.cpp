@@ -21,6 +21,7 @@
 
 #include "bumblebee/parser/ParserInputBuilder.h"
 
+#include "CLI11.hpp"
 #include "bumblebee/common/Log.h"
 
 namespace bumblebee {
@@ -39,6 +40,10 @@ void ParserInputBuilder::onDirective(char *directiveName, char *directiveValue) 
 }
 
 bool ParserInputBuilder::checkRuleSafety() {
+    return checkRuleSafety(currentRule);
+}
+
+bool ParserInputBuilder::checkRuleSafety(Rule& currentRule) {
     // check if rule is safe
     set_term_variable_t toCheckVars, bodyVars;
     for (auto&a : currentRule.getHead())a.getVariables(toCheckVars);
@@ -284,33 +289,131 @@ void ParserInputBuilder::onBuiltinAtom() {
 }
 
 void ParserInputBuilder::onAggregateLowerGuard() {
+    if(foundASafetyError_) return;
+    if (guard_terms.size() != 2)
+        guard_terms.resize(2);
+    if (terms_parsered.back().containsAnonymous())
+        currentRuleIsUnsafe_ = true;
+    guard_terms[0] = std::move(terms_parsered.back());
+    terms_parsered.pop_back();
 }
 
 void ParserInputBuilder::onAggregateUpperGuard() {
+    if(foundASafetyError_) return;
+    if (guard_terms.size() != 2)
+        guard_terms.resize(2);
+    if (terms_parsered.back().containsAnonymous())
+        currentRuleIsUnsafe_ = true;
+    secondBinop_ = binop_;
+    binop_ = NONE_OP;
+    guard_terms[1] = std::move(terms_parsered.back());
+    terms_parsered.pop_back();
 }
 
 void ParserInputBuilder::onAggregateFunction(char *functionSymbol) {
+    if (functionSymbol[0] == '#')
+        aggregateFunction_ = Atom::getAggFunction(++functionSymbol); // skip #
+    else
+        aggregateFunction_ = Atom::getAggFunction(functionSymbol);
 }
 
 void ParserInputBuilder::onAggregateGroundTerm(char *value, bool dash) {
+    if(foundASafetyError_) return;
+    newTerm(value);
+    agg_terms_parsered.push_back(std::move(terms_parsered.back()));
+    terms_parsered.pop_back();
 }
 
 void ParserInputBuilder::onAggregateVariableTerm(char *value) {
+    if(foundASafetyError_) return;
+    string var(value);
+    agg_terms_parsered.emplace_back(std::move(var), true);
 }
 
 void ParserInputBuilder::onAggregateUnknownVariable() {
+    currentRuleIsUnsafe_ = true;
 }
 
 void ParserInputBuilder::onAggregateFunctionalTerm(char *value, int nTerms) {
 }
 
 void ParserInputBuilder::onAggregateNafLiteral() {
+    if(foundASafetyError_) return;
+    agg_atoms.push_back(std::move(currentAtom));
 }
 
 void ParserInputBuilder::onAggregateElement() {
+    if(foundASafetyError_) return;
 }
 
 void ParserInputBuilder::onAggregate(bool naf) {
+    if(foundASafetyError_) return;
+
+    Atom bodyAggAtom = extractRuleFromAgg(agg_terms_parsered, agg_atoms);
+    agg_atoms.clear();
+    agg_atoms.push_back(std::move(bodyAggAtom));
+
+    currentAtom = Atom::createAggregateAtom(aggregateFunction_, binop_, secondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms));
+    binop_ = NONE_OP;
+    secondBinop_ = NONE_OP;
+    guard_terms.clear();
+    agg_atoms.clear();
+    agg_terms_parsered.clear();
+}
+
+Predicate* ParserInputBuilder::getAuxHeadAtomAggRule(std::vector<Term>& aggTerms, std::vector<Atom>& atoms) {
+    for (idx_t i = 0; i <auxAggRulesCreated_.size(); i++) {
+        auto& rule = program_[ auxAggRulesCreated_[i]];
+        // compare terms in head
+        BB_ASSERT(rule.getHead().size() == 1);
+        auto &headTerms = rule.getHead()[0].getTerms();
+        if (headTerms != aggTerms)continue;
+        // compare the body
+        auto& bodyAtoms = rule.getBody();
+        if (bodyAtoms.size() != atoms.size())continue;
+        std::vector<bool> used(atoms.size(), false);
+        bool matched = false;
+        for (const auto& x : bodyAtoms) {
+            matched = false;
+            for (std::size_t j = 0; j < atoms.size(); ++j) {
+                if (!used[j] && x == atoms[j]) {
+                    used[j] = true;   // consume this occurrence
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) break; // x has no unused match in atoms
+        }
+        if (!matched) continue;
+        // match found we can resuse this aux
+        return rule.getHead()[0].getPredicate();
+    }
+    return nullptr;
+}
+
+Atom ParserInputBuilder::extractRuleFromAgg(std::vector<Term>& aggTerms, std::vector<Atom>& atoms) {
+    // check if the aux rule with similar body and terms was alredy created
+    Predicate* auxPredAtom = getAuxHeadAtomAggRule(aggTerms, atoms);
+    if (auxPredAtom) {
+        // aux rule alredy create, return the atom
+        return Atom::createClassicalAtom(auxPredAtom, std::move(std::vector(aggTerms)));
+    }
+
+    // extract a new rule from the aggregate atoms
+    // and return the atom in head
+    string newPred = NEW_PREDICATE_AGG_PREFIX.c_str() + std::to_string(newPredCounter_++);
+    Predicate *predicate = currentSchema_.get().createPredicate(newPred.c_str(), aggTerms.size());
+    if (!hiddenNewPredicate) {
+        predicate->setInternal(false);
+    }
+    Atom head = Atom::createClassicalAtom(predicate, std::move(std::vector(aggTerms)));
+    Rule newRule;
+    newRule.addAtomInHead(std::move(head));
+    newRule.setBody(atoms);
+    checkRuleSafety(newRule);
+    auxAggRulesCreated_.push_back(program_.size());
+    program_.push_back(std::move(newRule));
+    return Atom::createClassicalAtom(predicate, std::move(std::vector(aggTerms)));
 }
 
 void ParserInputBuilder::onEnd() {

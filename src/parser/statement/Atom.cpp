@@ -35,12 +35,25 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
                                    predicate_(other.predicate_),
                                    type_(other.type_),
                                    negative_(other.negative_),
-                                   binop_(other.binop_){
+                                   binop_(other.binop_),
+                                   secondBinop_(other.secondBinop_),
+                                   aggregate_(other.aggregate_),
+                                   aggAtoms_(std::move(other.aggAtoms_)),
+                                   aggTerms_(std::move(other.aggTerms_)){
     calculateIsGround();
 }
 
 Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), binop_(binop), type_(AtomType::BUILTIN) {
     calculateIsGround();
+}
+
+Atom::Atom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard, Term &upperGuard,
+    terms_vector_t &&aggTerms, std::vector<Atom> &&aggAtoms): aggregate_(aggFunction),
+    binop_(firstBinop), secondBinop_(secondBinop),aggTerms_(std::move(aggTerms)),
+    aggAtoms_(std::move(aggAtoms)), predicate_(nullptr), type_(AGGREGATE){
+    terms_.resize(2);
+    terms_[0] = std::move(lowerGuard);
+    terms_[1] = std::move(upperGuard);
 }
 
 terms_vector_t& Atom::getTerms() {
@@ -57,6 +70,9 @@ Predicate* Atom::getPredicate() {
 void Atom::getPredicates(predicates_ptr_set_t &predicates) {
     if (type_ == AtomType::CLASSICAL) {
         predicates.insert(predicate_);
+    }else if (type_ == AGGREGATE) {
+        for (auto& atom : aggAtoms_)
+            atom.getPredicates(predicates);
     }
 }
 
@@ -85,6 +101,13 @@ void Atom::setBinop(Binop binop) {
     binop_ = binop;
 }
 
+Binop Atom::getSecondBinop() const {
+    return secondBinop_;
+}
+
+void Atom::setSecondBinop(Binop binop) {
+    secondBinop_ = binop;
+}
 
 bool Atom::containsAnonymous() const {
     for (auto& term : terms_)
@@ -129,6 +152,7 @@ std::vector<ConstantType> Atom::getTermsCType() {
     std::vector<ConstantType> types;
     types.reserve(terms_.size());
     for (auto& term : terms_) {
+        if (term.getType() == TermType::NONE_TERM) continue;
         types.push_back(term.getConstantType());
     }
     return types;
@@ -149,6 +173,10 @@ Atom & Atom::operator=(Atom &&other) noexcept {
     negative_ = other.negative_;
     binop_ = other.binop_;
     ground_ = other.ground_;
+    aggregate_ = other.aggregate_;
+    secondBinop_ = other.secondBinop_;
+    aggAtoms_ = std::move(other.aggAtoms_);
+    aggTerms_ = std::move(other.aggTerms_);
     return *this;
 }
 
@@ -201,11 +229,36 @@ std::string Atom::toString() const {
     if (type_ == AtomType::BUILTIN) {
         return terms_[0].toString() + " "+ getBinopStr(binop_) + " " + terms_[1].toString();
     }
+    if (type_ == AGGREGATE) {
+        string s ="";
+        if (binop_ != NONE_OP)
+            s += terms_[0].toString() + " " + getBinopStr(binop_) ;
+
+        s += "#" +getAggFunction(aggregate_) + "{";
+        for (auto& term : aggTerms_) {
+            s += term.toString()+",";
+        }
+        s.pop_back(); // remove last comma
+        s += ":";
+        for (auto& atom : aggAtoms_) {
+            s += atom.toString()+",";
+        }
+        s.pop_back(); // remove last comma
+        s += "}";
+        if (secondBinop_ != NONE_OP)
+            s += getBinopStr(secondBinop_) + terms_[1].toString() ;
+
+        return s;
+    }
     ErrorHandler::errorNotImplemented("Atom type not implemented");
     return "";
 }
 
 void Atom::calculateIsGround() {
+    if (type_ == AGGREGATE) {
+        ground_ = false;
+        return;
+    }
     for (auto &term : terms_) {
         if (!term.isGround()) {
             ground_ = false;
@@ -223,5 +276,39 @@ Atom Atom::createBuiltinAtom(terms_vector_t &&t, Binop binop) {
     return Atom(std::move(t), binop);
 }
 
+Atom Atom::createAggregateAtom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard,
+    Term &upperGuard, terms_vector_t &&aggTerms, std::vector<Atom> &&aggAtoms) {
+    return Atom(aggFunction, firstBinop, secondBinop, lowerGuard, upperGuard, std::move(aggTerms), std::move(aggAtoms));
+}
 
+string Atom::getAggFunction(AggregateFunction agg) {
+    switch (agg) {
+        case NONE:
+            return "";
+        case MIN:
+            return "MIN";
+        case MAX:
+            return "MAX";
+        case AVG:
+            return "AVG";
+        case SUM:
+            return "SUM";
+        case COUNT:
+            return "COUNT";
+    }
+}
+
+
+AggregateFunction Atom::getAggFunction(const char* aggFunction) {
+    if (aggFunction == nullptr) return NONE;
+
+    std::string s(aggFunction);
+    if (s == "min")   return MIN;
+    if (s == "max")   return MAX;
+    if (s == "avg")   return AVG;
+    if (s == "sum")   return SUM;
+    if (s == "count") return COUNT;
+
+    return NONE; // default if no match
+}
 }

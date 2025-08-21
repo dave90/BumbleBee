@@ -21,7 +21,7 @@
 namespace bumblebee{
 Schema::Schema(const std::string &name): name_(name) {}
 
-Predicate * Schema::createPredicate(char *predicateName, unsigned arity) {
+Predicate * Schema::createPredicate(const char *predicateName, unsigned arity) {
     PredicateMapEntry entry{.name_ = predicateName, .arity_ = arity};
     auto it = ptables_.find(entry);
     if (it != ptables_.end()) {

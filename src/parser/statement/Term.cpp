@@ -39,40 +39,40 @@ Term::Term(Term&& term)
 Term::Term(bool negative): negative_(negative) {}
 
 Term::Term(int8_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(int16_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(int32_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(int64_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(uint8_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(uint16_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(uint32_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(uint64_t c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(float c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(double c)
-    :  negative_(false), value_( c) {}
+    :  negative_(false), value_( c), type_(CONSTANT) {}
 
 Term::Term(string&& c)
-    : negative_(false), value_(std::move(c)) {}
+    : negative_(false), value_(std::move(c)), type_(CONSTANT) {}
 
 Term::Term(char* c)
-        : negative_(false), value_(c) {}
+        : negative_(false), value_(c), type_(CONSTANT) {}
 
 Term::Term(string&& c, bool isVariable)
     : value_(std::move(c)), negative_(false) {

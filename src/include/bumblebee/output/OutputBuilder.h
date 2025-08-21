@@ -24,7 +24,7 @@
 namespace bumblebee{
 
 enum OutputType:uint8_t {
-    NONE = 0,
+    NONE_OUTPUT = 0,
     TEXT = 1
 };
 
@@ -52,7 +52,7 @@ public:
                 TextOutputBuilder::outputAtom(atom);
                 break;
             }
-            case NONE:
+            case NONE_OUTPUT:
                 NoneOutputBuilder::outputAtom(atom);
                 break;
             default:
@@ -66,7 +66,7 @@ public:
                 TextOutputBuilder::outputAtoms(chunk, predicate);
                 break;
             }
-            case NONE:
+            case NONE_OUTPUT:
                 NoneOutputBuilder::outputAtoms(chunk, predicate);
                 break;
             default:

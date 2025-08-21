@@ -34,7 +34,8 @@ enum TermType{
 	CONSTANT = 0,
 	VARIABLE = 1,
 	ARITH = 2,
-	RANGE = 3
+	RANGE = 3,
+	NONE_TERM = 5
 };
 
 
@@ -56,7 +57,6 @@ public:
 	Term();
 	Term(bool negative);
 	Term(Term&& term);
-	Term(const Term& term) = delete;
 	Term(int8_t c);
 	Term(int16_t c);
 	Term(int32_t c);
@@ -72,6 +72,18 @@ public:
 	Term(string&& c, bool isVariable);
 	Term(IntervalTerm interval_);
 	Term(Term&& t1,Term&& t2, Operator op);
+
+	Term(const Term &other)
+		: negative_(other.negative_),
+		  interval_(other.interval_),
+		  type_(other.type_),
+		  anonymous_(other.anonymous_),
+		  terms_(other.terms_),
+		  operators_(other.operators_) {
+		value_ = other.value_.cast(other.value_.ctype_);
+	}
+
+
 	~Term() = default;
 
 	Term& operator=(Term&&) = default;
@@ -143,7 +155,7 @@ private:
 	// If it is interval the interval from to
 	IntervalTerm interval_{};
 	// Type of the term Constant/Variable/etc.
-	TermType type_{TermType::CONSTANT};
+	TermType type_{TermType::NONE_TERM};
 	// True if is anonymous variable
 	bool anonymous_{false};
 	// ArithTerm is an arithmetic with the list of a terms

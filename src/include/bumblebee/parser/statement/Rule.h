@@ -57,6 +57,7 @@ public:
     predicates_ptr_set_t getPredicates();
     void replaceVariable(const string& var,const string& newVar);
     void setBody(atoms_vector_t &body);
+    bool containsAggregate() const;
 
 private:
 

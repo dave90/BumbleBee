@@ -53,6 +53,12 @@ void Rule::setBody(atoms_vector_t &body) {
     body_ = std::move(body);
 }
 
+bool Rule::containsAggregate() const {
+    for (auto& atom: body_)
+        if (atom.getType() == AGGREGATE) return true;
+    return false;
+}
+
 void Rule::getPredicatesInHead(predicates_ptr_set_t &predicates) {
     for (auto& atom :head_)
         atom.getPredicates(predicates);

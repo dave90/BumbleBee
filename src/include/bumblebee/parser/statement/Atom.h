@@ -25,9 +25,20 @@
 
 namespace bumblebee {
 
+enum AggregateFunction : uint8_t {
+    NONE = 0,
+    COUNT = 1,
+    MAX = 2,
+    MIN = 3,
+    SUM = 4,
+    AVG = 5
+};
+
+
 enum AtomType {
     CLASSICAL = 0,
     BUILTIN = 1,
+    AGGREGATE = 2
 };
 
 using terms_vector_t = std::vector<Term>;
@@ -38,6 +49,7 @@ public:
     Atom() = default;
     Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type);
     Atom(terms_vector_t &&terms, Binop binop);
+    Atom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, std::vector<Atom>&& aggAtoms);
     Atom(AtomType type, bool negative);
     Atom(const Atom &other) = delete;
     Atom(Atom &&other) noexcept;
@@ -46,6 +58,7 @@ public:
     Atom & operator=(const Atom &other) = delete;
     Atom & operator=(Atom &&other) noexcept;
     Binop getBinop() const;
+    Binop getSecondBinop() const;
 
     hash_t hash();
     void getVariables(set_term_variable_t &variables);
@@ -66,6 +79,7 @@ public:
     bool isNegative() const;
     void setNegative(bool negative);
     void setBinop(Binop binop);
+    void setSecondBinop(Binop binop);
     bool containsAnonymous() const;
     bool containsRange() const;
     bool containsArith() const;
@@ -89,15 +103,26 @@ private:
     AtomType type_;
     bool negative_{false};
     // If it is a builtin the binop operation
-    Binop binop_;
+    Binop binop_{NONE_OP};
     // True if it is ground
     bool ground_{false};
+
+    // Aggregate fields
+    // Aggregates can have 2 Binop (example 1 < #sum{...} < 10)
+    Binop secondBinop_;
+    AggregateFunction aggregate_{NONE};
+    // Atoms to aggregate
+    std::vector<Atom> aggAtoms_;
+    // Aggregation terms
+    terms_vector_t aggTerms_;
 
 public:
     // static functions
     static Atom createClassicalAtom(Predicate* p, terms_vector_t&& t);
     static Atom createBuiltinAtom(terms_vector_t&& t, Binop binop);
-    static std::string getBinop(Binop binop);
+    static Atom createAggregateAtom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, std::vector<Atom>&& aggAtoms );
+    static string getAggFunction(AggregateFunction agg);
+    static AggregateFunction getAggFunction(const char* agg);
 };
 
 }

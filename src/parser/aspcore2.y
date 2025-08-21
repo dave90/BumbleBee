@@ -44,7 +44,7 @@ bool queryFound=false;
 %type <integer> list_terms_term
 
 %token <string> SYMBOLIC_CONSTANT NUMBER VARIABLE STRING DIRECTIVE_NAME DIRECTIVE_VALUE
-%token <string> AGGR_COUNT AGGR_MAX AGGR_MIN AGGR_SUM
+%token <string> AGGR_COUNT AGGR_MAX AGGR_MIN AGGR_SUM AGGR_AVG
 
 %token ERROR NEWLINE
 
@@ -685,6 +685,11 @@ aggregate_function
             delete[] $1;
         }
     | AGGR_SUM
+        {
+            director.getBuilder()->onAggregateFunction($1);
+            delete[] $1;
+        }
+    | AGGR_AVG
         {
             director.getBuilder()->onAggregateFunction($1);
             delete[] $1;

@@ -17,31 +17,28 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <map>
-#include <string>
+#include <unordered_map>
 
-#include "PredicateTables.h"
+#include "Function.h"
 
 namespace bumblebee{
 
-using predicates_tables_map = std::unordered_map<PredicateMapEntry, predicate_table_ptr_t, PredicateMapEntry::PEHash>;
 
-class Schema {
-public:
-    explicit Schema(const std::string &name);
-
-    ~Schema() = default;
-
-    Schema(const Schema &other) = delete;
-    Schema & operator=(const Schema &other) = delete;
-    Predicate* createPredicate(const char* predicateName, unsigned arity);
-    predicate_table_ptr_t& getPredicateTable(Predicate*);
-    std::vector<Predicate*> getPredicates();
-
+class FunctionRegister {
 private:
-    std::string name_;
-    predicates_tables_map ptables_;
+    // Hash functor for vector<ConstantType>
 
+    using arguments_func_map = std::unordered_map<std::vector<ConstantType>, function_ptr, VectorConstHash>;
+
+public:
+    FunctionRegister() = default;
+
+    void registerFunction(function_ptr function);
+    // if the function is not present return nullptr
+    function_ptr getFunction(const string& name,const std::vector<ConstantType>& arguments);
+private:
+
+    std::unordered_map<string, arguments_func_map> funcmap_;
 };
 
 

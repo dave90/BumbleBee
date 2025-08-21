@@ -49,39 +49,40 @@
      AGGR_MAX = 265,
      AGGR_MIN = 266,
      AGGR_SUM = 267,
-     ERROR = 268,
-     NEWLINE = 269,
-     DOT = 270,
-     DDOT = 271,
-     SEMICOLON = 272,
-     COLON = 273,
-     CONS = 274,
-     QUERY_MARK = 275,
-     PLUS = 276,
-     TIMES = 277,
-     SLASH = 278,
-     BACK_SLASH = 279,
-     ANON_VAR = 280,
-     PARAM_OPEN = 281,
-     PARAM_CLOSE = 282,
-     SQUARE_OPEN = 283,
-     SQUARE_CLOSE = 284,
-     CURLY_OPEN = 285,
-     CURLY_CLOSE = 286,
-     EQUAL = 287,
-     UNEQUAL = 288,
-     LESS = 289,
-     GREATER = 290,
-     LESS_OR_EQ = 291,
-     GREATER_OR_EQ = 292,
-     DASH = 293,
-     COMMA = 294,
-     NAF = 295,
-     AT = 296,
-     WCONS = 297,
-     AMPERSAND = 298,
-     VEL = 299,
-     EXISTS = 300
+     AGGR_AVG = 268,
+     ERROR = 269,
+     NEWLINE = 270,
+     DOT = 271,
+     DDOT = 272,
+     SEMICOLON = 273,
+     COLON = 274,
+     CONS = 275,
+     QUERY_MARK = 276,
+     PLUS = 277,
+     TIMES = 278,
+     SLASH = 279,
+     BACK_SLASH = 280,
+     ANON_VAR = 281,
+     PARAM_OPEN = 282,
+     PARAM_CLOSE = 283,
+     SQUARE_OPEN = 284,
+     SQUARE_CLOSE = 285,
+     CURLY_OPEN = 286,
+     CURLY_CLOSE = 287,
+     EQUAL = 288,
+     UNEQUAL = 289,
+     LESS = 290,
+     GREATER = 291,
+     LESS_OR_EQ = 292,
+     GREATER_OR_EQ = 293,
+     DASH = 294,
+     COMMA = 295,
+     NAF = 296,
+     AT = 297,
+     WCONS = 298,
+     AMPERSAND = 299,
+     VEL = 300,
+     EXISTS = 301
    };
 #endif
 /* Tokens.  */
@@ -95,39 +96,40 @@
 #define AGGR_MAX 265
 #define AGGR_MIN 266
 #define AGGR_SUM 267
-#define ERROR 268
-#define NEWLINE 269
-#define DOT 270
-#define DDOT 271
-#define SEMICOLON 272
-#define COLON 273
-#define CONS 274
-#define QUERY_MARK 275
-#define PLUS 276
-#define TIMES 277
-#define SLASH 278
-#define BACK_SLASH 279
-#define ANON_VAR 280
-#define PARAM_OPEN 281
-#define PARAM_CLOSE 282
-#define SQUARE_OPEN 283
-#define SQUARE_CLOSE 284
-#define CURLY_OPEN 285
-#define CURLY_CLOSE 286
-#define EQUAL 287
-#define UNEQUAL 288
-#define LESS 289
-#define GREATER 290
-#define LESS_OR_EQ 291
-#define GREATER_OR_EQ 292
-#define DASH 293
-#define COMMA 294
-#define NAF 295
-#define AT 296
-#define WCONS 297
-#define AMPERSAND 298
-#define VEL 299
-#define EXISTS 300
+#define AGGR_AVG 268
+#define ERROR 269
+#define NEWLINE 270
+#define DOT 271
+#define DDOT 272
+#define SEMICOLON 273
+#define COLON 274
+#define CONS 275
+#define QUERY_MARK 276
+#define PLUS 277
+#define TIMES 278
+#define SLASH 279
+#define BACK_SLASH 280
+#define ANON_VAR 281
+#define PARAM_OPEN 282
+#define PARAM_CLOSE 283
+#define SQUARE_OPEN 284
+#define SQUARE_CLOSE 285
+#define CURLY_OPEN 286
+#define CURLY_CLOSE 287
+#define EQUAL 288
+#define UNEQUAL 289
+#define LESS 290
+#define GREATER 291
+#define LESS_OR_EQ 292
+#define GREATER_OR_EQ 293
+#define DASH 294
+#define COMMA 295
+#define NAF 296
+#define AT 297
+#define WCONS 298
+#define AMPERSAND 299
+#define VEL 300
+#define EXISTS 301
 
 
 
@@ -141,7 +143,7 @@ typedef union YYSTYPE
     int integer;
 }
 /* Line 1529 of yacc.c.  */
-#line 145 "src/parser/aspcore2_parser.h"
+#line 147 "src/parser/aspcore2_parser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

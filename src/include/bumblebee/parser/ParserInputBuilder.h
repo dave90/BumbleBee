@@ -30,14 +30,17 @@
 namespace bumblebee {
 	class Term;
 
-	class ParserInputBuilder {
+class ParserInputBuilder {
 public:
+	constexpr static string NEW_PREDICATE_AGG_PREFIX = "#AGG_";
+
 	// TODO refactor pass client context
 	ParserInputBuilder(OutputType type, bool hiddenNewPredicates);
 	virtual ~ParserInputBuilder();
 
 	virtual void onDirective( char* directiveName, char* directiveValue );
 
+	bool checkRuleSafety(Rule& currentRule);
 	bool checkRuleSafety();
 
 	virtual void onRule();
@@ -93,16 +96,23 @@ public:
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
 	rules_vector_t& getProgram();
+	Atom extractRuleFromAgg(std::vector<Term>&, std::vector<Atom>& atoms);
+	Predicate* getAuxHeadAtomAggRule(std::vector<Term>& aggTerms, std::vector<Atom>& atoms);
 
 protected:
-	OutputBuilder output_builder_{NONE};
+	OutputBuilder output_builder_{NONE_OUTPUT};
 	std::reference_wrapper<Schema> currentSchema_;
 	bool foundARangeAtomInCurrentRule_{false};
 	bool currentRuleIsUnsafe_{false};
 	bool foundASafetyError_{false};
-	Binop binop_;
+	Binop binop_{NONE_OP};
+	Binop secondBinop_{NONE_OP};
+	AggregateFunction aggregateFunction_{NONE};
 
 	std::vector<Term> terms_parsered;
+	std::vector<Term> guard_terms;
+	std::vector<Term> agg_terms_parsered;
+	std::vector<Atom> agg_atoms;
 	Atom currentAtom{};
 	Rule currentRule{};
 
@@ -112,6 +122,10 @@ protected:
 
 	std::string safetyErrorMessage;
 	rules_vector_t program_;
+
+	std::vector<idx_t> auxAggRulesCreated_;
+
+	idx_t newPredCounter_{0};
 
 };
 
