@@ -42,7 +42,7 @@ void ParserInputDirector::configureBuilder(builder_ptr_t newBuilder) {
     builder_ = newBuilder;
 }
 
-int ParserInputDirector::parse(std::vector<std::string> files) {
+int ParserInputDirector::parse(vector<std::string> files) {
     if( files.empty() )
         ErrorHandler::errorGeneric( "No input files." );
 

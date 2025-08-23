@@ -63,8 +63,8 @@ idx_t PhysicalRule::getPhysicalAtomsSize() const {
     return patoms_.size();
 }
 
-std::vector<PhysicalAtom*> PhysicalRule::getPhysicalAtoms() const {
-    std::vector<PhysicalAtom*> patoms;
+vector<PhysicalAtom*> PhysicalRule::getPhysicalAtoms() const {
+    vector<PhysicalAtom*> patoms;
     patoms.push_back(source_.get());
     for (auto& patom: patoms_) {
         patoms.push_back(patom.get());

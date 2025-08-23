@@ -23,7 +23,7 @@ namespace bumblebee{
 
 
 
-PhysicalAtom::PhysicalAtom(const std::vector<ConstantType> &types, std::vector<idx_t>& dcCols, std::vector<idx_t>& selectedCols,
+PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols,
 idx_t estimated_cardinality): types_(types),
     estimatedCardinality_(estimated_cardinality),
     dcCols_(std::move(dcCols)),
@@ -32,7 +32,7 @@ idx_t estimated_cardinality): types_(types),
     for (auto c : dcCols_) colsType_.push_back(types_[c]);
 }
 
-PhysicalAtom::PhysicalAtom(const std::vector<ConstantType> &types, idx_t estimated_cardinality): types_(types), estimatedCardinality_(estimated_cardinality){}
+PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types, idx_t estimated_cardinality): types_(types), estimatedCardinality_(estimated_cardinality){}
 
 
 AtomResultType PhysicalAtom::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
@@ -69,7 +69,7 @@ string PhysicalAtom::toString() const {
     return "";
 }
 
-const std::vector<ConstantType> & PhysicalAtom::getTypes() const {
+const vector<ConstantType> & PhysicalAtom::getTypes() const {
     return types_;
 }
 

@@ -109,9 +109,9 @@ void Graph::logStrongComponent(strong_comp_vec_t& components) {
 
 strong_comp_vec_t Graph::tarjan() {
     const idx_t n = idx_;
-    std::vector<int> index(n, -1);
-    std::vector<int> lowlink(n, -1);
-    std::vector<bool> onStack(n, false);
+    vector<int> index(n, -1);
+    vector<int> lowlink(n, -1);
+    vector<bool> onStack(n, false);
     std::stack<idx_t> stack;
     int currentIndex = 0;
     strong_comp_vec_t components;
@@ -133,7 +133,7 @@ strong_comp_vec_t Graph::tarjan() {
         }
 
         if (lowlink[v] == index[v]) {
-            std::vector<string> component;
+            vector<string> component;
             idx_t w;
             do {
                 w = stack.top();
@@ -179,7 +179,7 @@ top_sort_vec_t Graph::calculateTopologicalSort() {
     top_sort_vec_t topSort;
 
     for (auto& iv : topIndexSort) {
-        std::vector<string> components;
+        vector<string> components;
         for (auto& v : iv)
             components.push_back(getValue(v));
         topSort.push_back(std::move(components));
@@ -190,8 +190,8 @@ top_sort_vec_t Graph::calculateTopologicalSort() {
     return topSort;
 }
 
-std::vector<std::vector<idx_t>> Graph::kahn() {
-    std::vector<idx_t> in_degree(adj_lst_.size(), 0);
+vector<vector<idx_t>> Graph::kahn() {
+    vector<idx_t> in_degree(adj_lst_.size(), 0);
 
     // Compute in-degree (number of incoming edges) for each vertex
     for (const auto& neighbors : adj_lst_) {
@@ -208,10 +208,10 @@ std::vector<std::vector<idx_t>> Graph::kahn() {
         }
     }
 
-    std::vector<std::vector<idx_t>> top_order;
+    vector<vector<idx_t>> top_order;
 
     while (!zero_in_degree.empty()) {
-        std::vector<idx_t> current_zero;
+        vector<idx_t> current_zero;
         while (!zero_in_degree.empty()) {
             idx_t u = zero_in_degree.front();
             zero_in_degree.pop();

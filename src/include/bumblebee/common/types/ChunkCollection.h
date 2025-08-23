@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <vector>
 
 #include "DataChunk.h"
 #include "bumblebee/common/TypeDefs.h"
@@ -30,7 +29,7 @@ public:
 	}
 
 	// Returns a list of types of the vectors of this data chunk
-	std::vector<ConstantType> getTypes() {
+	vector<ConstantType> getTypes() {
 	    return types_;
     }
 
@@ -85,7 +84,7 @@ public:
 		return *chunks_[chunk_index];
 	}
 
-	std::vector<data_chunk_ptr_t> &chunks() {
+	vector<data_chunk_ptr_t> &chunks() {
 		return chunks_;
 	}
 
@@ -124,9 +123,9 @@ private:
 	// The total amount of elements in the collection
 	idx_t count_;
 	// The set of data chunks in the collection
-	std::vector<data_chunk_ptr_t> chunks_;
+	vector<data_chunk_ptr_t> chunks_;
 	// The types of the ChunkCollection
-	std::vector<ConstantType> types_;
+	vector<ConstantType> types_;
 };
 
 

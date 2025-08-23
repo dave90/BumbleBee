@@ -30,8 +30,8 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
     atoms_vector_t newBody;
 
     // fetch all the builtint and the vars
-    std::vector<Atom*> builtIntAtoms;
-    std::vector<set_term_variable_t> builtInVariables;
+    vector<Atom*> builtIntAtoms;
+    vector<set_term_variable_t> builtInVariables;
     for (auto& atom : body) {
         if (atom.getType() == BUILTIN) {
             set_term_variable_t vars;
@@ -126,7 +126,7 @@ bool FilterPushDownRewriter::isAssignmePossibleToEvaluate(set_term_variable_t &c
     Term::intersetVariables(currentVariables, builtinVars, intersection );
     if (intersection.size() +1 !=  builtinVars.size()  )return false;
     // only one variable is not bounded, find it
-    std::vector<string> varsNotBounded;
+    vector<string> varsNotBounded;
     for (auto& v:builtinVars)
         if (!intersection.contains(v)) {
             varsNotBounded.push_back(v);

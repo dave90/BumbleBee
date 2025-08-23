@@ -24,9 +24,9 @@ namespace bumblebee{
 
 class PhysicalExpression : public PhysicalAtom {
 public:
-    PhysicalExpression(Expression& expr, std::vector<ConstantType>& types, idx_t estimated_cardinality);
+    PhysicalExpression(Expression& expr, vector<ConstantType>& types, idx_t estimated_cardinality);
     // constant assignment of the expression (X = 100)
-    PhysicalExpression(idx_t col,Value& constantValue, std::vector<ConstantType>& types);
+    PhysicalExpression(idx_t col,Value& constantValue, vector<ConstantType>& types);
     ~PhysicalExpression() override;
 
     AtomResultType execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const override;

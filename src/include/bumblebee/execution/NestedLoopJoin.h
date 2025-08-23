@@ -25,7 +25,7 @@ namespace bumblebee{
 
 struct NestedLoopJoinInner {
     static idx_t execute(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, DataChunk &rchunk,
-                         SelectionVector &lsel, SelectionVector &rsel, const std::vector<Expression> &conditions);
+                         SelectionVector &lsel, SelectionVector &rsel, const vector<Expression> &conditions);
 };
 
 

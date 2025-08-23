@@ -22,8 +22,8 @@
 #include "bumblebee/common/vector_operations/VectorOperations.h"
 
 namespace bumblebee{
-AggregateHashTable::AggregateHashTable(const std::vector<AggregateFunction *> &aggFunctions,
-    const std::vector<ConstantType> &types, idx_t capacity,bool resizable ): functions_(aggFunctions), capacity_(capacity), entries_(0),
+AggregateHashTable::AggregateHashTable(const vector<AggregateFunction *> &aggFunctions,
+    const vector<ConstantType> &types, idx_t capacity,bool resizable ): functions_(aggFunctions), capacity_(capacity), entries_(0),
                                                              hash_(UBIGINT, true, true, capacity), ready_(false), resizable_(resizable) {
     BB_ASSERT(capacity_ != 0 && (capacity_ & (capacity_ - 1)) == 0); // capacity should be power of 2
     // mask is for masking the last bit of the hash
@@ -36,7 +36,7 @@ AggregateHashTable::AggregateHashTable(const std::vector<AggregateFunction *> &a
     chunkone_.setCardinality(capacity_);
 
     // init states
-    std::vector<ConstantType> payloadTypes;
+    vector<ConstantType> payloadTypes;
     for (auto& fun: functions_) {
         idx_t size = fun->stateSize_() * capacity_;
         states_.emplace_back(new data_t[size]);
@@ -304,8 +304,8 @@ struct PartitionInfo {
     idx_t size_;
 };
 
-void AggregateHashTable::partition(std::vector<agg_ht_ptr>& partitions, idx_t shift) {
-    std::vector<PartitionInfo> pInfo;
+void AggregateHashTable::partition(vector<agg_ht_ptr>& partitions, idx_t shift) {
+    vector<PartitionInfo> pInfo;
     pInfo.reserve(partitions.size());
     for (idx_t i = 0; i < partitions.size(); i++) pInfo.emplace_back(capacity_);
     // fill the partition informations

@@ -116,7 +116,7 @@ public:
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {
-        std::vector<ConstantType> supportedTypes = {TINYINT, SMALLINT, INTEGER, BIGINT, UTINYINT, USMALLINT, UINTEGER, UBIGINT, DOUBLE, FLOAT};
+        vector<ConstantType> supportedTypes = {TINYINT, SMALLINT, INTEGER, BIGINT, UTINYINT, USMALLINT, UINTEGER, UBIGINT, DOUBLE, FLOAT};
         for (auto& c: supportedTypes) {
             funcRegister.registerFunction(getFunction(c));
         }

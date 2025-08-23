@@ -61,7 +61,7 @@ private:
     pstate_ptr_t sourceState_;
     pstate_ptr_t sinkState_;
     // result type for each intermediate physical atom
-    std::vector<AtomResultType> atomResults_;
+    vector<AtomResultType> atomResults_;
     AtomResultType sinkResult_;
     AtomResultType sourceResult_;
 

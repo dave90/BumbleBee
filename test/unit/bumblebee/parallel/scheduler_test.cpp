@@ -32,7 +32,6 @@
 #include "bumblebee/parallel/TaskExecutor.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class SchedulerTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -43,20 +42,20 @@ class SchedulerTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> sourcePtable;
-    shared_ptr<PredicateTables> sinkPtable;
+    std::shared_ptr<PredicateTables> sourcePtable;
+    std::shared_ptr<PredicateTables> sinkPtable;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override{
-        sourcePtable = make_shared<PredicateTables>("a",3);
-        sinkPtable = make_shared<PredicateTables>("b",2);
+        sourcePtable = std::make_shared<PredicateTables>("a",3);
+        sinkPtable = std::make_shared<PredicateTables>("b",2);
     }
 
 
 
-    std::vector<ConstantType> sourceTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<idx_t> cols_to_project = {0,2};
+    vector<ConstantType> sourceTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<idx_t> cols_to_project = {0,2};
     ClientContext cc;
 
     DataChunk createChunkWithValue( idx_t count = 1, idx_t offset=0) {
@@ -91,7 +90,7 @@ TEST_F(SchedulerTest, ScheduleSingleRuleTest) {
     // populate with 100 chunks
     populatePTable(100);
     // create PRule
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols,cols, sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
     auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes,cols_to_project, 0, sinkPtable.get()));
@@ -114,7 +113,7 @@ TEST_F(SchedulerTest, ScheduleSingleRulePartialChunkTest) {
     // populate with 100 chunks
     populatePTable(1, 100);
     // create PRule
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols,cols, sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
     auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes, cols_to_project, 0, sinkPtable.get()));
@@ -138,7 +137,7 @@ TEST_F(SchedulerTest, ScheduleRuleSourceAndSinkTest) {
     // populate with 100 chunks
     populatePTable(100);
     // create PRule
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols, cols,sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
     auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes,cols_to_project, 0, sinkPtable.get()));
@@ -165,7 +164,7 @@ TEST_F(SchedulerTest, ScheduleRuleWithFilterTest) {
     // populate with 100 chunks
     populatePTable(100);
     // create PRule
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols,cols, sourcePtable->getCount(), sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
     auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes,cols_to_project, 0, sinkPtable.get()));

@@ -48,7 +48,7 @@ Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), bino
 }
 
 Atom::Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard, Term &upperGuard,
-    terms_vector_t &&aggTerms, std::vector<Atom> &&aggAtoms): aggregate_(aggFunction),
+    terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms): aggregate_(aggFunction),
     binop_(firstBinop), secondBinop_(secondBinop),aggTerms_(std::move(aggTerms)),
     aggAtoms_(std::move(aggAtoms)), predicate_(nullptr), type_(AGGREGATE){
     terms_.resize(2);
@@ -148,8 +148,8 @@ bool Atom::isConstantAssignment() {
 
 }
 
-std::vector<ConstantType> Atom::getTermsCType() {
-    std::vector<ConstantType> types;
+vector<ConstantType> Atom::getTermsCType() {
+    vector<ConstantType> types;
     types.reserve(terms_.size());
     for (auto& term : terms_) {
         if (term.getType() == TermType::NONE_TERM) continue;
@@ -277,7 +277,7 @@ Atom Atom::createBuiltinAtom(terms_vector_t &&t, Binop binop) {
 }
 
 Atom Atom::createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard,
-    Term &upperGuard, terms_vector_t &&aggTerms, std::vector<Atom> &&aggAtoms) {
+    Term &upperGuard, terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms) {
     return Atom(aggFunction, firstBinop, secondBinop, lowerGuard, upperGuard, std::move(aggTerms), std::move(aggAtoms));
 }
 

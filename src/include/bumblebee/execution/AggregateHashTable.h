@@ -31,7 +31,12 @@ public:
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.7;
 
-    AggregateHashTable(const std::vector<AggregateFunction*>& aggFunctions, const std::vector<ConstantType>& types, idx_t capacity = MORSEL_SIZE, bool resizable = false);
+    AggregateHashTable(const vector<AggregateFunction*>& aggFunctions, const vector<ConstantType>& types, idx_t capacity = MORSEL_SIZE, bool resizable = false);
+
+    AggregateHashTable(const AggregateHashTable &other) = delete;
+    AggregateHashTable(AggregateHashTable &&other) noexcept = delete;
+    AggregateHashTable & operator=(const AggregateHashTable &other) = delete;
+    AggregateHashTable & operator=(AggregateHashTable &&other) noexcept = delete;
 
     // Add a given data to HT and computing the aggregates
     void addChunk(Vector& hash, DataChunk& group, DataChunk& payload);
@@ -54,7 +59,7 @@ public:
     // Combine with other HT
     void combine(AggregateHashTable& other);
     // Partition the HT
-    void partition(std::vector<agg_ht_ptr>& partitions, idx_t shift);
+    void partition(vector<agg_ht_ptr>& partitions, idx_t shift);
 
     idx_t getSize() const;
     idx_t getCapacity()const;
@@ -72,7 +77,7 @@ private:
                      SelectionVector& notMatchSel, idx_t &need_compare_count, idx_t &no_match_count);
 
     // Aggregates functions
-    std::vector<AggregateFunction*> functions_;
+    vector<AggregateFunction*> functions_;
     // Max entries in HT
     idx_t capacity_;
     // Elements in the HT
@@ -82,7 +87,7 @@ private:
     // Aggregated data for each function
     DataChunk payload_;
     // Holds the states for each aggregation
-    std::vector<agg_states_ptr> states_;
+    vector<agg_states_ptr> states_;
     // Hash of group data, last bit store if the bucket is empty or not
     Vector hash_;
     // Mask to apply on the hash to set bucket not empty

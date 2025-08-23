@@ -358,7 +358,7 @@ JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, 
     hash_.reference(hash);
 }
 
-JoinHashTable::JoinHashTable(Predicate *predicate, const std::vector<idx_t> &keys, idx_t buckets): predicate_(predicate),
+JoinHashTable::JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, idx_t buckets): predicate_(predicate),
     keys_(keys), buckets_(nextPowerOfTwo(buckets)), stats_(nextPowerOfTwo(buckets)) {
     // check that buckets is power of 2
     BB_ASSERT(buckets_ != 0 && (buckets_ & (buckets_ - 1)) == 0);
@@ -392,7 +392,7 @@ void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
     Vector buckets = calculateBucketVector(hash, chunk.getSize());
     BB_ASSERT(buckets.getVectorType() == VectorType::FLAT_VECTOR);
     BB_ASSERT(buckets.getType() == UBIGINT);
-    std::unordered_map<idx_t, std::vector<idx_t>> bucketSelection;
+    std::unordered_map<idx_t, vector<idx_t>> bucketSelection;
 
     // collect the idx for each bucket
     auto data = FlatVector::getData<uint64_t>(buckets);
@@ -497,7 +497,7 @@ idx_t JoinHashTable::getBuckets() {
     return buckets_;
 }
 
-bool JoinHashTable::checkKeys(std::vector<idx_t> keys) {
+bool JoinHashTable::checkKeys(vector<idx_t> keys) {
     if (keys.size() != keys_.size()) return false;
     auto sortKeys = keys_;
     std::sort(sortKeys.begin(), sortKeys.end());
@@ -506,7 +506,7 @@ bool JoinHashTable::checkKeys(std::vector<idx_t> keys) {
 }
 
 idx_t JoinHashTable::probe(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, Vector &lhash, SelectionVector &lsel,
-                           SelectionVector &rsel, const std::vector<Expression> &conditions) {
+                           SelectionVector &rsel, const vector<Expression> &conditions) {
     BB_ASSERT(!conditions.empty());
     // accept only simplified conditions with 2 columns
     for (auto& condition : conditions)

@@ -50,10 +50,10 @@ public:
     // Groups rules into separate vectors based on their priority.
     // Returns a vector of vectors, where each inner vector contains rules with the same priority.
     // The outer vector is indexed by priority, i.e., index 0 holds rules with priority 0, index 1 with priority 1, etc.
-    std::vector<prule_ptr_vector_t> bucketByPriority(prule_ptr_vector_t& rules);
+    vector<prule_ptr_vector_t> bucketByPriority(prule_ptr_vector_t& rules);
 	// List of thread context of all the tasks
 	// contains the execution time of the rules
-	std::vector<thread_context_ptr_t> tcontexts_;
+	vector<thread_context_ptr_t> tcontexts_;
 
 
 };

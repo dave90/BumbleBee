@@ -40,9 +40,9 @@ public:
 
 
 
-PhysicalNestedLoop::PhysicalNestedLoop(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols,
-    std::vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt,
-    std::vector<Expression>& conditions): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt), conditions_(std::move(conditions)) {
+PhysicalNestedLoop::PhysicalNestedLoop(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt,
+    vector<Expression>& conditions): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt), conditions_(std::move(conditions)) {
 }
 
 PhysicalNestedLoop::~PhysicalNestedLoop() {}

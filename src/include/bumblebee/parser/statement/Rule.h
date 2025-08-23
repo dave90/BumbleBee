@@ -17,13 +17,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <vector>
 
 #include "Atom.h"
 
 namespace bumblebee {
 
-using atoms_vector_t = std::vector<Atom>;
+using atoms_vector_t = vector<Atom>;
 
 class Rule {
 public:
@@ -65,7 +64,7 @@ private:
     atoms_vector_t head_;
 };
 
-using rules_vector_t = std::vector<Rule>;
+using rules_vector_t = vector<Rule>;
 
 // Bucket of rules divided based on the type
 struct RulesBucket {
@@ -74,6 +73,6 @@ struct RulesBucket {
     rules_vector_t constraints_;
 };
 
-using rules_bucket_vector_t = std::vector<RulesBucket>;
+using rules_bucket_vector_t = vector<RulesBucket>;
 
 } // bumblebee

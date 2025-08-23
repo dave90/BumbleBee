@@ -29,14 +29,14 @@ class PredicateTablesTester : public PredicateTables {
 public:
     PredicateTablesTester(const char* name, unsigned arity)
         : PredicateTables(name, arity) {
-        types_ = std::vector<ConstantType>(arity, UNKNOWN);
+        types_ = vector<ConstantType>(arity, UNKNOWN);
     }
 
-    void callUpdateTypes(std::vector<ConstantType> newTypes) {
+    void callUpdateTypes(vector<ConstantType> newTypes) {
         updateTypes(newTypes);
     }
 
-    const std::vector<ConstantType>& getTypes() const {
+    const vector<ConstantType>& getTypes() const {
         return types_;
     }
 
@@ -51,7 +51,7 @@ protected:
     std::unique_ptr<PredicateTablesTester> table;
 };
 
-Atom generateRangeAtom(Predicate* p,const std::vector<IntervalTerm>& intervals) {
+Atom generateRangeAtom(Predicate* p,const vector<IntervalTerm>& intervals) {
     terms_vector_t terms;
     for (auto& i : intervals)
         if (i.from == i.to)
@@ -64,8 +64,8 @@ Atom generateRangeAtom(Predicate* p,const std::vector<IntervalTerm>& intervals) 
 }
 
 // Function to generate the full Cartesian product table
-std::vector<std::vector<int>> generateCartesianProduct(const IntervalTerm& a, const IntervalTerm& b, const IntervalTerm& c) {
-    std::vector<std::vector<int>> result;
+vector<vector<int>> generateCartesianProduct(const IntervalTerm& a, const IntervalTerm& b, const IntervalTerm& c) {
+    vector<vector<int>> result;
 
     for (int i = c.from; i <= c.to; ++i) {
         for (int j = b.from; j <= b.to; ++j) {
@@ -78,13 +78,13 @@ std::vector<std::vector<int>> generateCartesianProduct(const IntervalTerm& a, co
     return result;
 }
 TEST_F(PredicateTablesTest, NoChange) {
-    std::vector<ConstantType> newTypes = {UNKNOWN, UNKNOWN, UNKNOWN};
+    vector<ConstantType> newTypes = {UNKNOWN, UNKNOWN, UNKNOWN};
     table->callUpdateTypes(newTypes);
     EXPECT_EQ(table->getTypes(), newTypes);
 }
 
 TEST_F(PredicateTablesTest, PromoteUnknown) {
-    std::vector<ConstantType> newTypes = {TINYINT, SMALLINT, BIGINT};
+    vector<ConstantType> newTypes = {TINYINT, SMALLINT, BIGINT};
     table->callUpdateTypes(newTypes);
     EXPECT_EQ(table->getTypes(), newTypes);
 }
@@ -113,7 +113,7 @@ TEST_F(PredicateTablesTest, FloatToDoublePromotion) {
 }
 
 TEST_F(PredicateTablesTest, TypeCountMismatchTriggersAssert) {
-    std::vector<ConstantType> badSize = {INTEGER, INTEGER}; // only 2 types
+    vector<ConstantType> badSize = {INTEGER, INTEGER}; // only 2 types
     EXPECT_DEATH(table->callUpdateTypes(badSize), "Wrong number of terms for Fact");
 }
 
@@ -181,7 +181,7 @@ TEST_F(PredicateTablesTest, TestSmallSequence) {
     IntervalTerm i1 = {1,2};
     IntervalTerm i2 = {1,  3};
     IntervalTerm i3 = {0,1};
-    std::vector<IntervalTerm> intervals = {i1,i2,i3};
+    vector<IntervalTerm> intervals = {i1,i2,i3};
     auto fact = generateRangeAtom(table->predicate_.get(), intervals);
     table->addFact(fact);
 
@@ -202,7 +202,7 @@ TEST_F(PredicateTablesTest, TestSmallSequenceWithConstantAndFact) {
     IntervalTerm i1 = {1,2};
     IntervalTerm i2 = {5,  5};
     IntervalTerm i3 = {-1,1};
-    std::vector<IntervalTerm> intervals = {i1,i2,i3};
+    vector<IntervalTerm> intervals = {i1,i2,i3};
     auto fact = generateRangeAtom(table->predicate_.get(), intervals);
     table->addFact(fact);
 
@@ -236,7 +236,7 @@ TEST_F(PredicateTablesTest, TestSmallMultipleSequenceWithConstant) {
     IntervalTerm i1 = {1,2};
     IntervalTerm i2 = {5,  5};
     IntervalTerm i3 = {-1,1};
-    std::vector<IntervalTerm> intervals = {i1,i2,i3};
+    vector<IntervalTerm> intervals = {i1,i2,i3};
     auto fact1 = generateRangeAtom(table->predicate_.get(), intervals);
     table->addFact(fact1);
 
@@ -273,7 +273,7 @@ TEST_F(PredicateTablesTest, TestBigSequence) {
     IntervalTerm i1 = {-100,100};
     IntervalTerm i2 = {0,  5};
     IntervalTerm i3 = {-1,1};
-    std::vector<IntervalTerm> intervals = {i1,i2,i3};
+    vector<IntervalTerm> intervals = {i1,i2,i3};
     auto fact = generateRangeAtom(table->predicate_.get(), intervals);
     table->addFact(fact);
 
@@ -296,7 +296,7 @@ TEST_F(PredicateTablesTest, TestMultipleBigSequence) {
     IntervalTerm i1 = {-100,100};
     IntervalTerm i2 = {0,  5};
     IntervalTerm i3 = {-1,1};
-    std::vector<IntervalTerm> intervals = {i1,i2,i3};
+    vector<IntervalTerm> intervals = {i1,i2,i3};
     auto fact1 = generateRangeAtom(table->predicate_.get(), intervals);
     table->addFact(fact1);
     auto fact2 = generateRangeAtom(table->predicate_.get(), intervals);

@@ -20,8 +20,6 @@
 
 #include "ParserInputBuilder.h"
 
-#include <vector>
-#include <cassert>
 
 namespace bumblebee {
 
@@ -39,7 +37,7 @@ public:
 
     //////////////////////////////////////////////////////////////////////////////
     // Parsing functions
-    int parse( std::vector<std::string> files);
+    int parse( vector<std::string> files);
     int parse( const char* filename, FILE *file );
     int parse( );
 

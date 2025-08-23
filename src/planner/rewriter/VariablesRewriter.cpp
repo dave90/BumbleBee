@@ -27,7 +27,7 @@ void VariablesRewriter::pushAnonymous(Rule &rule) {
     set_term_variable_t usedVariables;
     rule.getVariablesInHead(usedVariables);
     // collect all the variables for each atom in the body
-    std::vector<set_term_variable_t> variablesInBody;
+    vector<set_term_variable_t> variablesInBody;
     set_term_variable_t allVariables;
     variablesInBody.resize(rule.getBody().size());
     for (idx_t i = 0; i < rule.getBody().size(); ++i) {

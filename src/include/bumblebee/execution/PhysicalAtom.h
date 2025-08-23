@@ -58,7 +58,7 @@ public:
 };
 
 using pstate_ptr_t =std::unique_ptr<PhysicalAtomState>;
-using pstate_ptr_vector_t = std::vector<pstate_ptr_t>;
+using pstate_ptr_vector_t = vector<pstate_ptr_t>;
 using gpstate_ptr_t =std::unique_ptr<GlobalPhysicalAtomState>;
 
 // PhysicalAtom (or patom) is the base class of the classical physical operators in mostly DB present in the
@@ -69,18 +69,18 @@ public:
 	// Information of the columns used by this patom. Why it is not in struct? because
 	// not all the patoms needs all these information
 	// types of all the columns of the data chunks
-	std::vector<ConstantType> types_;
+	vector<ConstantType> types_;
 	// cols selected in the predicate tables
-	std::vector<idx_t> selectCols_;
+	vector<idx_t> selectCols_;
 	// for each selected cols the cols index in the data chunk
-	std::vector<idx_t> dcCols_;
+	vector<idx_t> dcCols_;
 	// because type_ contains the type of all the columns colsType_ contains the type of the interested columns
-	std::vector<ConstantType> colsType_;
+	vector<ConstantType> colsType_;
 	// TODO populate this value
 	idx_t estimatedCardinality_;
 
-	PhysicalAtom(const std::vector<ConstantType> &types,std::vector<idx_t>& dcCols,std::vector<idx_t>& selectedCols, idx_t estimated_cardinality);
-	PhysicalAtom(const std::vector<ConstantType> &types, idx_t estimated_cardinality);
+	PhysicalAtom(const vector<ConstantType> &types,vector<idx_t>& dcCols,vector<idx_t>& selectedCols, idx_t estimated_cardinality);
+	PhysicalAtom(const vector<ConstantType> &types, idx_t estimated_cardinality);
 	virtual ~PhysicalAtom() = default;
 
 	// Execute is called during the execution and accept input chunks and produce output chunks.
@@ -105,7 +105,7 @@ public:
 	virtual string getName() const;
 	virtual string toString() const;
 	// Return a vector of the types that will be returned by this patom
-	const std::vector<ConstantType> &getTypes()const;
+	const vector<ConstantType> &getTypes()const;
 	// Return the state of patom
 	virtual pstate_ptr_t getState() const;
 	virtual gpstate_ptr_t getGlobalState() const;
@@ -115,5 +115,5 @@ public:
 };
 
 using patom_ptr_t = std::unique_ptr<PhysicalAtom>;
-using patom_ptr_vector_t = std::vector<patom_ptr_t>;
+using patom_ptr_vector_t = vector<patom_ptr_t>;
 }

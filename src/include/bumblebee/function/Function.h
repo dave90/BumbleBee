@@ -19,7 +19,6 @@
 
 #pragma once
 #include "bumblebee/common/TypeDefs.h"
-#include <vector>
 
 #include "bumblebee/common/Hash.h"
 
@@ -32,7 +31,7 @@ namespace bumblebee{
 class Function {
 
 public:
-    Function(const string &name, const std::vector<ConstantType> &arguments, ConstantType result);
+    Function(const string &name, const vector<ConstantType> &arguments, ConstantType result);
 
     Function(const Function &other);
 
@@ -47,7 +46,7 @@ public:
     friend bool operator!=(const Function &lhs, const Function &rhs);
 
     string name_;
-    std::vector<ConstantType> arguments_;
+    vector<ConstantType> arguments_;
     ConstantType result_;
 };
 

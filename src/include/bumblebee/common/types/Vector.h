@@ -277,6 +277,6 @@ struct CircularSequenceVector {
 };
 
 
-using vector_vector_t = std::vector<Vector>;
+using vector_vector_t = vector<Vector>;
 using array_vector_data_t = std::unique_ptr<VectorData[]>;
 }

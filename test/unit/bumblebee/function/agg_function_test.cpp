@@ -23,7 +23,8 @@
 #include "bumblebee/function/aggregate/Sum.h"
 #include "vector"
 
-using namespace std;
+template <class T>
+using unique_ptr = std::unique_ptr<T>;
 
 namespace bumblebee {
 
@@ -47,7 +48,7 @@ public:
 
 TEST_F(AggFuncTest, InitSumStateTest ) {
 
-    std::vector args = {SMALLINT};
+    vector args = {SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
 
     auto stateSize = aggFunction.stateSize_();
@@ -67,7 +68,7 @@ TEST_F(AggFuncTest, InitSumStateTest ) {
 
 TEST_F(AggFuncTest, UpdateSumStateTest ) {
 
-    std::vector args = {SMALLINT};
+    vector args = {SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
 
     // init the state
@@ -94,7 +95,7 @@ TEST_F(AggFuncTest, UpdateSumStateTest ) {
 
 TEST_F(AggFuncTest, FinalizeSumStateTest ) {
 
-    std::vector args = {USMALLINT};
+    vector args = {USMALLINT};
     auto result = UBIGINT;
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
 
@@ -129,7 +130,7 @@ TEST_F(AggFuncTest, FinalizeSumStateTest ) {
 
 TEST_F(AggFuncTest, FinalizeSumMultipleindexStateTest ) {
 
-    std::vector args = {USMALLINT};
+    vector args = {USMALLINT};
     auto result = UBIGINT;
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
 
@@ -150,7 +151,7 @@ TEST_F(AggFuncTest, FinalizeSumMultipleindexStateTest ) {
     Vector resultVec(result);
     AggregateFunction::finalizeState(resultVec, states.get(), sel, aggFunction, n);
 
-    cout << resultVec.toString(n) << endl;
+    std::cout << resultVec.toString(n) << std::endl;
     // check all states 0 (except first)
     for (idx_t i = 1; i < n; i++) {
         EXPECT_EQ(resultVec.getValue(i).getNumericValue<uint64_t>(), 0);

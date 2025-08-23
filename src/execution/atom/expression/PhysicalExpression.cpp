@@ -20,11 +20,11 @@
 
 namespace bumblebee{
 
-PhysicalExpression::PhysicalExpression(Expression& expr, std::vector<ConstantType>& types, idx_t estimated_cardinality) : PhysicalAtom(types, estimated_cardinality), expression_(std::move(expr)) {
+PhysicalExpression::PhysicalExpression(Expression& expr, vector<ConstantType>& types, idx_t estimated_cardinality) : PhysicalAtom(types, estimated_cardinality), expression_(std::move(expr)) {
 
 }
 
-PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue, std::vector<ConstantType>& types) : PhysicalAtom(types, 1), constantAssignment_(true), constantValue_(std::move(constantValue)) {
+PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue, vector<ConstantType>& types) : PhysicalAtom(types, 1), constantAssignment_(true), constantValue_(std::move(constantValue)) {
     // put the col in the left side of the expression
     expression_.left_.cols_.push_back(col);
 }

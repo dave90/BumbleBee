@@ -18,7 +18,6 @@
  */
 #pragma once
 #include <memory>
-#include <vector>
 
 #include "SelectionVector.h"
 #include "StringHeap.h"
@@ -39,7 +38,7 @@ enum class VectorDataMngrType : uint8_t {
 class VectorDataMngr {
 public:
     using vector_data_mngr_ptr_t = std::shared_ptr<VectorDataMngr>;
-    using vector_vdm_ptr_t = std::vector<vector_data_mngr_ptr_t>;
+    using vector_vdm_ptr_t = vector<vector_data_mngr_ptr_t>;
 
     explicit VectorDataMngr(VectorDataMngrType type): type_(type) {}
     explicit VectorDataMngr(std::unique_ptr<data_t[]> data): data_(std::move(data)), type_(VectorDataMngrType::STANDARD_DATA_MNGR) {}

@@ -24,7 +24,6 @@
 #include "bumblebee/common/vector_operations/VectorOperations.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class VectorOperationsArithTest : public ::testing::Test {
 protected:

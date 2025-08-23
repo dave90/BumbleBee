@@ -45,7 +45,7 @@ public:
 
     std::string toString()const;
     idx_t getPhysicalAtomsSize() const;
-    std::vector<PhysicalAtom*> getPhysicalAtoms() const;
+    vector<PhysicalAtom*> getPhysicalAtoms() const;
 
 private:
     // The patom that generates the chunks
@@ -69,7 +69,7 @@ private:
 };
 
 using prule_ptr_t = std::shared_ptr<PhysicalRule>;
-using prule_ptr_vector_t = std::vector<prule_ptr_t>;
+using prule_ptr_vector_t = vector<prule_ptr_t>;
 
 struct PhysicalRulesBucket {
     prule_ptr_vector_t exit_;

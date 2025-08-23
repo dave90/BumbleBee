@@ -31,7 +31,6 @@
 #include "bumblebee/parallel/ThreadContext.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class PhysicalHJTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -42,20 +41,20 @@ class PhysicalHJTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> ptableLeft;
-    shared_ptr<PredicateTables> ptableRight;
+    std::shared_ptr<PredicateTables> ptableLeft;
+    std::shared_ptr<PredicateTables> ptableRight;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override{
-        ptableLeft = make_shared<PredicateTables>("a",3);
-        ptableRight = make_shared<PredicateTables>("b",3);
+        ptableLeft = std::make_shared<PredicateTables>("a",3);
+        ptableRight = std::make_shared<PredicateTables>("b",3);
     }
 
-    std::vector<ConstantType> tLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<ConstantType> tRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<ConstantType> tLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> tRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
 
-    DataChunk createChunkWithValue( std::vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCapacity(count);
@@ -70,7 +69,7 @@ protected:
         return chunk;
     }
 
-    void populatePTable(shared_ptr<PredicateTables> ptable ,std::vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
+    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i*STANDARD_VECTOR_SIZE);
             ptable->append(chunk);
@@ -92,7 +91,7 @@ protected:
 TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
     populatePTable(ptableLeft, tLeft, 1, 10);
     populatePTable(ptableLeft, tLeft, 1, 10);
-    std::vector<idx_t> keys = {1};
+    vector<idx_t> keys = {1};
     auto buckets = 16;
     JoinHashTable ht(ptableLeft.get()->predicate_.get(), keys, buckets);
 
@@ -107,13 +106,12 @@ TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
     for (idx_t i = 0; i < buckets; ++i) {
         ht.build(i);
     }
-    cout << ht.toString() << endl;
     auto& rchunk = ht.getDataChunk();
     EXPECT_EQ(rchunk.getSize(), ptableLeft->getCount());
 
     // check all the elements in keys vector with the same values are in the same directory
     auto& directory = ht.getDirectory();
-    unordered_map<string, idx_t> valueBucket;
+    std::unordered_map<string, idx_t> valueBucket;
     for (idx_t bucket = 0; bucket < buckets; ++bucket) {
         auto offset = JoinHashTable::dirBegin(directory.get(), bucket);
         auto bucketSize = JoinHashTable::dirEnd(directory.get(), bucket) - offset;
@@ -132,7 +130,7 @@ TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
  * We do not call build() here to avoid touching uninitialized storage.
  */
 TEST_F(PhysicalHJTest, HTInitDirectoryEmptyInput) {
-    std::vector<idx_t> keys = {1}; // arbitrary; no data will be hashed
+    vector<idx_t> keys = {1}; // arbitrary; no data will be hashed
     const idx_t buckets = 8;
     JoinHashTable ht(ptableLeft.get()->predicate_.get(), keys, buckets);
 
@@ -157,13 +155,13 @@ TEST_F(PhysicalHJTest, HTBucketDistributionMatchesHashUnderConcurrency) {
     // Create several chunks on the "right" table and feed them concurrently.
     // Use a power-of-two bucket count with multiple buckets to stress distribution.
     const idx_t buckets = 16;
-    std::vector<idx_t> keys = {1}; // hash on column 1 (non-trivial values)
+    vector<idx_t> keys = {1}; // hash on column 1 (non-trivial values)
     populatePTable(ptableRight, tRight, 6, 64);
 
     JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, buckets);
 
     // Launch threads that add each chunk with its hash vector
-    std::vector<std::thread> threads;
+    vector<std::thread> threads;
     for (idx_t c = 0; c < ptableRight->chunkCount(); ++c) {
         threads.emplace_back([&, c]() {
             auto &chunk = ptableRight->getChunk(c);
@@ -178,7 +176,7 @@ TEST_F(PhysicalHJTest, HTBucketDistributionMatchesHashUnderConcurrency) {
     ht.initDirectory();
 
     // Manually recompute expected per-bucket counts (without building) and compare with directory deltas
-    std::vector<uint64_t> expected_bucket_sizes(buckets, 0);
+    vector<uint64_t> expected_bucket_sizes(buckets, 0);
     for (idx_t c = 0; c < ptableRight->chunkCount(); ++c) {
         auto &chunk = ptableRight->getChunk(c);
         Vector hash(UBIGINT);
@@ -211,7 +209,7 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
     // Prepare left side: one chunk with the same value domain on col1 (UINTEGER)
     auto lchunk = createChunkWithValue(tLeft, 20, 0);
 
-    std::vector<idx_t> keys = {1}; // join on column 1
+    vector<idx_t> keys = {1}; // join on column 1
     const idx_t buckets = 8;
 
     JoinHashTable ht(ptableRight->predicate_.get(), keys, buckets);
@@ -226,7 +224,6 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
     for (idx_t i = 0; i < buckets; ++i)
         ht.build(i);
 
-    cout << ht.toString() << endl;
 
     // Prepare probe inputs
     Vector lhash(UBIGINT);
@@ -234,7 +231,7 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
 
-    std::vector<Expression> conditions;
+    vector<Expression> conditions;
     conditions.push_back(Expression::generateExpression(EQUAL, 1, 1));
 
     idx_t lpos = 0, rpos = 0;
@@ -269,7 +266,7 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
     // Left: shifted so equality has no overlap on col1
     auto lchunk = createChunkWithValue(tLeft,  /*count=*/32, /*offset=*/1000);
 
-    std::vector<idx_t> keys = {1};
+    vector<idx_t> keys = {1};
     const idx_t buckets = 1;
 
     JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, buckets);
@@ -286,7 +283,7 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
 
-    std::vector<Expression> conditions;
+    vector<Expression> conditions;
     Expression eq;
     conditions.push_back(Expression::generateExpression(EQUAL, 1, 1));
 
@@ -301,7 +298,7 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
  * We verify the exact masking behavior for a bunch of crafted hash values.
  */
 TEST_F(PhysicalHJTest, HTBucketMaskingMatchesBitwiseAnd) {
-    std::vector<idx_t> keys = {0}; // key doesn't matter for this test
+    vector<idx_t> keys = {0}; // key doesn't matter for this test
     const idx_t buckets = 32;       // power of two
     JoinHashTable ht(ptableLeft->predicate_.get(), keys, buckets);
 
@@ -324,7 +321,7 @@ TEST_F(PhysicalHJTest, HTBucketMaskingMatchesBitwiseAnd) {
  * checkKeys(): order-insensitive match must succeed; size or element mismatch must fail.
  */
 TEST_F(PhysicalHJTest, HTCheckKeysOrderAndMismatch) {
-    std::vector<idx_t> keys_ref = {2, 0, 1};
+    vector<idx_t> keys_ref = {2, 0, 1};
     JoinHashTable ht(ptableLeft->predicate_.get(), keys_ref, 8);
 
     // Same set, different order -> true
@@ -352,7 +349,7 @@ TEST_F(PhysicalHJTest, HTProbeMultipleConditionsRefine) {
     auto lchunk = createChunkWithValue(tLeft,  50, 0);
 
     // We’ll join on left.col1 (UINTEGER) == right.col0 (UINTEGER) to keep key types identical
-    std::vector<idx_t> build_keys = {0}; // for rchunk (its col0 is UINTEGER)
+    vector<idx_t> build_keys = {0}; // for rchunk (its col0 is UINTEGER)
     const idx_t buckets = 1; // avoid hash-bucket alignment issues for this logical test
     JoinHashTable ht(ptableRight->predicate_.get(), build_keys, buckets);
 
@@ -371,10 +368,10 @@ TEST_F(PhysicalHJTest, HTProbeMultipleConditionsRefine) {
     //   - col2 = i*20 (left BIGINT), right.col2 is INTEGER in tRight -> i*20
     // So condition (2) becomes: 0 > (i*20), only true when i == 0.
     Vector lhash(UBIGINT);
-    lchunk.hash(lhash,std::vector<idx_t>{1});
+    lchunk.hash(lhash,vector<idx_t>{1});
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
-    std::vector<Expression> conditions;
+    vector<Expression> conditions;
     conditions.push_back(Expression::generateExpression(EQUAL,1, 0));
     conditions.push_back(Expression::generateExpression(GREATER,0, 2));
 
@@ -412,7 +409,7 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
     auto rchunk = createChunkWithValue(tRight, N, 0);
     auto lchunk = createChunkWithValue(tLeft,  N, 0);
 
-    std::vector<idx_t> keys = {1}; // join on the 10*i column
+    vector<idx_t> keys = {1}; // join on the 10*i column
     const idx_t buckets = 8;
     JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, buckets);
 
@@ -427,7 +424,7 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
     lchunk.hash(lhash, keys);
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
-    std::vector<Expression> conditions;
+    vector<Expression> conditions;
     conditions.push_back(Expression::generateExpression(EQUAL, 1, 1));
 
     idx_t lpos = 0, rpos = 0;
@@ -450,14 +447,14 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
  */
 TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
     // left: (FLOAT, UINTEGER)   right: (UINTEGER, INTEGER)
-    std::vector<ConstantType> leftTypes  {ConstantType::FLOAT,   ConstantType::UINTEGER};
-    std::vector<ConstantType> rightTypes {ConstantType::UINTEGER, ConstantType::INTEGER};
+    vector<ConstantType> leftTypes  {ConstantType::FLOAT,   ConstantType::UINTEGER};
+    vector<ConstantType> rightTypes {ConstantType::UINTEGER, ConstantType::INTEGER};
 
     auto lchunk = createChunkWithValue(leftTypes,  64,0);
     auto rchunk = createChunkWithValue(rightTypes, 64,0);
 
     // Build on right key = col0 (UINTEGER)
-    std::vector<idx_t> build_keys = {0};
+    vector<idx_t> build_keys = {0};
     const idx_t buckets = 1;
     JoinHashTable ht(ptableRight.get()->predicate_.get(), build_keys, buckets);
 
@@ -471,11 +468,11 @@ TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
     //  1) left.col1 (UINTEGER) == right.col0 (UINTEGER)  -> candidate set
     //  2) left.col0 (FLOAT)    <= right.col1 (INTEGER)   -> common-type cast to double
     Vector lhash(UBIGINT);
-    lchunk.hash(lhash, /*probe uses the key from #1*/ std::vector<idx_t>{1});
+    lchunk.hash(lhash, /*probe uses the key from #1*/ vector<idx_t>{1});
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
 
-    std::vector<Expression> conditions;
+    vector<Expression> conditions;
     conditions.push_back(Expression::generateExpression(EQUAL,        1, 0));
     conditions.push_back(Expression::generateExpression(LESS_OR_EQ,   0, 1));
 
@@ -518,7 +515,7 @@ TEST_F(PhysicalHJTest, HTProbeWithMultipleKeys) {
 
     // Keys: left.col0 (INTEGER) matches right.col2 (INTEGER)
     //       left.col1 (UINTEGER) matches right.col0 (UINTEGER)
-    std::vector<idx_t> build_keys = {2, 0};
+    vector<idx_t> build_keys = {2, 0};
     const idx_t buckets = 8;
 
     JoinHashTable ht(ptableRight->predicate_.get(), build_keys, buckets);
@@ -538,7 +535,7 @@ TEST_F(PhysicalHJTest, HTProbeWithMultipleKeys) {
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
 
-    std::vector<Expression> conditions;
+    vector<Expression> conditions;
     conditions.push_back(Expression::generateExpression(EQUAL, 0, 0)); // left.col0 == right.col2
     conditions.push_back(Expression::generateExpression(EQUAL, 2, 2)); // left.col1 == right.col0
 

@@ -25,8 +25,8 @@ namespace bumblebee{
 
 // Create the optimal physical operators for the execution of the Rules
 class PhysicalOptimizer {
-    using cols_vector_t = std::vector<std::vector<idx_t>> ;
-    using type_vector_t = std::vector<std::vector<ConstantType>>;
+    using cols_vector_t = vector<vector<idx_t>> ;
+    using type_vector_t = vector<vector<ConstantType>>;
 public:
     explicit PhysicalOptimizer(ClientContext &context);
 
@@ -49,11 +49,11 @@ private:
     bool canBeSkipped(Rule& rule);
 
     // generate the patoms for the builtin atoms
-    void generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms);
+    void generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<ConstantType> types,patom_ptr_vector_t& patoms);
     // generate the join patoms, vars is the variables seen so far in the rule used to calculate the join keys
     void generatePhysicalJoin(const set_term_variable_t& vars, idx_t i, Rule& rule,patom_ptr_vector_t& patoms, prule_ptr_vector_t& prules, idx_t& priority);
 
-    void generateHTBuildRules(PredicateTables* pred, std::vector<idx_t>& keys,
+    void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
         prule_ptr_vector_t& prules, idx_t& priority);
 
     // global client context
@@ -65,7 +65,7 @@ private:
     cols_vector_t selectedCols_;
     // types for all the column, are the same for all the atoms. Atoms that use a subset of columns will
     // filter using cols_ field
-    std::vector<ConstantType> types_;
+    vector<ConstantType> types_;
     // Map of variable -> index in the data chunk
     std::unordered_map<std::string, idx_t> colsMap_;
     // Map of variable -> data type

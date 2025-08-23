@@ -28,8 +28,8 @@ namespace bumblebee{
 // `operators_` specifies the binary operations to apply between consecutive columns.
 // The number of operators must be one less than the number of columns.
 struct Operands {
-    std::vector<idx_t> cols_;
-    std::vector<Operator> operators_;
+    vector<idx_t> cols_;
+    vector<Operator> operators_;
 };
 
 struct Expression {
@@ -39,7 +39,7 @@ struct Expression {
     Expression() = default;
 
     Expression(Binop op, const Operands &left, const Operands &right);
-    Expression(Binop op, std::vector<idx_t>& leftCols, std::vector<Operator>& leftOps,std::vector<idx_t> &rightCols, std::vector<Operator>& rightOps );
+    Expression(Binop op, vector<idx_t>& leftCols, vector<Operator>& leftOps,vector<idx_t> &rightCols, vector<Operator>& rightOps );
     Expression(Expression &&other) noexcept;
 
     std::string toString() const;

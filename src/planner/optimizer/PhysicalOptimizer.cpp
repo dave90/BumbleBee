@@ -55,7 +55,7 @@ bool PhysicalOptimizer::canBeSkipped(Rule &rule) {
 void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
     BB_ASSERT(atom.getType() == BUILTIN);
     BB_ASSERT(atom.getTerms().size() == 2);
-    std::vector<string> vars;
+    vector<string> vars;
 
     if (atom.isConstantAssignment()) {
         // is an ssignment with constant value
@@ -123,7 +123,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
     }
 
     // populate the cols and types
-    std::vector<idx_t> atomCols;
+    vector<idx_t> atomCols;
     for (auto& var : vars) {
         atomCols.push_back(colsMap_[var]);
     }
@@ -133,8 +133,8 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
 
 void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
     BB_ASSERT(atom.getType() == CLASSICAL);
-    std::vector<idx_t> atomCols;
-    std::vector<idx_t> prjCols;
+    vector<idx_t> atomCols;
+    vector<idx_t> prjCols;
     for (idx_t i=0;i<atom.getTerms().size();++i) {
         auto& term = atom.getTerms()[i];
         // expected variable
@@ -174,7 +174,7 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
 
     // find cols for the head
     for (auto& atom : rule.getHead()) {
-        std::vector<idx_t> atomCols;
+        vector<idx_t> atomCols;
         BB_ASSERT(atom.getType() == CLASSICAL);
         for (auto& t: atom.getTerms()) {
             BB_ASSERT(t.getType() == VARIABLE);
@@ -184,7 +184,7 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
     }
 }
 
-void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t>& cols,std::vector<ConstantType> types,patom_ptr_vector_t& patoms ) {
+void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<ConstantType> types,patom_ptr_vector_t& patoms ) {
     BB_ASSERT(atom.getType() == BUILTIN);
     if (atom.isConstantAssignment()) {
         auto patom = patom_ptr_t(new PhysicalExpression(cols[0], atom.getTerms()[1].getValue(), types));
@@ -215,9 +215,9 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, std::vector<idx_t
 }
 
 void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
-    std::vector<idx_t>& keys, prule_ptr_vector_t& prules, idx_t& priority) {
+    vector<idx_t>& keys, prule_ptr_vector_t& prules, idx_t& priority) {
 
-    std::vector<idx_t> cols;
+    vector<idx_t> cols;
     for (idx_t i = 0;i<pred->predicate_->getArity();++i)
         cols.push_back(i);
 
@@ -257,7 +257,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     // try to build a join
     // calculate the join keys and conditions
     auto& terms = atom.getTerms();
-    std::vector<Expression> joinConditions;
+    vector<Expression> joinConditions;
     std::unordered_map<string,idx_t> varMap; // for each variable the index term in the atom
 
     for (idx_t i = 0; i < terms.size(); ++i) {
@@ -315,8 +315,8 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         return;
     }
     // check if hash join is possible finding if there are common variables
-    std::vector<idx_t> keys; // keys on current predicate
-    std::vector<idx_t> dcKeys; // keys in the input data chunk of the hash patom
+    vector<idx_t> keys; // keys on current predicate
+    vector<idx_t> dcKeys; // keys in the input data chunk of the hash patom
     for (auto& condition: joinConditions)
         if (condition.op_ == EQUAL && condition.right_.cols_.size() == 1) {
             BB_ASSERT(condition.left_.cols_.size() == 1);

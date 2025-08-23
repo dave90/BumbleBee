@@ -35,27 +35,26 @@
 #include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class PhysicalHTJoinTest : public ::testing::Test {
 protected:
-    shared_ptr<PredicateTables> ptableLeft;
-    shared_ptr<PredicateTables> ptableRight;
+    std::shared_ptr<PredicateTables> ptableLeft;
+    std::shared_ptr<PredicateTables> ptableRight;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override {
-        ptableLeft = make_shared<PredicateTables>("a", 3);
-        ptableRight = make_shared<PredicateTables>("b", 3);
+        ptableLeft = std::make_shared<PredicateTables>("a", 3);
+        ptableRight = std::make_shared<PredicateTables>("b", 3);
     }
 
     // Left:  (INTEGER, UINTEGER, BIGINT)
     // Right: (UINTEGER, BIGINT,  INTEGER)
-    std::vector<ConstantType> typesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<ConstantType> typesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<ConstantType> typesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> typesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
 
     // Helper identical to the one in your NL tests (same data pattern)
-    DataChunk createChunkWithValue(std::vector<ConstantType> testTypes, idx_t count = 1, idx_t offset = 0) {
+    DataChunk createChunkWithValue(vector<ConstantType> testTypes, idx_t count = 1, idx_t offset = 0) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCardinality(count);
@@ -69,7 +68,7 @@ protected:
         return chunk;
     }
 
-    void populatePTable(shared_ptr<PredicateTables> ptable, std::vector<ConstantType> types,
+    void populatePTable(std::shared_ptr<PredicateTables> ptable, vector<ConstantType> types,
                         idx_t chunks = 10, idx_t elements = STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i * STANDARD_VECTOR_SIZE);
@@ -82,12 +81,12 @@ protected:
     // 2) STATS.finalize() to init directory
     // 3) BUILD.getData() repeatedly to build buckets
     // 4) BUILD.finalize() to set ready
-    void buildRightHashTable(const std::vector<idx_t>& rightKeyIdx, idx_t estimated_cardinality = 200) {
+    void buildRightHashTable(const vector<idx_t>& rightKeyIdx, idx_t estimated_cardinality = 200) {
         // STATS operator (sink)
         // For STATS, dcCols are the columns we project from the coming input chunk (right table).
         // Here we keep all right columns: {0,1,2}
-        std::vector<idx_t> dcColsRight{0, 1, 2};
-        std::vector<idx_t> dummySel; // not used by STATS
+        vector<idx_t> dcColsRight{0, 1, 2};
+        vector<idx_t> dummySel; // not used by STATS
         PhysicalHashJoin statsOp(typesRight, dcColsRight, dummySel,
                                  estimated_cardinality, ptableRight.get(), rightKeyIdx, PhysicalHashJoinType::STATS);
 
@@ -132,17 +131,17 @@ TEST_F(PhysicalHTJoinTest, EqualityJoin_EndToEnd) {
     populatePTable(ptableRight, typesRight, 1, 20); // 20 right rows
 
     // Build right hash table on key = right col 0
-    std::vector<idx_t> rightKeys{0};
+    vector<idx_t> rightKeys{0};
     buildRightHashTable(rightKeys, 200);
 
     // PROBE operator
-    std::vector<idx_t> dccols = {3,4,5};     // where to place right-side projected cols (same pattern as NL tests)
-    std::vector<idx_t> selcols = {0,1,2};    // select all right cols for output composition
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};     // where to place right-side projected cols (same pattern as NL tests)
+    vector<idx_t> selcols = {0,1,2};    // select all right cols for output composition
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
-    std::vector<idx_t> lkeys{1}; // left key is left col1
-    std::vector<Expression> conditions;
+    vector<idx_t> lkeys{1}; // left key is left col1
+    vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0)); // l.col1 == r.col0
 
     PhysicalHashJoin probeOp(resultType, dccols, selcols, 200, ptableRight.get(),
@@ -173,17 +172,17 @@ TEST_F(PhysicalHTJoinTest, EmptyRight_NoMatches) {
     // Right stays empty
 
     // Still run pipeline so HT is ready (on same right key layout)
-    std::vector<idx_t> rightKeys{0};
+    vector<idx_t> rightKeys{0};
     buildRightHashTable(rightKeys, /*estimated*/ 0);
 
     // PROBE: l.col1 == r.col0
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
-    std::vector<idx_t> lkeys{1};
-    std::vector<Expression> conditions;
+    vector<idx_t> lkeys{1};
+    vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0));
 
     PhysicalHashJoin probeOp(resultType, dccols, selcols, 0, ptableRight.get(),
@@ -209,16 +208,16 @@ TEST_F(PhysicalHTJoinTest, MultiChunkRight_BuildAndProbe) {
 
     const idx_t rightRowsTotal = 3 * STANDARD_VECTOR_SIZE;
 
-    std::vector<idx_t> rightKeys{0};
+    vector<idx_t> rightKeys{0};
     buildRightHashTable(rightKeys, /*estimated*/ rightRowsTotal);
 
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
-    std::vector<idx_t> lkeys{1};
-    std::vector<Expression> conditions;
+    vector<idx_t> lkeys{1};
+    vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0));
 
     PhysicalHashJoin probeOp(resultType, dccols, selcols, rightRowsTotal, ptableRight.get(),
@@ -242,17 +241,17 @@ TEST_F(PhysicalHTJoinTest, MultiChunkRight_BuildAndProbe) {
 // Probe with empty input chunk: MUST return NEED_MORE_INPUT and leave output empty
 TEST_F(PhysicalHTJoinTest, ProbeWithEmptyInput_ReturnsNeedMoreInput) {
     // Right: build empty-but-ready hash table
-    std::vector<idx_t> rightKeys{0};
+    vector<idx_t> rightKeys{0};
     buildRightHashTable(rightKeys, 0);
 
     // PROBE setup
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
-    std::vector<idx_t> lkeys{1};
-    std::vector<Expression> conditions;
+    vector<idx_t> lkeys{1};
+    vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0));
 
     PhysicalHashJoin probeOp(resultType, dccols, selcols, 0, ptableRight.get(),

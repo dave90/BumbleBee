@@ -26,7 +26,6 @@
 #include "bumblebee/output/OutputBuilder.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class PhysicalOutputTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -37,16 +36,16 @@ class PhysicalOutputTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> ptable;
+    std::shared_ptr<PredicateTables> ptable;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override{
-        ptable = make_shared<PredicateTables>("a",3);
+        ptable = std::make_shared<PredicateTables>("a",3);
     }
 
-    std::vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<ConstantType> extraTestTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::BIGINT};
+    vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> extraTestTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::BIGINT};
 
     DataChunk createChunkWithValue( idx_t count = 1, idx_t offset=0, bool extraCol = true) {
         DataChunk chunk;
@@ -69,7 +68,7 @@ protected:
 
 TEST_F(PhysicalOutputTest, PhysicalChunkOutputSingleThreadedTest) {
 
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     PhysicalChunkOutput pco(extraTestTypes,cols, 0, ptable.get());
     auto gstate = pco.getGlobalState();
     auto state = pco.getState();
@@ -89,11 +88,11 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputSingleThreadedTest) {
 TEST_F(PhysicalOutputTest, PhysicalChunkOutputMultiThreadedTest) {
     constexpr int NUM_THREADS = 2;
     constexpr int TOTAL_CHUNKS = 8;
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     PhysicalChunkOutput pco(testTypes, cols,0, ptable.get());
     auto gstate = pco.getGlobalState();
 
-    std::vector<std::thread> threads;
+    vector<std::thread> threads;
 
     for (int t = 0; t < NUM_THREADS; ++t) {
         threads.emplace_back([&pco, &gstate, this]() {
@@ -121,11 +120,11 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputMultiThreadedTest) {
 TEST_F(PhysicalOutputTest, PhysicalChunkOutputFlushPartialChunksTest) {
     constexpr int NUM_THREADS = 2;
     constexpr int ROWS_PER_THREAD = 3 * (STANDARD_VECTOR_SIZE / 2); // ensure partial flushes
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     PhysicalChunkOutput pco(testTypes, cols,0, ptable.get());
     auto gstate = pco.getGlobalState();
 
-    std::vector<std::thread> threads;
+    vector<std::thread> threads;
 
     for (int t = 0; t < NUM_THREADS; ++t) {
         threads.emplace_back([&pco, &gstate, this, t]() {

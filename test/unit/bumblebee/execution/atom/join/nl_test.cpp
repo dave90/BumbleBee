@@ -29,7 +29,6 @@
 #include "bumblebee/parallel/ThreadContext.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class PhysicalNLTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -40,20 +39,20 @@ class PhysicalNLTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> ptableLeft;
-    shared_ptr<PredicateTables> ptableRight;
+    std::shared_ptr<PredicateTables> ptableLeft;
+    std::shared_ptr<PredicateTables> ptableRight;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override{
-        ptableLeft = make_shared<PredicateTables>("a",3);
-        ptableRight = make_shared<PredicateTables>("b",3);
+        ptableLeft = std::make_shared<PredicateTables>("a",3);
+        ptableRight = std::make_shared<PredicateTables>("b",3);
     }
 
-    std::vector<ConstantType> typesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<ConstantType> typesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<ConstantType> typesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> typesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
 
-    DataChunk createChunkWithValue( std::vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCardinality(count);
@@ -67,7 +66,7 @@ protected:
         return chunk;
     }
 
-    void populatePTable(shared_ptr<PredicateTables> ptable ,std::vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
+    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i*STANDARD_VECTOR_SIZE);
             ptable->append(chunk);
@@ -80,16 +79,16 @@ protected:
 TEST_F(PhysicalNLTest, PhysicalNLSimpleTest) {
     populatePTable(ptableLeft, typesLeft, 1, 10);
     populatePTable(ptableRight, typesRight, 1, 20);
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft; // Start with vec1
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft; // Start with vec1
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(GREATER_OR_EQ, 1, 0));
 
     PhysicalNestedLoop pnl(resultType, dccols,selcols, 200, ptableRight.get(),conditions);
-    cout << pnl.toString() << endl;
+    std::cout << pnl.toString() << std::endl;
 
     auto state = pnl.getState();
 
@@ -119,9 +118,9 @@ TEST_F(PhysicalNLTest, EmptyLeftTableTest) {
     populatePTable(ptableLeft, typesLeft, 0);  // No data
     populatePTable(ptableRight, typesRight, 1, 10);
 
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions;
@@ -146,9 +145,9 @@ TEST_F(PhysicalNLTest, NoMatchingRowsTest) {
     populatePTable(ptableLeft, typesLeft, 1, 5);    // Left: values 0..4
     populatePTable(ptableRight, typesRight, 1, 5);  // Right: values 0..4
 
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions;
@@ -175,9 +174,9 @@ TEST_F(PhysicalNLTest, MultiChunkJoinTest) {
     populatePTable(ptableLeft, typesLeft, 3 );
     populatePTable(ptableRight, typesRight, 2);
 
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = typesLeft;
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions; // No predicate: Full cross product

@@ -33,8 +33,8 @@ public:
 };
 
 
-PhysicalCrossProduct::PhysicalCrossProduct(const std::vector<ConstantType> &types,
-    std::vector<idx_t>& dcCols,std::vector<idx_t>& selectedCols, idx_t estimated_cardinality,
+PhysicalCrossProduct::PhysicalCrossProduct(const vector<ConstantType> &types,
+    vector<idx_t>& dcCols,vector<idx_t>& selectedCols, idx_t estimated_cardinality,
     PredicateTables *pt): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt) {
     BB_ASSERT(dcCols_.size() == selectCols_.size());
 }

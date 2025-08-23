@@ -77,7 +77,7 @@ void Planner::executeRewriters(RulesBucket &rules) {
      */
 
     LOG_DEBUG("Rewriting rules...");
-    std::vector<rewriter_ptr_t> rewriters;
+    vector<rewriter_ptr_t> rewriters;
     rewriters.emplace_back(new VariablesRewriter());
     rewriters.emplace_back(new ArithRewriter());
     rewriters.emplace_back(new FilterPushDownRewriter());

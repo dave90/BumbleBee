@@ -16,26 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
-
-#include "bumblebee/common/Vector.h"
-#include "catalog/Schema.h"
+#include "bumblebee/execution/PartitionedAggHT.h"
+#include <bit>
 
 namespace bumblebee{
+PartitionedAggHT::PartitionedAggHT(idx_t partitions):ready_(false), partitions_(partitions) {
+    BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2
+    shift_ = (sizeof(hash_t)*8) - std::bit_width(partitions_);
+}
 
-// The ClientContext holds information relevant to the current session
-class ClientContext {
-public:
-    std::string logFilename_;
-    vector<std::string> inputFiles_;
-    bool printLog_;
-    bool singleShot_;
-    Schema& defaultSchema_;
-    idx_t threads_;
-    bool printAll_;
-    bool printProfiling_;
-    ClientContext();
-};
+void PartitionedAggHT::partitionAggregateHT(agg_ht_ptr ht) {
+}
 
+void PartitionedAggHT::finalize() {
+}
 
+vector<agg_ht_ptr> PartitionedAggHT::getPartitionedHT(idx_t) {
+}
 }

@@ -26,7 +26,6 @@
 #include "bumblebee/function/aggregate/Sum.h"
 #include "bumblebee/parallel/ThreadContext.h"
 
-using namespace std;
 using namespace bumblebee;
 
 
@@ -40,9 +39,9 @@ class AggHTTest : public ::testing::Test {
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
 
-    std::vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
 
-    DataChunk createChunkWithValue( std::vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCapacity(count);
@@ -104,7 +103,6 @@ TEST_F(AggHTTest, AggHTSimpleTest) {
     vector<idx_t> payloadIndexTypes = {0};
     DataChunk chunk = createChunkWithValue(tLeft, 10);
 
-    cout << chunk.toString() << endl;
     auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
     vector functions = {(AggregateFunction*)aggFunc.get()};
     AggregateHashTable::agg_ht_ptr ht;
@@ -112,10 +110,8 @@ TEST_F(AggHTTest, AggHTSimpleTest) {
 
     ht->finalize();
 
-    cout << ht->toString(false) << endl;
 
     DataChunk payload = probeToHT(ht, chunk, groupIndexTypes, functions);
-    cout << payload.toString() << endl;
     // check that is all 0
     for (idx_t i = 0; i < payload.getSize(); i++)
         EXPECT_EQ(payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>(), 0 );
@@ -131,8 +127,6 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectly) {
     // Build the chunk with 8 rows
     DataChunk chunk = createChunkWithValue(tLeft, 8 );
 
-    cout << chunk.toString() << endl;
-
     // Create HT and add the same chunk twice (duplicates)
     AggregateHashTable::agg_ht_ptr ht;
     addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
@@ -141,12 +135,10 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectly) {
     // Finalize to flush aggregate states into payload
     ht->finalize();
 
-    cout << ht->toString(true) << endl;
 
     // Probe with the original groups; the SUM should be doubled of payload column
     DataChunk result = probeToHT(ht, chunk, groupIndexTypes, functions);
 
-    cout << result.toString() << endl;
 
     EXPECT_EQ(result.columnCount(), 1);
     EXPECT_EQ(result.getSize(), chunk.getSize());
@@ -194,7 +186,6 @@ TEST_F(AggHTTest, FetchAggregates_UnseenAndSeeGroup) {
     addChunkToAHT(ht, base, groupIndexTypes, payloadIndexTypes, functions, /*capacity=*/32);
     ht->finalize();
 
-    cout << ht->toString(true) << endl;
 
     // Probe with unseen  and see groups (same shape)
     DataChunk unseen = createChunkWithValue(tLeft, 5, /*offset=*/100);
@@ -202,8 +193,6 @@ TEST_F(AggHTTest, FetchAggregates_UnseenAndSeeGroup) {
     seenAndUnseen.setCapacity(10);
     seenAndUnseen.resize(10);
     seenAndUnseen.append(unseen);
-
-    cout << seenAndUnseen.toString() << endl;
 
     DataChunk payload = probeToHT(ht, seenAndUnseen, groupIndexTypes, functions);
 
@@ -274,7 +263,6 @@ TEST_F(AggHTTest, IdenticalColumns_AggregatesCorrectly1) {
     }
     chunk.setCardinality(N);
 
-    cout << chunk.toString() << endl;
 
     AggregateHashTable::agg_ht_ptr ht;
     // Add the same chunk twice -> each group's sum should double

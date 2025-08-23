@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <vector>
 
 #include "Assert.h"
 #include "Value.h"
@@ -81,7 +80,7 @@ public:
 	// Set the DataChunk to reference another data chunk
 	void reference(DataChunk &chunk);
 	// Set the DataChunk to reference another data chunk only on columns defined in cols
-	void reference(DataChunk &chunk, const std::vector<idx_t>& cols);
+	void reference(DataChunk &chunk, const vector<idx_t>& cols);
 
 	// Create a new pointer data chunk that reference to this data chunk
 	std::unique_ptr<DataChunk> clone();
@@ -90,9 +89,9 @@ public:
 	// This will create one vector of the specified type for each type in the
 	// types list. The vector will be referencing vector to the data owned by
 	// the DataChunk.
-	void initialize(const std::vector<ConstantType> &types);
+	void initialize(const vector<ConstantType> &types);
 	// Initializes an empty DataChunk with the given types. The vectors will *not* have any data allocated for them.
-	void initializeEmpty(const std::vector<ConstantType> &types);
+	void initializeEmpty(const vector<ConstantType> &types);
 	// Append the other DataChunk to this one. The column count and types of
 	// the two DataChunks have to match exactly. Throws an exception if there
 	// is not enough space in the chunk and resize is not allowed.
@@ -120,7 +119,7 @@ public:
 	// slice the vectors of other using a selection and set the results in data_
 	void slice(DataChunk &other, const SelectionVector &sel, idx_t count, idx_t colOffset = 0);
 	// slice the vectors of other using a selection and set the results in data_ setting the cols based on colsMap
-	void slice(DataChunk &other, const SelectionVector &sel, idx_t count, const std::vector<idx_t>& colsMap);
+	void slice(DataChunk &other, const SelectionVector &sel, idx_t count, const vector<idx_t>& colsMap);
 
 	// Resets the DataChunk to its state right after the DataChunk::Initialize
 	// function was called. This sets the count to 0, and resets each member
@@ -130,11 +129,11 @@ public:
 
 	// Hashes the DataChunk to the target vector
 	void hash(Vector &result);
-	void hash(Vector &result, const std::vector<idx_t> &cols);
+	void hash(Vector &result, const vector<idx_t> &cols);
 
 
 	// Returns a list of types of the vectors of this data chunk
-	std::vector<ConstantType> getTypes() const;
+	vector<ConstantType> getTypes() const;
 
 	// Converts this DataChunk to a printable string representation
 	std::string toString() const;
@@ -152,6 +151,6 @@ private:
 };
 
 using data_chunk_ptr_t = std::unique_ptr<DataChunk>;
-using data_chunk_vector_t = std::vector<data_chunk_ptr_t>;
+using data_chunk_vector_t = vector<data_chunk_ptr_t>;
 
 }

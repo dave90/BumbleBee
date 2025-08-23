@@ -244,7 +244,7 @@ void StatementDependency::recursiveOrderComponentGraph() {
 
     auto& edges = compGraph_.getEdges();
     std::unordered_set<idx_t> componentVisited;
-    std::vector<std::pair<string, string>> edgesToRemove;
+    vector<std::pair<string, string>> edgesToRemove;
     for (unsigned i=0; i<edges.size(); i++) {
         for (auto [key, value]: edges[i]) {
             auto v1 = compGraph_.getValue(i);
@@ -289,7 +289,7 @@ rules_bucket_vector_t StatementDependency::orderRules() {
 
     // Create the map of predicates -> set of rules
     // Create the counter map  constriants -> num of predicates
-    std::unordered_map<Predicate*, std::vector<idx_t>> constraintsPredicateMap;
+    std::unordered_map<Predicate*, vector<idx_t>> constraintsPredicateMap;
     std::unordered_map<idx_t, int> constraintsCounter;
     for (unsigned i=0; i<program_.size(); ++i) {
         Rule& rule = program_[i];
@@ -305,7 +305,7 @@ rules_bucket_vector_t StatementDependency::orderRules() {
     }
 
     // For each component store the vector of predicates
-    std::unordered_map<idx_t, std::vector<Predicate*>> componentsPredicatesMap;
+    std::unordered_map<idx_t, vector<Predicate*>> componentsPredicatesMap;
     for (auto& [predLabel, component]:predComponentsMap_)
         componentsPredicatesMap[component].push_back(label_map_[predLabel]);
 

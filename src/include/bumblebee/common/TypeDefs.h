@@ -19,7 +19,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include <vector>
+#include "bumblebee/common/Vector.h"
 
 namespace bumblebee {
 
@@ -40,7 +40,7 @@ enum ConstantType: uint8_t  {
 };
 
 struct VectorConstHash {
-    std::size_t operator()(const std::vector<ConstantType>& vec) const {
+    std::size_t operator()(const vector<ConstantType>& vec) const {
         std::size_t seed = 0;
         for (auto v : vec) {
             // A simple hash combination: shift and xor

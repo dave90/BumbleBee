@@ -91,7 +91,7 @@ public:
     static constexpr uint64_t BLOOM_MASK64 = (~0ULL << BLOOM_SHIFT); // only high BLOOM_SIZE bits are 1
 
 public:
-    JoinHashTable(Predicate *predicate, const std::vector<idx_t> &keys, idx_t buckets);
+    JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, idx_t buckets);
 
     // add the chunk in the stats
     void addDataChunkSel(Vector& hash, DataChunk& chunk);
@@ -108,10 +108,10 @@ public:
     void setReady();
     bool isReady();
     // check if the keys are equal to the ht keys
-    bool checkKeys(std::vector<idx_t> keys);
+    bool checkKeys(vector<idx_t> keys);
     // Probe the left chunk
     idx_t probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,
-                         SelectionVector &lsel, SelectionVector &rsel, const std::vector<Expression> &conditions);
+                         SelectionVector &lsel, SelectionVector &rsel, const vector<Expression> &conditions);
 
     // Return hash table as string
     string toString();
@@ -144,18 +144,18 @@ private:
             idx_t size_;
         };
         // Number of elements for each bucket
-        std::vector<std::atomic<idx_t>> bucketSize_;
+        vector<std::atomic<idx_t>> bucketSize_;
         // Chunks with selection vector for each bucket
-        std::vector<std::vector<DataChunkSel>> bucketChunks_;
+        vector<vector<DataChunkSel>> bucketChunks_;
         // locks for each bucket
-        std::vector<std::mutex> bucketMutex_;
+        vector<std::mutex> bucketMutex_;
     };
     // Number of buckets
     idx_t buckets_;
     // predicate of ht
     Predicate* predicate_;
     // Keys of the HT
-    std::vector<idx_t> keys_;
+    vector<idx_t> keys_;
     // Store the element indices for each bucket.
     // For bucket i, the data range is [directory[i-1], directory[i])
     // (start inclusive, end exclusive).

@@ -26,15 +26,15 @@
 namespace bumblebee{
 
 using edge_weight_t = int64_t;
-using strong_comp_vec_t = std::vector<std::vector<string>>;
-using top_sort_vec_t = std::vector<std::vector<string>>;
-using index_vertex_map_t = std::vector<string>;
+using strong_comp_vec_t = vector<vector<string>>;
+using top_sort_vec_t = vector<vector<string>>;
+using index_vertex_map_t = vector<string>;
 
 class Graph {
 private:
 
     using vertex_map_t = std::unordered_map<string,idx_t, StringTHash>;
-    using adjacency_list_t = std::vector<std::unordered_map<idx_t, edge_weight_t>>;
+    using adjacency_list_t = vector<std::unordered_map<idx_t, edge_weight_t>>;
 
 public:
     Graph(bool update_policy);
@@ -52,7 +52,7 @@ public:
 
 private:
     strong_comp_vec_t tarjan();
-    std::vector<std::vector<idx_t>> kahn();
+    vector<vector<idx_t>> kahn();
     bool haveIncomingEdges(idx_t v);
 
     void logTopoSort(top_sort_vec_t& topSort);

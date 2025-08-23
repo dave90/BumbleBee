@@ -36,7 +36,7 @@ public:
     Schema & operator=(const Schema &other) = delete;
     Predicate* createPredicate(const char* predicateName, unsigned arity);
     predicate_table_ptr_t& getPredicateTable(Predicate*);
-    std::vector<Predicate*> getPredicates();
+    vector<Predicate*> getPredicates();
 
 private:
     std::string name_;

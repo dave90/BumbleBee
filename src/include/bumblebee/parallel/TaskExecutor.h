@@ -29,7 +29,7 @@ namespace bumblebee{
 class TaskExecutor {
     constexpr static int64_t WAIT_TIMEOUT_USECS = 100000; // 100ms
     using thread_ptr_t = std::unique_ptr<std::thread>;
-    using vector_thread_ptr_t = std::vector<thread_ptr_t>;
+    using vector_thread_ptr_t = vector<thread_ptr_t>;
 
 public:
 
@@ -47,7 +47,7 @@ private:
     // list of internal threads
     vector_thread_ptr_t threads_;
     // vector of markers, usefull to stop the threads
-    std::vector<std::unique_ptr<std::atomic<bool>>> markers_;
+    vector<std::unique_ptr<std::atomic<bool>>> markers_;
 };
 
 }

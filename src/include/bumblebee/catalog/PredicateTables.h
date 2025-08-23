@@ -58,7 +58,7 @@ public:
     DataChunk & getChunk(idx_t index) {
         return chunks_.getChunk(index);
     }
-    const std::vector<Atom>& getFacts() const {
+    const vector<Atom>& getFacts() const {
         return facts_;
     }
     // Get a value given a row and column index
@@ -69,11 +69,11 @@ public:
     void append(DataChunk& chunk);
 
     // Return the Constat types for each column
-    std::vector<ConstantType> getTypes();
+    vector<ConstantType> getTypes();
 
     // Return a join hash table with the same keys. If does not exist create it
-    JoinHashTable& getJoinHashTable(const std::vector<idx_t>& keys);
-    bool existJoinHashTable(const std::vector<idx_t>& keys);
+    JoinHashTable& getJoinHashTable(const vector<idx_t>& keys);
+    bool existJoinHashTable(const vector<idx_t>& keys);
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
@@ -83,29 +83,29 @@ public:
 
 protected:
     // Update current types based on new types
-    void updateTypes(std::vector<ConstantType> &newTypes);
+    void updateTypes(vector<ConstantType> &newTypes);
     void loadFacts();
     void loadRanges();
 
     // Types of the columns
-    std::vector<ConstantType> types_;
+    vector<ConstantType> types_;
 
     // Data Chunk collections of atoms (columnar version)
     ChunkCollection chunks_;
     // Fact cached during the parsing (not loaded)
     // after the initializeChunks() will be cleared
     // TODO posible optimization store in a row chunks
-    std::vector<Atom> facts_;
+    vector<Atom> facts_;
     // facts that contains ranges
     // after the initializeChunks() will be cleared
-    std::vector<Atom> ranges_;
+    vector<Atom> ranges_;
 
     // mutex for sync functions
     // TODO test with light semaphore
     mutex mutex_;
 
     // hash tables data structures
-    std::vector<JoinHashTable> jhtables_;
+    vector<JoinHashTable> jhtables_;
 
 };
 

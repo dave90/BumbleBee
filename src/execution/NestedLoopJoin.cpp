@@ -273,7 +273,7 @@ idx_t nestedLoopJoinComparisonSwitch(Vector &left, Vector &right, idx_t lsize, i
 
 
 idx_t NestedLoopJoinInner::execute(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, DataChunk &rchunk,
-    SelectionVector &lsel, SelectionVector &rsel, const std::vector<Expression> &conditions) {
+    SelectionVector &lsel, SelectionVector &rsel, const vector<Expression> &conditions) {
     BB_ASSERT(!conditions.empty());
     // accept only simplified conditions with 2 columns
     for (auto& condition : conditions)

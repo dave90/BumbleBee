@@ -32,11 +32,11 @@ enum PhysicalHashJoinType : uint8_t {
 // - executor for probe phase
 class PhysicalHashJoin : public PhysicalAtom {
 public:
-    PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t>& dcCols, std::vector<idx_t>& selectedCols,
-        idx_t estimated_cardinality, PredicateTables* pt, std::vector<idx_t> keys,
-        std::vector<idx_t> lkeys, std::vector<Expression>& conditions);
-    PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t>& dcCols, std::vector<idx_t>& selectedCols,
-        idx_t estimated_cardinality, PredicateTables* pt, std::vector<idx_t> keys, PhysicalHashJoinType type);
+    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols,
+        idx_t estimated_cardinality, PredicateTables* pt, vector<idx_t> keys,
+        vector<idx_t> lkeys, vector<Expression>& conditions);
+    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols,
+        idx_t estimated_cardinality, PredicateTables* pt, vector<idx_t> keys, PhysicalHashJoinType type);
 
     ~PhysicalHashJoin() override;
 
@@ -66,9 +66,9 @@ private:
     DataChunk projectColumns(DataChunk &input) const;
 
     PredicateTables* pt_;
-    std::vector<idx_t> keys_; // keys of the current predicate
-    std::vector<idx_t> lkeys_; // keys on the input dataset
-    std::vector<Expression> conditions_;
+    vector<idx_t> keys_; // keys of the current predicate
+    vector<idx_t> lkeys_; // keys on the input dataset
+    vector<Expression> conditions_;
     PhysicalHashJoinType type_;
 };
 

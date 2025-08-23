@@ -25,8 +25,6 @@
 #include "bumblebee/common/vector_operations/VectorOperations.h"
 #include "bumblebee/execution/atom/expression/PhysicalExpression.h"
 using namespace bumblebee;
-using namespace std;
-
 
 
 class PhysicalExpressionTest : public ::testing::Test {
@@ -38,16 +36,16 @@ class PhysicalExpressionTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> ptable;
+    std::shared_ptr<PredicateTables> ptable;
     ClientContext client_context;
     ThreadContext context{client_context};
 
 
     void SetUp() override{
-        ptable = make_shared<PredicateTables>("a",5);
+        ptable = std::make_shared<PredicateTables>("a",5);
     }
 
-    std::vector<ConstantType> testTypes{ConstantType::BIGINT, ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::USMALLINT,ConstantType::SMALLINT  };
+    vector<ConstantType> testTypes{ConstantType::BIGINT, ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::USMALLINT,ConstantType::SMALLINT  };
 
     DataChunk createChunkWithValue( idx_t count = 1, idx_t offset=0) {
         DataChunk chunk;
@@ -83,7 +81,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionEQTest) {
     output.initializeEmpty(testTypes);
 
     pe.execute(context, input, output, *state);
-    cout << output.toString() <<endl;
+    std::cout << output.toString() <<std::endl;
     EXPECT_NE(output.getSize(), input.getSize());
     EXPECT_EQ(output.getSize(), 1); // only first row all 0 is equal
 }
@@ -103,7 +101,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentTest) {
     output.initializeEmpty(testTypes);
 
     pe.execute(context, input, output, *state);
-    cout << output.toString() <<endl;
+    std::cout << output.toString() <<std::endl;
     EXPECT_EQ(output.getSize(), input.getSize());
     auto result = VectorOperations::equals(output.data_[0],output.data_[2], nullptr, count, nullptr );
     EXPECT_EQ(result, count);
@@ -127,7 +125,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
     output.initializeEmpty(testTypes);
 
     pe.execute(context, input, output, *state);
-    cout << output.toString() <<endl;
+    std::cout << output.toString() <<std::endl;
     EXPECT_EQ(output.getSize(), input.getSize());
     for (idx_t i = 0; i < count; ++i) {
         auto v1 = input.getValue(1, i).getNumericValue<uint32_t>();

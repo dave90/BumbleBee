@@ -29,8 +29,8 @@ public:
     // - only 2 columns (one for left and one for right)
     // - left col ref to a col in input data chunk
     // - right col ref to a col in predicate table
-    PhysicalNestedLoop(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols,
-        std::vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables* pt, std::vector<Expression> &conditions);
+    PhysicalNestedLoop(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+        vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables* pt, vector<Expression> &conditions);
 
     ~PhysicalNestedLoop() override;
     string getName() const override;
@@ -43,7 +43,7 @@ private:
     DataChunk selectColumns(DataChunk &chunk) const;
 
     PredicateTables* pt_;
-    std::vector<Expression> conditions_;
+    vector<Expression> conditions_;
 };
 
 

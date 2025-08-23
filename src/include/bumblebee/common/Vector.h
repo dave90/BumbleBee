@@ -17,25 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <vector>
 
-#include "bumblebee/common/Vector.h"
-#include "catalog/Schema.h"
+namespace bumblebee {
 
-namespace bumblebee{
-
-// The ClientContext holds information relevant to the current session
-class ClientContext {
-public:
-    std::string logFilename_;
-    vector<std::string> inputFiles_;
-    bool printLog_;
-    bool singleShot_;
-    Schema& defaultSchema_;
-    idx_t threads_;
-    bool printAll_;
-    bool printProfiling_;
-    ClientContext();
-};
-
+template <class T>
+using vector = std::vector<T>;
 
 }

@@ -67,7 +67,7 @@ private:
     // number of chunks read
     idx_t chunksRead_{0};
     // size of rows for each chunk
-    std::vector<idx_t> chunksSize_;
+    vector<idx_t> chunksSize_;
     // true if init function was called in pt
     bool isPtInitialized_{false};
 
@@ -85,7 +85,7 @@ public:
     bool isInitialized_{false};
 };
 
-PhysicalChunkScan::PhysicalChunkScan(const std::vector<ConstantType> &types, std::vector<idx_t>& dcCols,std::vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt) :
+PhysicalChunkScan::PhysicalChunkScan(const vector<ConstantType> &types, vector<idx_t>& dcCols,vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt) :
     PhysicalAtom(types,dcCols, selectedCols, estimated_cardinality) {
     pt_ = pt;
     // expected dcCols increment array

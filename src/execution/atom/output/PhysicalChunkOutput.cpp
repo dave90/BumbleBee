@@ -70,7 +70,7 @@ public:
 };
 
 
-PhysicalChunkOutput::PhysicalChunkOutput(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols, idx_t estimated_cardinality,
+PhysicalChunkOutput::PhysicalChunkOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols, idx_t estimated_cardinality,
 PredicateTables *pt): PhysicalAtom(types,  estimated_cardinality), pt_(pt){
     dcCols_ = std::move(dcCols);
     for (auto c : dcCols_)colsType_.push_back(types_[c]);

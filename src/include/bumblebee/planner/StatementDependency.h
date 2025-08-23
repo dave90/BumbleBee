@@ -25,11 +25,11 @@ namespace bumblebee{
 
 // This class is responsible to find the correct order of the rules
 class StatementDependency {
-    using predicate_rule_map_t = std::unordered_map<std::string, std::vector<idx_t>>;
+    using predicate_rule_map_t = std::unordered_map<std::string, vector<idx_t>>;
     using predicate_component_map_t = std::unordered_map<std::string, idx_t> ;
     using unstrat_predicates_t = std::unordered_set<std::string> ;
     using label_predicate_map_t = std::unordered_map<std::string,Predicate*>;
-    using comp_graph_orders_t = std::vector<std::vector<idx_t>>;
+    using comp_graph_orders_t = vector<vector<idx_t>>;
 public:
     StatementDependency(rules_vector_t &&program);
 

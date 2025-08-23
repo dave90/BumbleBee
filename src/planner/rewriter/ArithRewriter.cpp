@@ -22,7 +22,7 @@
 
 namespace bumblebee{
 
-bool isConstantAssignment(Atom& builtin, std::vector<Atom>& body) {
+bool isConstantAssignment(Atom& builtin, vector<Atom>& body) {
     if (!builtin.isConstantAssignment()) return false;
     // now check if the variable is shared in the classical atoms in the body
     // if is shared we need to decouple
@@ -44,7 +44,7 @@ bool isConstantAssignment(Atom& builtin, std::vector<Atom>& body) {
 }
 
 void ArithRewriter::rewrite(Rule &rule) {
-    std::vector<Atom> builtins ;
+    vector<Atom> builtins ;
     // extract arith term or constant
     for (auto& atom: rule.getHead()) {
         while (atom.containsArith() || atom.containsConstant()) {
@@ -64,7 +64,7 @@ void ArithRewriter::rewrite(Rule &rule) {
 
     // separate the builtin with the classical atoms
     // and put the arith in the builtins vector
-    std::vector<Atom> newBody;
+    vector<Atom> newBody;
     for (auto& atom: rule.getBody()) {
         if (atom.getType() == CLASSICAL)
             newBody.push_back(std::move(atom));

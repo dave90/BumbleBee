@@ -20,7 +20,7 @@
 #include "bumblebee/function/Function.h"
 
 namespace bumblebee {
-Function::Function(const string &name, const std::vector<ConstantType> &arguments, ConstantType result): name_(name),
+Function::Function(const string &name, const vector<ConstantType> &arguments, ConstantType result): name_(name),
     arguments_(arguments),
     result_(result) {
 }

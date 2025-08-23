@@ -76,14 +76,14 @@ private:
     std::mutex mutex_;
     bool isPtInitialized_{false};
     idx_t bucketsProcessed_{0};
-    std::vector<idx_t> bucketsSize_;
+    vector<idx_t> bucketsSize_;
 };
 
 
-PhysicalHashJoin::PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols,
-    std::vector<idx_t> &selectedCols, idx_t estimated_cardinality,
-    PredicateTables *pt, std::vector<idx_t> keys, std::vector<idx_t> lkeys,
-    std::vector<Expression>& conditions)
+PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    vector<idx_t> &selectedCols, idx_t estimated_cardinality,
+    PredicateTables *pt, vector<idx_t> keys, vector<idx_t> lkeys,
+    vector<Expression>& conditions)
         :PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality),
         pt_(pt),
         conditions_(std::move(conditions)),
@@ -92,8 +92,8 @@ PhysicalHashJoin::PhysicalHashJoin(const std::vector<ConstantType> &types, std::
         lkeys_(std::move(lkeys)){
 }
 
-PhysicalHashJoin::PhysicalHashJoin(const std::vector<ConstantType> &types, std::vector<idx_t> &dcCols,
-    std::vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt, std::vector<idx_t> keys,
+PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt, vector<idx_t> keys,
     PhysicalHashJoinType type):PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality),
     pt_(pt),
     keys_(std::move(keys)),

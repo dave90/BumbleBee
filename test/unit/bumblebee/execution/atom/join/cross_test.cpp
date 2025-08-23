@@ -28,7 +28,6 @@
 #include "bumblebee/parallel/ThreadContext.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class PhysicalCrossJoinTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -39,20 +38,20 @@ class PhysicalCrossJoinTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> ptableLeft;
-    shared_ptr<PredicateTables> ptableRight;
+    std::shared_ptr<PredicateTables> ptableLeft;
+    std::shared_ptr<PredicateTables> ptableRight;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override{
-        ptableLeft = make_shared<PredicateTables>("a",3);
-        ptableRight = make_shared<PredicateTables>("b",3);
+        ptableLeft = std::make_shared<PredicateTables>("a",3);
+        ptableRight = std::make_shared<PredicateTables>("b",3);
     }
 
-    std::vector<ConstantType> testTypesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    std::vector<ConstantType> testTypesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<ConstantType> testTypesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> testTypesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
 
-    DataChunk createChunkWithValue( std::vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCardinality(count);
@@ -66,7 +65,7 @@ protected:
         return chunk;
     }
 
-    void populatePTable(shared_ptr<PredicateTables> ptable ,std::vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
+    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i*STANDARD_VECTOR_SIZE);
             ptable->append(chunk);
@@ -79,9 +78,9 @@ protected:
 TEST_F(PhysicalCrossJoinTest, PhysicalCrossSimpleTest) {
     populatePTable(ptableLeft, testTypesLeft, 1, 10);
     populatePTable(ptableRight, testTypesRight, 1, 20);
-    std::vector<idx_t> dccols = {3,4,5};
-    std::vector<idx_t> selcols = {0,1,2};
-    std::vector<ConstantType> resultType = testTypesLeft; // Start with vec1
+    vector<idx_t> dccols = {3,4,5};
+    vector<idx_t> selcols = {0,1,2};
+    vector<ConstantType> resultType = testTypesLeft; // Start with vec1
     resultType.insert(resultType.end(), testTypesRight.begin(), testTypesRight.end());
 
     PhysicalCrossProduct pcj(resultType, dccols,selcols, 200, ptableRight.get());
@@ -111,9 +110,9 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
     populatePTable(ptableLeft, testTypesLeft, 1, 10);
     populatePTable(ptableRight, testTypesRight, 1, 20);
     // select only column 0 and 2
-    std::vector<idx_t> dccols = {3,4};
-    std::vector<idx_t> selcols = {0,2};
-    std::vector<ConstantType> resultType = testTypesLeft;
+    vector<idx_t> dccols = {3,4};
+    vector<idx_t> selcols = {0,2};
+    vector<ConstantType> resultType = testTypesLeft;
     for (auto c : selcols)
         resultType.push_back(testTypesRight[c]);
 
@@ -142,14 +141,14 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
 
 
 TEST_F(PhysicalCrossJoinTest, PhysicalCrossNoInputTest) {
-    std::vector<idx_t> cols = {0,1};
+    vector<idx_t> cols = {0,1};
     auto dcCols = cols;
     PhysicalCrossProduct pcj(testTypesRight, dcCols,cols, 10, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk input;
     input.initializeEmpty(testTypesLeft);
-    std::vector<ConstantType> resultType = testTypesLeft; // Start with vec1
+    vector<ConstantType> resultType = testTypesLeft; // Start with vec1
     resultType.insert(resultType.end(), testTypesRight.begin(), testTypesRight.end());
     DataChunk output;
     output.initializeEmpty(resultType);

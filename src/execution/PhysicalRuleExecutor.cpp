@@ -93,7 +93,7 @@ void PhysicalRuleExecutor::executePush() {
     // current index of the patom to exeecute
     idx_t idx = 0;
     // queue of index of patom that have more output, to execute again with same input
-    std::vector<idx_t> idxMoreOutput;
+    vector<idx_t> idxMoreOutput;
     while (true) {
 
         auto result = prule_->patoms_[idx]->execute(*tcontext_, *chunks_[idx], *chunks_[idx + 1], *states_[idx]);

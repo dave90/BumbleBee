@@ -61,7 +61,7 @@ string PhysicalAtomProfiler::toString() const {
     return result;
 }
 
-string PhysicalAtomProfiler::toString(std::vector<PhysicalAtom*>& patoms) const {
+string PhysicalAtomProfiler::toString(vector<PhysicalAtom*>& patoms) const {
     string result;
 
     for (auto& patom: patoms) {

@@ -49,7 +49,7 @@ void DataChunk::reference(DataChunk &chunk) {
     }
 }
 
-void DataChunk::reference(DataChunk &chunk, const std::vector<idx_t>& cols) {
+void DataChunk::reference(DataChunk &chunk, const vector<idx_t>& cols) {
     BB_ASSERT(columnCount() >= cols.size());
     setCapacity(chunk);
     setCardinality(chunk);
@@ -67,7 +67,7 @@ std::unique_ptr<DataChunk> DataChunk::clone() {
     return chunk;
 }
 
-void DataChunk::initialize(const std::vector<ConstantType> &types) {
+void DataChunk::initialize(const vector<ConstantType> &types) {
     BB_ASSERT(data_.empty());
     capacity_ = STANDARD_VECTOR_SIZE;
     for (idx_t i = 0; i < types.size(); ++i) {
@@ -75,7 +75,7 @@ void DataChunk::initialize(const std::vector<ConstantType> &types) {
     }
 }
 
-void DataChunk::initializeEmpty(const std::vector<ConstantType> &types) {
+void DataChunk::initializeEmpty(const vector<ConstantType> &types) {
     BB_ASSERT(data_.empty());
     capacity_ = STANDARD_VECTOR_SIZE;
     for (idx_t i = 0; i < types.size(); ++i) {
@@ -195,7 +195,7 @@ void DataChunk::slice(DataChunk &other, const SelectionVector &sel, idx_t count,
     }
 }
 
-void DataChunk::slice(DataChunk &other, const SelectionVector &sel, idx_t count, const std::vector<idx_t>& colsMap) {
+void DataChunk::slice(DataChunk &other, const SelectionVector &sel, idx_t count, const vector<idx_t>& colsMap) {
     BB_ASSERT(colsMap.size() == other.columnCount());
     count_ = count;
     SelCache merge_cache;
@@ -230,7 +230,7 @@ void DataChunk::hash(Vector &result) {
     }
 }
 
-void DataChunk::hash(Vector &result, const std::vector<idx_t> &cols) {
+void DataChunk::hash(Vector &result, const vector<idx_t> &cols) {
     BB_ASSERT(result.getType() == ConstantType::UBIGINT);
     BB_ASSERT(cols.size() > 0);
     BB_ASSERT(cols[0] < columnCount());
@@ -241,8 +241,8 @@ void DataChunk::hash(Vector &result, const std::vector<idx_t> &cols) {
     }
 }
 
-std::vector<ConstantType> DataChunk::getTypes() const{
-    std::vector<ConstantType> types;
+vector<ConstantType> DataChunk::getTypes() const{
+    vector<ConstantType> types;
     types.reserve(data_.size());
     for (auto&v : data_) {
         types.push_back(v.getType());

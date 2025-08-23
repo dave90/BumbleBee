@@ -96,8 +96,8 @@ public:
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
 	rules_vector_t& getProgram();
-	Atom extractRuleFromAgg(std::vector<Term>&, std::vector<Atom>& atoms);
-	Predicate* getAuxHeadAtomAggRule(std::vector<Term>& aggTerms, std::vector<Atom>& atoms);
+	Atom extractRuleFromAgg(vector<Term>&, vector<Atom>& atoms);
+	Predicate* getAuxHeadAtomAggRule(vector<Term>& aggTerms, vector<Atom>& atoms);
 
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};
@@ -109,10 +109,10 @@ protected:
 	Binop secondBinop_{NONE_OP};
 	AggregateFunctionType aggregateFunction_{NONE};
 
-	std::vector<Term> terms_parsered;
-	std::vector<Term> guard_terms;
-	std::vector<Term> agg_terms_parsered;
-	std::vector<Atom> agg_atoms;
+	vector<Term> terms_parsered;
+	vector<Term> guard_terms;
+	vector<Term> agg_terms_parsered;
+	vector<Atom> agg_atoms;
 	Atom currentAtom{};
 	Rule currentRule{};
 
@@ -123,7 +123,7 @@ protected:
 	std::string safetyErrorMessage;
 	rules_vector_t program_;
 
-	std::vector<idx_t> auxAggRulesCreated_;
+	vector<idx_t> auxAggRulesCreated_;
 
 	idx_t newPredCounter_{0};
 

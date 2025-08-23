@@ -31,8 +31,8 @@ Scheduler::Scheduler(ClientContext &context):context_(context) {
 }
 
 
-std::vector<prule_ptr_vector_t> Scheduler::bucketByPriority(prule_ptr_vector_t &rules) {
-    std::vector<idx_t> priorities;
+vector<prule_ptr_vector_t> Scheduler::bucketByPriority(prule_ptr_vector_t &rules) {
+    vector<idx_t> priorities;
     std::unordered_map<idx_t, prule_ptr_vector_t> priorityMap;
 
     for (auto& rule : rules) {
@@ -44,7 +44,7 @@ std::vector<prule_ptr_vector_t> Scheduler::bucketByPriority(prule_ptr_vector_t &
         priorityMap[priority].push_back(rule);
     }
     std::sort(priorities.begin(), priorities.end());
-    std::vector<prule_ptr_vector_t> result;
+    vector<prule_ptr_vector_t> result;
     result.reserve(priorities.size());
     for (auto p: priorities) {
         result.push_back(std::move(priorityMap[p]));
@@ -60,7 +60,7 @@ void Scheduler::schedulePriorityRules(prule_ptr_vector_t &bucket) {
     LOG_DEBUG("Process rules for priority %d.", bucket[0]->getPriority());
 
     // store for each rules the expected number of completed tasks
-    std::vector<idx_t> rulesTaskExpected;
+    vector<idx_t> rulesTaskExpected;
     rulesTaskExpected.reserve(bucket.size());
     for (auto& rule: bucket) {
         auto taskExpected = scheduleRule(rule);
@@ -68,7 +68,7 @@ void Scheduler::schedulePriorityRules(prule_ptr_vector_t &bucket) {
         LOG_DEBUG("Generate %d tasks for rule: %s.", taskExpected, rule->toString().c_str());
     }
 
-    std::vector<TaskStatus> taskStatus;
+    vector<TaskStatus> taskStatus;
     taskStatus.resize(bucket.size(), RUNNING);
     bool allCompleted = false;
     while (!allCompleted) {

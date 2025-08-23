@@ -42,8 +42,8 @@ predicate_table_ptr_t & Schema::getPredicateTable(Predicate* p){
     return it->second;
 }
 
-std::vector<Predicate*> Schema::getPredicates() {
-    std::vector<Predicate*> predicates;
+vector<Predicate*> Schema::getPredicates() {
+    vector<Predicate*> predicates;
     for (auto& [key, value] : ptables_) {
         predicates.push_back(value->predicate_.get());
     }

@@ -361,7 +361,7 @@ void ParserInputBuilder::onAggregate(bool naf) {
     agg_terms_parsered.clear();
 }
 
-Predicate* ParserInputBuilder::getAuxHeadAtomAggRule(std::vector<Term>& aggTerms, std::vector<Atom>& atoms) {
+Predicate* ParserInputBuilder::getAuxHeadAtomAggRule(vector<Term>& aggTerms, vector<Atom>& atoms) {
     for (idx_t i = 0; i <auxAggRulesCreated_.size(); i++) {
         auto& rule = program_[ auxAggRulesCreated_[i]];
         // compare terms in head
@@ -371,7 +371,7 @@ Predicate* ParserInputBuilder::getAuxHeadAtomAggRule(std::vector<Term>& aggTerms
         // compare the body
         auto& bodyAtoms = rule.getBody();
         if (bodyAtoms.size() != atoms.size())continue;
-        std::vector<bool> used(atoms.size(), false);
+        vector<bool> used(atoms.size(), false);
         bool matched = false;
         for (const auto& x : bodyAtoms) {
             matched = false;
@@ -391,12 +391,12 @@ Predicate* ParserInputBuilder::getAuxHeadAtomAggRule(std::vector<Term>& aggTerms
     return nullptr;
 }
 
-Atom ParserInputBuilder::extractRuleFromAgg(std::vector<Term>& aggTerms, std::vector<Atom>& atoms) {
+Atom ParserInputBuilder::extractRuleFromAgg(vector<Term>& aggTerms, vector<Atom>& atoms) {
     // check if the aux rule with similar body and terms was alredy created
     Predicate* auxPredAtom = getAuxHeadAtomAggRule(aggTerms, atoms);
     if (auxPredAtom) {
         // aux rule alredy create, return the atom
-        return Atom::createClassicalAtom(auxPredAtom, std::move(std::vector(aggTerms)));
+        return Atom::createClassicalAtom(auxPredAtom, std::move(vector(aggTerms)));
     }
 
     // extract a new rule from the aggregate atoms
@@ -406,14 +406,14 @@ Atom ParserInputBuilder::extractRuleFromAgg(std::vector<Term>& aggTerms, std::ve
     if (!hiddenNewPredicate) {
         predicate->setInternal(false);
     }
-    Atom head = Atom::createClassicalAtom(predicate, std::move(std::vector(aggTerms)));
+    Atom head = Atom::createClassicalAtom(predicate, std::move(vector(aggTerms)));
     Rule newRule;
     newRule.addAtomInHead(std::move(head));
     newRule.setBody(atoms);
     checkRuleSafety(newRule);
     auxAggRulesCreated_.push_back(program_.size());
     program_.push_back(std::move(newRule));
-    return Atom::createClassicalAtom(predicate, std::move(std::vector(aggTerms)));
+    return Atom::createClassicalAtom(predicate, std::move(vector(aggTerms)));
 }
 
 void ParserInputBuilder::onEnd() {

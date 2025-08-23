@@ -44,7 +44,7 @@ public:
         return profilingInfo_;
     }
     string toString()const;
-    string toString(std::vector<PhysicalAtom*>& patoms)const;
+    string toString(vector<PhysicalAtom*>& patoms)const;
     // append the profilation of other in this profiler
     void append(const PhysicalAtomProfiler& other);
 

@@ -34,7 +34,7 @@ class ChunkCollectionTest : public ::testing::Test {
 protected:
     ChunkCollection collection;
 
-    std::vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
 
     DataChunk createChunkWithValue( idx_t count = 1) {
         DataChunk chunk;

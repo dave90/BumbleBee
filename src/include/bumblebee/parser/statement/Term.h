@@ -50,8 +50,8 @@ using set_term_variable_t = std::unordered_set<string>;
  *
  **/
 class Term {
-	using term_vector_t = std::vector<Term>;
-	using op_vector_t = std::vector<Operator>;
+	using term_vector_t = vector<Term>;
+	using op_vector_t = vector<Operator>;
 
 public:
 	Term();

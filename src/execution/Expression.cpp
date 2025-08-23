@@ -27,7 +27,7 @@ Expression::Expression(Binop op, const Operands &left, const Operands &right): o
     BB_ASSERT(verify() && "Expression verification failed");
 }
 
-Expression::Expression(Binop op, std::vector<idx_t>& leftCols, std::vector<Operator>& leftOps, std::vector<idx_t> &rightCols, std::vector<Operator> &rightOps) : op_(op) {
+Expression::Expression(Binop op, vector<idx_t>& leftCols, vector<Operator>& leftOps, vector<idx_t> &rightCols, vector<Operator> &rightOps) : op_(op) {
     left_.cols_ = std::move(leftCols);
     left_.operators_ = std::move(leftOps);
     right_.cols_ = std::move(rightCols);

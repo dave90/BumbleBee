@@ -35,7 +35,7 @@ bool operator!=(const PredicateTables &lhs, const PredicateTables &rhs) {
     return !(lhs == rhs);
 }
 
-void PredicateTables::updateTypes(std::vector<ConstantType>& newTypes) {
+void PredicateTables::updateTypes(vector<ConstantType>& newTypes) {
     BB_ASSERT(newTypes.size() == types_.size() && "Wrong number of terms for Fact");
     for (idx_t i = 0; i < newTypes.size(); i++) {
         if (newTypes[i] == types_[i]) continue;
@@ -57,11 +57,11 @@ void PredicateTables::addFact(Atom &atom) {
     }
 }
 
-std::vector<ConstantType> PredicateTables::getTypes() {
+vector<ConstantType> PredicateTables::getTypes() {
     return types_;
 }
 
-JoinHashTable & PredicateTables::getJoinHashTable(const std::vector<idx_t>& keys) {
+JoinHashTable & PredicateTables::getJoinHashTable(const vector<idx_t>& keys) {
     for (auto&ht: jhtables_)
         if (ht.checkKeys(keys))
             return ht;
@@ -70,7 +70,7 @@ JoinHashTable & PredicateTables::getJoinHashTable(const std::vector<idx_t>& keys
     return jhtables_.back();
 }
 
-bool PredicateTables::existJoinHashTable(const std::vector<idx_t>& keys) {
+bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
     for (auto&ht: jhtables_)
         if (ht.checkKeys(keys))
             return true;
@@ -144,8 +144,8 @@ void PredicateTables::loadFacts() {
 }
 
 
-std::vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const std::vector<ConstantType> &types) {
-    std::vector<data_chunk_ptr_t>  chunks;
+vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const vector<ConstantType> &types) {
+    vector<data_chunk_ptr_t>  chunks;
     data_chunk_ptr_t chunk = data_chunk_ptr_t(new DataChunk());
     // we will set by us the vector data ;)
     chunk->initializeEmpty(types);

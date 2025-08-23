@@ -26,7 +26,6 @@
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
 
 using namespace bumblebee;
-using namespace std;
 
 class PhysicalScanTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -37,15 +36,15 @@ class PhysicalScanTest : public ::testing::Test {
     // The function sets the cardinality of the chunk to count and returns it.
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
-    shared_ptr<PredicateTables> ptable;
+    std::shared_ptr<PredicateTables> ptable;
     ClientContext client_context;
     ThreadContext context{client_context};
 
     void SetUp() override{
-        ptable = make_shared<PredicateTables>("a",3);
+        ptable = std::make_shared<PredicateTables>("a",3);
     }
 
-    std::vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
 
     DataChunk createChunkWithValue( idx_t count = 1, idx_t offset=0) {
         DataChunk chunk;
@@ -72,7 +71,7 @@ protected:
 
 TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
     populatePTable(10, STANDARD_VECTOR_SIZE);
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     PhysicalChunkScan pcs(testTypes, cols,cols, 0, ptable.get());
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
@@ -94,12 +93,12 @@ TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
 
 TEST_F(PhysicalScanTest, PhysicalScanProjSimpleTest) {
     populatePTable(10, STANDARD_VECTOR_SIZE);
-    std::vector<idx_t> cols = {0,1};
+    vector<idx_t> cols = {0,1};
     PhysicalChunkScan pcs(testTypes, cols,cols, 0, ptable.get());
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
 
-    std::vector<ConstantType> sourceTypes;
+    vector<ConstantType> sourceTypes;
     for (auto c : {0,1}) sourceTypes.push_back(testTypes[c]);
     DataChunk input;
     input.initializeEmpty(sourceTypes);
@@ -125,15 +124,15 @@ TEST_F(PhysicalScanTest, PhysicalScanMultiThreadTest) {
     populatePTable(CHUNK_COUNT, ELEMENTS_PER_CHUNK);
 
     // Create the scan operator and shared global state
-    std::vector<idx_t> cols = {0,1,2};
+    vector<idx_t> cols = {0,1,2};
     PhysicalChunkScan pcs(testTypes,cols, cols, 0, ptable.get());
     auto gstate = pcs.getGlobalState();
 
     // Use a vector to collect total rows processed by each thread
-    std::vector<idx_t> threadRowCounts(NUM_THREADS, 0);
+    vector<idx_t> threadRowCounts(NUM_THREADS, 0);
 
     // Create and launch threads
-    std::vector<std::thread> threads;
+    vector<std::thread> threads;
     for (int t = 0; t < NUM_THREADS; ++t) {
         threads.emplace_back([t, &pcs, &gstate, &threadRowCounts, this]() {
             auto state = pcs.getState(); // Local state for each thread
