@@ -34,7 +34,7 @@ typedef void (*aggregate_combine_t)(data_ptr_t state, data_ptr_t combined);
 // The type used for finalizing hashed aggregate function payloads
 typedef void (*aggregate_finalize_t)(data_ptr_t state, data_ptr_t result);
 
-
+using agg_states_ptr = std::unique_ptr<data_t[]> ;
 
 class AggregateFunction : public Function {
 public:
@@ -143,7 +143,7 @@ private:
 
 public:
     static void initStates(data_ptr_t states, SelectionVector& sel, AggregateFunction& func, idx_t count);
-    static void combineStates(data_ptr_t states, data_ptr_t targetStates, SelectionVector& sel, AggregateFunction& func, idx_t count);
+    static void combineStates(data_ptr_t states, data_ptr_t targetStates, SelectionVector& sel, SelectionVector& targetSel, AggregateFunction& func, idx_t count);
     static void updateState(Vector& input, data_ptr_t states, SelectionVector& sel, AggregateFunction& func, idx_t count);
     static void finalizeState(Vector& result, data_ptr_t states, SelectionVector& sel, AggregateFunction& func, idx_t count);
 

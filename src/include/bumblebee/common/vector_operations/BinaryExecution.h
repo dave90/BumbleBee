@@ -108,13 +108,19 @@ protected:
 protected:
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
 	static idx_t selectConstant(Vector &left, Vector &right, const SelectionVector *sel, idx_t count,
-								SelectionVector *trueSel) {
+								SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 		auto ldata = ConstantVector::getData<LEFT_TYPE>(left);
 		auto rdata = ConstantVector::getData<RIGHT_TYPE>(right);
 
 		// both sides are constant, return either 0 or the count
 		// in this case we do not fill in the result selection vector at all
 		if (! OP::operation(*ldata, *rdata)) {
+			if (falseSel) {
+				for (idx_t i = 0; i < count; i++) {
+					falseSel->setIndex(i, sel->getIndex(i));
+				}
+			}
+			false_count = 1;
 			return 0;
 		} else {
 			if (trueSel) {
@@ -122,25 +128,29 @@ protected:
 					trueSel->setIndex(i, sel->getIndex(i));
 				}
 			}
+			false_count = 0;
 			return count;
 		}
 	}
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT, bool HAS_TRUE_SEL>
+	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT, bool HAS_TRUE_SEL, bool HAS_FALSE_SEL>
 	static inline idx_t selectFlatLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
 	                                   const SelectionVector *sel, idx_t count,
-	                                   SelectionVector *trueSel) {
+	                                   SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 		idx_t true_count = 0;
+		false_count = 0;
 		for (idx_t idx = 0; idx < count; idx++) {
-			idx_t result_idx = sel->getIndex(idx);
 			idx_t lidx = LEFT_CONSTANT ? 0 : idx;
 			idx_t ridx = RIGHT_CONSTANT ? 0 : idx;
 			bool comparison_result = OP::operation(ldata[lidx], rdata[ridx]);
 			if (HAS_TRUE_SEL) {
 				trueSel->setIndex(true_count, sel->getIndex(idx));
 			}
+			if (HAS_FALSE_SEL) {
+				falseSel->setIndex(true_count, sel->getIndex(idx));
+			}
 			true_count += comparison_result;
-
+			false_count += !comparison_result;
 		}
 		return true_count;
 	}
@@ -148,27 +158,34 @@ protected:
 
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
 	static inline idx_t selectFlat(Vector &left, Vector &right, const SelectionVector *sel, idx_t count,
-	                        SelectionVector *trueSel) {
+	                        SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 		auto ldata = FlatVector::getData<LEFT_TYPE>(left);
 		auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
+		if (trueSel && falseSel)
+			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true, true>(
+			    ldata, rdata, sel, count, trueSel, falseSel, false_count);
 		if (trueSel)
-			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true>(
-			    ldata, rdata, sel, count, trueSel);
-		return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false>(
-				ldata, rdata, sel, count, trueSel);
+			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true, false>(
+				ldata, rdata, sel, count, trueSel, falseSel, false_count);
+		if (falseSel)
+			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false, true>(
+				ldata, rdata, sel, count, trueSel, falseSel, false_count);
+		return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false, false>(
+				ldata, rdata, sel, count, trueSel, falseSel, false_count);
 
 	}
 
 
 
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool HAS_TRUE_SEL>
+	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool HAS_TRUE_SEL,bool HAS_FALSE_SEL >
 	static inline idx_t
 	selectGenericLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata, const SelectionVector *__restrict lsel,
 	                  const SelectionVector *__restrict rsel, const SelectionVector *__restrict resultSel, idx_t count,
-	                  SelectionVector *trueSel) {
+	                  SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 
 		idx_t true_count = 0;
+		false_count = 0;
 		for (idx_t i = 0; i < count; i++) {
 			auto result_idx = resultSel->getIndex(i);
 			auto lindex = lsel->getIndex(i);
@@ -178,7 +195,10 @@ protected:
 				// write same index if does not match ( branchless operation ;) )
 				trueSel->setIndex(true_count, result_idx);
 			}
+			if (HAS_FALSE_SEL)
+				falseSel->setIndex(false_count, result_idx);
 			true_count += comparison_result;
+			false_count += !comparison_result;
 		}
 		return true_count;
 	}
@@ -186,27 +206,32 @@ protected:
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
 	static inline idx_t selectGenericLoopSelSwitch(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
 						   const SelectionVector *__restrict lsel, const SelectionVector *__restrict rsel,
-						   const SelectionVector *__restrict resultSel, idx_t count, SelectionVector *trueSel) {
-		if (trueSel) {
-			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true>(
-				ldata, rdata, lsel, rsel, resultSel, count,  trueSel);
-		}
-		return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false>(
-				ldata, rdata, lsel, rsel, resultSel, count, trueSel);
+						   const SelectionVector *__restrict resultSel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
+		if (trueSel && falseSel)
+			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true, true>(
+				ldata, rdata, lsel, rsel, resultSel, count,  trueSel, falseSel, falseCount);
+		if (trueSel)
+			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true, false>(
+				ldata, rdata, lsel, rsel, resultSel, count,  trueSel, falseSel, falseCount);
+		if (falseSel)
+			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false, true>(
+				ldata, rdata, lsel, rsel, resultSel, count,  trueSel, falseSel, falseCount);
+		return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false, false>(
+				ldata, rdata, lsel, rsel, resultSel, count, trueSel, falseSel, falseCount);
 
 	}
 
 
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
 	static idx_t selectGeneric(Vector &left, Vector &right, const SelectionVector *sel, idx_t count,
-	                           SelectionVector *trueSel) {
+	                           SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
 		VectorData ldata, rdata;
 
 		left.orrify(count, ldata);
 		right.orrify(count, rdata);
 
 		return selectGenericLoopSelSwitch<LEFT_TYPE, RIGHT_TYPE, OP>((LEFT_TYPE *)ldata.data_, (RIGHT_TYPE *)rdata.data_,
-		                                                          ldata.sel_, rdata.sel_, sel, count, trueSel);
+		                                                          ldata.sel_, rdata.sel_, sel, count, trueSel, falseSel, falseCount);
 	}
 
 public:
@@ -244,24 +269,24 @@ public:
 	// - Supports all vector types and combinations (constant, flat, generic).
 	// - If `trueSel` is nullptr, only the count of matching elements is returned without writing any indices.
     template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
-    static idx_t select(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+    static idx_t select(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
         if (!sel) {
 			sel = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
 		}
 		if (left.getVectorType() == VectorType::CONSTANT_VECTOR &&
 		    right.getVectorType() == VectorType::CONSTANT_VECTOR) {
-			return selectConstant<LEFT_TYPE, RIGHT_TYPE, OP>(left, right, sel, count, trueSel);
+			return selectConstant<LEFT_TYPE, RIGHT_TYPE, OP>(left, right, sel, count, trueSel, falseSel, falseCount);
 		} else if (left.getVectorType() == VectorType::CONSTANT_VECTOR &&
 		           right.getVectorType() == VectorType::FLAT_VECTOR) {
-			return selectFlat<LEFT_TYPE, RIGHT_TYPE, OP, true, false>(left, right, sel, count, trueSel);
+			return selectFlat<LEFT_TYPE, RIGHT_TYPE, OP, true, false>(left, right, sel, count, trueSel, falseSel, falseCount);
 		} else if (left.getVectorType() == VectorType::FLAT_VECTOR &&
 		           right.getVectorType() == VectorType::CONSTANT_VECTOR) {
-			return selectFlat<LEFT_TYPE, RIGHT_TYPE, OP, false, true>(left, right, sel, count, trueSel);
+			return selectFlat<LEFT_TYPE, RIGHT_TYPE, OP, false, true>(left, right, sel, count, trueSel, falseSel, falseCount);
 		} else if (left.getVectorType() == VectorType::FLAT_VECTOR &&
 		           right.getVectorType() == VectorType::FLAT_VECTOR) {
-			return selectFlat<LEFT_TYPE, RIGHT_TYPE, OP, false, false>(left, right, sel, count, trueSel);
+			return selectFlat<LEFT_TYPE, RIGHT_TYPE, OP, false, false>(left, right, sel, count, trueSel, falseSel, falseCount);
 		} else {
-			return selectGeneric<LEFT_TYPE, RIGHT_TYPE, OP>(left, right, sel, count, trueSel);
+			return selectGeneric<LEFT_TYPE, RIGHT_TYPE, OP>(left, right, sel, count, trueSel, falseSel, falseCount);
 		}
     };
 

@@ -34,6 +34,8 @@ public:
     static idx_t greaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t lessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
+    static idx_t equals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount);
+    // TODO implement other comparison with false sel and count
 
     // Arithmetic operations
     static void sum(Vector &left, Vector &right, Vector &result, idx_t count);
@@ -62,6 +64,7 @@ public:
     // Copy
     static void copy(const Vector &source, Vector &target, idx_t source_count, idx_t source_offset, idx_t target_offset);
     static void copy(const Vector &source, Vector &target, const SelectionVector &sel, idx_t source_count, idx_t source_offset, idx_t target_offset);
+    static void copy(const Vector &source, Vector &target, const SelectionVector &sel,const SelectionVector &targetSel, idx_t source_count, idx_t source_offset, idx_t target_offset);
 
 };
 

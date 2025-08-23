@@ -1,0 +1,295 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "bumblebee/common/Constants.h"
+#include <gtest/gtest.h>
+
+#include "bumblebee/ClientContext.h"
+#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/execution/AggregateHashTable.h"
+#include "bumblebee/function/aggregate/Sum.h"
+#include "bumblebee/parallel/ThreadContext.h"
+
+using namespace std;
+using namespace bumblebee;
+
+
+class AggHTTest : public ::testing::Test {
+    // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
+    // For each of the count rows, it populates the columns with incrementing values:
+    // Column 0 (INTEGER): sequential int32_t values starting from 0.
+    // Column 1 (UINTEGER): uint32_t values equal to i * 10.
+    // Column 2 (BIGINT): int64_t values equal to i * 100.
+    // The function sets the cardinality of the chunk to count and returns it.
+    // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
+protected:
+
+    std::vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
+
+    DataChunk createChunkWithValue( std::vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+        DataChunk chunk;
+        chunk.initialize(testTypes);
+        chunk.setCapacity(count);
+        chunk.resize(count);
+        for (idx_t i = 0; i < count; ++i) {
+            for (idx_t j = 0; j < testTypes.size(); ++j) {
+                auto value = Value((int64_t) ((i+offset)*10*j));
+                chunk.setValue(j, i, value.cast(testTypes[j]));
+            }
+        }
+        chunk.setCardinality(count);
+        return chunk;
+    }
+
+    void addChunkToAHT(AggregateHashTable::agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE) {
+        DataChunk group, payload;
+        vector<ConstantType> groupTypes, payloadTypes;
+        for (auto g : groups)
+            groupTypes.push_back(chunk.getTypes()[g]);
+        for (auto p : payloads)
+            payloadTypes.push_back(chunk.getTypes()[p]);
+
+        if (!ht)
+            ht = AggregateHashTable::agg_ht_ptr(new AggregateHashTable(functions, groupTypes, capacity));
+
+        group.initialize(groupTypes);
+        payload.initialize(payloadTypes);
+        group.reference(chunk, groups);
+        payload.reference(chunk, payloads);
+        Vector hash(UBIGINT, group.getSize());
+        group.hash(hash);
+        ht->addChunk(hash, group, payload);
+    }
+
+    DataChunk probeToHT(AggregateHashTable::agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
+        vector<ConstantType> groupTypes, payloadTypes;
+        for (auto g : groups)
+            groupTypes.push_back(chunk.getTypes()[g]);
+        for (auto f : functions)
+            payloadTypes.push_back(f->result_);
+
+        DataChunk group, payload;
+        group.initialize(groupTypes);
+        group.reference(chunk, groups);
+        payload.initialize(payloadTypes);
+        payload.setCardinality(group.getSize());
+
+        Vector hash(UBIGINT, group.getSize());
+        group.hash(hash);
+
+        ht->fetchAggregates(hash, group, payload);
+        return payload;
+    }
+
+};
+
+TEST_F(AggHTTest, AggHTSimpleTest) {
+    vector<idx_t> groupIndexTypes = {1,2};
+    vector<idx_t> payloadIndexTypes = {0};
+    DataChunk chunk = createChunkWithValue(tLeft, 10);
+
+    cout << chunk.toString() << endl;
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+    AggregateHashTable::agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+
+    ht->finalize();
+
+    cout << ht->toString(false) << endl;
+
+    DataChunk payload = probeToHT(ht, chunk, groupIndexTypes, functions);
+    cout << payload.toString() << endl;
+    // check that is all 0
+    for (idx_t i = 0; i < payload.getSize(); i++)
+        EXPECT_EQ(payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>(), 0 );
+}
+
+TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectly) {
+    // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {2};
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Build the chunk with 8 rows
+    DataChunk chunk = createChunkWithValue(tLeft, 8 );
+
+    cout << chunk.toString() << endl;
+
+    // Create HT and add the same chunk twice (duplicates)
+    AggregateHashTable::agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+
+    // Finalize to flush aggregate states into payload
+    ht->finalize();
+
+    cout << ht->toString(true) << endl;
+
+    // Probe with the original groups; the SUM should be doubled of payload column
+    DataChunk result = probeToHT(ht, chunk, groupIndexTypes, functions);
+
+    cout << result.toString() << endl;
+
+    EXPECT_EQ(result.columnCount(), 1);
+    EXPECT_EQ(result.getSize(), chunk.getSize());
+    for (idx_t i = 0; i < result.getSize(); ++i) {
+        // Expected = 2 * (i * 10)
+        int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    }
+}
+
+TEST_F(AggHTTest, FetchAggregates_UnseenGroupReturnsZeroAndCreatesEntry) {
+    // Build an HT with groups for i in [0..9], then probe with a *new* group (offset=100)
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {2}; // SUM over BIGINT
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Base table with 10 groups
+    DataChunk base = createChunkWithValue(tLeft, 10);
+    AggregateHashTable::agg_ht_ptr ht;
+    addChunkToAHT(ht, base, groupIndexTypes, payloadIndexTypes, functions, /*capacity=*/32);
+    ht->finalize();
+
+    // Probe with unseen groups (same shape, but offset so keys don't exist yet)
+    DataChunk unseen = createChunkWithValue(tLeft, 5, /*offset=*/100);
+    DataChunk payload = probeToHT(ht, unseen, groupIndexTypes, functions);
+
+    EXPECT_EQ(payload.getSize(), 0);
+
+}
+
+
+
+TEST_F(AggHTTest, FetchAggregates_UnseenAndSeeGroup) {
+    // Build an HT with groups for i in [0..9], then probe with a *new* group (offset=100)
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {2}; // SUM over BIGINT
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Base table with 10 groups
+    DataChunk base = createChunkWithValue(tLeft, 10);
+    AggregateHashTable::agg_ht_ptr ht;
+    addChunkToAHT(ht, base, groupIndexTypes, payloadIndexTypes, functions, /*capacity=*/32);
+    ht->finalize();
+
+    cout << ht->toString(true) << endl;
+
+    // Probe with unseen  and see groups (same shape)
+    DataChunk unseen = createChunkWithValue(tLeft, 5, /*offset=*/100);
+    DataChunk seenAndUnseen = createChunkWithValue(tLeft, 5, /*offset=*/0);
+    seenAndUnseen.setCapacity(10);
+    seenAndUnseen.resize(10);
+    seenAndUnseen.append(unseen);
+
+    cout << seenAndUnseen.toString() << endl;
+
+    DataChunk payload = probeToHT(ht, seenAndUnseen, groupIndexTypes, functions);
+
+    EXPECT_EQ(payload.getSize(), 5);
+    // check first 5 rows should be equal to the seen chunk
+    for (idx_t i = 0; i < payload.getSize(); ++i) {
+        // Expected = 2 * (i * 10)
+        int64_t expected = seenAndUnseen.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t got = payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    }
+}
+
+TEST_F(AggHTTest, Scan_IteratesAllGroupsInBatchesAndBoundary) {
+    // Create many unique groups then walk them via scan().
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {0}; // payload not relevant for scan
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Make 50 unique rows => 50 groups
+    DataChunk chunk = createChunkWithValue(tLeft, 50);
+    AggregateHashTable::agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 128);
+
+    // Total entries should be 50
+    EXPECT_EQ(ht->getSize(), 50);
+
+    // Prepare a result chunk with the same group types for scanning
+    DataChunk out;
+    out.initialize({tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]});
+
+    // Iterate from 0 until we've seen all groups
+    idx_t visited = 0;
+    idx_t pos = 0;
+    while (pos < ht->getSize()) {
+        idx_t got = ht->scan(pos, out);
+        visited += got;
+        pos += got;
+    }
+    EXPECT_EQ(visited, ht->getSize());
+
+    // Boundary: scanning from last valid starting position should return exactly 1 row
+    idx_t tail = ht->scan(ht->getSize() - 1, out);
+    EXPECT_EQ(tail, 1);
+}
+
+
+// Columns-with-same-values test
+TEST_F(AggHTTest, IdenticalColumns_AggregatesCorrectly1) {
+    // We will group by cols [0,1] (SMALLINT, UINTEGER) and SUM col [2] (BIGINT).
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc::getFunction(tLeft[payloads[0]]); // Sum over BIGINT
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    const idx_t N = 12;
+
+    DataChunk chunk;
+    chunk.initialize(tLeft);
+    chunk.setCapacity(N);
+    chunk.resize(N);
+    for (idx_t i = 0; i < N; ++i) {
+        int64_t v = static_cast<int64_t>(100);
+        for (idx_t j = 0; j < tLeft.size(); ++j) {
+            chunk.setValue(j, i, Value(v*j).cast(tLeft[j])); // make all columns identical
+        }
+    }
+    chunk.setCardinality(N);
+
+    cout << chunk.toString() << endl;
+
+    AggregateHashTable::agg_ht_ptr ht;
+    // Add the same chunk twice -> each group's sum should double
+    addChunkToAHT(ht, chunk, groups, payloads, functions, 64);
+    addChunkToAHT(ht, chunk, groups, payloads, functions, 64);
+    ht->finalize();
+
+    // Probe the same groups
+    DataChunk payload = probeToHT(ht, chunk, groups, functions);
+    ASSERT_EQ(payload.getSize(), chunk.getSize());
+    // values should be 200 (payload column) * 12 * 2
+    for (idx_t i = 0; i < payload.getSize(); ++i) {
+        int64_t expected = 200 * 12 * 2;
+        int64_t got = payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    }
+
+}

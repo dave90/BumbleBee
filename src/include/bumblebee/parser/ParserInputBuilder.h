@@ -107,7 +107,7 @@ protected:
 	bool foundASafetyError_{false};
 	Binop binop_{NONE_OP};
 	Binop secondBinop_{NONE_OP};
-	AggregateFunction aggregateFunction_{NONE};
+	AggregateFunctionType aggregateFunction_{NONE};
 
 	std::vector<Term> terms_parsered;
 	std::vector<Term> guard_terms;

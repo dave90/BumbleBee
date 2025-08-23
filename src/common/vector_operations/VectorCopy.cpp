@@ -23,19 +23,20 @@ namespace bumblebee {
 
 
 template <class T>
-static void TemplatedCopy(const Vector &source, const SelectionVector &sel, Vector &target, idx_t source_offset,
+static void TemplatedCopy(const Vector &source, const SelectionVector &sel, Vector &target, const SelectionVector &targetSel, idx_t source_offset,
                           idx_t target_offset, idx_t copy_count) {
     auto ldata = FlatVector::getData<T>(source);
     auto tdata = FlatVector::getData<T>(target);
     for (idx_t i = 0; i < copy_count; i++) {
         auto source_idx = sel.getIndex(source_offset + i);
-        tdata[target_offset + i] = ldata[source_idx];
+        auto target_idx = targetSel.getIndex(target_offset + i);
+        tdata[target_idx] = ldata[source_idx];
     }
 }
 
 
 void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
-    switch (source.getVectorType()) {
+	switch (source.getVectorType()) {
         case VectorType::DICTIONARY_VECTOR: {
             // dictionary: continue into child with selection vector
             auto &child = DictionaryVector::child(source);
@@ -78,6 +79,10 @@ void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCo
 }
 
 void VectorOperations::copy(const Vector &source, Vector &target, const SelectionVector &sel, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
+	VectorOperations::copy(source, target, sel, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,targetOffset);
+}
+
+void VectorOperations::copy(const Vector &source, Vector &target, const SelectionVector &sel,const SelectionVector &targetSel, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
 	BB_ASSERT(sourceOffset <= sourceCount);
 	BB_ASSERT(source.getType() == target.getType());
 	idx_t copyCount = sourceCount - sourceOffset;
@@ -136,41 +141,41 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 	// now copy over the data
 	switch (source.getType()) {
 		case ConstantType::TINYINT:
-			TemplatedCopy<int8_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<int8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::SMALLINT:
-			TemplatedCopy<int16_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<int16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::INTEGER:
-			TemplatedCopy<int32_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<int32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::BIGINT:
-			TemplatedCopy<int64_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<int64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::UTINYINT:
-			TemplatedCopy<uint8_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<uint8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::USMALLINT:
-			TemplatedCopy<uint16_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<uint16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::UINTEGER:
-			TemplatedCopy<uint32_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<uint32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::UBIGINT:
-			TemplatedCopy<uint64_t>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<uint64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::FLOAT:
-			TemplatedCopy<float>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<float>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::DOUBLE:
-			TemplatedCopy<double>(source, sel, target, sourceOffset, targetOffset, copyCount);
+			TemplatedCopy<double>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::STRING:	{
 			auto ldata = FlatVector::getData<string_t>(source);
 			auto tdata = FlatVector::getData<string_t>(target);
 			for (idx_t i = 0; i < copyCount; i++) {
 				auto source_idx = sel.getIndex(sourceOffset + i);
-				auto target_idx = targetOffset + i;
+				auto target_idx = targetSel.getIndex(targetOffset + i);
 				tdata[target_idx] = StringVector::addString(target, ldata[source_idx]);
 			}
 			break;

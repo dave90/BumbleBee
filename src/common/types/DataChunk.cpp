@@ -241,7 +241,7 @@ void DataChunk::hash(Vector &result, const std::vector<idx_t> &cols) {
     }
 }
 
-std::vector<ConstantType> DataChunk::getTypes() {
+std::vector<ConstantType> DataChunk::getTypes() const{
     std::vector<ConstantType> types;
     types.reserve(data_.size());
     for (auto&v : data_) {

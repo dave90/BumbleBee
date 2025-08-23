@@ -29,14 +29,15 @@ void AggregateFunction::initStates(data_ptr_t states, SelectionVector& sel, Aggr
     }
 }
 
-void AggregateFunction::combineStates(data_ptr_t states, data_ptr_t targetStates, SelectionVector &sel,
+void AggregateFunction::combineStates(data_ptr_t states, data_ptr_t targetStates,SelectionVector &sel, SelectionVector &targetSel,
     AggregateFunction &func, idx_t count) {
 
     auto size = func.stateSize_();
     for (idx_t i = 0; i < count; i++) {
         idx_t index = sel.getIndex(i);
+        idx_t tindex = targetSel.getIndex(i);
         uint8_t* state = states + index * size;
-        uint8_t* targetState = targetStates + index * size;
+        uint8_t* targetState = targetStates + tindex * size;
         func.combine_(state, targetState);
     }
 
@@ -101,7 +102,7 @@ void templatedFinalizeState(Vector &result, data_ptr_t states, SelectionVector &
     auto state_size = func.stateSize_();
     for (idx_t i = 0; i < count; i++) {
         idx_t state_index = sel.getIndex(i);
-        idx_t input_index = result_data.sel_->getIndex(i);
+        idx_t input_index = result_data.sel_->getIndex(state_index);
 
         func.finalize_( states + state_size * state_index, (data_ptr_t)(data + input_index));
     }

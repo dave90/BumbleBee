@@ -134,7 +134,7 @@ public:
 
 
 	// Returns a list of types of the vectors of this data chunk
-	std::vector<ConstantType> getTypes();
+	std::vector<ConstantType> getTypes() const;
 
 	// Converts this DataChunk to a printable string representation
 	std::string toString() const;

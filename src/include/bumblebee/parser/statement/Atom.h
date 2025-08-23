@@ -25,7 +25,7 @@
 
 namespace bumblebee {
 
-enum AggregateFunction : uint8_t {
+enum AggregateFunctionType : uint8_t {
     NONE = 0,
     COUNT = 1,
     MAX = 2,
@@ -49,7 +49,7 @@ public:
     Atom() = default;
     Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type);
     Atom(terms_vector_t &&terms, Binop binop);
-    Atom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, std::vector<Atom>&& aggAtoms);
+    Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, std::vector<Atom>&& aggAtoms);
     Atom(AtomType type, bool negative);
     Atom(const Atom &other) = delete;
     Atom(Atom &&other) noexcept;
@@ -110,7 +110,7 @@ private:
     // Aggregate fields
     // Aggregates can have 2 Binop (example 1 < #sum{...} < 10)
     Binop secondBinop_;
-    AggregateFunction aggregate_{NONE};
+    AggregateFunctionType aggregate_{NONE};
     // Atoms to aggregate
     std::vector<Atom> aggAtoms_;
     // Aggregation terms
@@ -120,9 +120,9 @@ public:
     // static functions
     static Atom createClassicalAtom(Predicate* p, terms_vector_t&& t);
     static Atom createBuiltinAtom(terms_vector_t&& t, Binop binop);
-    static Atom createAggregateAtom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, std::vector<Atom>&& aggAtoms );
-    static string getAggFunction(AggregateFunction agg);
-    static AggregateFunction getAggFunction(const char* agg);
+    static Atom createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, std::vector<Atom>&& aggAtoms );
+    static string getAggFunction(AggregateFunctionType agg);
+    static AggregateFunctionType getAggFunction(const char* agg);
 };
 
 }

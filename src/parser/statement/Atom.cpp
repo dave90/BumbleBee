@@ -47,7 +47,7 @@ Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), bino
     calculateIsGround();
 }
 
-Atom::Atom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard, Term &upperGuard,
+Atom::Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard, Term &upperGuard,
     terms_vector_t &&aggTerms, std::vector<Atom> &&aggAtoms): aggregate_(aggFunction),
     binop_(firstBinop), secondBinop_(secondBinop),aggTerms_(std::move(aggTerms)),
     aggAtoms_(std::move(aggAtoms)), predicate_(nullptr), type_(AGGREGATE){
@@ -276,12 +276,12 @@ Atom Atom::createBuiltinAtom(terms_vector_t &&t, Binop binop) {
     return Atom(std::move(t), binop);
 }
 
-Atom Atom::createAggregateAtom(AggregateFunction aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard,
+Atom Atom::createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard,
     Term &upperGuard, terms_vector_t &&aggTerms, std::vector<Atom> &&aggAtoms) {
     return Atom(aggFunction, firstBinop, secondBinop, lowerGuard, upperGuard, std::move(aggTerms), std::move(aggAtoms));
 }
 
-string Atom::getAggFunction(AggregateFunction agg) {
+string Atom::getAggFunction(AggregateFunctionType agg) {
     switch (agg) {
         case NONE:
             return "";
@@ -299,7 +299,7 @@ string Atom::getAggFunction(AggregateFunction agg) {
 }
 
 
-AggregateFunction Atom::getAggFunction(const char* aggFunction) {
+AggregateFunctionType Atom::getAggFunction(const char* aggFunction) {
     if (aggFunction == nullptr) return NONE;
 
     std::string s(aggFunction);
