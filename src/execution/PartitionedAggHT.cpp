@@ -26,11 +26,47 @@ PartitionedAggHT::PartitionedAggHT(idx_t partitions):ready_(false), partitions_(
 }
 
 void PartitionedAggHT::partitionAggregateHT(agg_ht_ptr ht) {
+    if (ht->getSize() == 0)return;
+
+    vector<agg_ht_ptr> partitions;
+    partitions.reserve(partitions_);
+    ht->partition(partitions, shift_);
+    // lock the vector
+    lock_guard guard(mutex_);
+    // log the statistics
+    for (idx_t i = 0; i < partitions_; i++) {
+        auto& ht = partitions[i];
+        if (!ht)continue;
+        if (!partitionEntries_.contains(i))partitionEntries_[i] = 0;
+        partitionEntries_[i] += ht->getSize();
+    }
+    // push the partitions in the vector
+    partitionsVec_.push_back(std::move(partitions));
 }
 
 void PartitionedAggHT::finalize() {
+    for (idx_t i = 0; i < partitions_; i++) {
+        auto &ht = partitionsVec_[i][0];
+        if (!ht)continue;
+        if (!table_)
+            table_ = std::move(ht);
+        else
+            table_->combine(*ht);
+    }
+    table_->finalize();
+    ready_ = true;
 }
 
-vector<agg_ht_ptr> PartitionedAggHT::getPartitionedHT(idx_t) {
+void PartitionedAggHT::processPartition(idx_t partition) {
+    BB_ASSERT(partition < partitions_);
+    if (partitionsVec_.empty()) return;
+    auto& finalPartitionHT = partitionsVec_[0][partition];
+    for (idx_t i=1;i < partitions_; i++) {
+        auto &ht = partitionsVec_[i][partition];
+        if (!ht) continue;
+        finalPartitionHT->combine(*ht);
+        // clear the memory
+        partitionsVec_[i][partition] = nullptr;
+    }
 }
 }

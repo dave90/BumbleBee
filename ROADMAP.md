@@ -6,6 +6,7 @@
 ## Next
 - Aggregation
 - Negative
+- Distinct
 - CSV
 - CICD
 - SQL

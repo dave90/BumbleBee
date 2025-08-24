@@ -40,15 +40,12 @@ public:
 
     // Add a given data to HT and computing the aggregates
     void addChunk(Vector& hash, DataChunk& group, DataChunk& payload);
-    // find the groups (bucket) not empty starting from a position with specific size
-    // return the size of the groups in the sel vector
-    idx_t getGroups(idx_t position, SelectionVector &sel, idx_t size);
 
     // Scan the HT starting from the position until the result and group
     idx_t scan(idx_t position, DataChunk& result);
     // Fetch the aggregates for specific groups from the HT and place them in the result
     // filter out the groups that does not matched
-    void fetchAggregates(Vector& hash, DataChunk& group, DataChunk& result);
+    void fetchAggregates(Vector& hash, DataChunk& group, DataChunk& result, SelectionVector &sel);
     // finalize
     void finalize();
 
@@ -70,11 +67,14 @@ public:
 private:
     // Resize the HT
     void resize(idx_t size);
-
+    // init the states
     void initStates(DataChunk &groups,SelectionVector& emptyBucketSel, SelectionVector& emptySel, idx_t new_entry_count);
-
+    // try to match the groups
     void matchChunks(DataChunk &groups, SelectionVector& compareSel, SelectionVector& compareBucketSel,
                      SelectionVector& notMatchSel, idx_t &need_compare_count, idx_t &no_match_count);
+    // find the groups (bucket) not empty starting from a position with specific size
+    // return the size of the groups in the sel vector
+    idx_t getGroups(idx_t position, SelectionVector &sel, idx_t size);
 
     // Aggregates functions
     vector<AggregateFunction*> functions_;

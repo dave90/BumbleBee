@@ -97,7 +97,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 		auto newBuffer = dict_sel.slice(sel, sourceCount);
 		SelectionVector mergedSel(newBuffer);
 		// recursively call until the child is flat
-		VectorOperations::copy(child, target, mergedSel, sourceCount, sourceOffset, targetOffset);
+		VectorOperations::copy(child, target, mergedSel, targetSel, sourceCount, sourceOffset, targetOffset);
 		return;
 	}
 	case VectorType::SEQUENCE_VECTOR: {
@@ -105,7 +105,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 		Vector seq(source.getType());
 		SequenceVector::getSequence(source, start, increment);
 		VectorOperations::generateSequence(seq, sourceCount, sel, start, increment);
-		VectorOperations::copy(seq, target, sel, sourceCount, sourceOffset, targetOffset);
+		VectorOperations::copy(seq, target, sel, targetSel, sourceCount, sourceOffset, targetOffset);
 		return;
 	}
 	case VectorType::SEQUENCE_CIRCULAR_VECTOR: {
@@ -113,7 +113,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 		Vector seq(source.getType());
 		CircularSequenceVector::getSequence(source, start,offset, stride, end);
 		VectorOperations::generateSequence(seq, sourceCount, sel, start, offset, stride, end);
-		VectorOperations::copy(seq, target, sel, sourceCount, sourceOffset, targetOffset);
+		VectorOperations::copy(seq, target, sel, targetSel, sourceCount, sourceOffset, targetOffset);
 		return;
 		}
 	case VectorType::CONSTANT_VECTOR:

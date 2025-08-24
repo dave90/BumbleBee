@@ -69,6 +69,7 @@ void AggregateHashTable::addChunk(Vector &hash, DataChunk &group, DataChunk &pay
 }
 
 idx_t AggregateHashTable::getGroups(idx_t position, SelectionVector &sel, idx_t size) {
+    BB_ASSERT(hash_.getVectorType() == VectorType::FLAT_VECTOR);
     auto ht_hash_data = FlatVector::getData<uint64_t>(hash_);
     idx_t slotCounter = 0;
     idx_t counter = 0;
@@ -89,21 +90,20 @@ idx_t AggregateHashTable::scan(idx_t position, DataChunk &result) {
     return counter;
 }
 
-void AggregateHashTable::fetchAggregates(Vector &hash, DataChunk &group, DataChunk &result) {
+void AggregateHashTable::fetchAggregates(Vector &hash, DataChunk &group, DataChunk &result, SelectionVector &sel) {
     BB_ASSERT(result.columnCount() == payload_.columnCount());
     BB_ASSERT(result.getSize() == group.getSize());
 
     // find the buckets for each row in the group
     SelectionVector groupSel(group.getSize());
-    SelectionVector matchSel(group.getSize());
-    auto matchedGroups = findOrCreateGroups(hash, group, groupSel, false, &matchSel);
+    auto matchedGroups = findOrCreateGroups(hash, group, groupSel, false, &sel);
     // copy the agg results value in the result chunk
     for (id_t i = 0;i<payload_.columnCount();++i) {
         VectorOperations::copy(payload_.data_[i], result.data_[i], groupSel, group.getSize(), 0, 0);
     }
     // filter only the matched groups
-    group.slice(matchSel, matchedGroups);
-    result.slice(matchSel, matchedGroups);
+    group.slice(sel, matchedGroups);
+    result.slice(sel, matchedGroups);
 }
 
 void AggregateHashTable::finalize() {
@@ -117,7 +117,6 @@ void AggregateHashTable::finalize() {
 
 void AggregateHashTable::initStates(DataChunk &groups,SelectionVector& emptyBucketSel, SelectionVector& emptySel, idx_t new_entry_count) {
     // copy data
-    idx_t size = groups.getSize();
     for (idx_t i = 0; i < chunkone_.columnCount(); i++) {
         Vector target(chunkone_.data_[i]);
         Vector source(groups.data_[i]);
@@ -279,15 +278,15 @@ void AggregateHashTable::combine(AggregateHashTable &other) {
     for (idx_t i = 0; i < functions_.size(); i++)
         BB_ASSERT(functions_[i] == other.functions_[i]);
 
+    // find the groups of the other table
     SelectionVector sel(other.entries_);
     other.getGroups(0, sel, other.entries_);
-    // find the groups of the other table
-    Vector otherHash(UBIGINT, other.chunkone_.getSize());
-    other.chunkone_.hash(otherHash);
     // slice the other chunk to keep only the non empty slots
     other.chunkone_.slice(sel, other.entries_);
+    Vector otherHash(UBIGINT, other.chunkone_.getSize());
+    other.chunkone_.hash(otherHash);
     // creates the groups that are not present in this HT
-    SelectionVector oBucketsel(other.entries_);
+    SelectionVector oBucketsel(other.chunkone_.getSize());
     findOrCreateGroups(otherHash, other.chunkone_, oBucketsel);
     // now merge the states
     for (idx_t i = 0; i < functions_.size(); i++)
@@ -310,24 +309,25 @@ void AggregateHashTable::partition(vector<agg_ht_ptr>& partitions, idx_t shift) 
     for (idx_t i = 0; i < partitions.size(); i++) pInfo.emplace_back(capacity_);
     // fill the partition informations
     // for each partitions create a sel vector with the groups that belong to the partition
+    BB_ASSERT(hash_.getVectorType() == VectorType::FLAT_VECTOR);
     auto ht_hash_data = FlatVector::getData<uint64_t>(hash_);
-    idx_t slotCounter = 0;
-    idx_t counter = 0;
     for (id_t i = 0;i<capacity_;++i) {
-        if ( !(ht_hash_data[i] && mask_)) continue; // empty slot
-        idx_t p = ht_hash_data[i] >> shift;
-        pInfo[p].sel_.setIndex(pInfo[p].size_++, i);
+        idx_t p = ht_hash_data[i] >> shift; // partition
+        pInfo[p].sel_.setIndex(pInfo[p].size_, i);
+        pInfo[p].size_ += (ht_hash_data[i] && mask_)?1:0; // increment size if slot is non empty
     }
 
     for (id_t i = 0;i<pInfo.size();++i) {
-        if (pInfo[i].size_ == 0)continue; // empty partition
+        auto& pi = pInfo[i];
+        if (pi.size_ == 0)continue; // empty partition
         auto& partition = partitions[i];
         // create partition if null
-        if (!partition) partition = agg_ht_ptr(new AggregateHashTable(functions_, chunkone_.getTypes(), true));
+        if (!partition) partition = agg_ht_ptr(new AggregateHashTable(functions_, chunkone_.getTypes(),MORSEL_SIZE, true));
 
         DataChunk chunk;
-        chunk.slice(chunkone_, pInfo[i].sel_, pInfo[i].size_);
-        Vector hash(UBIGINT,pInfo[i].size_);
+        chunk.initializeEmpty(chunkone_.getTypes());
+        chunk.slice(chunkone_, pi.sel_, pi.size_);
+        Vector hash(UBIGINT,pi.size_);
         chunk.hash(hash);
 
         // create the groups in the partition table
@@ -336,8 +336,8 @@ void AggregateHashTable::partition(vector<agg_ht_ptr>& partitions, idx_t shift) 
 
         // combine the states
 
-        for (idx_t i = 0; i < functions_.size(); i++)
-            AggregateFunction::combineStates(states_[i].get(), partition->states_[i].get(), pInfo[i].sel_, groupSel, *functions_[i], pInfo[i].size_);
+        for (idx_t j = 0; j < functions_.size(); j++)
+            AggregateFunction::combineStates(states_[j].get(), partition->states_[j].get(), pi.sel_, groupSel, *functions_[j], pi.size_);
 
     }
 

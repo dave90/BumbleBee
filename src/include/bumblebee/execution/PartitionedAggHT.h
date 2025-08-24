@@ -38,10 +38,21 @@ public:
     PartitionedAggHT & operator=(const PartitionedAggHT &other) = delete;
     PartitionedAggHT & operator=(PartitionedAggHT &&other) noexcept = delete;
 
+    // partition the agg HT and push the partitioned HT in the partition vector
     void partitionAggregateHT(agg_ht_ptr ht);
+    // compute the final aggregate HT
     void finalize();
-    vector<agg_ht_ptr> getPartitionedHT(idx_t );
+    // merge the HT in the same partitions (no lock are used, so each thread should process different partitions)
+    void processPartition(idx_t partition);
 
+
+    idx_t getPartitionSize(idx_t partition) {
+        return partitionEntries_[partition];
+    }
+
+    bool isReady() {
+        return ready_;
+    }
 
 private:
     // the final HT table
@@ -56,6 +67,8 @@ private:
     bool ready_;
     // mutex of the partitioned HT
     mutex mutex_;
+    // statistics of entries for each partition
+    std::unordered_map<idx_t, idx_t> partitionEntries_;
 };
 
 

@@ -56,7 +56,7 @@ protected:
         return chunk;
     }
 
-    void addChunkToAHT(AggregateHashTable::agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE) {
+    void addChunkToAHT(AggregateHashTable::agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE, bool resize = false) {
         DataChunk group, payload;
         vector<ConstantType> groupTypes, payloadTypes;
         for (auto g : groups)
@@ -65,7 +65,7 @@ protected:
             payloadTypes.push_back(chunk.getTypes()[p]);
 
         if (!ht)
-            ht = AggregateHashTable::agg_ht_ptr(new AggregateHashTable(functions, groupTypes, capacity));
+            ht = AggregateHashTable::agg_ht_ptr(new AggregateHashTable(functions, groupTypes, capacity, resize));
 
         group.initialize(groupTypes);
         payload.initialize(payloadTypes);
@@ -92,7 +92,8 @@ protected:
         Vector hash(UBIGINT, group.getSize());
         group.hash(hash);
 
-        ht->fetchAggregates(hash, group, payload);
+        SelectionVector sel(group.getSize());
+        ht->fetchAggregates(hash, group, payload,sel);
         return payload;
     }
 
@@ -280,4 +281,88 @@ TEST_F(AggHTTest, IdenticalColumns_AggregatesCorrectly1) {
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 
+}
+
+TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCombine) {
+    // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {2};
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Build the chunk with 8 rows
+    DataChunk chunk = createChunkWithValue(tLeft, 8 );
+
+    // Create HT and add the same chunk twice (duplicates)
+    AggregateHashTable::agg_ht_ptr ht1, ht2;
+    addChunkToAHT(ht1, chunk, groupIndexTypes, payloadIndexTypes, functions, 16, true);
+    addChunkToAHT(ht2, chunk, groupIndexTypes, payloadIndexTypes, functions, 16, true);
+
+    // combine ht
+    ht1->combine(*ht2);
+    ht2 = nullptr;
+
+    ht1->finalize();
+    std::cout << ht1->toString(false) << std::endl;
+
+    // Probe with the original groups; the SUM should be doubled of payload column
+    DataChunk result = probeToHT(ht1, chunk, groupIndexTypes, functions);
+
+
+    EXPECT_EQ(result.columnCount(), 1);
+    EXPECT_EQ(result.getSize(), chunk.getSize());
+    for (idx_t i = 0; i < result.getSize(); ++i) {
+        // Expected = 2 * (i * 10)
+        int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    }
+}
+
+
+TEST_F(AggHTTest, Partition_Shift62) {
+    vector<idx_t> groupIndexTypes = {0,2};
+    vector<idx_t> payloadIndexTypes = {2};
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 16);
+    AggregateHashTable::agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+
+    EXPECT_EQ(ht->getSize(), 16);
+
+    // Prepare 2 partitions; with shift=63, index should always be 1 for non-empty buckets.
+    std::vector<AggregateHashTable::agg_ht_ptr> partitions(4);
+    ht->partition(partitions, 62);
+    auto pSize = 0;
+    for (auto& p: partitions)
+        if (p)pSize += p->getSize();
+    EXPECT_EQ(pSize, ht->getSize());
+
+    // now combine all the partitions
+    AggregateHashTable::agg_ht_ptr htFinal;
+    for (auto& p: partitions) {
+        if (!p)continue;
+        if (!htFinal) {
+            htFinal = std::move(p);
+            continue;
+        };
+        htFinal->combine(*p);
+        p = nullptr;
+    }
+    htFinal->finalize();
+    EXPECT_EQ(htFinal->getSize(), ht->getSize());
+    ht = nullptr;
+    // check the data
+    DataChunk result = probeToHT(htFinal, chunk, groupIndexTypes, functions);
+
+    EXPECT_EQ(result.columnCount(), 1);
+    EXPECT_EQ(result.getSize(), chunk.getSize());
+    for (idx_t i = 0; i < result.getSize(); ++i) {
+        // Expected = 2 * (i * 10)
+        int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    }
 }
