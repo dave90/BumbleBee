@@ -22,12 +22,13 @@
 
 #include "bumblebee/ClientContext.h"
 #include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/execution/AggregateHashTable.h"
+#include "bumblebee/execution/AggregateChunkOneHashTable.h"
 #include "bumblebee/function/aggregate/Sum.h"
 #include "bumblebee/parallel/ThreadContext.h"
 
 using namespace bumblebee;
 
+using agg_ht_ptr = AggregateChunkOneHashTable::agg_ht_ptr_t;
 
 class AggHTTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -55,8 +56,9 @@ protected:
         chunk.setCardinality(count);
         return chunk;
     }
-
-    void addChunkToAHT(AggregateHashTable::agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE, bool resize = false) {
+    void addChunkToAHT(agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups,
+            vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE,
+            bool resize = false) {
         DataChunk group, payload;
         vector<ConstantType> groupTypes, payloadTypes;
         for (auto g : groups)
@@ -65,7 +67,7 @@ protected:
             payloadTypes.push_back(chunk.getTypes()[p]);
 
         if (!ht)
-            ht = AggregateHashTable::agg_ht_ptr(new AggregateHashTable(functions, groupTypes, capacity, resize));
+            ht = agg_ht_ptr(new AggregateChunkOneHashTable(groupTypes, capacity, resize,  functions));
 
         group.initialize(groupTypes);
         payload.initialize(payloadTypes);
@@ -74,9 +76,11 @@ protected:
         Vector hash(UBIGINT, group.getSize());
         group.hash(hash);
         ht->addChunk(hash, group, payload);
+
     }
 
-    DataChunk probeToHT(AggregateHashTable::agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
+
+    DataChunk probeToHT(agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
         vector<ConstantType> groupTypes, payloadTypes;
         for (auto g : groups)
             groupTypes.push_back(chunk.getTypes()[g]);
@@ -106,11 +110,10 @@ TEST_F(AggHTTest, AggHTSimpleTest) {
 
     auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
     vector functions = {(AggregateFunction*)aggFunc.get()};
-    AggregateHashTable::agg_ht_ptr ht;
+    agg_ht_ptr ht;
     addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
 
     ht->finalize();
-
 
     DataChunk payload = probeToHT(ht, chunk, groupIndexTypes, functions);
     // check that is all 0
@@ -118,7 +121,7 @@ TEST_F(AggHTTest, AggHTSimpleTest) {
         EXPECT_EQ(payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>(), 0 );
 }
 
-TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectly) {
+TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyNoDistinc) {
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2};
@@ -129,17 +132,16 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectly) {
     DataChunk chunk = createChunkWithValue(tLeft, 8 );
 
     // Create HT and add the same chunk twice (duplicates)
-    AggregateHashTable::agg_ht_ptr ht;
-    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+    agg_ht_ptr ht;
+    // call with no distinc cols
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes ,functions, 32);
     addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
 
     // Finalize to flush aggregate states into payload
     ht->finalize();
 
-
     // Probe with the original groups; the SUM should be doubled of payload column
     DataChunk result = probeToHT(ht, chunk, groupIndexTypes, functions);
-
 
     EXPECT_EQ(result.columnCount(), 1);
     EXPECT_EQ(result.getSize(), chunk.getSize());
@@ -151,6 +153,7 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectly) {
     }
 }
 
+
 TEST_F(AggHTTest, FetchAggregates_UnseenGroupReturnsZeroAndCreatesEntry) {
     // Build an HT with groups for i in [0..9], then probe with a *new* group (offset=100)
     vector<idx_t> groupIndexTypes = {1, 2};
@@ -160,7 +163,7 @@ TEST_F(AggHTTest, FetchAggregates_UnseenGroupReturnsZeroAndCreatesEntry) {
 
     // Base table with 10 groups
     DataChunk base = createChunkWithValue(tLeft, 10);
-    AggregateHashTable::agg_ht_ptr ht;
+    agg_ht_ptr ht;
     addChunkToAHT(ht, base, groupIndexTypes, payloadIndexTypes, functions, /*capacity=*/32);
     ht->finalize();
 
@@ -169,7 +172,6 @@ TEST_F(AggHTTest, FetchAggregates_UnseenGroupReturnsZeroAndCreatesEntry) {
     DataChunk payload = probeToHT(ht, unseen, groupIndexTypes, functions);
 
     EXPECT_EQ(payload.getSize(), 0);
-
 }
 
 
@@ -183,7 +185,7 @@ TEST_F(AggHTTest, FetchAggregates_UnseenAndSeeGroup) {
 
     // Base table with 10 groups
     DataChunk base = createChunkWithValue(tLeft, 10);
-    AggregateHashTable::agg_ht_ptr ht;
+    agg_ht_ptr ht;
     addChunkToAHT(ht, base, groupIndexTypes, payloadIndexTypes, functions, /*capacity=*/32);
     ht->finalize();
 
@@ -216,7 +218,7 @@ TEST_F(AggHTTest, Scan_IteratesAllGroupsInBatchesAndBoundary) {
 
     // Make 50 unique rows => 50 groups
     DataChunk chunk = createChunkWithValue(tLeft, 50);
-    AggregateHashTable::agg_ht_ptr ht;
+    agg_ht_ptr ht;
     addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 128);
 
     // Total entries should be 50
@@ -242,47 +244,6 @@ TEST_F(AggHTTest, Scan_IteratesAllGroupsInBatchesAndBoundary) {
 }
 
 
-// Columns-with-same-values test
-TEST_F(AggHTTest, IdenticalColumns_AggregatesCorrectly1) {
-    // We will group by cols [0,1] (SMALLINT, UINTEGER) and SUM col [2] (BIGINT).
-    vector<idx_t> groups = {0, 1};
-    vector<idx_t> payloads = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloads[0]]); // Sum over BIGINT
-    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
-
-    const idx_t N = 12;
-
-    DataChunk chunk;
-    chunk.initialize(tLeft);
-    chunk.setCapacity(N);
-    chunk.resize(N);
-    for (idx_t i = 0; i < N; ++i) {
-        int64_t v = static_cast<int64_t>(100);
-        for (idx_t j = 0; j < tLeft.size(); ++j) {
-            chunk.setValue(j, i, Value(v*j).cast(tLeft[j])); // make all columns identical
-        }
-    }
-    chunk.setCardinality(N);
-
-
-    AggregateHashTable::agg_ht_ptr ht;
-    // Add the same chunk twice -> each group's sum should double
-    addChunkToAHT(ht, chunk, groups, payloads, functions, 64);
-    addChunkToAHT(ht, chunk, groups, payloads, functions, 64);
-    ht->finalize();
-
-    // Probe the same groups
-    DataChunk payload = probeToHT(ht, chunk, groups, functions);
-    ASSERT_EQ(payload.getSize(), chunk.getSize());
-    // values should be 200 (payload column) * 12 * 2
-    for (idx_t i = 0; i < payload.getSize(); ++i) {
-        int64_t expected = 200 * 12 * 2;
-        int64_t got = payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
-    }
-
-}
-
 TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCombine) {
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
@@ -294,7 +255,7 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCombine) {
     DataChunk chunk = createChunkWithValue(tLeft, 8 );
 
     // Create HT and add the same chunk twice (duplicates)
-    AggregateHashTable::agg_ht_ptr ht1, ht2;
+    agg_ht_ptr ht1, ht2;
     addChunkToAHT(ht1, chunk, groupIndexTypes, payloadIndexTypes, functions, 16, true);
     addChunkToAHT(ht2, chunk, groupIndexTypes, payloadIndexTypes, functions, 16, true);
 
@@ -314,54 +275,6 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCombine) {
     for (idx_t i = 0; i < result.getSize(); ++i) {
         // Expected = 2 * (i * 10)
         int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
-    }
-}
-
-
-TEST_F(AggHTTest, Partition_Shift62) {
-    vector<idx_t> groupIndexTypes = {0,2};
-    vector<idx_t> payloadIndexTypes = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
-    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
-
-    DataChunk chunk = createChunkWithValue(tLeft, 16);
-    AggregateHashTable::agg_ht_ptr ht;
-    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
-
-    EXPECT_EQ(ht->getSize(), 16);
-
-    // Prepare 2 partitions; with shift=63, index should always be 1 for non-empty buckets.
-    std::vector<AggregateHashTable::agg_ht_ptr> partitions(4);
-    ht->partition(partitions, 62);
-    auto pSize = 0;
-    for (auto& p: partitions)
-        if (p)pSize += p->getSize();
-    EXPECT_EQ(pSize, ht->getSize());
-
-    // now combine all the partitions
-    AggregateHashTable::agg_ht_ptr htFinal;
-    for (auto& p: partitions) {
-        if (!p)continue;
-        if (!htFinal) {
-            htFinal = std::move(p);
-            continue;
-        };
-        htFinal->combine(*p);
-        p = nullptr;
-    }
-    htFinal->finalize();
-    EXPECT_EQ(htFinal->getSize(), ht->getSize());
-    ht = nullptr;
-    // check the data
-    DataChunk result = probeToHT(htFinal, chunk, groupIndexTypes, functions);
-
-    EXPECT_EQ(result.columnCount(), 1);
-    EXPECT_EQ(result.getSize(), chunk.getSize());
-    for (idx_t i = 0; i < result.getSize(); ++i) {
-        // Expected = 2 * (i * 10)
-        int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
         int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }

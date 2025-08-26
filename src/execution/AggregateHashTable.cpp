@@ -23,9 +23,12 @@
 
 namespace bumblebee{
 AggregateHashTable::AggregateHashTable(const vector<AggregateFunction *> &aggFunctions,
-    const vector<ConstantType> &types, idx_t capacity,bool resizable ): functions_(aggFunctions), capacity_(capacity), entries_(0),
-                                                             hash_(UBIGINT, true, true, capacity), ready_(false), resizable_(resizable) {
+    const vector<ConstantType> &types, const vector<idx_t>& payloadCols,  const vector<idx_t>& groupCols,
+    idx_t capacity,bool resizable ): functions_(aggFunctions), capacity_(capacity), entries_(0),
+    hash_(UBIGINT, true, true, capacity), payloadCols_(payloadCols),
+    ready_(false), resizable_(resizable),groupCols_(groupCols) {
     BB_ASSERT(capacity_ != 0 && (capacity_ & (capacity_ - 1)) == 0); // capacity should be power of 2
+    BB_ASSERT(payloadCols_.size() == aggFunctions.size()); // for each agg func a paylaod
     // mask is for masking the last bit of the hash
     mask_ = (hash_t(1) << (sizeof(hash_t) * 8 - 1));
 
@@ -54,17 +57,73 @@ AggregateHashTable::AggregateHashTable(const vector<AggregateFunction *> &aggFun
     auto maxValue = (1ULL << (sizeof(capacity_) * 8 - 1));
     // check the capacity can fit in a uint of 63 (last bit is used to flag if a bucket is empty or not)
     BB_ASSERT(capacity_ < maxValue);
+
+    if (!groupCols_.empty()) {
+        for (auto& col: groupCols_) {
+            BB_ASSERT(col < chunkone_.columnCount());
+            groupColsType_.push_back(types[col]);
+        }
+        // init distinct HT with no functions
+        distinctHT_ = agg_ht_ptr(new AggregateHashTable(vector<AggregateFunction*>{}, types, payloadCols, capacity_, true));
+    }
 }
 
-void AggregateHashTable::addChunk(Vector &hash, DataChunk &group, DataChunk &payload) {
+AggregateHashTable::AggregateHashTable(const vector<AggregateFunction *> &aggFunctions,
+    const vector<ConstantType> &types, const vector<idx_t>& payloadCols, idx_t capacity,
+    bool resizable):AggregateHashTable(aggFunctions, types,payloadCols, vector<idx_t>{}, capacity, resizable) {
+}
+
+void AggregateHashTable::distinctChunk(DataChunk &chunk) {
+    Vector hash(UBIGINT, chunk.getSize());
+    chunk.hash(hash);
+
+    DataChunk payload;
+    payload.initializeEmpty(payloadColsType_);
+    payload.reference(chunk, payloadCols_);
+    distinctChunk(hash, chunk, payload);
+}
+
+void AggregateHashTable::distinctChunk(Vector &hash, DataChunk &chunk, DataChunk &payload) {
+    // probe with the distinct HT
+    SelectionVector groupSel(chunk.getSize());
+    SelectionVector newGroupSel(chunk.getSize());
+    idx_t newGroupCount = 0;
+    distinctHT_->findOrCreateGroups(hash, chunk, groupSel, newGroupCount, newGroupSel);
+    chunk.slice(newGroupSel, newGroupCount);
+    hash.slice(newGroupSel, newGroupCount);
+    payload.slice(newGroupSel, newGroupCount);
+}
+
+void AggregateHashTable::addChunk(Vector &hash, DataChunk &groupAndPayload) {
+    DataChunk  payload;
+    payload.initializeEmpty(payloadColsType_);
+    payload.reference(groupAndPayload, payloadCols_);
+    addChunkInternal(hash, groupAndPayload, payload);
+}
+
+void AggregateHashTable::addChunkInternal(Vector &hash, DataChunk &chunk, DataChunk &payload) {
     BB_ASSERT(payload.columnCount() == functions_.size());
-    BB_ASSERT(payload.getSize() == group.getSize());
+    BB_ASSERT(payload.getSize() == chunk.getSize());
+
+    DataChunk ichunk;
+    ichunk.initializeEmpty(chunk.getTypes());
+    ichunk.reference(chunk);
+
+    // if distinct columns > 0 we need to filter out the duplicates
+    if (!groupCols_.empty()) {
+        distinctChunk(hash, chunk, payload);
+        // now select the group cols
+        ichunk.destroy();
+        ichunk.initializeEmpty(groupColsType_);
+        ichunk.reference(chunk, groupCols_);
+    }
+
     // find the buckets for each row in the group
-    SelectionVector groupSel(group.getSize());
-    findOrCreateGroups(hash, group, groupSel);
+    SelectionVector groupSel(ichunk.getSize());
+    findOrCreateGroups(hash, ichunk, groupSel);
     // now apply the agg function
     for (id_t i = 0;i<functions_.size();++i) {
-        AggregateFunction::updateState(payload.data_[i], states_[i].get(), groupSel, *functions_[i], group.getSize());
+        AggregateFunction::updateState(payload.data_[i], states_[i].get(), groupSel, *functions_[i], payload.getSize());
     }
 }
 
@@ -93,10 +152,13 @@ idx_t AggregateHashTable::scan(idx_t position, DataChunk &result) {
 void AggregateHashTable::fetchAggregates(Vector &hash, DataChunk &group, DataChunk &result, SelectionVector &sel) {
     BB_ASSERT(result.columnCount() == payload_.columnCount());
     BB_ASSERT(result.getSize() == group.getSize());
+    BB_ASSERT(groupCols_.empty() && group.columnCount() == chunkone_.columnCount());
+    BB_ASSERT(!groupCols_.empty() && group.columnCount() == groupCols_.size());
 
     // find the buckets for each row in the group
     SelectionVector groupSel(group.getSize());
-    auto matchedGroups = findOrCreateGroups(hash, group, groupSel, false, &sel);
+    idx_t matchedGroups = 0;
+    findOrCreateGroups(hash, group, groupSel,matchedGroups, false, sel);
     // copy the agg results value in the result chunk
     for (id_t i = 0;i<payload_.columnCount();++i) {
         VectorOperations::copy(payload_.data_[i], result.data_[i], groupSel, group.getSize(), 0, 0);
@@ -152,7 +214,7 @@ void AggregateHashTable::matchChunks(DataChunk &groups, SelectionVector& compare
     }
 }
 
-idx_t AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, SelectionVector &groupSel, bool createGroups, SelectionVector* matchedSel) {
+void AggregateHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups, SelectionVector &groupSel, idx_t& matchedCount, idx_t& newGroupsCount, bool createGroups, SelectionVector* matchedSel, SelectionVector* newGroupSel) {
 
     auto size = groups.getSize();
 
@@ -180,13 +242,13 @@ idx_t AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Se
     buckets.normalify(size); // should be already normalized
 
     SelectionVector sel_vector;
-
+    // sel of index and buckets of new groups
     SelectionVector emptySel(size);
     SelectionVector emptyBucketSel(size);
-
+    // sel of index and buckets of the to be matched groups
     SelectionVector compareSel(size);
     SelectionVector compareBucketSel(size);
-
+    // sel of the no match groups
     SelectionVector notMatchSel(size);
 
     auto group_data = chunkone_.orrify();
@@ -235,7 +297,13 @@ idx_t AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Se
             }
 
         }
-        created_groups += new_entry_count;
+        // set the created groups index sel
+        if (newGroupSel) {
+            for (idx_t j = 0; j< new_entry_count; j++) {
+                newGroupSel->setIndex(created_groups++, emptySel.getIndex(j));
+            }
+        }else
+            created_groups += new_entry_count;
 
         // init the new states
         initStates(groups, emptyBucketSel, emptySel, new_entry_count);
@@ -249,7 +317,8 @@ idx_t AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Se
             for (idx_t j = 0; j< need_compare_count; j++) {
                 matchedSel->setIndex(matched_groups++, compareSel.getIndex(j));
             }
-        }
+        }else
+            matched_groups += need_compare_count;
 
         // the matched rows we do not need to update as bucket is correct
         // for the notMatchSel we need to try to compare with another bucket (linear probe)
@@ -266,9 +335,28 @@ idx_t AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Se
         remaining_entries = no_match_count;
     }
 
-    return matched_groups;
+    matchedCount = matched_groups;
+    newGroupsCount = created_groups;
+}
+
+void AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, SelectionVector &groupSel) {
+    idx_t mc, ng;
+    return findOrCreateGroupsInternal(hash, groups, groupSel,mc,ng, true, nullptr, nullptr );
+}
+
+void AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, SelectionVector &groupSel,
+    idx_t &matchedCount, bool createGroups, SelectionVector &matchedSel) {
+    idx_t ng;
+    return findOrCreateGroupsInternal(hash, groups, groupSel,matchedCount,ng, createGroups, &matchedSel, nullptr );
 
 }
+
+void AggregateHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, SelectionVector &groupSel,
+    idx_t &newGroupsCount, SelectionVector &newGroupSel) {
+    idx_t mc;
+    return findOrCreateGroupsInternal(hash, groups, groupSel,mc,newGroupsCount, true, nullptr, &newGroupSel );
+}
+
 
 void AggregateHashTable::combine(AggregateHashTable &other) {
     BB_ASSERT(chunkone_.columnCount() == other.chunkone_.columnCount());
@@ -278,19 +366,46 @@ void AggregateHashTable::combine(AggregateHashTable &other) {
     for (idx_t i = 0; i < functions_.size(); i++)
         BB_ASSERT(functions_[i] == other.functions_[i]);
 
-    // find the groups of the other table
-    SelectionVector sel(other.entries_);
-    other.getGroups(0, sel, other.entries_);
-    // slice the other chunk to keep only the non empty slots
-    other.chunkone_.slice(sel, other.entries_);
-    Vector otherHash(UBIGINT, other.chunkone_.getSize());
-    other.chunkone_.hash(otherHash);
-    // creates the groups that are not present in this HT
-    SelectionVector oBucketsel(other.chunkone_.getSize());
-    findOrCreateGroups(otherHash, other.chunkone_, oBucketsel);
-    // now merge the states
-    for (idx_t i = 0; i < functions_.size(); i++)
-        AggregateFunction::combineStates(other.states_[i].get(), states_[i].get(), sel, oBucketsel, *functions_[i], other.entries_);
+    other.finalize();
+
+    DataChunk chunk;
+    chunk.initializeEmpty(other.chunkone_.getTypes());
+    chunk.reference(other.chunkone_);
+
+    DataChunk payload;
+    payload.initializeEmpty(other.payload_.getTypes());
+    payload.reference(other.payload_);
+
+    if (!groupCols_.empty()) {
+        // if distinct cols is not empty we need to compare only the distinct chunk
+        // take the chunkone of the distinct ht ( that contains all the columns)
+        chunk.destroy();
+        chunk.initializeEmpty(other.distinctHT_->chunkone_.getTypes());
+        chunk.reference(other.distinctHT_->chunkone_);
+
+        SelectionVector dsel(other.distinctHT_->entries_);
+        other.distinctHT_->getGroups(0, dsel, other.distinctHT_->entries_);
+        chunk.slice(dsel, other.distinctHT_->entries_);
+
+        distinctChunk( chunk );
+        // ref the payload from the distinct chunk
+        payload.destroy();
+        payload.initializeEmpty(payloadColsType_);
+        payload.reference(chunk, payloadCols_);
+
+    }else {
+        // find the groups of the other table and remove the empty group
+        SelectionVector sel(other.entries_);
+        other.getGroups(0, sel, other.entries_);
+        chunk.slice(sel, other.entries_);
+        payload.slice(sel, other.entries_);
+    }
+
+    Vector otherHash(UBIGINT, chunk.getSize());
+    chunk.hash(otherHash);
+
+    // add the chunk in the current ht
+    addChunkInternal(otherHash, chunk, payload);
 
     // if HT is ready recalculate the payloads
     if (ready_)
@@ -322,7 +437,7 @@ void AggregateHashTable::partition(vector<agg_ht_ptr>& partitions, idx_t shift) 
         if (pi.size_ == 0)continue; // empty partition
         auto& partition = partitions[i];
         // create partition if null
-        if (!partition) partition = agg_ht_ptr(new AggregateHashTable(functions_, chunkone_.getTypes(),MORSEL_SIZE, true));
+        if (!partition) partition = agg_ht_ptr(new AggregateHashTable(functions_, chunkone_.getTypes(), payloadCols_, groupCols_,MORSEL_SIZE, true));
 
         DataChunk chunk;
         chunk.initializeEmpty(chunkone_.getTypes());
@@ -348,7 +463,7 @@ void AggregateHashTable::resize(idx_t size) {
     if (capacity_ > size) return;
     BB_ASSERT(resizable_);
     // create a new HT with the capacity = size and combine with the current one
-    AggregateHashTable newTable(functions_, chunkone_.getTypes(), size);
+    AggregateHashTable newTable(functions_, chunkone_.getTypes(), payloadCols_, size);
     newTable.combine(*this);
     // now take the results from the new table
     capacity_ = newTable.capacity_;

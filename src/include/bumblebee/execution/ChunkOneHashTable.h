@@ -17,39 +17,33 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "bumblebee/common/TypeDefs.h"
+#include "bumblebee/common/Vector.h"
 #include "bumblebee/common/types/DataChunk.h"
-#include "bumblebee/function/AggregateFunction.h"
 
 namespace bumblebee{
 
 
-class AggregateHashTable {
-
+class ChunkOneHashTable {
 public:
-    using agg_ht_ptr = std::unique_ptr<AggregateHashTable>;
+    using distinct_ht_ptr_t = std::unique_ptr<ChunkOneHashTable>;
 
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.7;
 
-    // if no groups col are provided the HT table can be used to the calculation of the distinct values (passing also empty vector as aggFunctions)
-    AggregateHashTable(const vector<AggregateFunction*>& aggFunctions, const vector<ConstantType>& types,const vector<idx_t>& payloadCols, idx_t capacity = MORSEL_SIZE, bool resizable = false);
-    AggregateHashTable(const vector<AggregateFunction*>& aggFunctions, const vector<ConstantType>& types,const vector<idx_t>& payloadCols,const vector<idx_t>& groupCols, idx_t capacity = MORSEL_SIZE, bool resizable = false);
+    ChunkOneHashTable(const vector<ConstantType>& types, idx_t capacity, bool resizable);
 
-    AggregateHashTable(const AggregateHashTable &other) = delete;
-    AggregateHashTable(AggregateHashTable &&other) noexcept = delete;
-    AggregateHashTable & operator=(const AggregateHashTable &other) = delete;
-    AggregateHashTable & operator=(AggregateHashTable &&other) noexcept = delete;
+    ChunkOneHashTable(const ChunkOneHashTable &other) = delete;
+    ChunkOneHashTable(ChunkOneHashTable &&other) noexcept = delete;
+    ChunkOneHashTable & operator=(const ChunkOneHashTable &other) = delete;
+    ChunkOneHashTable & operator=(ChunkOneHashTable &&other) noexcept = delete;
 
-    // Add a given data to HT and computing the aggregates
+
+    // Add a given data to HT
     void addChunk(Vector& hash, DataChunk& chunk);
 
     // Scan the HT starting from the position until the result and group
-    idx_t scan(idx_t position, DataChunk& result);
-    // Fetch the aggregates for specific groups from the HT and place them in the result
-    // filter out the groups that does not matched
-    void fetchAggregates(Vector& hash, DataChunk& group, DataChunk& result, SelectionVector &sel);
-    // finalize
-    void finalize();
+    idx_t scan(idx_t position, DataChunk& result, idx_t size = STANDARD_VECTOR_SIZE);
 
     // Find or creates groups
     void findOrCreateGroups(Vector &hash, DataChunk &groups, SelectionVector &groupSel);
@@ -59,21 +53,21 @@ public:
     void findOrCreateGroups(Vector &hash, DataChunk &groups, SelectionVector &groupSel, idx_t& newGroupsCount, SelectionVector& newGroupSel);
 
     // Combine with other HT
-    void combine(AggregateHashTable& other);
+    void combine(ChunkOneHashTable& other);
     // Partition the HT
-    void partition(vector<agg_ht_ptr>& partitions, idx_t shift);
+    void partition(vector<distinct_ht_ptr_t>& partitions, idx_t shift);
 
     idx_t getSize() const;
     idx_t getCapacity()const;
-    bool isReady() const;
-    void setReady();
     string toString(bool compact = true);
+    vector<ConstantType> getTypes() const;
 
-private:
+protected:
+
     // Resize the HT
-    void resize(idx_t size);
+    virtual void resize(idx_t size);
     // init the states
-    void initStates(DataChunk &groups,SelectionVector& emptyBucketSel, SelectionVector& emptySel, idx_t new_entry_count);
+    void copyNewGroups(DataChunk &groups,SelectionVector& emptyBucketSel, SelectionVector& emptySel, idx_t new_entry_count);
     // try to match the groups
     void matchChunks(DataChunk &groups, SelectionVector& compareSel, SelectionVector& compareBucketSel,
                      SelectionVector& notMatchSel, idx_t &need_compare_count, idx_t &no_match_count);
@@ -83,40 +77,20 @@ private:
     // Finds or creates groups in the hashtable using the specified group keys. The groupSel selection vector will point to the groups.
     // Is possible to use it to find only the match group calling with createGroups to false, matched sel will return the matched index
     void findOrCreateGroupsInternal(Vector &hash, DataChunk &groups, SelectionVector &groupSel, idx_t& matchedCount, idx_t& newGroupsCount, bool createGroups = true, SelectionVector* matchedSel = nullptr, SelectionVector* newGroupSel = nullptr);
-    // select the distinct columns
-    void distinctChunk(Vector &hash, DataChunk &group, DataChunk &payload);
-    void distinctChunk(DataChunk &chunk);
 
-    void addChunkInternal(Vector& hash, DataChunk& chunk, DataChunk& payload);
 
-    // Aggregates functions
-    vector<AggregateFunction*> functions_;
     // Max entries in HT
     idx_t capacity_;
     // Elements in the HT
     idx_t entries_;
     // Holds the groups of HT
     DataChunk chunkone_;
-    // Aggregated data for each function
-    DataChunk payload_;
-    // Holds the states for each aggregation
-    vector<agg_states_ptr> states_;
-    // Hash of group data, last bit store if the bucket is empty or not
+    // Hash of data, last bit store if the bucket is empty or not
     Vector hash_;
     // Mask to apply on the hash to set bucket not empty
     idx_t mask_;
-    // If is ready to be used
-    bool ready_;
     // if the hash table can resize
     bool resizable_;
-    // probe columns (if empty distinct and groups columns are equal)
-    vector<ConstantType> groupColsType_;
-    vector<idx_t> groupCols_;
-    // pyalod cols
-    vector<idx_t> payloadCols_;
-    vector<ConstantType> payloadColsType_;
-    // HT for the distinct calculation
-    agg_ht_ptr distinctHT_;
 };
 
 

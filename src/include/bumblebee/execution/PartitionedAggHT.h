@@ -19,46 +19,56 @@
 #pragma once
 #include <memory>
 
-#include "AggregateHashTable.h"
+#include "AggregateChunkOneHashTable.h"
 #include "bumblebee/common/Mutex.h"
 #include "bumblebee/common/Vector.h"
 
 namespace bumblebee{
 
-using agg_ht_ptr = AggregateHashTable::agg_ht_ptr;
+using agg_ht_ptr_t = AggregateChunkOneHashTable::agg_ht_ptr_t;
 
+// Inspired by : https://db.in.tum.de/~leis/papers/morsels.pdf
 class PartitionedAggHT {
 public:
 
     static constexpr idx_t PARTITIONS = 64; // consider that in Agg HT last bit is always 1
 
-    explicit PartitionedAggHT(idx_t partitions = PARTITIONS);
+    explicit PartitionedAggHT(vector<idx_t> &groupCols,vector<idx_t>& payloadCols, vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
     PartitionedAggHT(const PartitionedAggHT &other) = delete;
     PartitionedAggHT(PartitionedAggHT &&other) noexcept = delete;
     PartitionedAggHT & operator=(const PartitionedAggHT &other) = delete;
     PartitionedAggHT & operator=(PartitionedAggHT &&other) noexcept = delete;
 
-    // partition the agg HT and push the partitioned HT in the partition vector
-    void partitionAggregateHT(agg_ht_ptr ht);
+    // partition the HT and push the partitioned HT in the partition vector
+    void partitionHT(distinct_ht_ptr_t& ht);
     // compute the final aggregate HT
     void finalize();
     // merge the HT in the same partitions (no lock are used, so each thread should process different partitions)
-    void processPartition(idx_t partition);
-
+    void aggregatePartition(idx_t partition);
 
     idx_t getPartitionSize(idx_t partition) {
         return partitionEntries_[partition];
+    }
+
+    idx_t getNumPartitions() {
+        return partitions_;
     }
 
     bool isReady() {
         return ready_;
     }
 
+    agg_ht_ptr_t& getAggregateHT() {
+        return table_;
+    }
+
 private:
-    // the final HT table
-    agg_ht_ptr table_;
-    // vector of partitioned agg HT
-    vector<vector<agg_ht_ptr>> partitionsVec_;
+    // the final Aggregate HT table
+    agg_ht_ptr_t table_;
+    // vector of distinct HT
+    vector<vector<distinct_ht_ptr_t>> partitionsVec_;
+    // Aggregate HT for each partition
+    vector<agg_ht_ptr_t> partitionsAggVec_;
     // number of partitions
     idx_t partitions_;
     // shift to apply on hash table to calculate the partition
@@ -69,7 +79,15 @@ private:
     mutex mutex_;
     // statistics of entries for each partition
     std::unordered_map<idx_t, idx_t> partitionEntries_;
+
+    // Aggregate Group columns
+    vector<idx_t> groupCols_;
+    // Payload cols
+    vector<idx_t> payloadCols_;
+    // Aggregates functions
+    vector<AggregateFunction*> functions_;
 };
 
+using partitioned_agg_ht_ptr_t = std::unique_ptr<PartitionedAggHT>;
 
 }
