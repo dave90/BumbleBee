@@ -29,10 +29,14 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
     // construct the new body with only classical atoms
     atoms_vector_t newBody;
 
-    // fetch all the builtint and the vars
+    // fetch all the builtin and aggregates and the vars
+    // for the aggregate we store the shared variables
+    // aggregates will be treated similar to assignment
     vector<Atom*> builtIntAtoms;
     vector<set_term_variable_t> builtInVariables;
+    set_term_variable_t ruleVars;
     for (auto& atom : body) {
+        atom.getVariables(ruleVars);
         if (atom.getType() == BUILTIN) {
             set_term_variable_t vars;
             atom.getVariables(vars);
@@ -40,13 +44,26 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
             builtInVariables.push_back(vars);
             builtIntAtoms.push_back(&atom);
         }
+        if (atom.getType() == AGGREGATE) {
+            builtIntAtoms.push_back(&atom);
+            builtInVariables.emplace_back();
+        }
     }
 
+    for (idx_t i = 0; i < builtIntAtoms.size(); i++) {
+        auto aggAtom = builtIntAtoms[i];
+        if (aggAtom->getType() != AGGREGATE) continue;
+        BB_ASSERT(aggAtom->getBinop() == ASSIGNMENT);
+        set_term_variable_t sharedVars;
+        aggAtom->getAggSharedVariables(ruleVars, sharedVars);
+        sharedVars.erase(aggAtom->getTerms()[0].getVariable()); // remove the assignment var
+        builtInVariables[i] = std::move(sharedVars);
+    }
 
 
     set_term_variable_t currentVariables;
     for (idx_t i=0; i< body.size(); i++) {
-        if (body[i].getType() == BUILTIN) continue;
+        if (body[i].getType() == BUILTIN || body[i].getType() == AGGREGATE) continue;
         // add the variables of this classical atoms in the current variables set
         // and push in the new body (not changing the order of classical atoms)
         body[i].getVariables(currentVariables);
@@ -74,24 +91,34 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
             }
             // if is equal or assignment and is possible to evaluate now (so only one variable is not bounded)
             // then evaluate it now
-            if ((ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)  && isAssignmePossibleToEvaluate(currentVariables, builtInVariables[j], *ba)) {
-                ba->setBinop(ASSIGNMENT);
-                ba->getVariables(currentVariables);
-                newBody.push_back(std::move(*ba));
-                builtIntAtoms[j] = nullptr;
-                // new assignment found restart from 0
-                j = 0;
-                continue;
+
+            if ((
+                ba->getType() == BUILTIN
+                 && ( ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)
+                 && isAssignmePossibleToEvaluate(currentVariables, builtInVariables[j], *ba))
+                 ||(
+                 ba->getType() == AGGREGATE
+                 && Term::subset(currentVariables, builtInVariables[j])
+                 )) {
+                    ba->setBinop(ASSIGNMENT);
+                    ba->getVariables(currentVariables);
+                    newBody.push_back(std::move(*ba));
+                    builtIntAtoms[j] = nullptr;
+                    // new assignment found restart from 0
+                    j = 0;
+                    continue;
             }
+
             ++j;
         }
+
 
         // now check the builtin atoms if is possible to insert one
         // and while true until no more new atoms is possible to insert
         for (idx_t j=0; j< builtIntAtoms.size();++j) {
             auto ba = builtIntAtoms[j];
             // if is nullptr builtin already inserted in the new body
-            if (ba == nullptr)continue;
+            if (ba == nullptr || ba->getType() == AGGREGATE)continue;
             // if all the variables are present, we can execute as filter
             if (Term::subset(currentVariables, builtInVariables[j])) {
                 if (ba->getBinop() == ASSIGNMENT) {

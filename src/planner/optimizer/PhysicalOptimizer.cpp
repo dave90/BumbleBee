@@ -22,6 +22,7 @@
 #include "bumblebee/catalog/PredicateTables.h"
 #include "bumblebee/execution/Expression.h"
 #include "bumblebee/execution/NestedLoopJoin.h"
+#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.h"
 #include "bumblebee/execution/atom/expression/PhysicalExpression.h"
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
 #include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
@@ -131,6 +132,47 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
     selectedCols_.emplace_back(); // push empty array as builtin does not have predicates
 }
 
+idx_t getAggPayloadIndex(Atom &atom) {
+    BB_ASSERT(atom.getAggTerms().size() > 0);
+    BB_ASSERT(atom.getAggTerms()[0].getType() == VARIABLE);
+    auto &payloadTerm = atom.getAggTerms()[0];
+    for (idx_t i = 0;i<atom.getAggsAtoms()[0].getTerms().size();i++) {
+        auto &iterm = atom.getAggsAtoms()[0].getTerms()[i];
+        BB_ASSERT(iterm.getType() == VARIABLE);
+        if (iterm.getVariable() == payloadTerm.getVariable()) {
+            return i;
+        }
+    }
+    ErrorHandler::errorGeneric("Generic error with aggregates, payload not found");
+    return 0;
+}
+
+
+void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
+
+    BB_ASSERT(atom.getType() == AGGREGATE);
+    BB_ASSERT(atom.getBinop() == ASSIGNMENT);
+    BB_ASSERT(atom.getTerms().size() > 0);
+    BB_ASSERT(atom.getAggsAtoms().size() == 1);
+    string internalPredName = atom.getAggsAtoms()[0].getPredicate()->getName();
+    BB_ASSERT(internalPredName.starts_with(Predicate::INTERNAL_PREDICATE_AGG_PREFIX));
+
+    // now you need to insert the result type of the agg
+    // payload of agg is the first term
+    auto payloadIndex = getAggPayloadIndex(atom);
+    auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
+    BB_ASSERT(pt->getTypes().size() > payloadIndex);
+    ConstantType payloadType = pt->getTypes()[payloadIndex];
+    BB_ASSERT(payloadType != UNKNOWN);
+    auto function = context_.functionRegister_.getFunction(atom.getAggregateFunctionName(), {payloadType});
+    ConstantType returnType = function->result_;
+    auto& term = atom.getTerms()[0]; // assignment variable
+    typesMap_[term.getVariable()] = returnType;
+    cols_.push_back({colsMap_.size()}); // where to put the result of the agg
+    colsMap_[term.getVariable()] = colsMap_.size();
+    selectedCols_.emplace_back(); // push empty array as aggregate does not have predicates to select
+}
+
 void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
     BB_ASSERT(atom.getType() == CLASSICAL);
     vector<idx_t> atomCols;
@@ -155,6 +197,7 @@ void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
     cols_.push_back(std::move(atomCols));
 }
 
+
 void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
     // maps of variable and cols in the data chunk
     for (auto& atom:rule.getBody()) {
@@ -162,6 +205,8 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
             findColsAndTypesClassicalAtom(atom);
         else if (atom.getType() == BUILTIN)
             findColsAndTypesBuiltin(atom);
+        else if (atom.getType() == AGGREGATE)
+            findColsAndTypesAggregateAtom(atom);
         else
             ErrorHandler::errorNotImplemented("Optimizer: find columns implemented only for CLASSICAL and BUILTIN atoms");
     }
@@ -182,6 +227,56 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
         }
         headCols_.push_back(std::move(atomCols));
     }
+}
+
+void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, patom_ptr_vector_t &patoms) {
+
+    vector<idx_t> selCols; // empty selCols
+    BB_ASSERT(atom.getAggsAtoms().size() > 0);
+    auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
+    AggregateChunkOneHashTable *aht;
+    idx_t internalPayloadIndex = getAggPayloadIndex(atom); // index of the payload
+    idx_t payload = 0; // find the payload to extract (can be multiple payloads)
+    bool payloadFound = false;
+    {
+        vector<AggregateFunction*> aggFunctions;
+        vector<idx_t> groups, payloads;
+        vector<string> funcNames;
+        Predicate::parseAggregateInternalPredicate(pt->predicate_->getName(), groups, payloads, funcNames);
+        BB_ASSERT(payloads.size() == funcNames.size());
+        vector<ConstantType> arguments;
+        for (auto p:payloads) {
+            BB_ASSERT(p < payloads.size());
+            BB_ASSERT(pt->getTypes()[p] != UNKNOWN);
+            arguments.push_back(pt->getTypes()[p]);
+        }
+        // get the aggregate function
+        for (idx_t i = 0; i < funcNames.size(); i++) {
+            auto funcName = funcNames[i];
+            auto function = context_.functionRegister_.getFunction(funcName, {arguments[i]});
+            BB_ASSERT(function);
+            aggFunctions.push_back((AggregateFunction*) function.get());
+            if (payloads[i] == internalPayloadIndex && funcName == atom.getAggregateFunctionName()) {
+                // we are looking for this payload
+                payload = i;
+                payloadFound = true;
+            }
+        }
+        aht = pt->getPartitionedAggHashTable(groups, payloads, aggFunctions).getAggregateHT().get();
+        BB_ASSERT(aht->isReady());
+        BB_ASSERT(payloadFound);
+    }
+
+    vector<idx_t> groupCols;
+    // cols are the groups cols
+    // you need to find out the shared cols (group cols)
+    set_term_variable_t internalVars;
+    atom.getAggAtomsVariables(internalVars);
+    for (auto& var:internalVars)
+        if (colsMap_.contains(var))
+            groupCols.push_back(colsMap_[var]);
+    vector payloads = {payload};
+    patoms.emplace_back(new PhysicalPartitionedAggHT(types_, cols,selCols,groupCols, payloads, aht));
 }
 
 void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<ConstantType> types,patom_ptr_vector_t& patoms ) {
@@ -210,7 +305,7 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& co
 
     // create the expression based on atom
     Expression expr(atom.getBinop(), left, right);
-    auto patom = patom_ptr_t(new PhysicalExpression(expr, types, 0));
+    auto patom = patom_ptr_t(new PhysicalExpression(expr, types));
     patoms.push_back(std::move(patom));
 }
 
@@ -226,18 +321,18 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     patom_ptr_vector_t empty;
     {
         auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
-        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred->getCount(), pred));
+        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
         dbCols = cols; selCols = cols;
-        patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols, 0 , pred, keys, STATS));
+        patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, COLLECT));
         prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
         prules.push_back(std::move(pruleStats));
     }
     {
         auto dbCols = cols, selCols = cols;
         auto estimatedBuckets = nextPowerOfTwo(pred->getCount());
-        patom_ptr_t source = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols, estimatedBuckets , pred, keys, BUILD));
+        patom_ptr_t source = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, BUILD));
         dbCols = cols; selCols = cols;
-        patom_ptr_t sink = patom_ptr_t(new PhysicalNopeOutput(types, dbCols, selCols, 0 ));
+        patom_ptr_t sink = patom_ptr_t(new PhysicalNopeOutput(types, dbCols, selCols ));
         prule_ptr_t pruleBuild(new PhysicalRule(source, sink, empty, 1));
         prules.push_back(std::move(pruleBuild));
     }
@@ -310,7 +405,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     auto pred = schema.getPredicateTable(atom.getPredicate()).get();
     if (joinConditions.size() == 0 ) {
         // cross product join
-        auto cp = patom_ptr_t(new PhysicalCrossProduct(types, dcCols, selCols, 0, pred ));
+        auto cp = patom_ptr_t(new PhysicalCrossProduct(types, dcCols, selCols, pred ));
         patoms.push_back(std::move(cp));
         return;
     }
@@ -327,7 +422,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     if (keys.size() == 0) {
         // no hash join possible
         // TODO create sort merge join instead of nested loop
-        auto nj = patom_ptr_t(new PhysicalNestedLoop(types, dcCols, selCols, 0, pred, joinConditions ));
+        auto nj = patom_ptr_t(new PhysicalNestedLoop(types, dcCols, selCols, pred, joinConditions ));
         patoms.push_back(std::move(nj));
         return;
     }
@@ -341,9 +436,57 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     if (!pred->getJoinHashTable(keys).isReady())
         priority = (priority < 2)? 2 : priority;
 
-    auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, 0, pred, keys, dcKeys, joinConditions ));
+    auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, dcKeys, joinConditions ));
     patoms.push_back(std::move(nj));
 
+}
+
+void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules) {
+    prule_ptr_vector_t value;
+    BB_ASSERT(rule.getHead().size() == 1);
+    auto& headAtom = rule.getHead()[0];
+    string predicateName = headAtom.getPredicate()->getName();
+    auto& ptSink = schema.getPredicateTable(headAtom.getPredicate());
+    auto types = types_;
+    auto headCols = headCols_[0];
+    if (predicateName.starts_with(Predicate::INTERNAL_PREDICATE_AGG_PREFIX)) {
+        // is the internal aggregate builds, set as patom the partitioned agg ht and
+        // generate another rule for the build of agg ht
+        vector<idx_t> groups, payloads;
+        vector<string> funcNames;
+        Predicate::parseAggregateInternalPredicate(predicateName, groups, payloads, funcNames);
+        BB_ASSERT(payloads.size() == funcNames.size());
+        vector<ConstantType> arguments;
+        for (auto p:payloads) {
+            BB_ASSERT(p < headCols.size());
+            arguments.push_back(types[headCols[p]]);
+        }
+        // get the aggregate function
+        vector<AggregateFunction*> aggFunctions;
+        for (idx_t i = 0; i < funcNames.size(); i++) {
+            auto funcName = funcNames[i];
+            auto function = context_.functionRegister_.getFunction(funcName, {arguments[i]});
+            BB_ASSERT(function);
+            aggFunctions.push_back((AggregateFunction*) function.get());
+        }
+        vector<idx_t> selCols;
+        sink = patom_ptr_t(new PhysicalPartitionedAggHT(types, headCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::COLLECT  ));
+
+        // now create also the build rule with priority +1
+        vector<idx_t> dcCols;
+        idx_t estinametedCardinality = 0;
+        // does not need dcCols and sel cols
+        auto source = patom_ptr_t(new PhysicalPartitionedAggHT(types, dcCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::BUILD  ));
+        auto nopeSink = patom_ptr_t(new PhysicalNopeOutput(types, dcCols, selCols ));
+
+        vector<patom_ptr_t> empty;
+        prule_ptr_t pruleBuild(new PhysicalRule(source, nopeSink, empty, 1));
+        pruleBuild->toString();
+        prules.push_back(std::move(pruleBuild));
+
+        return;
+    }
+    sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols, ptSink.get()));
 }
 
 prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
@@ -357,21 +500,16 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     set_term_variable_t vars;
     idx_t priority = 0;
     auto& schema = context_.defaultSchema_;
-    {
-        BB_ASSERT(rule.getBody().size() > 0);
-        auto& firstAtom = rule.getBody()[0];
-        firstAtom.getVariables(vars);
-        auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
-        auto types = types_;
-        source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource->getCount(), ptSource.get()));
-    }
-    {
-        BB_ASSERT(rule.getHead().size() == 1);
-        auto& headAtom = rule.getHead()[0];
-        auto& ptSink = schema.getPredicateTable(headAtom.getPredicate());
-        auto types = types_;
-        sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols_[0], 0, ptSink.get()));
-    }
+
+    BB_ASSERT(rule.getBody().size() > 0);
+    auto& firstAtom = rule.getBody()[0];
+    firstAtom.getVariables(vars);
+    auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
+    auto types = types_;
+    source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
+
+    generateOutputPhysicalAtom(rule, sink, schema, prules);
+
     for (idx_t i=1;i<rule.getBody().size();++i) {
         if (skipAtom_.contains(i) && skipAtom_[i])continue;
         auto& atom = rule.getBody()[i];
@@ -382,6 +520,9 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
             case CLASSICAL:
                 // find the physical join
                 generatePhysicalJoin(vars, i, rule, patoms, prules, priority);
+                break;
+            case AGGREGATE:
+                generatePhysicalAgg(atom, cols_[i], patoms);
                 break;
         }
         atom.getVariables(vars);

@@ -25,7 +25,7 @@ namespace bumblebee{
 
 class Planner {
 public:
-    explicit Planner(ClientContext &context): context(context) {}
+    explicit Planner(ClientContext &context): context_(context) {}
     virtual ~Planner() = default;
 
     virtual PhysicalRulesBucket plan(RulesBucket& rules);
@@ -34,7 +34,7 @@ private:
     void executeRewriters(RulesBucket& rules);
     void executeOptimizer(RulesBucket&, PhysicalRulesBucket& );
 
-    ClientContext& context;
+    ClientContext& context_;
 };
 
 

@@ -142,10 +142,10 @@ private:
 
 
 public:
-    static void initStates(data_ptr_t states, SelectionVector& sel, AggregateFunction& func, idx_t count);
-    static void combineStates(data_ptr_t states, data_ptr_t targetStates, SelectionVector& sel, SelectionVector& targetSel, AggregateFunction& func, idx_t count);
-    static void updateState(Vector& input, data_ptr_t states, SelectionVector& sel, AggregateFunction& func, idx_t count);
-    static void finalizeState(Vector& result, data_ptr_t states, SelectionVector& sel, AggregateFunction& func, idx_t count);
+    static void initStates(data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
+    static void combineStates(data_ptr_t states, data_ptr_t targetStates, const SelectionVector& sel, const SelectionVector& targetSel, AggregateFunction& func, idx_t count);
+    static void updateState(Vector& input, data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
+    static void finalizeState(Vector& result, data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
 
 };
 

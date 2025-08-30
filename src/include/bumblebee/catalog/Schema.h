@@ -37,11 +37,13 @@ public:
     Predicate* createPredicate(const char* predicateName, unsigned arity);
     predicate_table_ptr_t& getPredicateTable(Predicate*);
     vector<Predicate*> getPredicates();
+    Predicate* getFASOPredicate();
 
 private:
+    void initDefaultPredicates();
+
     std::string name_;
     predicates_tables_map ptables_;
-
 };
 
 

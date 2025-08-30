@@ -1698,7 +1698,7 @@ yyreduce:
     {
         case 4:
 #line 77 "src/parser/aspcore2.y"
-    { }
+    { director.getBuilder()->onEnd();}
     break;
 
   case 5:

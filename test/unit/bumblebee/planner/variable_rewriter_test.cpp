@@ -42,8 +42,8 @@ TEST(ViariableRewriterTest, NoRewriting) {
 
     string beforeRewriting = rule.toString();
     std::cout << beforeRewriting << std::endl;
-
-    VariablesRewriter rewriter;
+    ClientContext context;
+    VariablesRewriter rewriter(context);
     rewriter.rewrite(rule);
     EXPECT_EQ(rule.toString(), beforeRewriting);
 }
@@ -55,8 +55,8 @@ TEST(ViariableRewriterTest, AddAnonymousRewriting) {
 
     string beforeRewriting = rule.toString();
     std::cout << beforeRewriting << std::endl;
-
-    VariablesRewriter rewriter;
+    ClientContext context;
+    VariablesRewriter rewriter(context);
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
@@ -73,8 +73,8 @@ TEST(ViariableRewriterTest, RemoveAtomRewriting) {
 
     string beforeRewriting = rule.toString();
     std::cout << beforeRewriting << std::endl;
-
-    VariablesRewriter rewriter;
+    ClientContext context;
+    VariablesRewriter rewriter(context);
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);

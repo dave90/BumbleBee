@@ -19,6 +19,7 @@
 #include "bumblebee/ClientContext.h"
 
 #include "bumblebee/catalog/Catalog.h"
+#include "bumblebee/function/aggregate/Sum.h"
 
 namespace bumblebee{
 ClientContext::ClientContext():
@@ -27,6 +28,13 @@ ClientContext::ClientContext():
     threads_(1),
     printAll_(false),
     printProfiling_(false),
-    singleShot_(true){}
+    singleShot_(true) {
 
+    registerFunctions();
+
+}
+
+void ClientContext::registerFunctions() {
+    SumFunc::registerFunction(functionRegister_);
+}
 }

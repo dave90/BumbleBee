@@ -35,7 +35,7 @@ class PhysicalRule {
 public:
     PhysicalRule(patom_ptr_t &source, patom_ptr_t &sink, patom_ptr_vector_t &patoms, idx_t priority );
 
-    idx_t getSourceSize() const;
+    idx_t getSourceMaxThreads() const;
     idx_t getPriority() const;
     void setPriority(idx_t priority);
     void incrementCompleted();

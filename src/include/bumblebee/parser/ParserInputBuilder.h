@@ -32,8 +32,6 @@ namespace bumblebee {
 
 class ParserInputBuilder {
 public:
-	constexpr static string NEW_PREDICATE_AGG_PREFIX = "#AGG_";
-
 	// TODO refactor pass client context
 	ParserInputBuilder(OutputType type, bool hiddenNewPredicates);
 	virtual ~ParserInputBuilder();
@@ -96,8 +94,9 @@ public:
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
 	rules_vector_t& getProgram();
-	Atom extractRuleFromAgg(vector<Term>&, vector<Atom>& atoms);
-	Predicate* getAuxHeadAtomAggRule(vector<Term>& aggTerms, vector<Atom>& atoms);
+	// Atom extractRuleFromAgg(vector<Term>&, vector<Atom>& atoms);
+	// Predicate* getAuxHeadAtomAggRule(vector<Term>& aggTerms, vector<Atom>& atoms);
+	void rewriteAggregates();
 
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};
@@ -123,7 +122,7 @@ protected:
 	std::string safetyErrorMessage;
 	rules_vector_t program_;
 
-	vector<idx_t> auxAggRulesCreated_;
+	vector<idx_t> rulesWithAggregates_;
 
 	idx_t newPredCounter_{0};
 

@@ -55,6 +55,10 @@ public:
 	explicit GlobalPhysicalAtomState() = default;
 	~GlobalPhysicalAtomState() = default;
 
+	// return the start and end index of the next bucket to read
+	// return false if no buckets are available to read , otherwise true
+	static bool getNextBucket(idx_t& start,idx_t& end, idx_t& current, vector<idx_t>& size );
+
 };
 
 using pstate_ptr_t =std::unique_ptr<PhysicalAtomState>;
@@ -75,12 +79,10 @@ public:
 	// for each selected cols the cols index in the data chunk
 	vector<idx_t> dcCols_;
 	// because type_ contains the type of all the columns colsType_ contains the type of the interested columns
-	vector<ConstantType> colsType_;
-	// TODO populate this value
-	idx_t estimatedCardinality_;
+	vector<ConstantType> dcColsType_;
 
-	PhysicalAtom(const vector<ConstantType> &types,vector<idx_t>& dcCols,vector<idx_t>& selectedCols, idx_t estimated_cardinality);
-	PhysicalAtom(const vector<ConstantType> &types, idx_t estimated_cardinality);
+	PhysicalAtom(const vector<ConstantType> &types,vector<idx_t>& dcCols,vector<idx_t>& selectedCols);
+	PhysicalAtom(const vector<ConstantType> &types);
 	virtual ~PhysicalAtom() = default;
 
 	// Execute is called during the execution and accept input chunks and produce output chunks.
@@ -112,6 +114,13 @@ public:
 
 	friend bool operator==(const PhysicalAtom &lhs, const PhysicalAtom &rhs);
 	friend bool operator!=(const PhysicalAtom &lhs, const PhysicalAtom &rhs);
+
+protected:
+	// Select columns from selectCols_
+	DataChunk selectColumns(DataChunk &chunk) const;
+	// Select columns from dcCols
+	DataChunk projectColumns(DataChunk &input) const;
+
 };
 
 using patom_ptr_t = std::unique_ptr<PhysicalAtom>;

@@ -81,14 +81,14 @@ protected:
     // 2) STATS.finalize() to init directory
     // 3) BUILD.getData() repeatedly to build buckets
     // 4) BUILD.finalize() to set ready
-    void buildRightHashTable(const vector<idx_t>& rightKeyIdx, idx_t estimated_cardinality = 200) {
+    void buildRightHashTable(const vector<idx_t>& rightKeyIdx) {
         // STATS operator (sink)
         // For STATS, dcCols are the columns we project from the coming input chunk (right table).
         // Here we keep all right columns: {0,1,2}
         vector<idx_t> dcColsRight{0, 1, 2};
         vector<idx_t> dummySel; // not used by STATS
         PhysicalHashJoin statsOp(typesRight, dcColsRight, dummySel,
-                                 estimated_cardinality, ptableRight.get(), rightKeyIdx, PhysicalHashJoinType::STATS);
+            ptableRight.get(), rightKeyIdx, PhysicalHashType::COLLECT);
 
         auto gstateStats = statsOp.getGlobalState();
         auto stateStats = statsOp.getState();
@@ -104,7 +104,7 @@ protected:
 
         // BUILD operator (source)
         PhysicalHashJoin buildOp(typesRight, dcColsRight, dummySel,
-                                 estimated_cardinality, ptableRight.get(), rightKeyIdx, PhysicalHashJoinType::BUILD);
+                                  ptableRight.get(), rightKeyIdx, PhysicalHashType::BUILD);
         auto gstateBuild = buildOp.getGlobalState();
         auto stateBuild = buildOp.getState();
 
@@ -132,7 +132,7 @@ TEST_F(PhysicalHTJoinTest, EqualityJoin_EndToEnd) {
 
     // Build right hash table on key = right col 0
     vector<idx_t> rightKeys{0};
-    buildRightHashTable(rightKeys, 200);
+    buildRightHashTable(rightKeys);
 
     // PROBE operator
     vector<idx_t> dccols = {3,4,5};     // where to place right-side projected cols (same pattern as NL tests)
@@ -144,7 +144,7 @@ TEST_F(PhysicalHTJoinTest, EqualityJoin_EndToEnd) {
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0)); // l.col1 == r.col0
 
-    PhysicalHashJoin probeOp(resultType, dccols, selcols, 200, ptableRight.get(),
+    PhysicalHashJoin probeOp(resultType, dccols, selcols, ptableRight.get(),
                              rightKeys, lkeys, conditions);
 
     auto state = probeOp.getState();
@@ -173,7 +173,7 @@ TEST_F(PhysicalHTJoinTest, EmptyRight_NoMatches) {
 
     // Still run pipeline so HT is ready (on same right key layout)
     vector<idx_t> rightKeys{0};
-    buildRightHashTable(rightKeys, /*estimated*/ 0);
+    buildRightHashTable(rightKeys);
 
     // PROBE: l.col1 == r.col0
     vector<idx_t> dccols = {3,4,5};
@@ -185,7 +185,7 @@ TEST_F(PhysicalHTJoinTest, EmptyRight_NoMatches) {
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0));
 
-    PhysicalHashJoin probeOp(resultType, dccols, selcols, 0, ptableRight.get(),
+    PhysicalHashJoin probeOp(resultType, dccols, selcols, ptableRight.get(),
                              rightKeys, lkeys, conditions);
 
     auto state = probeOp.getState();
@@ -209,7 +209,7 @@ TEST_F(PhysicalHTJoinTest, MultiChunkRight_BuildAndProbe) {
     const idx_t rightRowsTotal = 3 * STANDARD_VECTOR_SIZE;
 
     vector<idx_t> rightKeys{0};
-    buildRightHashTable(rightKeys, /*estimated*/ rightRowsTotal);
+    buildRightHashTable(rightKeys);
 
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
@@ -220,7 +220,7 @@ TEST_F(PhysicalHTJoinTest, MultiChunkRight_BuildAndProbe) {
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0));
 
-    PhysicalHashJoin probeOp(resultType, dccols, selcols, rightRowsTotal, ptableRight.get(),
+    PhysicalHashJoin probeOp(resultType, dccols, selcols, ptableRight.get(),
                              rightKeys, lkeys, conditions);
 
     auto state = probeOp.getState();
@@ -242,7 +242,7 @@ TEST_F(PhysicalHTJoinTest, MultiChunkRight_BuildAndProbe) {
 TEST_F(PhysicalHTJoinTest, ProbeWithEmptyInput_ReturnsNeedMoreInput) {
     // Right: build empty-but-ready hash table
     vector<idx_t> rightKeys{0};
-    buildRightHashTable(rightKeys, 0);
+    buildRightHashTable(rightKeys);
 
     // PROBE setup
     vector<idx_t> dccols = {3,4,5};
@@ -254,7 +254,7 @@ TEST_F(PhysicalHTJoinTest, ProbeWithEmptyInput_ReturnsNeedMoreInput) {
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 0));
 
-    PhysicalHashJoin probeOp(resultType, dccols, selcols, 0, ptableRight.get(),
+    PhysicalHashJoin probeOp(resultType, dccols, selcols, ptableRight.get(),
                              rightKeys, lkeys, conditions);
     auto state = probeOp.getState();
 

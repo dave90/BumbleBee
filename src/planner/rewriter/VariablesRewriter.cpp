@@ -68,6 +68,9 @@ void VariablesRewriter::pushAnonymous(Rule &rule) {
     }
 }
 
+VariablesRewriter::VariablesRewriter(const ClientContext &context): context_(context) {
+}
+
 void VariablesRewriter::rewrite(Rule &rule) {
     // start with the variables in the head
     pushAnonymous(rule);
@@ -76,6 +79,23 @@ void VariablesRewriter::rewrite(Rule &rule) {
 }
 
 void VariablesRewriter::verifyAndPruneAtoms(Rule &rule) {
+
+    // check if a source atom is present
+    bool sourceAtomPresent = false;
+    for (auto& atom:rule.getBody()) {
+        if (atom.getType() == CLASSICAL)
+            sourceAtomPresent = true;
+    }
+    if (!sourceAtomPresent) {
+        // no source atoms are present
+        // add a fake classical atom as source just to have a source in the rule
+        terms_vector_t terms;
+        terms.emplace_back(Predicate::INTERNAL_SOURCE_ONE_ROW.c_str(), true); // add variable that is not possible to exist in the body
+        auto atom = Atom::createClassicalAtom(context_.defaultSchema_.getFASOPredicate(), std::move(terms));
+        rule.addAtomInBody(std::move(atom));
+        return;
+    }
+
     // check no anonymous in head
     // check if all atoms has anonymous if yes prune it
     // check if it is a binop atom that not contains anonymous

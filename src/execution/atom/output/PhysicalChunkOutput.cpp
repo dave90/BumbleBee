@@ -70,10 +70,10 @@ public:
 };
 
 
-PhysicalChunkOutput::PhysicalChunkOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols, idx_t estimated_cardinality,
-PredicateTables *pt): PhysicalAtom(types,  estimated_cardinality), pt_(pt){
+PhysicalChunkOutput::PhysicalChunkOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PredicateTables *pt): PhysicalAtom(types), pt_(pt){
     dcCols_ = std::move(dcCols);
-    for (auto c : dcCols_)colsType_.push_back(types_[c]);
+    for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
 }
 
 PhysicalChunkOutput::~PhysicalChunkOutput() {}
@@ -94,7 +94,7 @@ string PhysicalChunkOutput::toString() const {
         result += std::to_string(c) + ", ";
     }
     result += ";";
-    for (auto c : colsType_) {
+    for (auto c : dcColsType_) {
         result += ctypeToString(c) + ", ";
     }
     return result + ")";
@@ -109,14 +109,6 @@ gpstate_ptr_t PhysicalChunkOutput::getGlobalState() const {
     return gpstate_ptr_t(new GlobalChunkOutputState(pt_));
 }
 
-DataChunk PhysicalChunkOutput::projectColumns(DataChunk &input) const{
-
-    DataChunk newChunk;
-    newChunk.initializeEmpty(colsType_);
-    newChunk.reference(input, dcCols_);
-    return newChunk;
-
-}
 
 AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
     /**
@@ -154,7 +146,7 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     }
     BB_ASSERT(input.getSize() > 0);
     DataChunk pinput = projectColumns(input);
-    BB_ASSERT(pinput.columnCount() == colsType_.size());
+    BB_ASSERT(pinput.columnCount() == dcColsType_.size());
 
     if ( pinput.getSize() == pinput.getCapacity()) {
         // chunk is full push in the global state
@@ -171,7 +163,7 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     pinput.normalify();
     // if cache is empty set to cache
     if (cstate.cachedChunk_.getSize() == 0) {
-        cstate.cachedChunk_.initializeEmpty(colsType_);
+        cstate.cachedChunk_.initializeEmpty(dcColsType_);
         cstate.cachedChunk_.reference(pinput);
         context.profiler_.endPhysicalAtom(pinput);
         return AtomResultType::HAVE_MORE_OUTPUT;

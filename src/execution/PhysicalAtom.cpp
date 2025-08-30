@@ -23,16 +23,14 @@ namespace bumblebee{
 
 
 
-PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols,
-idx_t estimated_cardinality): types_(types),
-    estimatedCardinality_(estimated_cardinality),
+PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols): types_(types),
     dcCols_(std::move(dcCols)),
     selectCols_(std::move(selectedCols)) {
     BB_ASSERT(dcCols_.size() <= types_.size());
-    for (auto c : dcCols_) colsType_.push_back(types_[c]);
+    for (auto c : dcCols_) dcColsType_.push_back(types_[c]);
 }
 
-PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types, idx_t estimated_cardinality): types_(types), estimatedCardinality_(estimated_cardinality){}
+PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types): types_(types){}
 
 
 AtomResultType PhysicalAtom::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
@@ -81,6 +79,23 @@ gpstate_ptr_t PhysicalAtom::getGlobalState() const {
     return gpstate_ptr_t(new GlobalPhysicalAtomState());
 }
 
+DataChunk PhysicalAtom::selectColumns(DataChunk &chunk) const {
+    vector<ConstantType> selectColsType;
+    for (auto& i:selectCols_)
+        selectColsType.push_back(chunk.data_[i].getType());
+    DataChunk newChunk;
+    newChunk.initializeEmpty(selectColsType);
+    newChunk.reference(chunk, selectCols_);
+    return newChunk;
+}
+
+DataChunk PhysicalAtom::projectColumns(DataChunk &input) const{
+    DataChunk newChunk;
+    newChunk.initializeEmpty(dcColsType_);
+    newChunk.reference(input, dcCols_);
+    return newChunk;
+}
+
 bool operator==(const PhysicalAtom &lhs, const PhysicalAtom &rhs) {
     return false;
 }
@@ -94,5 +109,22 @@ idx_t PhysicalAtom::getMaxThreads() const {
 }
 
 void PhysicalAtom::setMaxThreads(idx_t threads) const {
+}
+
+bool GlobalPhysicalAtomState::getNextBucket(idx_t &start, idx_t &end, idx_t &current, vector<idx_t> &size) {
+    if (current >= size.size()) {
+        return false;
+    }
+
+    auto s = size[0];
+    start = current;
+    end = start;
+    while (end < size.size() - 1) {
+        s += size[end];
+        if (s > MORSEL_SIZE) break;
+        ++end;
+    }
+    current = end + 1;
+    return true;
 }
 }

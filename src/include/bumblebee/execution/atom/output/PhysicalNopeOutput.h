@@ -25,8 +25,8 @@ namespace bumblebee{
 class PhysicalNopeOutput : public  PhysicalAtom{
 public:
     PhysicalNopeOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols,
-        vector<idx_t> &selectedCols, idx_t estimated_cardinality)
-        : PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality) {
+        vector<idx_t> &selectedCols)
+        : PhysicalAtom(types, dcCols, selectedCols) {
     }
 
     ~PhysicalNopeOutput() override{};

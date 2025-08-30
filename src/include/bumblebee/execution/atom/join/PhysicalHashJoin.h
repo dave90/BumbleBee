@@ -21,22 +21,15 @@
 
 namespace bumblebee{
 
-enum PhysicalHashJoinType : uint8_t {
-    PROBE = 0,
-    STATS = 1,
-    BUILD = 2
-};
 
 // Physical Atom for Hash Join. Can be used as:
 // - sink and source for build phase
 // - executor for probe phase
 class PhysicalHashJoin : public PhysicalAtom {
 public:
-    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols,
-        idx_t estimated_cardinality, PredicateTables* pt, vector<idx_t> keys,
+    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys,
         vector<idx_t> lkeys, vector<Expression>& conditions);
-    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols,
-        idx_t estimated_cardinality, PredicateTables* pt, vector<idx_t> keys, PhysicalHashJoinType type);
+    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, PhysicalHashType type);
 
     ~PhysicalHashJoin() override;
 
@@ -62,14 +55,12 @@ public:
 
 
 private:
-    DataChunk selectColumns(DataChunk &chunk) const;
-    DataChunk projectColumns(DataChunk &input) const;
 
     PredicateTables* pt_;
     vector<idx_t> keys_; // keys of the current predicate
     vector<idx_t> lkeys_; // keys on the input dataset
     vector<Expression> conditions_;
-    PhysicalHashJoinType type_;
+    PhysicalHashType type_;
 };
 
 

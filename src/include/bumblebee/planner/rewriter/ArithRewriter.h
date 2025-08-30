@@ -18,13 +18,14 @@
  */
 #pragma once
 #include "Rewriter.h"
+#include "bumblebee/ClientContext.h"
 
 namespace bumblebee{
 
 // Rewrites the Arith and Builtin atoms
 class ArithRewriter : public Rewriter{
 public:
-    static constexpr string NEW_VARS_PREFIX = "#ARITH_";
+
     ~ArithRewriter() override;
     void rewrite(Rule &rule) override;
 
@@ -33,6 +34,8 @@ private:
     bool containsSharedVariables(Atom& atom, string& sharedVar);
     // remove the duplicates variables sharedVar creating a new binop
     atoms_vector_t removeSharedVariables(Atom& atom,string& sharedVar);
+    // rewrite the aggregate as assignment
+    atoms_vector_t rewriteAggregate(Atom& atom);
     // extract constant values from arith term
     Atom extractConstantBuiltinArith(Atom& atom);
 

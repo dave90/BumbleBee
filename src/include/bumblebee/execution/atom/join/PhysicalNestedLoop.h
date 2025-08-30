@@ -30,7 +30,7 @@ public:
     // - left col ref to a col in input data chunk
     // - right col ref to a col in predicate table
     PhysicalNestedLoop(const vector<ConstantType> &types, vector<idx_t> &dcCols,
-        vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables* pt, vector<Expression> &conditions);
+        vector<idx_t> &selectedCols, PredicateTables* pt, vector<Expression> &conditions);
 
     ~PhysicalNestedLoop() override;
     string getName() const override;
@@ -40,7 +40,6 @@ public:
         PhysicalAtomState &state) const override;
 
 private:
-    DataChunk selectColumns(DataChunk &chunk) const;
 
     PredicateTables* pt_;
     vector<Expression> conditions_;

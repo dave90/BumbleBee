@@ -20,6 +20,7 @@
 
 #include "bumblebee/common/Vector.h"
 #include "catalog/Schema.h"
+#include "function/FunctionRegister.h"
 
 namespace bumblebee{
 
@@ -34,7 +35,12 @@ public:
     idx_t threads_;
     bool printAll_;
     bool printProfiling_;
+    FunctionRegister functionRegister_;
+
     ClientContext();
+
+private:
+    void registerFunctions();
 };
 
 

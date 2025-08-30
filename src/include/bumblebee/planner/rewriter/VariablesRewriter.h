@@ -18,6 +18,7 @@
  */
 #pragma once
 #include "Rewriter.h"
+#include "bumblebee/ClientContext.h"
 #include "bumblebee/parser/statement/Rule.h"
 
 namespace bumblebee{
@@ -25,6 +26,7 @@ namespace bumblebee{
 // This rewriter rewrites the variables in the rule
 class VariablesRewriter : public Rewriter {
 public:
+    explicit VariablesRewriter(const ClientContext &context);
 
     void rewrite(Rule& rule) override;
 private:
@@ -33,6 +35,8 @@ private:
     // verify the rule is still correct after the rewrite
     // and prune atoms with all anonymous variables
     void verifyAndPruneAtoms(Rule& rule);
+
+    ClientContext context_;
 };
 
 

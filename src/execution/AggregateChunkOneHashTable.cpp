@@ -44,6 +44,10 @@ AggregateChunkOneHashTable::AggregateChunkOneHashTable(const vector<ConstantType
 }
 
 void AggregateChunkOneHashTable::addChunk(Vector& hash, DataChunk& groups, DataChunk& payload) {
+    if (groups.columnCount() == 0) {
+        addChunk(payload);
+        return;
+    }
 
     // now insert or find the groups
     // find the buckets for each row in the group
@@ -67,6 +71,25 @@ void AggregateChunkOneHashTable::addChunk(Vector& hash, DataChunk& groups, DataC
 
 }
 
+void AggregateChunkOneHashTable::addChunk(DataChunk &payload) {
+    // check if init state is needed
+    BB_ASSERT(hash_.getVectorType() == VectorType::FLAT_VECTOR);
+    auto hash_data = FlatVector::getData<uint64_t>(hash_);
+    if (!(hash_data[0] & mask_)) {
+        entries_++;
+        hash_data[0] = hash_data[0] | mask_;
+        SelectionVector sel;
+        for (idx_t i = 0; i < functions_.size(); i++)
+            AggregateFunction::initStates(states_[i].get(),sel, *functions_[i], 1);
+    }
+
+    // update the first state
+
+    for (id_t i = 0;i<functions_.size();++i) {
+        AggregateFunction::updateState(payload.data_[i], states_[i].get(), ConstantVector::ZERO_SELECTION_VECTOR, *functions_[i], payload.getSize());
+    }
+}
+
 void AggregateChunkOneHashTable::combine(AggregateChunkOneHashTable &other) {
     BB_ASSERT(chunkone_.columnCount() == other.chunkone_.columnCount());
     BB_ASSERT(chunkone_.getTypes() == other.chunkone_.getTypes());
@@ -74,6 +97,17 @@ void AggregateChunkOneHashTable::combine(AggregateChunkOneHashTable &other) {
     BB_ASSERT(payload_.getTypes() == other.payload_.getTypes());
     for (idx_t i = 0; i < functions_.size(); i++)
         BB_ASSERT(functions_[i] == other.functions_[i]);
+
+    if (other.entries_ == 0)return;
+
+    if (other.chunkone_.columnCount() == 0) {
+        // aggregation with no groups, so combine the first state
+        BB_ASSERT(other.entries_ == 1);
+        SelectionVector sel;
+        for (idx_t i = 0; i < functions_.size(); i++)
+            AggregateFunction::combineStates(other.states_[i].get(), states_[i].get(), sel, sel, *functions_[i], other.entries_);
+        return;
+    }
 
     // find the groups of the other table and remove the empty group
     SelectionVector sel(other.entries_);
@@ -152,6 +186,41 @@ void AggregateChunkOneHashTable::fetchAggregates(Vector &hash, DataChunk &group,
     result.slice(sel, matchedGroups);
 }
 
+
+void AggregateChunkOneHashTable::fetchAggregates(Vector &hash, DataChunk &group, Vector &result, idx_t function,
+    SelectionVector &sel) {
+    BB_ASSERT(function < functions_.size());
+    BB_ASSERT(ready_);
+    BB_ASSERT(result.getType() == payload_.data_[function].getType());
+
+    // find the buckets for each row in the group
+    SelectionVector groupSel(group.getSize());
+    idx_t matchedGroups = 0;
+    findOrCreateGroups(hash, group, groupSel,matchedGroups, false, sel);
+
+    // copy the agg results value in the result chunk
+    VectorOperations::copy(payload_.data_[function], result, groupSel, group.getSize(), 0, 0);
+    // filter only the matched groups
+    group.slice(sel, matchedGroups);
+    result.slice(sel, matchedGroups);
+}
+
+void AggregateChunkOneHashTable::fetchAggregates(DataChunk &result) {
+    BB_ASSERT(ready_);
+
+    // create constant vector that point to the first value of the payload
+    for (idx_t i = 0; i < functions_.size(); i++) {
+        result.data_[i].reference(Value(payload_.data_[i].getValue(0)));
+    }
+    result.setCardinality(1);
+}
+
+void AggregateChunkOneHashTable::fetchAggregates(Vector &result, idx_t function) {
+    BB_ASSERT(ready_);
+    BB_ASSERT(function < payload_.data_.size());
+
+    result.reference(Value(payload_.data_[function].getValue(0)));
+}
 
 string AggregateChunkOneHashTable::toString(bool compact) {
     string result = "AggregateChunkOneHashTable - "

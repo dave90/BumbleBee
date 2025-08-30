@@ -60,6 +60,14 @@ terms_vector_t& Atom::getTerms() {
     return terms_;
 }
 
+terms_vector_t & Atom::getAggTerms() {
+    return aggTerms_;
+}
+
+vector<Atom> & Atom::getAggsAtoms() {
+    return aggAtoms_;
+}
+
 const terms_vector_t& Atom::getTerms() const {
     return terms_;
 }
@@ -148,6 +156,12 @@ bool Atom::isConstantAssignment() {
 
 }
 
+bool Atom::isAggregateAssignment() {
+    if (getType() != AGGREGATE) return false;
+    if (binop_ == ASSIGNMENT || secondBinop_ == ASSIGNMENT) return true;
+    return false;
+}
+
 vector<ConstantType> Atom::getTermsCType() {
     vector<ConstantType> types;
     types.reserve(terms_.size());
@@ -162,6 +176,11 @@ void Atom::replaceVariable(const string &var,const string &newVar) {
     for (auto& term : terms_) {
         term.replaceVariable(var, newVar);
     }
+}
+
+string Atom::getAggregateFunctionName() {
+    BB_ASSERT(getType() == AGGREGATE);
+    return Atom::getAggFunction(aggregate_);
 }
 
 Atom & Atom::operator=(Atom &&other) noexcept {
@@ -203,9 +222,28 @@ hash_t Atom::hash() {
 }
 
 void Atom::getVariables(set_term_variable_t &variables) {
+    if (getType() == AGGREGATE) {
+        if (getBinop() != NONE_OP)
+            terms_[0].getVariables(variables);
+        if (getSecondBinop() != NONE_OP)
+            terms_[1].getVariables(variables);
+        return;
+    }
     for (auto& term : terms_) {
         term.getVariables(variables);
     }
+}
+
+void Atom::getAggAtomsVariables(set_term_variable_t &variables) {
+    for (auto& atom: aggAtoms_) {
+        atom.getVariables(variables);
+    }
+}
+
+void Atom::getAggSharedVariables(const set_term_variable_t &globalVariables, set_term_variable_t &sharedVariables) {
+    set_term_variable_t internals;
+    getAggAtomsVariables(internals);
+    Term::intersetVariables(internals, globalVariables, sharedVariables);
 }
 
 bool Atom::isGround() {
@@ -234,7 +272,7 @@ std::string Atom::toString() const {
         if (binop_ != NONE_OP)
             s += terms_[0].toString() + " " + getBinopStr(binop_) ;
 
-        s += "#" +getAggFunction(aggregate_) + "{";
+        s += getAggFunction(aggregate_) + "{";
         for (auto& term : aggTerms_) {
             s += term.toString()+",";
         }
@@ -286,15 +324,15 @@ string Atom::getAggFunction(AggregateFunctionType agg) {
         case NONE:
             return "";
         case MIN:
-            return "MIN";
+            return "#min";
         case MAX:
-            return "MAX";
+            return "#max";
         case AVG:
-            return "AVG";
+            return "#avg";
         case SUM:
-            return "SUM";
+            return "#sum";
         case COUNT:
-            return "COUNT";
+            return "#count";
     }
 }
 
@@ -311,4 +349,5 @@ AggregateFunctionType Atom::getAggFunction(const char* aggFunction) {
 
     return NONE; // default if no match
 }
+
 }

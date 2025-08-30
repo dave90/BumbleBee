@@ -20,8 +20,8 @@
 
 #include "bumblebee/common/Log.h"
 #include "bumblebee/parser/statement/Atom.h"
-#include "bumblebee/parser/statement/Rule.h"
 #include "bumblebee/execution/JoinHashTable.h"
+#include "bumblebee/execution/PartitionedAggHT.h"
 
 namespace bumblebee{
 PredicateTables::PredicateTables(const char* name, unsigned arity): predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
@@ -74,6 +74,23 @@ bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
     for (auto&ht: jhtables_)
         if (ht.checkKeys(keys))
             return true;
+    return false;
+}
+
+PartitionedAggHT & PredicateTables::getPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
+    const vector<AggregateFunction *> &aggregateFunctions) {
+    for (auto& paht: partitionedAggHT_) {
+        if (paht.checkGroups(groups) && paht.checkPayload(payloads, aggregateFunctions))  return paht;
+    }
+    partitionedAggHT_.emplace_back(groups, payloads, aggregateFunctions);
+    return partitionedAggHT_.back();
+}
+
+bool PredicateTables::existgetPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
+    const vector<AggregateFunction *> &aggregateFunctions) {
+    for (auto& paht: partitionedAggHT_) {
+        if (paht.checkGroups(groups) && paht.checkPayload(payloads, aggregateFunctions))  return true;
+    }
     return false;
 }
 

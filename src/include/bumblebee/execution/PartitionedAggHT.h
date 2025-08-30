@@ -33,11 +33,12 @@ public:
 
     static constexpr idx_t PARTITIONS = 64; // consider that in Agg HT last bit is always 1
 
-    explicit PartitionedAggHT(vector<idx_t> &groupCols,vector<idx_t>& payloadCols, vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
-    PartitionedAggHT(const PartitionedAggHT &other) = delete;
-    PartitionedAggHT(PartitionedAggHT &&other) noexcept = delete;
+    explicit PartitionedAggHT(const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
+    PartitionedAggHT(PartitionedAggHT &&other) noexcept;
+    PartitionedAggHT & operator=(PartitionedAggHT &&other) noexcept;
+
     PartitionedAggHT & operator=(const PartitionedAggHT &other) = delete;
-    PartitionedAggHT & operator=(PartitionedAggHT &&other) noexcept = delete;
+    PartitionedAggHT(const PartitionedAggHT &other) = delete;
 
     // partition the HT and push the partitioned HT in the partition vector
     void partitionHT(distinct_ht_ptr_t& ht);
@@ -45,6 +46,8 @@ public:
     void finalize();
     // merge the HT in the same partitions (no lock are used, so each thread should process different partitions)
     void aggregatePartition(idx_t partition);
+    // merge the partitions
+    void combinePartitions(idx_t start,idx_t end);
 
     idx_t getPartitionSize(idx_t partition) {
         return partitionEntries_[partition];
@@ -54,6 +57,10 @@ public:
         return partitions_;
     }
 
+    idx_t getNumPartitionsNotEmpty() {
+        return partitionEntries_.size();
+    }
+
     bool isReady() {
         return ready_;
     }
@@ -61,6 +68,13 @@ public:
     agg_ht_ptr_t& getAggregateHT() {
         return table_;
     }
+
+    vector<ConstantType> getTypes() {
+        return types_;
+    }
+
+    bool checkGroups(const vector<idx_t>& groups);
+    bool checkPayload(const vector<idx_t>& payload, const vector<AggregateFunction*>& functions);
 
 private:
     // the final Aggregate HT table
@@ -86,6 +100,8 @@ private:
     vector<idx_t> payloadCols_;
     // Aggregates functions
     vector<AggregateFunction*> functions_;
+
+    vector<ConstantType> types_;
 };
 
 using partitioned_agg_ht_ptr_t = std::unique_ptr<PartitionedAggHT>;

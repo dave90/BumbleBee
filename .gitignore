@@ -35,5 +35,6 @@
 *.log
 __pycache__/
 test.1
-benchmarks/files/asp/actual
-benchmarks/files/asp/expected
+benchmarks/files/asp/actual/
+benchmarks/files/asp/expected/
+test/e2e/files/asp/actual/

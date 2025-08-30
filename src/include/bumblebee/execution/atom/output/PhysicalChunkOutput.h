@@ -27,12 +27,11 @@ namespace bumblebee{
 // predicate table and if is not internal output it
 class PhysicalChunkOutput : public PhysicalAtom {
 public:
-    PhysicalChunkOutput(const vector<ConstantType> &types,vector<idx_t> &dcCols, idx_t estimated_cardinality, PredicateTables *pt);
+    PhysicalChunkOutput(const vector<ConstantType> &types,vector<idx_t> &dcCols, PredicateTables *pt);
 
     ~PhysicalChunkOutput() override;
     AtomResultType sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
     void finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const override;
-    DataChunk projectColumns(DataChunk &input) const;
     bool isSink() const override;
     string getName() const override;
     string toString() const override;

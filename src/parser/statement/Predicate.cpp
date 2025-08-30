@@ -17,8 +17,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #include "bumblebee/parser/statement/Predicate.h"
-
 #include "bumblebee/common/Hash.h"
+#include <sstream>
 
 namespace bumblebee {
 
@@ -95,5 +95,74 @@ bool PredicateMapEntry::operator==(const PredicateMapEntry &other) const {
 
 hash_t PredicateMapEntry::PEHash::operator()(const PredicateMapEntry &entry) const {
     return CombineHash(Hash(entry.name_), Hash<unsigned>(entry.arity_));
+}
+
+
+string Predicate::buildAggregateInternalPredicate(idx_t suffixCounter, const vector<idx_t> &groups, const vector<idx_t> &payloads,
+    const vector<string> &funcNames) {
+    std::ostringstream oss;
+    oss << INTERNAL_PREDICATE_AGG_PREFIX<<suffixCounter;
+
+    // Append function names
+    for (const auto& fn : funcNames) {
+        oss << "_" << fn;
+    }
+
+    // Append groups
+    if (!groups.empty()) {
+        oss << "_GROUPS";
+        for (auto g : groups) {
+            oss << "_" << g;
+        }
+    }
+
+    // Append payloads
+    if (!payloads.empty()) {
+        oss << "_PAYLOADS";
+        for (auto p : payloads) {
+            oss << "_" << p;
+        }
+    }
+
+    return oss.str();
+}
+
+void Predicate::parseAggregateInternalPredicate(const string &predName, vector<idx_t> &groups, vector<idx_t> &payloads,
+    vector<string> &funcNames) {
+    std::istringstream iss(predName);
+    std::string token;
+
+    // Split by '_'
+    std::vector<std::string> parts;
+    while (std::getline(iss, token, '_')) {
+        parts.push_back(token);
+    }
+
+    enum Section { FUNCS, GROUPS, PAYLOADS };
+    Section section = FUNCS;
+
+    for (size_t i = 1; i < parts.size(); ++i) { // skip prefix (#AGG)
+        const auto& part = parts[i];
+
+        if (part == "GROUPS") {
+            section = GROUPS;
+            continue;
+        } else if (part == "PAYLOADS") {
+            section = PAYLOADS;
+            continue;
+        }
+
+        switch (section) {
+            case FUNCS:
+                funcNames.push_back(part);
+                break;
+            case GROUPS:
+                groups.push_back(std::stoi(part));
+                break;
+            case PAYLOADS:
+                payloads.push_back(std::stoi(part));
+                break;
+        }
+    }
 }
 }

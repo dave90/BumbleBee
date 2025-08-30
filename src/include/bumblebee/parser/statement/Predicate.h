@@ -28,6 +28,12 @@ namespace bumblebee {
 class Predicate {
 public:
 
+    // internal new predicates
+    static constexpr string INTERNAL_VARS_PREFIX = "#ARITH";
+    constexpr static string INTERNAL_PREDICATE_AGG_PREFIX = "#AGG";
+    constexpr static string INTERNAL_SOURCE_ONE_ROW = "#FASO";
+
+
     Predicate() = default;
     explicit Predicate(const char* name, unsigned arity);
     Predicate(Predicate &&other) = delete;
@@ -66,6 +72,11 @@ private:
     bool internal_{true};
     // If the predicated is solved or undefined
     bool solved_{true};
+
+public:
+    //static functions
+    static string buildAggregateInternalPredicate(idx_t suffixCounter, const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<string>& funcNames);
+    static void parseAggregateInternalPredicate(const string& predName, vector<idx_t>& groups,vector<idx_t>& payloads, vector<string>& funcNames);
 };
 
 

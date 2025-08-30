@@ -34,8 +34,8 @@ public:
 
 
 PhysicalCrossProduct::PhysicalCrossProduct(const vector<ConstantType> &types,
-    vector<idx_t>& dcCols,vector<idx_t>& selectedCols, idx_t estimated_cardinality,
-    PredicateTables *pt): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt) {
+    vector<idx_t>& dcCols,vector<idx_t>& selectedCols,
+    PredicateTables *pt): PhysicalAtom(types, dcCols, selectedCols), pt_(pt) {
     BB_ASSERT(dcCols_.size() == selectCols_.size());
 }
 
@@ -53,9 +53,11 @@ string PhysicalCrossProduct::toString() const {
     for (auto c : selectCols_) {
         result += std::to_string(c) + ", ";
     }
-    for (auto c : colsType_) {
+    result += "; ";
+    for (auto c : dcColsType_) {
         result += ctypeToString(c) + ", ";
     }
+
     return result + ")";
 }
 

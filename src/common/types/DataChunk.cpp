@@ -224,6 +224,7 @@ void DataChunk::reset() {
 
 void DataChunk::hash(Vector &result) {
     BB_ASSERT(result.getType() == ConstantType::UBIGINT);
+    if (columnCount() == 0) return;
     VectorOperations::hash(data_[0], result, getSize());
     for (idx_t i = 1; i < columnCount(); i++) {
         VectorOperations::combineHash(result, data_[i], getSize());

@@ -41,8 +41,8 @@ public:
 
 
 PhysicalNestedLoop::PhysicalNestedLoop(const vector<ConstantType> &types, vector<idx_t> &dcCols,
-    vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt,
-    vector<Expression>& conditions): PhysicalAtom(types, dcCols, selectedCols, estimated_cardinality), pt_(pt), conditions_(std::move(conditions)) {
+    vector<idx_t> &selectedCols, PredicateTables *pt,
+    vector<Expression>& conditions): PhysicalAtom(types, dcCols, selectedCols), pt_(pt), conditions_(std::move(conditions)) {
 }
 
 PhysicalNestedLoop::~PhysicalNestedLoop() {}
@@ -62,7 +62,7 @@ string PhysicalNestedLoop::toString() const {
         result += std::to_string(c) + ", ";
     }
     result += "; ";
-    for (auto c : colsType_) {
+    for (auto c : dcColsType_) {
         result += ctypeToString(c) + ", ";
     }
     result += "; ";
@@ -76,13 +76,6 @@ pstate_ptr_t PhysicalNestedLoop::getState() const {
     return pstate_ptr_t(new NestedLoopJoinState());
 }
 
-DataChunk PhysicalNestedLoop::selectColumns(DataChunk &chunk) const{
-
-    DataChunk newChunk;
-    newChunk.initializeEmpty(colsType_);
-    newChunk.reference(chunk, selectCols_);
-    return newChunk;
-}
 
 AtomResultType PhysicalNestedLoop::execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
     PhysicalAtomState &state) const {

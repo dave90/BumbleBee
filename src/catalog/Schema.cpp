@@ -19,7 +19,9 @@
 #include "bumblebee/catalog/Schema.h"
 
 namespace bumblebee{
-Schema::Schema(const std::string &name): name_(name) {}
+Schema::Schema(const std::string &name): name_(name) {
+    initDefaultPredicates();
+}
 
 Predicate * Schema::createPredicate(const char *predicateName, unsigned arity) {
     PredicateMapEntry entry{.name_ = predicateName, .arity_ = arity};
@@ -49,4 +51,18 @@ vector<Predicate*> Schema::getPredicates() {
     }
     return predicates;
 }
+
+Predicate * Schema::getFASOPredicate() {
+    return createPredicate( Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);
+}
+
+void Schema::initDefaultPredicates() {
+    auto p = createPredicate( Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);
+    auto& pt = getPredicateTable(p);
+    terms_vector_t terms;
+    terms.emplace_back(0);
+    auto atom = Atom::createClassicalAtom(p, std::move(terms));
+    pt->addFact(atom); // add one row with one column
+}
+
 }

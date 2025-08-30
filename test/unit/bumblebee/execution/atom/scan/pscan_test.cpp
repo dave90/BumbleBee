@@ -72,7 +72,7 @@ protected:
 TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
     populatePTable(10, STANDARD_VECTOR_SIZE);
     vector<idx_t> cols = {0,1,2};
-    PhysicalChunkScan pcs(testTypes, cols,cols, 0, ptable.get());
+    PhysicalChunkScan pcs(testTypes, cols,cols, ptable.get());
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
 
@@ -94,7 +94,7 @@ TEST_F(PhysicalScanTest, PhysicalScanSimpleTest) {
 TEST_F(PhysicalScanTest, PhysicalScanProjSimpleTest) {
     populatePTable(10, STANDARD_VECTOR_SIZE);
     vector<idx_t> cols = {0,1};
-    PhysicalChunkScan pcs(testTypes, cols,cols, 0, ptable.get());
+    PhysicalChunkScan pcs(testTypes, cols,cols, ptable.get());
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
 
@@ -125,7 +125,7 @@ TEST_F(PhysicalScanTest, PhysicalScanMultiThreadTest) {
 
     // Create the scan operator and shared global state
     vector<idx_t> cols = {0,1,2};
-    PhysicalChunkScan pcs(testTypes,cols, cols, 0, ptable.get());
+    PhysicalChunkScan pcs(testTypes,cols, cols, ptable.get());
     auto gstate = pcs.getGlobalState();
 
     // Use a vector to collect total rows processed by each thread

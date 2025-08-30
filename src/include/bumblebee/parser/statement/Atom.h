@@ -61,6 +61,8 @@ public:
 
     hash_t hash();
     void getVariables(set_term_variable_t &variables);
+    void getAggAtomsVariables(set_term_variable_t &variables);
+    void getAggSharedVariables(const set_term_variable_t& globalVariables,set_term_variable_t& sharedVariables);
     bool isGround();
     std::string toString() const;
 
@@ -70,6 +72,8 @@ public:
     inline Term& operator[](unsigned i);
 
     terms_vector_t& getTerms();
+    terms_vector_t& getAggTerms();
+    vector<Atom>& getAggsAtoms();
     const terms_vector_t& getTerms()const;
     Predicate* getPredicate();
     void getPredicates(predicates_ptr_set_t &predicates);
@@ -85,8 +89,10 @@ public:
     bool containsConstant() const;
     // return true if is constant assignment , i.e X == 10
     bool isConstantAssignment();
+    bool isAggregateAssignment();
     vector<ConstantType> getTermsCType();
     void replaceVariable(const string& var, const string& newVar);
+    string getAggregateFunctionName();
 
     inline const Value& getValue(idx_t idx) const {
         return terms_[idx].getValue();

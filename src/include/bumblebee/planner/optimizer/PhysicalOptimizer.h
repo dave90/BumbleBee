@@ -44,6 +44,7 @@ private:
     // For each atom find the used columns and types for the data chunk
     void findColsAndTypes(Rule& rule);
     void findColsAndTypesClassicalAtom(Atom& atom);
+    void findColsAndTypesAggregateAtom(Atom& atom);
     void findColsAndTypesBuiltin(Atom& atom);
     // return true if the rule can be not evaluated
     bool canBeSkipped(Rule& rule);
@@ -53,8 +54,12 @@ private:
     // generate the join patoms, vars is the variables seen so far in the rule used to calculate the join keys
     void generatePhysicalJoin(const set_term_variable_t& vars, idx_t i, Rule& rule,patom_ptr_vector_t& patoms, prule_ptr_vector_t& prules, idx_t& priority);
 
+    void generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules);
+
+    void generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, patom_ptr_vector_t &patoms);
+
     void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
-        prule_ptr_vector_t& prules, idx_t& priority);
+                              prule_ptr_vector_t& prules, idx_t& priority);
 
     // global client context
     ClientContext& context_;

@@ -279,3 +279,32 @@ TEST_F(AggHTTest, AddChunk_DuplicateGroupsAggregatesCombine) {
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 }
+
+
+TEST_F(AggHTTest, AddChunk_NoGroups) {
+    // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
+    vector<idx_t> groupIndexTypes = {};
+    vector<idx_t> payloadIndexTypes = {2};
+    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Build the chunk with 8 rows
+    DataChunk chunk = createChunkWithValue(tLeft, 8 );
+
+    // Create HT and add the same chunk twice (duplicates)
+    agg_ht_ptr ht1;
+    addChunkToAHT(ht1, chunk, groupIndexTypes, payloadIndexTypes, functions, 32, true);
+    addChunkToAHT(ht1, chunk, groupIndexTypes, payloadIndexTypes, functions, 32, true);
+
+    ht1->finalize();
+
+    // fetch the results
+    DataChunk result;
+    result.initializeEmpty({tLeft[payloadIndexTypes[0]]});
+    result.setCapacity(1);
+    ht1->fetchAggregates(result);
+    EXPECT_EQ(result.getSize(), 1);
+    auto expected = 560 * 2; // sum twice of all values in third column 0, 20, 40, 60, 80, 100, 120, 140
+    EXPECT_EQ(result.getValue(0,0).cast(BIGINT).getNumericValue<int64_t>(), expected);
+
+}

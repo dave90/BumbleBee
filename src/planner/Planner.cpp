@@ -48,7 +48,7 @@ PhysicalRulesBucket Planner::plan(RulesBucket &rules) {
 }
 
 void Planner::executeOptimizer(RulesBucket & rules, PhysicalRulesBucket & prules) {
-    PhysicalOptimizer optimizer(context);
+    PhysicalOptimizer optimizer(context_);
     for (auto& rule: rules.exit_) {
         for (auto& prule: optimizer.optimize(rule))
             prules.exit_.emplace_back(prule);
@@ -78,7 +78,7 @@ void Planner::executeRewriters(RulesBucket &rules) {
 
     LOG_DEBUG("Rewriting rules...");
     vector<rewriter_ptr_t> rewriters;
-    rewriters.emplace_back(new VariablesRewriter());
+    rewriters.emplace_back(new VariablesRewriter(context_));
     rewriters.emplace_back(new ArithRewriter());
     rewriters.emplace_back(new FilterPushDownRewriter());
 

@@ -20,7 +20,7 @@
 #include "bumblebee/function/AggregateFunction.h"
 
 namespace bumblebee {
-void AggregateFunction::initStates(data_ptr_t states, SelectionVector& sel, AggregateFunction &func, idx_t count) {
+void AggregateFunction::initStates(data_ptr_t states, const SelectionVector& sel, AggregateFunction &func, idx_t count) {
     auto size = func.stateSize_();
     for (idx_t i = 0; i < count; i++) {
         idx_t index = sel.getIndex(i);
@@ -29,7 +29,7 @@ void AggregateFunction::initStates(data_ptr_t states, SelectionVector& sel, Aggr
     }
 }
 
-void AggregateFunction::combineStates(data_ptr_t states, data_ptr_t targetStates,SelectionVector &sel, SelectionVector &targetSel,
+void AggregateFunction::combineStates(data_ptr_t states, data_ptr_t targetStates,const SelectionVector &sel, const SelectionVector &targetSel,
     AggregateFunction &func, idx_t count) {
 
     auto size = func.stateSize_();
@@ -44,7 +44,7 @@ void AggregateFunction::combineStates(data_ptr_t states, data_ptr_t targetStates
 }
 
 template <class T>
-    void templatedUpdateState(Vector& input, data_ptr_t states, SelectionVector &sel, AggregateFunction &func,
+    void templatedUpdateState(Vector& input, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
         idx_t count) {
 
     VectorData input_data;
@@ -60,7 +60,7 @@ template <class T>
     }
 }
 
-void AggregateFunction::updateState(Vector& input, data_ptr_t states, SelectionVector &sel, AggregateFunction &func,
+void AggregateFunction::updateState(Vector& input, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
     idx_t count) {
 
     switch (input.getType()) {
@@ -93,7 +93,7 @@ void AggregateFunction::updateState(Vector& input, data_ptr_t states, SelectionV
 }
 
 template <class T>
-void templatedFinalizeState(Vector &result, data_ptr_t states, SelectionVector &sel, AggregateFunction &func,
+void templatedFinalizeState(Vector &result, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
         idx_t count) {
     VectorData result_data;
     result.orrify(count, result_data);
@@ -109,7 +109,7 @@ void templatedFinalizeState(Vector &result, data_ptr_t states, SelectionVector &
 }
 
 
-void AggregateFunction::finalizeState(Vector &result, data_ptr_t states, SelectionVector &sel, AggregateFunction &func,
+void AggregateFunction::finalizeState(Vector &result, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
     idx_t count) {
 
     switch (result.getType()) {

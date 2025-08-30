@@ -72,7 +72,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionEQTest) {
     idx_t count = 100;
     Expression expr = generateExpression(EQUAL, {0}, {}, {1}, {} );
 
-    PhysicalExpression pe(expr, testTypes, 0);
+    PhysicalExpression pe(expr, testTypes);
     auto gstate = pe.getGlobalState();
     auto state = pe.getState();
 
@@ -92,7 +92,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentTest) {
     idx_t count = 100;
     Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {2}, {} );
 
-    PhysicalExpression pe(expr, testTypes, 0);
+    PhysicalExpression pe(expr, testTypes);
     auto gstate = pe.getGlobalState();
     auto state = pe.getState();
 
@@ -116,7 +116,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
     Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1,2,3,4,2}, {MINUS, PLUS, TIMES, DIV} );
     // Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1,2,3}, {PLUS, PLUS} );
 
-    PhysicalExpression pe(expr, testTypes, 0);
+    PhysicalExpression pe(expr, testTypes);
     auto gstate = pe.getGlobalState();
     auto state = pe.getState();
 

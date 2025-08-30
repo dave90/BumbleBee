@@ -87,7 +87,7 @@ TEST_F(PhysicalNLTest, PhysicalNLSimpleTest) {
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(GREATER_OR_EQ, 1, 0));
 
-    PhysicalNestedLoop pnl(resultType, dccols,selcols, 200, ptableRight.get(),conditions);
+    PhysicalNestedLoop pnl(resultType, dccols,selcols, ptableRight.get(),conditions);
     std::cout << pnl.toString() << std::endl;
 
     auto state = pnl.getState();
@@ -126,7 +126,7 @@ TEST_F(PhysicalNLTest, EmptyLeftTableTest) {
     vector<Expression> conditions;
     conditions.emplace_back(Expression::generateExpression(EQUAL, 0, 0)); // a.col0 == b.col0
 
-    PhysicalNestedLoop pnl(resultType, dccols, selcols, 200, ptableRight.get(), conditions);
+    PhysicalNestedLoop pnl(resultType, dccols, selcols, ptableRight.get(), conditions);
     auto state = pnl.getState();
 
     DataChunk input;
@@ -154,7 +154,7 @@ TEST_F(PhysicalNLTest, NoMatchingRowsTest) {
     conditions.emplace_back(Expression::generateExpression(LESS, 0, 0)); // a.col0 < b.col0
     // Since all a.col0 == b.col0, this condition is never true
 
-    PhysicalNestedLoop pnl(resultType, dccols, selcols, 200, ptableRight.get(), conditions);
+    PhysicalNestedLoop pnl(resultType, dccols, selcols, ptableRight.get(), conditions);
     auto state = pnl.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
@@ -182,7 +182,7 @@ TEST_F(PhysicalNLTest, MultiChunkJoinTest) {
     vector<Expression> conditions; // No predicate: Full cross product
     conditions.emplace_back(Expression::generateExpression(EQUAL, 1, 1)); // a.col1 == b.col1
 
-    PhysicalNestedLoop pnl(resultType, dccols, selcols, 200, ptableRight.get(), conditions);
+    PhysicalNestedLoop pnl(resultType, dccols, selcols, ptableRight.get(), conditions);
 
     auto state = pnl.getState();
     DataChunk output;

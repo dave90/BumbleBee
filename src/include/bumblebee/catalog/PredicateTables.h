@@ -19,13 +19,13 @@
 #pragma once
 #include "bumblebee/common/Mutex.h"
 #include "bumblebee/common/types/ChunkCollection.h"
-#include "bumblebee/execution/JoinHashTable.h"
 #include "bumblebee/parser/statement/Predicate.h"
 #include "bumblebee/parser/statement/Atom.h"
+#include "bumblebee/function/AggregateFunction.h"
+#include "bumblebee/execution/JoinHashTable.h"
+#include "bumblebee/execution/PartitionedAggHT.h"
 
 namespace bumblebee{
-
-class JoinHashTable;
 
 
 class PredicateTables {
@@ -61,6 +61,11 @@ public:
     const vector<Atom>& getFacts() const {
         return facts_;
     }
+
+    void setTypes(const vector<ConstantType>& types) {
+        types_ = types;
+    }
+
     // Get a value given a row and column index
     Value getValue(idx_t column, idx_t index);
 
@@ -74,6 +79,11 @@ public:
     // Return a join hash table with the same keys. If does not exist create it
     JoinHashTable& getJoinHashTable(const vector<idx_t>& keys);
     bool existJoinHashTable(const vector<idx_t>& keys);
+
+    // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
+    PartitionedAggHT& getPartitionedAggHashTable(const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
+    bool existgetPartitionedAggHashTable(const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions);
+
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
@@ -106,6 +116,8 @@ protected:
 
     // hash tables data structures
     vector<JoinHashTable> jhtables_;
+    // partitioned aggregate hash table (for aggregates)
+    vector<PartitionedAggHT> partitionedAggHT_;
 
 };
 

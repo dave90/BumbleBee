@@ -101,8 +101,8 @@ void Scheduler::schedulePriorityRules(prule_ptr_vector_t &bucket) {
 }
 
 idx_t Scheduler::scheduleRule(prule_ptr_t& rule) {
-    // generate tasks based on morsel size and source cardinality
-    auto partitions = rule->getSourceSize() / MORSEL_SIZE + 1;
+    // generate tasks based source max thread
+    auto partitions = rule->getSourceMaxThreads();
     for (idx_t idx = 0; idx < partitions; ++idx) {
         tcontexts_.emplace_back(new ThreadContext(context_));
         rule_executor_ptr_t execRule = rule_executor_ptr_t(new PhysicalRuleExecutor(rule, tcontexts_.back().get()));

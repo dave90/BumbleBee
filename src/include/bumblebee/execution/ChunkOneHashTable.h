@@ -26,12 +26,14 @@ namespace bumblebee{
 
 class ChunkOneHashTable {
 public:
+
     using distinct_ht_ptr_t = std::unique_ptr<ChunkOneHashTable>;
 
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.7;
 
     ChunkOneHashTable(const vector<ConstantType>& types, idx_t capacity, bool resizable);
+    virtual ~ChunkOneHashTable() {};
 
     ChunkOneHashTable(const ChunkOneHashTable &other) = delete;
     ChunkOneHashTable(ChunkOneHashTable &&other) noexcept = delete;

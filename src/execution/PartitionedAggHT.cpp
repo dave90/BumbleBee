@@ -20,17 +20,46 @@
 #include <bit>
 
 namespace bumblebee{
-PartitionedAggHT::PartitionedAggHT(vector<idx_t>& groupCols,vector<idx_t> &payloadCols,
-    vector<AggregateFunction*>& functions, idx_t partitions)
-    :ready_(false), partitions_(partitions), groupCols_(std::move(groupCols)), payloadCols_(std::move(payloadCols)), functions_(std::move(functions)) {
+PartitionedAggHT::PartitionedAggHT(const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
+    const vector<AggregateFunction*>& functions, idx_t partitions)
+    :ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions) {
     BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2
     BB_ASSERT(payloadCols_.size() == functions_.size());
     shift_ = (sizeof(hash_t)*8) - std::bit_width(partitions_) + 1;
     partitionsAggVec_.resize(partitions_);
 }
 
+PartitionedAggHT::PartitionedAggHT(PartitionedAggHT &&other) noexcept: table_(std::move(other.table_)),
+                                                                       partitionsVec_(std::move(other.partitionsVec_)),
+                                                                       partitionsAggVec_(std::move(other.partitionsAggVec_)),
+                                                                       partitions_(other.partitions_),
+                                                                       shift_(other.shift_),
+                                                                       ready_(other.ready_),
+                                                                       partitionEntries_(std::move(other.partitionEntries_)),
+                                                                       groupCols_(std::move(other.groupCols_)),
+                                                                       payloadCols_(std::move(other.payloadCols_)),
+                                                                       functions_(std::move(other.functions_)) {
+}
+
+PartitionedAggHT & PartitionedAggHT::operator=(PartitionedAggHT &&other) noexcept {
+    if (this == &other)
+        return *this;
+    table_ = std::move(other.table_);
+    partitionsVec_ = std::move(other.partitionsVec_);
+    partitionsAggVec_ = std::move(other.partitionsAggVec_);
+    partitions_ = other.partitions_;
+    shift_ = other.shift_;
+    ready_ = other.ready_;
+    partitionEntries_ = std::move(other.partitionEntries_);
+    groupCols_ = std::move(other.groupCols_);
+    payloadCols_ = std::move(other.payloadCols_);
+    functions_ = std::move(other.functions_);
+    return *this;
+}
+
 void PartitionedAggHT::partitionHT(distinct_ht_ptr_t& ht) {
     if (ht->getSize() == 0)return;
+
 
     vector<distinct_ht_ptr_t> partitions;
     partitions.resize(partitions_);
@@ -43,6 +72,9 @@ void PartitionedAggHT::partitionHT(distinct_ht_ptr_t& ht) {
         if (!ht)continue;
         if (!partitionEntries_.contains(i))partitionEntries_[i] = 0;
         partitionEntries_[i] += ht->getSize();
+        if (types_.empty()) {
+            types_ = ht->getTypes();
+        }
     }
     // push the partitions in the vector
     partitionsVec_.push_back(std::move(partitions));
@@ -53,7 +85,9 @@ void PartitionedAggHT::finalize() {
         if (!aht) continue;
         if (!table_) {
             // init the final table
-            table_ = agg_ht_ptr_t(new AggregateChunkOneHashTable(aht->getTypes(), MORSEL_SIZE, true, functions_));
+            table_ = std::move(aht);
+            aht = nullptr;
+            continue;
         }
         table_->combine(*aht);
         aht = nullptr; // free memory
@@ -65,12 +99,14 @@ void PartitionedAggHT::finalize() {
 void PartitionedAggHT::aggregatePartition(idx_t partition) {
     BB_ASSERT(partition < partitions_);
     if (partitionsVec_.empty()) return;
-    distinct_ht_ptr_t dht;
+    distinct_ht_ptr_t dht = nullptr;;
     for (idx_t i=0;i < partitionsVec_.size(); i++) {
+        BB_ASSERT(partition < partitionsVec_[i].size());
         auto &ht = partitionsVec_[i][partition];
         if (!ht) continue;
         if (!dht) {
             dht = std::move(ht);
+            partitionsVec_[i][partition] = nullptr;
             continue;
         }
         dht->combine(*ht);
@@ -102,7 +138,6 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     for (idx_t i = 0; i < payloadCols_.size(); i++) {
         auto col = payloadCols_[i];
         BB_ASSERT(col < types.size());
-        BB_ASSERT(functions_[i]->result_ == types[col]);
         payloadTypeCols.push_back(types[col]);
     }
     payloads.initializeEmpty(payloadTypeCols);
@@ -113,4 +148,37 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     // add into the agg HT
     pht->addChunk(hash, groups, payloads);
 }
+
+void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
+    BB_ASSERT(start >= 0 && end < partitionsAggVec_.size());
+    AggregateChunkOneHashTable* pht = nullptr;
+    for (idx_t i=start; i<=end; i++) {
+        if (!partitionsAggVec_[i])continue;
+        if (!pht) {
+            pht = partitionsAggVec_[i].get();
+            continue;
+        }
+        pht->combine(*partitionsAggVec_[i]);
+        partitionsAggVec_[i] = nullptr;
+    }
+}
+
+
+bool PartitionedAggHT::checkGroups(const vector<idx_t> &groups) {
+    return compareVectors(groups, groupCols_);
+}
+
+bool PartitionedAggHT::checkPayload(const vector<idx_t> &payload, const vector<AggregateFunction *> &functions) {
+    // check the functions of the payloads are the same
+    std::unordered_map<idx_t, AggregateFunction*> payloadFunc; // map of paylaod col and agg function name
+    BB_ASSERT(functions_.size() == payloadCols_.size());
+    for (id_t i=0;i<functions_.size();++i)
+        payloadFunc[payloadCols_[i]] = functions_[i];
+    for (idx_t i=0;i<functions.size();++i) {
+        if (!payloadFunc.contains( payload[i])) return false;
+        if (functions_[i] != payloadFunc[payload[i]]) return false;
+    }
+    return true;
+}
+
 }

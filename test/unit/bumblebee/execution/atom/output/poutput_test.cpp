@@ -69,7 +69,7 @@ protected:
 TEST_F(PhysicalOutputTest, PhysicalChunkOutputSingleThreadedTest) {
 
     vector<idx_t> cols = {0,1,2};
-    PhysicalChunkOutput pco(extraTestTypes,cols, 0, ptable.get());
+    PhysicalChunkOutput pco(extraTestTypes,cols, ptable.get());
     auto gstate = pco.getGlobalState();
     auto state = pco.getState();
 
@@ -89,7 +89,7 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputMultiThreadedTest) {
     constexpr int NUM_THREADS = 2;
     constexpr int TOTAL_CHUNKS = 8;
     vector<idx_t> cols = {0,1,2};
-    PhysicalChunkOutput pco(testTypes, cols,0, ptable.get());
+    PhysicalChunkOutput pco(testTypes, cols, ptable.get());
     auto gstate = pco.getGlobalState();
 
     vector<std::thread> threads;
@@ -121,7 +121,7 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputFlushPartialChunksTest) {
     constexpr int NUM_THREADS = 2;
     constexpr int ROWS_PER_THREAD = 3 * (STANDARD_VECTOR_SIZE / 2); // ensure partial flushes
     vector<idx_t> cols = {0,1,2};
-    PhysicalChunkOutput pco(testTypes, cols,0, ptable.get());
+    PhysicalChunkOutput pco(testTypes, cols, ptable.get());
     auto gstate = pco.getGlobalState();
 
     vector<std::thread> threads;

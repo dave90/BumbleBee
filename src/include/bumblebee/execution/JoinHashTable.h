@@ -108,7 +108,7 @@ public:
     void setReady();
     bool isReady();
     // check if the keys are equal to the ht keys
-    bool checkKeys(vector<idx_t> keys);
+    bool checkKeys(const vector<idx_t>& keys);
     // Probe the left chunk
     idx_t probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,
                          SelectionVector &lsel, SelectionVector &rsel, const vector<Expression> &conditions);

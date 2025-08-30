@@ -74,7 +74,7 @@ HEAD_SEPARATOR  : VEL;
 
 program
     :
-    | rules { }
+    | rules { director.getBuilder()->onEnd();}
     | error { yyerror(director,"Generic error"); }
     ;
 

@@ -17,12 +17,54 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "bumblebee/execution/PhysicalAtom.h"
 
 namespace bumblebee{
 
 
-class PhysicalPartitionedAggHT {
+class PhysicalPartitionedAggHT : public PhysicalAtom {
 
+public:
+    // constructor for sink and source
+    PhysicalPartitionedAggHT(const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
+        const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
+        PhysicalHashType type);
+    // constructor for probe
+    PhysicalPartitionedAggHT(const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
+        const vector<idx_t> &payload_cols, AggregateChunkOneHashTable* aht);
+
+    ~PhysicalPartitionedAggHT() override = default;
+
+    idx_t getMaxThreads() const override;
+    bool isSource() const override;
+    bool isSink() const override;
+    string toString() const override;
+    pstate_ptr_t getState() const override;
+    gpstate_ptr_t getGlobalState() const override;
+    string getName() const override;
+
+    void finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const override;
+    AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
+        PhysicalAtomState &state) const override;
+    AtomResultType getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+        GlobalPhysicalAtomState &gstate) const override;
+    AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
+        GlobalPhysicalAtomState &gstate) const override;
+
+
+private:
+    PredicateTables* pt_;
+    AggregateChunkOneHashTable* aht_; // used during probe phase
+    // during build phase point to the internal predicate table columns
+    // on probe point to the group column in input data chunk
+    vector<idx_t> groupCols_;
+    vector<ConstantType> groupColsTypes_;
+    // during build phase point the payloads columns to aggregate
+    // during probe phase the payload columns to fetch
+    vector<idx_t> payloadCols_;
+    vector<ConstantType> payloadColsTypes_;
+    vector<AggregateFunction*> aggregateFunctions_;
+    PhysicalHashType type_;
 };
 
 

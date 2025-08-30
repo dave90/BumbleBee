@@ -497,12 +497,8 @@ idx_t JoinHashTable::getBuckets() {
     return buckets_;
 }
 
-bool JoinHashTable::checkKeys(vector<idx_t> keys) {
-    if (keys.size() != keys_.size()) return false;
-    auto sortKeys = keys_;
-    std::sort(sortKeys.begin(), sortKeys.end());
-    std::sort(keys.begin(), keys.end());
-    return sortKeys == keys;
+bool JoinHashTable::checkKeys(const vector<idx_t>& keys) {
+    return compareVectors<idx_t>(keys, keys_);
 }
 
 idx_t JoinHashTable::probe(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, Vector &lhash, SelectionVector &lsel,

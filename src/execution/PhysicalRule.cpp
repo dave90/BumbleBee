@@ -39,8 +39,8 @@ void PhysicalRule::setPriority(idx_t priority) {
     priority_ = priority;
 }
 
-idx_t PhysicalRule::getSourceSize() const {
-    return source_->estimatedCardinality_;
+idx_t PhysicalRule::getSourceMaxThreads() const {
+    return source_->getMaxThreads();
 }
 
 void PhysicalRule::incrementCompleted() {

@@ -33,12 +33,20 @@ public:
     virtual ~AggregateChunkOneHashTable() = default;
 
     void addChunk(Vector& hash, DataChunk& groups, DataChunk& payload);
+    // add the paylaod to the first state (in case of no groups)
+    void addChunk(DataChunk& payload);
 
     void combine(AggregateChunkOneHashTable& other);
 
     // Fetch the aggregates for specific groups from the HT and place them in the result
     // filter out the groups that does not matched
     void fetchAggregates(Vector& hash, DataChunk& group, DataChunk& result, SelectionVector &sel);
+    // fetch function results specified in the function value
+    void fetchAggregates(Vector& hash, DataChunk& group, Vector& result, idx_t function ,SelectionVector &sel);
+    // get the results of the first state (in case of no groups)
+    void fetchAggregates(DataChunk& result);
+    void fetchAggregates(Vector& result, idx_t function);
+
 
     void finalize();
     bool isReady();

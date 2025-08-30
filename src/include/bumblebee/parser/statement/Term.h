@@ -175,7 +175,7 @@ public:
 	static Term createSmallestConstantNumericTerm(long long value);
 
 	template <class T>
-	static void intersetVariables(T& s1, set_term_variable_t& s2, set_term_variable_t& result) {
+	static void intersetVariables(const T& s1, const set_term_variable_t& s2, set_term_variable_t& result) {
 		for (auto& v2 : s2)
 			if (s1.contains(v2))
 				result.insert(v2);

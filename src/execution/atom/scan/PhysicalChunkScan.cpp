@@ -43,20 +43,7 @@ public:
         if (!isPtInitialized_) {
             initPredicateTable();
         }
-        if (chunksRead_ >= chunksSize_.size()) {
-            return false;
-        }
-
-        auto size = chunksSize_[0];
-        start = chunksRead_;
-        end = start;
-        while (end < chunksSize_.size() - 1) {
-            size += chunksSize_[end];
-            if (size > MORSEL_SIZE) break;
-            ++end;
-        }
-        chunksRead_ = end + 1;
-        return true;
+        return getNextBucket(start, end, chunksRead_, chunksSize_);
     }
 
 private:
@@ -85,8 +72,8 @@ public:
     bool isInitialized_{false};
 };
 
-PhysicalChunkScan::PhysicalChunkScan(const vector<ConstantType> &types, vector<idx_t>& dcCols,vector<idx_t> &selectedCols, idx_t estimated_cardinality, PredicateTables *pt) :
-    PhysicalAtom(types,dcCols, selectedCols, estimated_cardinality) {
+PhysicalChunkScan::PhysicalChunkScan(const vector<ConstantType> &types, vector<idx_t>& dcCols,vector<idx_t> &selectedCols, PredicateTables *pt) :
+    PhysicalAtom(types,dcCols, selectedCols) {
     pt_ = pt;
     // expected dcCols increment array
     for (idx_t i = 0; i < dcCols.size(); ++i) {
@@ -115,7 +102,8 @@ string PhysicalChunkScan::toString() const {
     for (auto c : selectCols_) {
         result += std::to_string(c) + ", ";
     }
-    for (auto c : colsType_) {
+    result += "; ";
+    for (auto c : dcColsType_) {
         result += ctypeToString(c) + ", ";
     }
     return result + ")";
@@ -130,7 +118,7 @@ gpstate_ptr_t PhysicalChunkScan::getGlobalState() const {
 }
 
 idx_t PhysicalChunkScan::getMaxThreads() const {
-    return estimatedCardinality_ / MORSEL_SIZE + 1; // for cardinality not multiple of morsel size
+    return pt_->getCount() / MORSEL_SIZE + 1;
 }
 
 AtomResultType PhysicalChunkScan::getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {

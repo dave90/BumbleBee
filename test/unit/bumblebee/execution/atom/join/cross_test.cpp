@@ -83,7 +83,7 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossSimpleTest) {
     vector<ConstantType> resultType = testTypesLeft; // Start with vec1
     resultType.insert(resultType.end(), testTypesRight.begin(), testTypesRight.end());
 
-    PhysicalCrossProduct pcj(resultType, dccols,selcols, 200, ptableRight.get());
+    PhysicalCrossProduct pcj(resultType, dccols,selcols, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
@@ -116,7 +116,7 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
     for (auto c : selcols)
         resultType.push_back(testTypesRight[c]);
 
-    PhysicalCrossProduct pcj(resultType, dccols,selcols, 0, ptableRight.get());
+    PhysicalCrossProduct pcj(resultType, dccols,selcols, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk& input = ptableLeft->getChunk(0);
@@ -143,7 +143,7 @@ TEST_F(PhysicalCrossJoinTest, PhysicalCrossPrjTest) {
 TEST_F(PhysicalCrossJoinTest, PhysicalCrossNoInputTest) {
     vector<idx_t> cols = {0,1};
     auto dcCols = cols;
-    PhysicalCrossProduct pcj(testTypesRight, dcCols,cols, 10, ptableRight.get());
+    PhysicalCrossProduct pcj(testTypesRight, dcCols,cols, ptableRight.get());
     auto state = pcj.getState();
 
     DataChunk input;
