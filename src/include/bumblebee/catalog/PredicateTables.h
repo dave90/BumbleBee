@@ -96,6 +96,7 @@ protected:
     void updateTypes(vector<ConstantType> &newTypes);
     void loadFacts();
     void loadRanges();
+    void castEntirePredicateTable(const vector<ConstantType> &newTypes);
 
     // Types of the columns
     vector<ConstantType> types_;

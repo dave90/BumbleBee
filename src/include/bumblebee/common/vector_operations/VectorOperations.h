@@ -66,6 +66,10 @@ public:
     static void copy(const Vector &source, Vector &target, const SelectionVector &sel, idx_t source_count, idx_t source_offset, idx_t target_offset);
     static void copy(const Vector &source, Vector &target, const SelectionVector &sel,const SelectionVector &targetSel, idx_t source_count, idx_t source_offset, idx_t target_offset);
 
+    // Cast
+    static void cast(Vector &source, Vector &target, idx_t source_count);
+
+
 };
 
 

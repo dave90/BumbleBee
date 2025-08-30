@@ -2,6 +2,7 @@
 - Aggregation
 - Test aggregation
 - Test with double, float and string
+- Default minimum integer (small int or int 32 bit not tiny as now)
 
 ## Next
 - Aggregation
@@ -21,7 +22,9 @@
 - Recursion
 - Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner with statistics better optimizer and rule ordering
-
+- functions
+- DATE / TIMESTAMP
+- Specific table types
 
 ## 0.1
 - CSV

@@ -281,9 +281,34 @@ void PredicateTables::append(data_chunk_ptr_t chunk) {
     chunks_.append(std::move(chunk));
 }
 
+void PredicateTables::castEntirePredicateTable(const vector<ConstantType> &newTypes) {
+    LOG_WARNING("Casting predicate tables of type %s. For better optimization, set the table types explicitly using directives.", predicate_->getName());
+    BB_ASSERT(newTypes.size() == types_.size());
+    chunks_.cast(newTypes);
+    types_ = newTypes;
+}
+
 void PredicateTables::append(DataChunk& chunk) {
     BB_ASSERT(chunk.columnCount() == predicate_->getArity());
+    BB_ASSERT(chunk.columnCount() == types_.size());
     lock_guard guard(mutex_);
+    if (types_.size() > 0 && types_[0] != UNKNOWN && chunk.getTypes() != types_) {
+        // different types, check if we need to cast the entire predicate tables
+        // or just the chunk
+        bool castPredicateTable = false;
+        auto ctype = chunk.getTypes();
+        vector<ConstantType> commonTypes;
+        for (idx_t i =0;i<ctype.size()&&!castPredicateTable;++i) {
+            commonTypes.push_back(getCommonType(ctype[i], types_[i]));
+            if (commonTypes.back() != types_[i])
+                castPredicateTable = true; // common type is not the type that we have in pt
+        }
+
+        chunk.cast(commonTypes);
+        if (castPredicateTable)
+            castEntirePredicateTable(chunk.getTypes());
+    }
+
     if (types_.size() > 0 && types_[0] == UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk.getTypes();

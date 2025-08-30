@@ -119,6 +119,14 @@ public:
 		return result;
 	}
 
+	// cast data chunks
+	void cast(const vector<ConstantType> &newTypes) {
+		BB_ASSERT(newTypes.size() == types_.size());
+		for (auto& chunk : chunks_)
+			chunk->cast(newTypes);
+		types_ = newTypes;
+	}
+
 private:
 	// The total amount of elements in the collection
 	idx_t count_;

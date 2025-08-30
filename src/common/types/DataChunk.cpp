@@ -18,6 +18,7 @@
  */
 #include "bumblebee/common/types/DataChunk.h"
 
+#include "bumblebee/common/Log.h"
 #include "bumblebee/common/types/Vector.h"
 #include "bumblebee/common/vector_operations/VectorOperations.h"
 
@@ -261,5 +262,17 @@ std::string DataChunk::toString() const {
 
 void DataChunk::verify() {
     // TODO
+}
+
+void DataChunk::cast(const vector<ConstantType>& types) {
+    BB_ASSERT(data_.size() == types.size());
+    for (idx_t i = 0; i < columnCount(); i++) {
+        if (data_[i].getType() == types[i]) continue;
+
+        Vector newVec(types[i], getCapacity());
+        LOG_DEBUG("Casting vector %s to %s.", ctypeToString(data_[i].getType()).c_str(), ctypeToString(newVec.getType()).c_str() );
+        VectorOperations::cast(data_[i], newVec, getSize());
+        data_[i].reference(newVec);
+    }
 }
 }
