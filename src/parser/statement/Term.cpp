@@ -224,8 +224,7 @@ bool Term::containsOrIsConstant() const {
 }
 
 void Term::replaceVariable(const string &var,const string &newVar) {
-
-    if (type_ == CONSTANT || type_ == RANGE )return;
+    if (type_ == CONSTANT || type_ == RANGE || type_ == NONE_TERM)return;
     if (type_ == VARIABLE) {
         if (value_.stringValue_ == var) {
             value_.stringValue_ = newVar;

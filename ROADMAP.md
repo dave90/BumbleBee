@@ -1,6 +1,9 @@
 ## TODOLIST
 - Aggregation
-- Test aggregation
+- Test aggregation sum
+- Aggregation min,max,avg, count
+- Test multiple aggs.
+- Benchmark agg
 - Test with double, float and string
 - Default minimum integer (small int or int 32 bit not tiny as now)
 

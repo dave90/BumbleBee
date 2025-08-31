@@ -180,8 +180,8 @@ public:
     inline static uint64_t dirEnd(const uint64_t* d, idx_t b){ return d[b] & ~BLOOM_MASK64; }
     // Return the bloom filter of a directory
     inline static uint16_t dirBloom(const uint64_t* d, idx_t b){ return uint16_t(d[b] >> BLOOM_SHIFT); }
-
-
 };
+
+using joinht_ptr_t = std::unique_ptr<JoinHashTable>;
 
 }

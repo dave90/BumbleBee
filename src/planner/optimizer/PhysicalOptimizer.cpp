@@ -46,9 +46,24 @@ prule_ptr_vector_t PhysicalOptimizer::optimize(Rule &rule) {
 bool PhysicalOptimizer::canBeSkipped(Rule &rule) {
     // skip rules with classical literal with no data
     for (auto&atom : rule.getBody()) {
-        if (atom.getType() != CLASSICAL) continue;
-        auto& pt = context_.defaultSchema_.getPredicateTable(atom.getPredicate());
-        if (pt->getCount() == 0) return true;
+        switch (atom.getType()) {
+            case CLASSICAL: {
+                auto& pt = context_.defaultSchema_.getPredicateTable(atom.getPredicate());
+                if (pt->getCount() == 0) return true;
+                break;
+            }case BUILTIN: {
+                // TODO check if contains constant value comparison (1 = 0)
+                break;
+            }case AGGREGATE: {
+                BB_ASSERT(atom.getAggsAtoms().size() == 1);
+                auto& apt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
+                // if agg tables size are 0
+                BB_ASSERT(apt->existPartitionedAggHashTable());
+                if (apt->getPartitionedAggHashTable()->getSize() == 0) return true;
+                break;
+            }
+        }
+
     }
     return false;
 }
@@ -149,7 +164,6 @@ idx_t getAggPayloadIndex(Atom &atom) {
 
 
 void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
-
     BB_ASSERT(atom.getType() == AGGREGATE);
     BB_ASSERT(atom.getBinop() == ASSIGNMENT);
     BB_ASSERT(atom.getTerms().size() > 0);
@@ -246,7 +260,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
         BB_ASSERT(payloads.size() == funcNames.size());
         vector<ConstantType> arguments;
         for (auto p:payloads) {
-            BB_ASSERT(p < payloads.size());
+            BB_ASSERT(p < pt->getTypes().size());
             BB_ASSERT(pt->getTypes()[p] != UNKNOWN);
             arguments.push_back(pt->getTypes()[p]);
         }
@@ -262,7 +276,8 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
                 payloadFound = true;
             }
         }
-        aht = pt->getPartitionedAggHashTable(groups, payloads, aggFunctions).getAggregateHT().get();
+        BB_ASSERT(pt->existPartitionedAggHashTable());
+        aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
         BB_ASSERT(aht->isReady());
         BB_ASSERT(payloadFound);
     }
@@ -271,10 +286,13 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
     // cols are the groups cols
     // you need to find out the shared cols (group cols)
     set_term_variable_t internalVars;
-    atom.getAggAtomsVariables(internalVars);
-    for (auto& var:internalVars)
-        if (colsMap_.contains(var))
-            groupCols.push_back(colsMap_[var]);
+    BB_ASSERT(atom.getAggsAtoms().size() == 1);
+    auto & internalVarias = atom.getAggsAtoms()[0].getTerms();
+    for (auto& var:internalVarias) {
+        BB_ASSERT(var.getType() == VARIABLE);
+        if (colsMap_.contains(var.getVariable()))
+            groupCols.push_back(colsMap_[var.getVariable()]);
+    }
     vector payloads = {payload};
     patoms.emplace_back(new PhysicalPartitionedAggHT(types_, cols,selCols,groupCols, payloads, aht));
 }
@@ -433,7 +451,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         generateHTBuildRules(pred, keys, prules, priority);
     }
     // check if the hash table is ready, otherwise we need to set the priority >= 2
-    if (!pred->getJoinHashTable(keys).isReady())
+    if (!pred->getJoinHashTable(keys)->isReady())
         priority = (priority < 2)? 2 : priority;
 
     auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, dcKeys, joinConditions ));
@@ -441,7 +459,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
 
 }
 
-void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules) {
+void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules, idx_t priority) {
     prule_ptr_vector_t value;
     BB_ASSERT(rule.getHead().size() == 1);
     auto& headAtom = rule.getHead()[0];
@@ -480,8 +498,8 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
         auto nopeSink = patom_ptr_t(new PhysicalNopeOutput(types, dcCols, selCols ));
 
         vector<patom_ptr_t> empty;
-        prule_ptr_t pruleBuild(new PhysicalRule(source, nopeSink, empty, 1));
-        pruleBuild->toString();
+        // set priority of builder current +1
+        prule_ptr_t pruleBuild(new PhysicalRule(source, nopeSink, empty, priority+1));
         prules.push_back(std::move(pruleBuild));
 
         return;
@@ -508,7 +526,6 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     auto types = types_;
     source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
 
-    generateOutputPhysicalAtom(rule, sink, schema, prules);
 
     for (idx_t i=1;i<rule.getBody().size();++i) {
         if (skipAtom_.contains(i) && skipAtom_[i])continue;
@@ -526,8 +543,9 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
                 break;
         }
         atom.getVariables(vars);
-
     }
+
+    generateOutputPhysicalAtom(rule, sink, schema, prules, priority);
 
     prule_ptr_t prule(new PhysicalRule(source, sink, patoms, priority));
     prules.push_back(prule);

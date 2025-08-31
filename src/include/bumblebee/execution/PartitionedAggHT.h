@@ -73,6 +73,11 @@ public:
         return types_;
     }
 
+    idx_t getSize() {
+        BB_ASSERT(isReady());
+        return (table_)?table_->getSize() : 0;
+    }
+
     bool checkGroups(const vector<idx_t>& groups);
     bool checkPayload(const vector<idx_t>& payload, const vector<AggregateFunction*>& functions);
 

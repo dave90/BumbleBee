@@ -242,7 +242,7 @@ void ChunkOneHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &grou
 
     BB_ASSERT(size + entries_ <= capacity_ );
     BB_ASSERT(groups.columnCount() == chunkone_.columnCount());
-    BB_ASSERT(groups.getTypes() == chunkone_.getTypes());
+    BB_ASSERT(groups.getTypes() == chunkone_.getTypes() || !createGroups); // allow different types during mathcing
     BB_ASSERT(hash.getType() == UBIGINT);
 
     // should be already normalized
@@ -321,7 +321,8 @@ void ChunkOneHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &grou
             created_groups += new_entry_count;
 
         // copy the data
-        copyNewGroups(groups, emptyBucketSel, emptySel, new_entry_count);
+        if (new_entry_count > 0)
+            copyNewGroups(groups, emptyBucketSel, emptySel, new_entry_count);
 
         // now compare the possible match
         matchChunks(groups, compareSel, compareBucketSel, notMatchSel, need_compare_count, no_match_count);

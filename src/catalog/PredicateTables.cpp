@@ -61,37 +61,32 @@ vector<ConstantType> PredicateTables::getTypes() {
     return types_;
 }
 
-JoinHashTable & PredicateTables::getJoinHashTable(const vector<idx_t>& keys) {
+joinht_ptr_t & PredicateTables::getJoinHashTable(const vector<idx_t>& keys) {
     for (auto&ht: jhtables_)
-        if (ht.checkKeys(keys))
+        if (ht->checkKeys(keys))
             return ht;
 
-    jhtables_.emplace_back(predicate_.get(), keys, getCount());
+    jhtables_.emplace_back(new JoinHashTable(predicate_.get(), keys, getCount()));
     return jhtables_.back();
 }
 
 bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
     for (auto&ht: jhtables_)
-        if (ht.checkKeys(keys))
+        if (ht->checkKeys(keys))
             return true;
     return false;
 }
 
-PartitionedAggHT & PredicateTables::getPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
+partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
     const vector<AggregateFunction *> &aggregateFunctions) {
-    for (auto& paht: partitionedAggHT_) {
-        if (paht.checkGroups(groups) && paht.checkPayload(payloads, aggregateFunctions))  return paht;
-    }
-    partitionedAggHT_.emplace_back(groups, payloads, aggregateFunctions);
-    return partitionedAggHT_.back();
+    if (partitionedAggHT_) return partitionedAggHT_;
+    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(groups, payloads, aggregateFunctions));
+    return partitionedAggHT_;
 }
 
-bool PredicateTables::existgetPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
-    const vector<AggregateFunction *> &aggregateFunctions) {
-    for (auto& paht: partitionedAggHT_) {
-        if (paht.checkGroups(groups) && paht.checkPayload(payloads, aggregateFunctions))  return true;
-    }
-    return false;
+
+bool PredicateTables::existPartitionedAggHashTable() {
+    return partitionedAggHT_ != nullptr;
 }
 
 void PredicateTables::initializeChunks() {
@@ -290,8 +285,8 @@ void PredicateTables::castEntirePredicateTable(const vector<ConstantType> &newTy
 
 void PredicateTables::append(DataChunk& chunk) {
     BB_ASSERT(chunk.columnCount() == predicate_->getArity());
-    BB_ASSERT(chunk.columnCount() == types_.size());
     lock_guard guard(mutex_);
+    BB_ASSERT(chunk.columnCount() == types_.size());
     if (types_.size() > 0 && types_[0] != UNKNOWN && chunk.getTypes() != types_) {
         // different types, check if we need to cast the entire predicate tables
         // or just the chunk

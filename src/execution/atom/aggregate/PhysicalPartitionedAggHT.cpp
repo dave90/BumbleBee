@@ -87,12 +87,14 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const vector<ConstantType> &t
                                     groupCols_(group_cols),
                                     payloadCols_(payload_cols),
                                     type_(PROBE){
+    for (auto& i: groupCols_)
+        groupColsTypes_.push_back(types_[i]);
 }
 
 idx_t PhysicalPartitionedAggHT::getMaxThreads() const {
-    BB_ASSERT(pt_->existgetPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_));
-    auto& pht = pt_->getPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_);
-    return pht.getNumPartitionsNotEmpty(); // max parallelism 1 partition x thread
+    BB_ASSERT(pt_->existPartitionedAggHashTable());
+    auto& pht = pt_->getPartitionedAggHashTable();
+    return pht->getNumPartitionsNotEmpty(); // max parallelism 1 partition x thread
 }
 
 bool PhysicalPartitionedAggHT::isSource() const {
@@ -135,9 +137,9 @@ pstate_ptr_t PhysicalPartitionedAggHT::getState() const {
 }
 
 gpstate_ptr_t PhysicalPartitionedAggHT::getGlobalState() const {
-    auto& paht = pt_->getPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_);
-    BB_ASSERT(!paht.isReady()); // during build or collect we do not expect is ready
-    return gpstate_ptr_t(new GlobalAggHTJoinAtomState(paht));
+    auto& paht = pt_->createPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_);
+    BB_ASSERT(!paht->isReady()); // during build or collect we do not expect is ready
+    return gpstate_ptr_t(new GlobalAggHTJoinAtomState(*paht));
 }
 
 
@@ -267,7 +269,7 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     }
 
     // reference in the return chunk
-    BB_ASSERT(chunk.columnCount() > dcCols_[dcCols_[0]]);
+    BB_ASSERT(chunk.columnCount() > dcCols_[0]);
     chunk.reference(input);
     chunk.slice(sel, group.getSize());
 

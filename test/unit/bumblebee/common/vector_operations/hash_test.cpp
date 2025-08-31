@@ -102,3 +102,27 @@ TEST(VectorOperationsHashConstantTest, HashConstantVector) {
 
     ASSERT_EQ(hash_val, Hash<int32_t>(input_val));
 }
+
+
+TEST(VectorOperationsHashConstantTest, HashNumericDifferentType) {
+    // hash of different numeric type but same value should be the same
+
+    Value val(123);
+    Vector constantInput(val);
+    Vector expectedHashResult(ConstantType::UBIGINT);
+
+    VectorOperations::hash(constantInput, expectedHashResult, 1);
+
+    auto expected_hash_val = *ConstantVector::getData<hash_t>(expectedHashResult);
+
+    vector<ConstantType> types = {SMALLINT, INTEGER, USMALLINT, UINTEGER, UBIGINT};
+    for (auto type : types) {
+        Vector vec(val.cast(type));
+        EXPECT_EQ(vec.getType(), type);
+        Vector hashResult(ConstantType::UBIGINT);
+        VectorOperations::hash(vec, hashResult, 1);
+        auto hash_val = *ConstantVector::getData<hash_t>(hashResult);
+        EXPECT_EQ(expected_hash_val, hash_val);
+    }
+
+}

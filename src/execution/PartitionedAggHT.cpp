@@ -92,7 +92,8 @@ void PartitionedAggHT::finalize() {
         table_->combine(*aht);
         aht = nullptr; // free memory
     }
-    table_->finalize();
+    if (table_)
+        table_->finalize();
     ready_ = true;
 }
 

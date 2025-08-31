@@ -77,12 +77,15 @@ public:
     vector<ConstantType> getTypes();
 
     // Return a join hash table with the same keys. If does not exist create it
-    JoinHashTable& getJoinHashTable(const vector<idx_t>& keys);
+    joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys);
     bool existJoinHashTable(const vector<idx_t>& keys);
 
     // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
-    PartitionedAggHT& getPartitionedAggHashTable(const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
-    bool existgetPartitionedAggHashTable(const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions);
+    partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
+        return partitionedAggHT_;
+    }
+    partitioned_agg_ht_ptr_t& createPartitionedAggHashTable(const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
+    bool existPartitionedAggHashTable();
 
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
@@ -116,9 +119,9 @@ protected:
     mutex mutex_;
 
     // hash tables data structures
-    vector<JoinHashTable> jhtables_;
+    vector<joinht_ptr_t> jhtables_;
     // partitioned aggregate hash table (for aggregates)
-    vector<PartitionedAggHT> partitionedAggHT_;
+    partitioned_agg_ht_ptr_t partitionedAggHT_;
 
 };
 

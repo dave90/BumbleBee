@@ -117,11 +117,11 @@ string PhysicalHashJoin::toString() const {
 }
 
 pstate_ptr_t PhysicalHashJoin::getState() const {
-    return pstate_ptr_t(new HTJoinAtomState(pt_->getJoinHashTable(keys_)));
+    return pstate_ptr_t(new HTJoinAtomState(*pt_->getJoinHashTable(keys_)));
 }
 
 idx_t PhysicalHashJoin::getMaxThreads() const {
-    return pt_->getJoinHashTable(keys_).getBuckets(); // you can parallelize max. 1 bucket per thread
+    return pt_->getJoinHashTable(keys_)->getBuckets(); // you can parallelize max. 1 bucket per thread
 }
 
 bool PhysicalHashJoin::isSource() const {
@@ -133,7 +133,7 @@ bool PhysicalHashJoin::isSink() const {
 }
 
 gpstate_ptr_t PhysicalHashJoin::getGlobalState() const {
-    return gpstate_ptr_t(new GlobalHTJoinAtomState(pt_->getJoinHashTable(keys_)));
+    return gpstate_ptr_t(new GlobalHTJoinAtomState(*pt_->getJoinHashTable(keys_)));
 }
 
 AtomResultType PhysicalHashJoin::execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,

@@ -14,11 +14,15 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # list of tests with filtered atoms (clingo does not support it)
 
 FILTER_PREDICATES = {}
+TEST_TO_EXCLUDE = ["agg.sum.1","agg.sum.4"]
 
 def create_expected():
     # Iterate over all files in the input directory
     for root, _, files in os.walk(INPUT_DIR):
         for filename in files:
+            if filename in TEST_TO_EXCLUDE:
+                continue
+
             relative_path = os.path.relpath(root, INPUT_DIR)
             input_path = os.path.join(INPUT_DIR, relative_path, filename)
             output_path = os.path.join(OUTPUT_DIR, filename)

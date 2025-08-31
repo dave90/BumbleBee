@@ -26,18 +26,12 @@ namespace bumblebee{
 void VariablesRewriter::pushAnonymous(Rule &rule) {
     set_term_variable_t usedVariables;
     rule.getVariablesInHead(usedVariables);
-    // collect all the variables for each atom in the body
-    vector<set_term_variable_t> variablesInBody;
     set_term_variable_t allVariables;
-    variablesInBody.resize(rule.getBody().size());
-    for (idx_t i = 0; i < rule.getBody().size(); ++i) {
-        rule.getBody()[i].getVariables(variablesInBody[i]);
-        allVariables.insert(variablesInBody[i].begin(), variablesInBody[i].end());
-    }
 
-    for (idx_t i = 0; i < variablesInBody.size(); ++i) {
-        // count the vars present in the atom, if multiple terms share the same variable will increment the counter
-        std::unordered_map<string,idx_t> variableCounter;
+    std::unordered_map<string,idx_t> variableCounter;
+    for (idx_t i = 0; i < rule.getBody().size(); ++i) {
+        rule.getBody()[i].getVariables(allVariables);
+        // for loop of variables inside the term to catch the shared variables (i.e. a(X,X))
         for (auto& term: rule.getBody()[i].getTerms()) {
             set_term_variable_t termVariables;
             term.getVariables(termVariables);
@@ -47,25 +41,32 @@ void VariablesRewriter::pushAnonymous(Rule &rule) {
                 ++variableCounter[var];
             }
         }
-        // find the vars shared with other atoms, this vars are used varaibles
-        for (idx_t j = i +1; j < variablesInBody.size(); ++j)
-            Term::intersetVariables(variableCounter, variablesInBody[j], usedVariables);
+    }
 
-        for (auto& [var, count]: variableCounter) {
-            if (count > 1) {
-                // count > 1 variables is shared in the same atoms, i.e a(X,X)
-                usedVariables.insert(var);
-                continue;
-            }
-            if (usedVariables.contains(var))continue;
+    // check the aggregate shared variables
+    for (idx_t i = 0; i < rule.getBody().size(); ++i) {
+        if (rule.getBody()[i].getType() != AGGREGATE)continue;
+        set_term_variable_t sharedVars;
+        rule.getBody()[i].getAggSharedVariables(allVariables, sharedVars);
+        for (auto& var : sharedVars) {
+            BB_ASSERT(variableCounter.contains(var));
+            ++variableCounter[var];
         }
     }
 
+
+    for (auto& [var, count]: variableCounter) {
+        if (count > 1) {
+            // count > 1 variables is shared with other atoms
+            usedVariables.insert(var);
+        }
+    }
     for (auto& var : allVariables) {
         if (usedVariables.contains(var))continue;
         // unused variable, replace it
         rule.replaceVariable(var, Term::anonymous_variable);
     }
+
 }
 
 VariablesRewriter::VariablesRewriter(const ClientContext &context): context_(context) {
