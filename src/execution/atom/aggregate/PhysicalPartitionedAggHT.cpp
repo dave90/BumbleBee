@@ -18,7 +18,6 @@
  */
 #include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.h"
 
-#include "bumblebee/execution/AggregateHashTable.h"
 
 
 namespace bumblebee{

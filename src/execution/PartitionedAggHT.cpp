@@ -110,25 +110,33 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
             partitionsVec_[i][partition] = nullptr;
             continue;
         }
-        dht->combine(*ht);
+        // combine larger with smallest
+        if (dht->getSize() > ht->getSize())
+            dht->combine(*ht);
+        else {
+            ht->combine(*dht);
+            dht = std::move(ht);
+        }
+
 
         // clear the memory
         partitionsVec_[i][partition] = nullptr;
     }
     if (!dht) return; // no data for the partition
-
+    auto dhtCapacity = dht->getCapacity();
     // fetch the distinct values from final ht
     auto types = dht->getTypes();
     DataChunk result;
     result.initializeEmpty(types);
     dht->scan(0, result, dht->getSize());
+    result.setCapacity(dht->getSize());
 
     vector<ConstantType> groupColsType;
     for (auto& col: groupCols_) {
         BB_ASSERT(col < types.size());
         groupColsType.push_back(types[col]);
     }
-    partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregateChunkOneHashTable(groupColsType, MORSEL_SIZE, true, functions_));
+    partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregateChunkOneHashTable(groupColsType, dhtCapacity, true, functions_));
     auto& pht = partitionsAggVec_[partition];
 
     // split the result chunk in groups and payload
@@ -152,15 +160,22 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
 
 void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
     BB_ASSERT(start >= 0 && end < partitionsAggVec_.size());
-    AggregateChunkOneHashTable* pht = nullptr;
+    int partitionIndex = -1;
     for (idx_t i=start; i<=end; i++) {
         if (!partitionsAggVec_[i])continue;
-        if (!pht) {
-            pht = partitionsAggVec_[i].get();
+        if (partitionIndex < 0) {
+            partitionIndex = i;
             continue;
         }
-        pht->combine(*partitionsAggVec_[i]);
-        partitionsAggVec_[i] = nullptr;
+        // merge large partition with small
+        if (partitionsAggVec_[partitionIndex]->getSize() >partitionsAggVec_[i]->getSize()) {
+            partitionsAggVec_[partitionIndex]->combine(*partitionsAggVec_[i]);
+            partitionsAggVec_[i] = nullptr;
+        }else {
+            partitionsAggVec_[i]->combine(*partitionsAggVec_[partitionIndex]);
+            partitionsAggVec_[partitionIndex] = nullptr;
+            partitionIndex = (int)i;
+        }
     }
 }
 

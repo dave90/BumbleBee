@@ -31,7 +31,7 @@ using agg_ht_ptr_t = AggregateChunkOneHashTable::agg_ht_ptr_t;
 class PartitionedAggHT {
 public:
 
-    static constexpr idx_t PARTITIONS = 64; // consider that in Agg HT last bit is always 1
+    static constexpr idx_t PARTITIONS = 8; // consider that in Agg HT last bit is always 1
 
     explicit PartitionedAggHT(const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
     PartitionedAggHT(PartitionedAggHT &&other) noexcept;

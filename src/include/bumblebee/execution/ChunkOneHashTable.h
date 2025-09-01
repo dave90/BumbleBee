@@ -30,7 +30,7 @@ public:
     using distinct_ht_ptr_t = std::unique_ptr<ChunkOneHashTable>;
 
     // The hash table load factor, when a resize is triggered
-    constexpr static float LOAD_FACTOR = 0.7;
+    constexpr static float LOAD_FACTOR = 0.5;
 
     ChunkOneHashTable(const vector<ConstantType>& types, idx_t capacity, bool resizable);
     virtual ~ChunkOneHashTable() {};
@@ -72,7 +72,7 @@ protected:
     void copyNewGroups(DataChunk &groups,SelectionVector& emptyBucketSel, SelectionVector& emptySel, idx_t new_entry_count);
     // try to match the groups
     void matchChunks(DataChunk &groups, SelectionVector& compareSel, SelectionVector& compareBucketSel,
-                     SelectionVector& notMatchSel, idx_t &need_compare_count, idx_t &no_match_count);
+                     SelectionVector& notMatchSel, idx_t need_compare_count, idx_t &no_match_count, SelectionVector& machtSelResult, idx_t& match_count);
     // find the groups (bucket) not empty starting from a position with specific size
     // return the size of the groups in the sel vector
     idx_t getGroups(idx_t position, SelectionVector &sel, idx_t size);

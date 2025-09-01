@@ -189,28 +189,32 @@ void ChunkOneHashTable::copyNewGroups(DataChunk &groups, SelectionVector &emptyB
 }
 
 void ChunkOneHashTable::matchChunks(DataChunk &groups, SelectionVector &compareSel,
-    SelectionVector &compareBucketSel, SelectionVector &notMatchSel, idx_t &need_compare_count,
-    idx_t &no_match_count) {
+    SelectionVector &compareBucketSel, SelectionVector &notMatchSel, idx_t need_compare_count,
+    idx_t &no_match_count, SelectionVector& matchSel, idx_t& match_count) {
 
     if (!need_compare_count)return;
+    match_count = need_compare_count;
     idx_t size = groups.getSize();
     SelectionVector notEqualSel(size);
     SelectionVector equalSel(size);
+    matchSel.initialize(compareSel);
+    SelectionVector matchBucketSel(compareBucketSel);
     for (idx_t i = 0; i < chunkone_.columnCount(); i++) {
         Vector left(chunkone_.data_[i]);
-        left.slice(compareBucketSel, need_compare_count);
+        left.slice(matchBucketSel, match_count);
         Vector right(groups.data_[i]);
-        right.slice(compareSel, need_compare_count);
+        right.slice(matchSel, match_count);
         idx_t notEqualCount;
-        auto equalCount = VectorOperations::equals(left, right, nullptr, need_compare_count, &equalSel, &notEqualSel, notEqualCount);
+        auto equalCount = VectorOperations::equals(left, right, nullptr, match_count, &equalSel, &notEqualSel, notEqualCount);
         // add the not matched to the notMatchSel
         for (idx_t j = 0; j < notEqualCount; j++)
             notMatchSel.setIndex(no_match_count++, notEqualSel.getIndex(j));
         // set the compare sel with the matched for the next vector comparison ( avoid matching again the not equal index)
-        compareSel.initialize(compareSel.slice(equalSel, equalCount));
-        compareBucketSel.initialize(compareBucketSel.slice(equalSel, equalCount));
-        need_compare_count = equalCount;
-        if (!need_compare_count)return;
+
+        matchSel.initialize(matchSel.slice(equalSel, equalCount));
+        matchBucketSel.initialize(matchBucketSel.slice(equalSel, equalCount));
+        match_count = equalCount;
+        if (!match_count)break;
     }
 }
 
@@ -237,7 +241,9 @@ void ChunkOneHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &grou
         (size + entries_ >= capacity_ // size + current size > capacity
             || ((float)entries_ + size) / (float)capacity_ > LOAD_FACTOR // size + current size > LOAD FACTOR
         )) {
-        resize(capacity_ * 2);
+        auto newCapacity = capacity_ * 2;
+        // while (newCapacity +entries_ < size) newCapacity *= 2;
+        resize(newCapacity);
     }
 
     BB_ASSERT(size + entries_ <= capacity_ );
@@ -279,6 +285,7 @@ void ChunkOneHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &grou
         idx_t new_entry_count = 0;
         idx_t need_compare_count = 0;
         idx_t no_match_count = 0;
+        idx_t match_count = 0;
 
         // first figure out if it belongs to a full or empty group
         for (idx_t i = 0; i < remaining_entries; i++) {
@@ -325,16 +332,15 @@ void ChunkOneHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &grou
             copyNewGroups(groups, emptyBucketSel, emptySel, new_entry_count);
 
         // now compare the possible match
-        matchChunks(groups, compareSel, compareBucketSel, notMatchSel, need_compare_count, no_match_count);
-
-        // set the matched sel if not null
+        SelectionVector msel;
+        matchChunks(groups, compareSel, compareBucketSel, notMatchSel, need_compare_count, no_match_count, msel, match_count);
         if (matchedSel) {
-            // compareSel and need_compare_count will store the information of the matched index
-            for (idx_t j = 0; j< need_compare_count; j++) {
-                matchedSel->setIndex(matched_groups++, compareSel.getIndex(j));
+            // add the matched index
+            for (idx_t j = 0; j< match_count; j++) {
+                matchedSel->setIndex(matched_groups++, msel.getIndex(j));
             }
         }else
-            matched_groups += need_compare_count;
+            matched_groups += match_count;
 
         // the matched rows we do not need to update as bucket is correct
         // for the notMatchSel we need to try to compare with another bucket (linear probe)
