@@ -17,26 +17,21 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "Rewriter.h"
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/parser/statement/Rule.h"
+#include "TypeDefs.h"
+#include "Vector.h"
 
 namespace bumblebee{
 
-// This rewriter rewrites the variables in the rule
-class VariablesRewriter : public Rewriter {
+// Utility class for string operations
+class StringUtils {
 public:
-    explicit VariablesRewriter(const ClientContext &context);
 
-    void rewrite(Rule& rule) override;
-private:
-    // Try to rewrite the unused variable with anonymous
-    void pushAnonymous(Rule &rule);
-    // verify the rule is still correct after the rewrite
-    // and prune atoms with all anonymous variables
-    void verifyAndPruneAtoms(Rule& rule);
+    static vector<string> split(const string &str, char delimiter);
+    static vector<string> split(const string &input, const string &split);
+    static bool contains(const string &input, const string &split);
+    static bool glob(const char *string, idx_t slen, const char *pattern, idx_t plen);
+    static bool glob(const string& str,const string& pattern);
 
-    const ClientContext& context_;
 };
 
 

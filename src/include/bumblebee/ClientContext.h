@@ -20,6 +20,7 @@
 
 #include "bumblebee/common/Vector.h"
 #include "catalog/Schema.h"
+#include "common/FileSystem.h"
 #include "function/FunctionRegister.h"
 
 namespace bumblebee{
@@ -36,11 +37,13 @@ public:
     bool printAll_;
     bool printProfiling_;
     FunctionRegister functionRegister_;
+    fs_ptr_t fileSystem_;
 
     ClientContext();
 
 private:
     void registerFunctions();
+    void initFileSystem();
 };
 
 

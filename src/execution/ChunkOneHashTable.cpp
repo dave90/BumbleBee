@@ -184,7 +184,7 @@ void ChunkOneHashTable::copyNewGroups(DataChunk &groups, SelectionVector &emptyB
     for (idx_t i = 0; i < chunkone_.columnCount(); i++) {
         Vector target(chunkone_.data_[i]);
         Vector source(groups.data_[i]);
-        VectorOperations::copy(source, target, emptySel, emptyBucketSel, new_entry_count, 0,0);
+        VectorOperations::copy(source, target, emptySel, &emptyBucketSel, new_entry_count, 0,0);
     }
 }
 

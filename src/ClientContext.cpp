@@ -19,6 +19,7 @@
 #include "bumblebee/ClientContext.h"
 
 #include "bumblebee/catalog/Catalog.h"
+#include "bumblebee/common/LocalFileSystem.h"
 #include "bumblebee/function/aggregate/Sum.h"
 
 namespace bumblebee{
@@ -31,10 +32,16 @@ ClientContext::ClientContext():
     singleShot_(true) {
 
     registerFunctions();
+    initFileSystem();
 
 }
 
 void ClientContext::registerFunctions() {
     SumFunc::registerFunction(functionRegister_);
 }
+
+void ClientContext::initFileSystem() {
+    fileSystem_ = fs_ptr_t(new LocalFileSystem());
+}
+
 }
