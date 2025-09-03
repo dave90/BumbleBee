@@ -23,6 +23,7 @@ namespace bumblebee{
 
 using mutex = std::mutex;
 using lock_guard = std::lock_guard<mutex>;
-
+template<typename T>
+using atomic = std::atomic<T>;
 
 }

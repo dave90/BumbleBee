@@ -16,34 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#pragma once
+#include "bumblebee/storage/BufferHandle.h"
 
-#include <string>
-#include <iostream>
-
-#include "Constants.h"
-
-namespace bumblebee {
-
-class ErrorHandler
-{
-
-public:
-    static void errorParsing( const std::string& );
-    static void errorParsing( const char*  );
-
-    static void errorGeneric( const std::string&  );
-    static void errorGeneric( const char*  );
-
-    static void errorNotImplemented( const std::string&  );
-    static void errorNotImplemented( const char*  );
-
-    static void outOfMemory( const std::string&  );
-    static void outOfMemory( const char*  );
+namespace bumblebee{
 
 
-};
-
-
-
-} // bumblebee
+}

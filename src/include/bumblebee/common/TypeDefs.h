@@ -23,6 +23,22 @@
 
 namespace bumblebee {
 
+
+struct Storage {
+    // The size of a hard disk sector, only really needed for Direct IO
+    constexpr static int SECTOR_SIZE = 4096;
+    // Block header size for blocks written to the storage
+    constexpr static int BLOCK_HEADER_SIZE = sizeof(uint64_t);
+    // Size of a memory slot managed by the StorageManager. This is the quantum of allocation for Blocks. We
+    // default to 256KB. (1 << 18)
+    constexpr static int BLOCK_ALLOC_SIZE = 262144;
+    // The actual memory space that is available within the blocks
+    constexpr static int BLOCK_SIZE = BLOCK_ALLOC_SIZE - BLOCK_HEADER_SIZE;
+    // The size of the headers. This should be small and written more or less atomically by the hard disk. We default
+    // to the page size, which is 4KB. (1 << 12)
+    constexpr static int FILE_HEADER_SIZE = 4096;
+};
+
 // HASH is constant type UBIGINT
 enum ConstantType: uint8_t  {
     TINYINT = 0,
@@ -99,6 +115,7 @@ string getBinopStr(Binop binop);
 string ctypeToString(ConstantType type);
 Binop getFlippedBinop(Binop op);
 idx_t nextPowerOfTwo(idx_t n);
+uint64_t checksum(uint8_t *buffer, size_t size);
 
 template <typename T>
 bool compareVectors(vector<T> v1, vector<T> v2) {
@@ -128,4 +145,15 @@ bool compareVectorsNoSort(vector<T> const &lhs, vector<T> const &rhs) {
     return true;
 }
 
+template <typename T>
+const T load(const_data_ptr_t ptr) {
+    T ret;
+    memcpy(&ret, ptr, sizeof(ret));
+    return ret;
+}
+
+template <typename T>
+void store(const T val, data_ptr_t ptr) {
+    memcpy(ptr, (void *)&val, sizeof(val));
+}
 }

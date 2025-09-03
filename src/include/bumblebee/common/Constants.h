@@ -29,6 +29,7 @@ namespace bumblebee {
 #define ERROR_PARSING_CODE 100
 #define ERROR_GENERIC_CODE 110
 #define ERROR_NOT_IMPLEMENTED 120
+#define ERROR_OUT_OF_MEMORY 130
 
 // Logs
 #define DEFAULT_LOG_FILE "bbdb.log"
@@ -53,5 +54,7 @@ namespace bumblebee {
 
 // 1 enable the profiling 0 disable it
 #define PROFILING 1
+
+#define DEFAULT_TMP_DIR "./bumblebee/"
 
 }

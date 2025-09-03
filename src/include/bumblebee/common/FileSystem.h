@@ -24,7 +24,6 @@
 
 namespace bumblebee{
 class FileSystem;
-class ClientContext;
 
 enum class FileCompressionType : std::uint8_t { AUTO_DETECT = 0, UNCOMPRESSED = 1, GZIP = 2 };
 enum class FileLockType : uint8_t { NO_LOCK = 0, READ_LOCK = 1, WRITE_LOCK = 2 };
@@ -97,6 +96,8 @@ public:
 	FileSystem &fileSystem_;
 	string path_;
 };
+
+using file_handler_ptr_t = std::unique_ptr<FileHandle>;
 
 // generic File System class
 class FileSystem {
@@ -185,8 +186,6 @@ public:
 	// Extract the base name of a file (e.g. if the input is lib/example.dll the base name is example)
 	static string extractBaseName(const string &path);
 
-	// Return file system from context
-	static FileSystem &getFileSystem(ClientContext &context);
 };
 
 using fs_ptr_t = std::unique_ptr<FileSystem>;

@@ -17,40 +17,34 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-
-#include "bumblebee/common/Vector.h"
-#include "catalog/Schema.h"
-#include "common/Allocator.h"
-#include "common/FileSystem.h"
-#include "function/FunctionRegister.h"
-#include "storage/BufferManager.h"
+#include "bumblebee/common/FileSystem.h"
+#include "bumblebee/common/serializer/Serializer.h"
 
 namespace bumblebee{
 
-// The ClientContext holds information relevant to the current session
-class ClientContext {
-public:
-    std::string logFilename_;
-    vector<std::string> inputFiles_;
-    bool printLog_;
-    bool singleShot_;
-    Schema& defaultSchema_;
-    idx_t threads_;
-    bool printAll_;
-    bool printProfiling_;
-    FunctionRegister functionRegister_;
-    fs_ptr_t fileSystem_;
-    Allocator allocator_;
-    BufferManager bufferManager_;
-    string tempDirectory_;
-    idx_t maxMemory_;
-    block_manager_ptr_t blockManager_;
 
-    ClientContext();
+
+class BufferedFileReader : public Deserializer {
+public:
+    BufferedFileReader(FileSystem &fs, const char *path);
+
+    FileSystem &fs_;
+    std::unique_ptr<data_t[]> data_;
+    idx_t offset_;
+    idx_t readData_;
+    file_handler_ptr_t handle_;
+
+public:
+    void readData(data_ptr_t buffer, uint64_t read_size) override;
+    bool finished();
+
+    idx_t fileSize() {
+        return fileSize_;
+    }
 
 private:
-    void registerFunctions();
-    void initFileSystem();
+    idx_t fileSize_;
+    idx_t totalRead_;
 };
 
 

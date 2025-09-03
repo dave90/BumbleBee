@@ -17,33 +17,33 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <memory>
 
-#include <string>
-#include <iostream>
+#include "BlockHandle.h"
+#include "bumblebee/ClientContext.h"
+#include "bumblebee/common/FileBuffer.h"
 
-#include "Constants.h"
+namespace bumblebee{
 
-namespace bumblebee {
 
-class ErrorHandler
-{
-
+class BufferHandle {
 public:
-    static void errorParsing( const std::string& );
-    static void errorParsing( const char*  );
+    BufferHandle(block_shared_ptr_t handle, FileBuffer *node): handle_(handle), node_(node) {
+    }
+    ~BufferHandle() {
+        auto &buffer_manager = handle_->context_.bufferManager_;
+        buffer_manager.unpin(handle_);
+    }
 
-    static void errorGeneric( const std::string&  );
-    static void errorGeneric( const char*  );
-
-    static void errorNotImplemented( const std::string&  );
-    static void errorNotImplemented( const char*  );
-
-    static void outOfMemory( const std::string&  );
-    static void outOfMemory( const char*  );
-
-
+    // The block handle
+    block_shared_ptr_t handle_;
+    //! The managed buffer node
+    FileBuffer *node_;
+    data_ptr_t ptr() {
+        return node_->buffer_;
+    }
 };
 
+using buffer_hande_ptr_t = std::unique_ptr<BufferHandle>;
 
-
-} // bumblebee
+}

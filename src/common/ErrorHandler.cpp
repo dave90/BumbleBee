@@ -47,9 +47,15 @@ void ErrorHandler::errorNotImplemented( const std::string& message )
     errorGeneric( message.c_str() );
 }
 
-void ErrorHandler::errorNotImplemented( const char* message )
+void ErrorHandler::outOfMemory( const std::string& message )
 {
-    std::cerr << ERROR_NOT_IMPLEMENTED << ": " << message << std::endl;
-    exit( ERROR_NOT_IMPLEMENTED );
+    std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
+    exit( ERROR_OUT_OF_MEMORY );
+}
+
+void ErrorHandler::outOfMemory( const char* message )
+{
+    std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
+    exit( ERROR_OUT_OF_MEMORY );
 }
 } // bumblebee

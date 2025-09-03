@@ -17,33 +17,31 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "StorageInfo.h"
+#include "bumblebee/common/FileBuffer.h"
+#include "bumblebee/common/types/Assert.h"
 
-#include <string>
-#include <iostream>
+namespace bumblebee{
 
-#include "Constants.h"
 
-namespace bumblebee {
-
-class ErrorHandler
-{
-
+class Block : public FileBuffer {
 public:
-    static void errorParsing( const std::string& );
-    static void errorParsing( const char*  );
+    Block(Allocator &allocator, block_id_t id)
+        : FileBuffer(allocator, FileBufferType::BLOCK, Storage::BLOCK_ALLOC_SIZE), id(id) {
+    }
 
-    static void errorGeneric( const std::string&  );
-    static void errorGeneric( const char*  );
-
-    static void errorNotImplemented( const std::string&  );
-    static void errorNotImplemented( const char*  );
-
-    static void outOfMemory( const std::string&  );
-    static void outOfMemory( const char*  );
-
-
+    Block(FileBuffer &source, block_id_t id) : FileBuffer(source, FileBufferType::BLOCK), id(id) {
+        BB_ASSERT(getMallocedSize() == Storage::BLOCK_ALLOC_SIZE);
+        BB_ASSERT(size_ == Storage::BLOCK_SIZE);
+    }
+    block_id_t id;
 };
 
+struct BlockPointer {
+    block_id_t blockId_;
+    uint32_t offset_;
+};
 
+using block_ptr_t = std::unique_ptr<Block>;
 
-} // bumblebee
+}

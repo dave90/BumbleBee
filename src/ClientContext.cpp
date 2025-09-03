@@ -21,6 +21,7 @@
 #include "bumblebee/catalog/Catalog.h"
 #include "bumblebee/common/LocalFileSystem.h"
 #include "bumblebee/function/aggregate/Sum.h"
+#include "bumblebee/storage/InMemoryBlockManager.h"
 
 namespace bumblebee{
 ClientContext::ClientContext():
@@ -29,11 +30,14 @@ ClientContext::ClientContext():
     threads_(1),
     printAll_(false),
     printProfiling_(false),
-    singleShot_(true) {
+    singleShot_(true),
+    maxMemory_((idx_t)-1),
+    tempDirectory_(DEFAULT_TMP_DIR),
+    bufferManager_(*this,tempDirectory_,maxMemory_),
+    blockManager_(new InMemoryBlockManager()){
 
     registerFunctions();
     initFileSystem();
-
 }
 
 void ClientContext::registerFunctions() {

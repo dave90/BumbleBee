@@ -29,7 +29,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "bumblebee/ClientContext.h"
 #include "bumblebee/common/ErrorHandler.h"
 #include "bumblebee/common/StringUtils.h"
 
@@ -296,9 +295,6 @@ string FileSystem::extractBaseName(const string &path) {
     return vec[0];
 }
 
-FileSystem & FileSystem::getFileSystem(ClientContext &context) {
-    return *context.fileSystem_.get();
-}
 
 void FileSystem::setWorkingDirectory(const string &path) {
     if (chdir(path.c_str()) != 0) {
