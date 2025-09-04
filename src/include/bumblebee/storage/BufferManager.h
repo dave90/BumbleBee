@@ -34,7 +34,7 @@ class ClientContext;
 struct BufferEvictionNode {
 
 	BufferEvictionNode(std::weak_ptr<BlockHandle> handle_p, idx_t timestamp_p)
-		: handle_(move(handle_p)), timestamp_(timestamp_p) {
+		: handle_(std::move(handle_p)), timestamp_(timestamp_p) {
 		BB_ASSERT(!handle_.expired());
 	}
 
@@ -73,18 +73,9 @@ struct EvictionQueue {
 
 class TemporaryDirectoryHandle {
 public:
-	TemporaryDirectoryHandle(ClientContext &context, string path_p) : context_(context), temp_directory(move(path_p)) {
-		auto &fs = context_.fileSystem_;
-		if (!temp_directory.empty()) {
-			fs->createDirectory(temp_directory);
-		}
-	}
-	~TemporaryDirectoryHandle() {
-		auto &fs = context_.fileSystem_;
-		if (!temp_directory.empty()) {
-			fs->removeDirectory(temp_directory);
-		}
-	}
+	TemporaryDirectoryHandle(ClientContext &context, string path_p);
+
+	~TemporaryDirectoryHandle();
 
 private:
 	ClientContext &context_;
@@ -115,12 +106,12 @@ public:
 
 	// Allocate an in-memory buffer with a single pin.
 	// The allocated memory is released when the buffer handle is destroyed.
-	buffer_hande_ptr_t allocate(idx_t block_size);
+	buffer_handle_ptr_t allocate(idx_t block_size);
 
 	// Reallocate an in-memory buffer that is pinned.
 	void reAllocate(block_shared_ptr_t &handle, idx_t block_size);
 
-	buffer_hande_ptr_t pin(block_shared_ptr_t &handle);
+	buffer_handle_ptr_t pin(block_shared_ptr_t &handle);
 	void unpin(block_shared_ptr_t &handle);
 
 	void unregisterBlock(block_id_t block_id, bool can_destroy);
@@ -189,5 +180,6 @@ private:
 	atomic<block_id_t> temporaryId_;
 };
 
+using buffer_mngr_ptr_ptr_t = std::unique_ptr<BufferManager>;
 
 }

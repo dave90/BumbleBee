@@ -18,21 +18,16 @@
  */
 #pragma once
 #include "StorageInfo.h"
-#include "bumblebee/ClientContext.h"
 #include "bumblebee/common/FileBuffer.h"
 #include "bumblebee/common/TypeDefs.h"
 
 namespace bumblebee{
-class ClientContext;
 
 // Managed buffer is an arbitrarily-sized buffer that is at least of size >= BLOCK_SIZE
 class ManagedBuffer : public FileBuffer{
 public:
-    ManagedBuffer(ClientContext& context, idx_t size, bool can_destroy, block_id_t id): FileBuffer(context.allocator_, FileBufferType::MANAGED_BUFFER, size)
-    ,context_(context), canDestroy_(can_destroy), id_(id) {
-        BB_ASSERT(id >= MAXIMUM_BLOCK);
-        BB_ASSERT(size >= Storage::BLOCK_SIZE);
-    }
+    ManagedBuffer(ClientContext& context, idx_t size, bool can_destroy, block_id_t id);
+
     ClientContext& context_;
     // Whether or not the managed buffer can be freely destroyed when unpinned.
     // - If can_destroy is true, the buffer can be destroyed when unpinned and hence be unrecoverable. After being

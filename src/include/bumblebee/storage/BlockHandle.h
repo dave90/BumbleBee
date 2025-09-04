@@ -19,7 +19,6 @@
 #pragma once
 #include <memory>
 
-#include "BufferHandle.h"
 #include "StorageInfo.h"
 #include "bumblebee/common/FileBuffer.h"
 #include "bumblebee/common/Mutex.h"
@@ -28,6 +27,7 @@ namespace bumblebee{
 
 
 class ClientContext;
+class BufferHandle;
 
 enum class BlockState : uint8_t { BLOCK_UNLOADED = 0, BLOCK_LOADED = 1 };
 
@@ -54,7 +54,7 @@ public:
     }
 
 private:
-    buffer_hande_ptr_t load();
+    std::unique_ptr<BufferHandle> load();
     void unload();
     bool canUnload();
 
@@ -67,7 +67,7 @@ private:
     // The block id of the block
     const block_id_t blockId_;
     // Pointer to loaded data (if any)
-    unique_ptr<FileBuffer> buffer_;
+    std::unique_ptr<FileBuffer> buffer_;
     // Internal eviction timestamp
     atomic<idx_t> evictionTimestamp_;
     // Whether or not the buffer can be destroyed (only used for temporary buffers)

@@ -22,6 +22,7 @@
 #include "bumblebee/parser/ParserInputBuilder.h"
 
 #include "CLI11.hpp"
+#include "bumblebee/common/Helper.h"
 #include "bumblebee/common/Log.h"
 
 namespace bumblebee {

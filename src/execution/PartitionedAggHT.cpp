@@ -19,6 +19,8 @@
 #include "bumblebee/execution/PartitionedAggHT.h"
 #include <bit>
 
+#include "bumblebee/common/Helper.h"
+
 namespace bumblebee{
 PartitionedAggHT::PartitionedAggHT(const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
     const vector<AggregateFunction*>& functions, idx_t partitions)

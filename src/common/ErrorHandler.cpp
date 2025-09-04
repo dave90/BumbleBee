@@ -42,9 +42,14 @@ void ErrorHandler::errorGeneric( const char* message )
     exit( ERROR_GENERIC_CODE );
 }
 
+void ErrorHandler::errorNotImplemented(const char *message) {
+    std::cerr << ERROR_NOT_IMPLEMENTED << ": " << message << std::endl;
+    exit( ERROR_NOT_IMPLEMENTED );
+}
+
 void ErrorHandler::errorNotImplemented( const std::string& message )
 {
-    errorGeneric( message.c_str() );
+    errorNotImplemented( message.c_str() );
 }
 
 void ErrorHandler::outOfMemory( const std::string& message )

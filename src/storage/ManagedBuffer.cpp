@@ -16,12 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/storage/BufferHandle.h"
-#include "bumblebee/ClientContext.h"
 
-namespace bumblebee{
-BufferHandle::~BufferHandle() {
-    auto &buffer_manager = handle_->context_.bufferManager_;
-    buffer_manager->unpin(handle_);
+#include "bumblebee/storage/ManagedBuffer.h"
+
+#include "bumblebee/ClientContext.h"
+#include "bumblebee/common/types/Assert.h"
+
+namespace bumblebee {
+ManagedBuffer::ManagedBuffer(ClientContext &context, idx_t size, bool can_destroy, block_id_t id): FileBuffer(context.allocator_, FileBufferType::MANAGED_BUFFER, size)
+    ,context_(context), canDestroy_(can_destroy), id_(id) {
+    BB_ASSERT(id >= MAXIMUM_BLOCK);
+    BB_ASSERT(size >= Storage::BLOCK_SIZE);
 }
 }

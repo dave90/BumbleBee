@@ -18,17 +18,34 @@
  */
 #include "bumblebee/storage/BufferManager.h"
 
+#include "bumblebee/ClientContext.h"
+#include "bumblebee/common/ErrorHandler.h"
+
 namespace bumblebee{
 
 void BufferManager::setTemporaryDirectory(string new_dir) {
 	if (tempDirectoryHandle_) {
 		ErrorHandler::errorGeneric("Cannot switch temporary directory after the current one has been used");
 	}
-	this->tempDirectory_ = move(new_dir);
+	this->tempDirectory_ = std::move(new_dir);
+}
+
+TemporaryDirectoryHandle::TemporaryDirectoryHandle(ClientContext &context, string path_p): context_(context), temp_directory(std::move(path_p)) {
+	auto &fs = context_.fileSystem_;
+	if (!temp_directory.empty()) {
+		fs->createDirectory(temp_directory);
+	}
+}
+
+TemporaryDirectoryHandle::~TemporaryDirectoryHandle() {
+	auto &fs = context_.fileSystem_;
+	if (!temp_directory.empty()) {
+		fs->removeDirectory(temp_directory);
+	}
 }
 
 BufferManager::BufferManager(ClientContext &context, string tmp, idx_t maximum_memory)
-	: context_(context), currentMemory_(0), maximumMemory_(maximum_memory), tempDirectory_(move(tmp)),
+	: context_(context), currentMemory_(0), maximumMemory_(maximum_memory), tempDirectory_(std::move(tmp)),
 	  queue_(std::make_unique<EvictionQueue>()), temporaryId_(MAXIMUM_BLOCK) {
 }
 
@@ -38,7 +55,7 @@ BufferManager::~BufferManager() {
 
 
 block_shared_ptr_t BufferManager::registerBlock(block_id_t block_id) {
-	lock_guard<mutex> lock(blocksLock_);
+	lock_guard lock(blocksLock_);
 	// check if the block already exists
 	auto entry = blocks_.find(block_id);
 	if (entry != blocks_.end()) {
@@ -62,7 +79,7 @@ block_shared_ptr_t BufferManager::registerMemory(idx_t block_size, bool can_dest
 	auto alloc_size = block_size + Storage::BLOCK_HEADER_SIZE;
 	// first evict blocks until we have enough memory to store this buffer
 	if (!evictBlocks(alloc_size, maximumMemory_)) {
-		string error = "Could not allocate block of %lld bytes" + alloc_size;
+		string error = "Could not allocate block of %lld bytes" + std::to_string(alloc_size);
 		ErrorHandler::errorGeneric(error);
 	}
 
@@ -74,7 +91,7 @@ block_shared_ptr_t BufferManager::registerMemory(idx_t block_size, bool can_dest
 	return make_shared<BlockHandle>(context_, temp_id, std::move(buffer), can_destroy, block_size);
 }
 
-buffer_hande_ptr_t BufferManager::allocate(idx_t block_size) {
+buffer_handle_ptr_t BufferManager::allocate(idx_t block_size) {
 	auto block = registerMemory(block_size, true);
 	return pin(block);
 }
@@ -114,7 +131,7 @@ block_shared_ptr_t BufferManager::convertToPersistent(BlockManager &block_manage
 
 void BufferManager::reAllocate(block_shared_ptr_t &handle, idx_t block_size) {
 	BB_ASSERT(block_size >= Storage::BLOCK_SIZE);
-	lock_guard<mutex> lock(handle->lock_);
+	lock_guard lock(handle->lock_);
 	BB_ASSERT(handle->state_ == BlockState::BLOCK_LOADED);
 	auto alloc_size = block_size + Storage::BLOCK_HEADER_SIZE;
 	int64_t required_memory = alloc_size - handle->memoryUsage_;
@@ -133,15 +150,15 @@ void BufferManager::reAllocate(block_shared_ptr_t &handle, idx_t block_size) {
 	}
 
 	// resize and adjust current memory
-	handle->buffer_->Resize(block_size);
+	handle->buffer_->resize(block_size);
 	handle->memoryUsage_ = alloc_size;
 }
 
-buffer_hande_ptr_t BufferManager::pin(block_shared_ptr_t &handle) {
+buffer_handle_ptr_t BufferManager::pin(block_shared_ptr_t &handle) {
 	idx_t required_memory;
 	{
 		// lock the block
-		lock_guard<mutex> lock(handle->lock_);
+		lock_guard lock(handle->lock_);
 		// check if the block is already loaded
 		if (handle->state_ == BlockState::BLOCK_LOADED) {
 			// the block is loaded, increment the reader count and return a pointer to the handle
@@ -155,8 +172,8 @@ buffer_hande_ptr_t BufferManager::pin(block_shared_ptr_t &handle) {
 			string error = "failed to resize block from" + std::to_string(handle->memoryUsage_) + " to " +std::to_string(required_memory)  ;
 			ErrorHandler::outOfMemory(error);
 	}
-	// lock the handle again and repeat the check (in case anybody loaded in the mean time)
-	lock_guard<mutex> lock(handle->lock_);
+	// lock the handle again and repeat the check (in case anybody loaded in the meantime)
+	lock_guard lock(handle->lock_);
 	// check if the block is already loaded
 	if (handle->state_ == BlockState::BLOCK_LOADED) {
 		// the block is loaded, increment the reader count and return a pointer to the handle
@@ -177,7 +194,7 @@ void BufferManager::addToEvictionQueue(block_shared_ptr_t &handle) {
 }
 
 void BufferManager::unpin(block_shared_ptr_t &handle) {
-	lock_guard<mutex> lock(handle->lock_);
+	lock_guard lock(handle->lock_);
 	BB_ASSERT(handle->readers_ > 0);
 	handle->readers_--;
 	if (handle->readers_ == 0) {
@@ -202,7 +219,7 @@ bool BufferManager::evictBlocks(idx_t extra_memory, idx_t memory_limit) {
 			continue;
 		}
 		// we might be able to free this block: grab the mutex and check if we can free it
-		lock_guard<mutex> lock(handle->lock_);
+		lock_guard lock(handle->lock_);
 		if (!node->canUnload(*handle)) {
 			// something changed in the mean-time, bail out
 			continue;
@@ -223,10 +240,9 @@ void BufferManager::purgeQueue() {
 		auto handle = node->tryGetBlockHandle();
 		if (!handle) {
 			continue;
-		} else {
-			queue_->q.enqueue(move(node));
-			break;
 		}
+		queue_->q.enqueue(std::move(node));
+		break;
 	}
 }
 
@@ -238,13 +254,13 @@ void BufferManager::unregisterBlock(block_id_t block_id, bool can_destroy) {
 			deleteTemporaryFile(block_id);
 		}
 	} else {
-		lock_guard<mutex> lock(blocksLock_);
+		lock_guard lock(blocksLock_);
 		// on-disk block: erase from list of blocks in manager
 		blocks_.erase(block_id);
 	}
 }
 void BufferManager::setLimit(idx_t limit) {
-	lock_guard<mutex> l_lock(limitLock_);
+	lock_guard l_lock(limitLock_);
 	// try to evict until the limit is reached
 	if (!evictBlocks(0, limit)) {
 		ErrorHandler::outOfMemory("Failed to change memory limit.");
@@ -269,7 +285,7 @@ void BufferManager::requireTemporaryDirectory() {
 	if (tempDirectory_.empty()) {
 		ErrorHandler::outOfMemory("Failed to create temporary directory. Cannot write buffer because no temporary directory is specified!");
 	}
-	lock_guard<mutex> temp_handle_guard(tempHandleLock_);
+	lock_guard temp_handle_guard(tempHandleLock_);
 	if (!tempDirectoryHandle_) {
 		// temp directory has not been created yet: initialize it
 		tempDirectoryHandle_ = std::make_unique<TemporaryDirectoryHandle>(context_, tempDirectory_);
@@ -305,7 +321,7 @@ file_buffer_ptr_t BufferManager::readTemporaryBuffer(block_id_t id) {
 
 	handle.reset();
 	deleteTemporaryFile(id);
-	return move(buffer);
+	return std::move(buffer);
 }
 
 void BufferManager::deleteTemporaryFile(block_id_t id) {

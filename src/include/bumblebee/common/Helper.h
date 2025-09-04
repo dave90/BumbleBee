@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "Hash.h"
 #include "TypeDefs.h"
 
 namespace bumblebee{
@@ -79,6 +80,51 @@ void assignSharedPointer(std::shared_ptr<T> &target, const std::shared_ptr<T> &s
 	}
 }
 
+
+
+template <typename T>
+bool compareVectors(vector<T> v1, vector<T> v2) {
+	if (v1.size() != v2.size()) return false;
+	std::sort(v1.begin(), v1.end());
+	std::sort(v2.begin(), v2.end());
+	return v1 == v2;
+}
+
+template <typename T>
+bool compareVectorsNoSort(vector<T> const &lhs, vector<T> const &rhs) {
+	if (lhs.size() != rhs.size())return false;
+	vector<bool> used(lhs.size(), false);
+	bool matched = false;
+	for (const auto& x : lhs) {
+		matched = false;
+		for (std::size_t j = 0; j < rhs.size(); ++j) {
+			if (!used[j] && x == rhs[j]) {
+				used[j] = true;   // consume this occurrence
+				matched = true;
+				break;
+			}
+		}
+		if (!matched) break; // x has no unused match in atoms
+	}
+	if (!matched) return false;
+	return true;
+}
+
+
+inline uint64_t calcChecksum(uint8_t *buffer, size_t size) {
+	uint64_t result = 5381;
+	uint64_t *ptr = (uint64_t *)buffer;
+	size_t i;
+	// for efficiency, we first hash uint64_t values
+	for (i = 0; i < size / 8; i++) {
+		result ^= Hash(ptr[i]);
+	}
+	if (size - i * 8 > 0) {
+		// the remaining 0-7 bytes we hash using a string hash
+		result ^= Hash((const char*)(buffer + i * 8), size - i * 8);
+	}
+	return result;
+}
 
 
 }

@@ -41,7 +41,7 @@ public:
     FunctionRegister functionRegister_;
     fs_ptr_t fileSystem_;
     Allocator allocator_;
-    BufferManager bufferManager_;
+    buffer_mngr_ptr_ptr_t bufferManager_;
     string tempDirectory_;
     idx_t maxMemory_;
     block_manager_ptr_t blockManager_;

@@ -25,11 +25,12 @@ namespace bumblebee{
 
 class InMemoryBlockManager : public BlockManager {
 public:
-    ~InMemoryBlockManager() override {
+    InMemoryBlockManager() = default;
+    ~InMemoryBlockManager() override = default;
 
+    void startCheckpoint() override {
+        ErrorHandler::errorNotImplemented("Cannot perform IO in in-memory database!");
     }
-
-    void startCheckpoint() override;
 
     block_ptr_t createBlock(block_id_t block_id) override {
         ErrorHandler::errorNotImplemented("Cannot perform IO in in-memory database!");
@@ -80,6 +81,7 @@ public:
         ErrorHandler::errorNotImplemented("Cannot perform IO in in-memory database!");
         return 0;
     }
+
 };
 
 

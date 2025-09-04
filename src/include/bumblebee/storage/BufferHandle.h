@@ -19,21 +19,15 @@
 #pragma once
 #include <memory>
 
-#include "BlockHandle.h"
-#include "bumblebee/ClientContext.h"
 #include "bumblebee/common/FileBuffer.h"
+#include "bumblebee/storage/BlockHandle.h"
 
 namespace bumblebee{
 
-
 class BufferHandle {
 public:
-    BufferHandle(block_shared_ptr_t handle, FileBuffer *node): handle_(handle), node_(node) {
-    }
-    ~BufferHandle() {
-        auto &buffer_manager = handle_->context_.bufferManager_;
-        buffer_manager.unpin(handle_);
-    }
+    BufferHandle(block_shared_ptr_t handle, FileBuffer *node): handle_(handle), node_(node) {}
+    ~BufferHandle();
 
     // The block handle
     block_shared_ptr_t handle_;
@@ -44,6 +38,6 @@ public:
     }
 };
 
-using buffer_hande_ptr_t = std::unique_ptr<BufferHandle>;
+using buffer_handle_ptr_t = std::unique_ptr<BufferHandle>;
 
 }

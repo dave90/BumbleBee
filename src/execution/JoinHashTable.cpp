@@ -18,6 +18,7 @@
  */
 #include "bumblebee/execution/JoinHashTable.h"
 
+#include "bumblebee/common/Helper.h"
 #include "bumblebee/common/operator/ComparisonOperators.h"
 #include "bumblebee/common/vector_operations/VectorOperations.h"
 

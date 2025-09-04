@@ -32,9 +32,8 @@ BlockHandle::BlockHandle(ClientContext &context, block_id_t block_id): canDestro
 BlockHandle::BlockHandle(ClientContext &context, block_id_t block_id, file_buffer_ptr_t buffer, bool can_destroy,
     idx_t block_size) :canDestroy_(can_destroy), context_(context), blockId_(block_id), buffer_(std::move(buffer)){
     BB_ASSERT(block_size >= Storage::BLOCK_SIZE);
-    evictionTimestamp_ = 0;
-    state_ = BlockState::BLOCK_UNLOADED;
-    memoryUsage_ = Storage::BLOCK_ALLOC_SIZE;
+    state_ = BlockState::BLOCK_LOADED;
+    memoryUsage_ = block_size + Storage::BLOCK_HEADER_SIZE;
 }
 
 BlockHandle::~BlockHandle() {
@@ -43,16 +42,17 @@ BlockHandle::~BlockHandle() {
     if (state_ == BlockState::BLOCK_LOADED) {
         // the block is still loaded in memory: erase it
         buffer_.reset();
-        buffer_manager.currentMemory_ -= memoryUsage_;
+        buffer_manager->currentMemory_ -= memoryUsage_;
     }
-    buffer_manager.unregisterBlock(blockId_, canDestroy_);
+    buffer_manager->unregisterBlock(blockId_, canDestroy_);
 }
 
-buffer_hande_ptr_t BlockHandle::load() {
+buffer_handle_ptr_t BlockHandle::load() {
+    auto this_shared = block_shared_ptr_t(this);
     if (state_ == BlockState::BLOCK_LOADED) {
         // already loaded
         BB_ASSERT(buffer_);
-        return buffer_hande_ptr_t( new BufferHandle(this, buffer_.get()));
+        return buffer_handle_ptr_t( new BufferHandle(this_shared, buffer_.get()));
     }
 
     auto &buffer_manager = context_.bufferManager_;
@@ -65,11 +65,11 @@ buffer_hande_ptr_t BlockHandle::load() {
         if (canDestroy_) {
             return nullptr;
         } else {
-            buffer_ = buffer_manager.readTemporaryBuffer(blockId_);
+            buffer_ = buffer_manager->readTemporaryBuffer(blockId_);
         }
     }
     state_ = BlockState::BLOCK_LOADED;
-    return buffer_hande_ptr_t( new BufferHandle(this, buffer_.get()));
+    return buffer_handle_ptr_t( new BufferHandle(this_shared, buffer_.get()));
 }
 
 void BlockHandle::unload() {
@@ -83,10 +83,10 @@ void BlockHandle::unload() {
 
     if (blockId_ >= MAXIMUM_BLOCK && !canDestroy_) {
         // temporary block that cannot be destroyed: write to temporary file
-        buffer_manager.writeTemporaryBuffer((ManagedBuffer &)*buffer_);
+        buffer_manager->writeTemporaryBuffer((ManagedBuffer &)*buffer_);
     }
     buffer_.reset();
-    buffer_manager.currentMemory_ -= memoryUsage_;
+    buffer_manager->currentMemory_ -= memoryUsage_;
     state_ = BlockState::BLOCK_UNLOADED;
 }
 
@@ -100,7 +100,7 @@ bool BlockHandle::canUnload() {
         return false;
     }
     auto &buffer_manager = context_.bufferManager_;
-    if (blockId >= MAXIMUM_BLOCK && !canDestroy_ && buffer_manager.tempDirectory_.empty()) {
+    if (blockId_ >= MAXIMUM_BLOCK && !canDestroy_ && buffer_manager->tempDirectory_.empty()) {
         // in order to unload this block we need to write it to a temporary buffer
         // however, no temporary directory is specified!
         // hence we cannot unload the block

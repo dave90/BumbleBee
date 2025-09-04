@@ -20,6 +20,7 @@
 
 #include "CLI11.hpp"
 #include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/Helper.h"
 #include "bumblebee/common/types/Assert.h"
 
 namespace bumblebee{
@@ -115,7 +116,7 @@ void FileBuffer::readAndChecksum(FileHandle &handle, uint64_t location) {
 	read(handle, location);
 	// compute the checksum
 	auto stored_checksum = load<uint64_t>(internalBuffer_);
-	uint64_t computed_checksum = checksum(buffer_, size_);
+	uint64_t computed_checksum = calcChecksum(buffer_, size_);
 	// verify the checksum
 	if (stored_checksum != computed_checksum) {
 		string error = "Corrupt database file: computed checksum" + std::to_string(stored_checksum) + " does not match stored checksum in block: "+std::to_string(computed_checksum);
@@ -129,8 +130,8 @@ void FileBuffer::write(FileHandle &handle, uint64_t location) {
 
 void FileBuffer::checksumAndWrite(FileHandle &handle, uint64_t location) {
 	// compute the checksum and write it to the start of the buffer (if not temp buffer)
-	uint64_t checksum = checksum(buffer_, size_);
-	store<uint64_t>(checksum, internalBuffer_);
+	uint64_t cs = calcChecksum(buffer_, size_);
+	store<uint64_t>(cs, internalBuffer_);
 	// now write the buffer
 	write(handle, location);
 }
