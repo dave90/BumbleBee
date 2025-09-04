@@ -19,6 +19,8 @@
 #include "bumblebee/storage/StorageInfo.h"
 
 #include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/serializer/BufferedDeserializer.h"
+#include "bumblebee/common/serializer/BufferedSerializer.h"
 
 namespace bumblebee{
 
