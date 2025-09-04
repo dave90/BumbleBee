@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/AggregateChunkOneHashTable.h"
+#include "bumblebee/execution/AggregateChunkOneHashTable.hpp"
 
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 

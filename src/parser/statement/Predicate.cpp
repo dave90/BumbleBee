@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/parser/statement/Predicate.h"
-#include "bumblebee/common/Hash.h"
+#include "bumblebee/parser/statement/Predicate.hpp"
+#include "bumblebee/common/Hash.hpp"
 #include <sstream>
 
 namespace bumblebee {

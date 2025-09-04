@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/storage/BufferHandle.h"
-#include "bumblebee/ClientContext.h"
+#include "bumblebee/storage/BufferHandle.hpp"
+#include "bumblebee/ClientContext.hpp"
 
 namespace bumblebee{
 BufferHandle::~BufferHandle() {

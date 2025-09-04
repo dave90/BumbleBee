@@ -21,9 +21,9 @@
 #include <thread>
 #include <gtest/gtest.h>
 
-#include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/output/OutputBuilder.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/output/OutputBuilder.hpp"
 
 using namespace bumblebee;
 

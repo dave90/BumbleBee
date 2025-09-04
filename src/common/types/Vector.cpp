@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/Vector.h"
+#include "bumblebee/common/types/Vector.hpp"
 
-#include "bumblebee/common/Helper.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 Vector::Vector(Vector &other):ctype_(other.ctype_), vtype_(other.vtype_) {

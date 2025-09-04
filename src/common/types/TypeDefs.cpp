@@ -17,11 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/TypeDefs.h"
+#include "bumblebee/common/TypeDefs.hpp"
 
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/common/Hash.h"
-#include "bumblebee/common/types/BumbleString.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/common/Hash.hpp"
+#include "bumblebee/common/types/BumbleString.hpp"
 namespace bumblebee {
 
 

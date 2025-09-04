@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/parser/statement/Rule.h"
+#include "bumblebee/parser/statement/Rule.hpp"
 
 namespace bumblebee {
 Rule::Rule(Rule &&other) noexcept: body_(std::move(other.body_)),

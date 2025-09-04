@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/serializer/BufferedFileReader.h"
+#include "bumblebee/common/serializer/BufferedFileReader.hpp"
 
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/common/serializer/BufferedFileWriter.h"
-#include "bumblebee/common/types/Assert.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/common/serializer/BufferedFileWriter.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee{
 BufferedFileReader::BufferedFileReader(FileSystem &fs, const char *path)

@@ -19,8 +19,8 @@
 
 #include <gtest/gtest.h>
 
-#include "bumblebee/function/AggregateFunction.h"
-#include "bumblebee/function/aggregate/Sum.h"
+#include "bumblebee/function/AggregateFunction.hpp"
+#include "bumblebee/function/aggregate/Sum.hpp"
 #include "vector"
 
 template <class T>

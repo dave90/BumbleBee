@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "../include/bumblebee/common/Allocator.h"
+#include "bumblebee/common/Allocator.hpp"
 
-#include "bumblebee/ClientContext.h"
+#include "bumblebee/ClientContext.hpp"
 
 namespace bumblebee{
 AllocatedData::AllocatedData(Allocator &allocator, data_ptr_t pointer, idx_t allocated_size):

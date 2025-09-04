@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/function/AggregateFunction.h"
+#include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee {
 void AggregateFunction::initStates(data_ptr_t states, const SelectionVector& sel, AggregateFunction &func, idx_t count) {

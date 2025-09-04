@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/PhysicalAtomProfiler.h"
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/common/types/DataChunk.h"
-#include "bumblebee/execution/PhysicalAtom.h"
+#include "bumblebee/execution/PhysicalAtomProfiler.hpp"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/types/DataChunk.hpp"
+#include "bumblebee/execution/PhysicalAtom.hpp"
 
 namespace bumblebee{
 

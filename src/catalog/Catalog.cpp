@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/catalog/Catalog.h"
+#include "bumblebee/catalog/Catalog.hpp"
 
 namespace bumblebee{
 Catalog::Catalog(): default_schema_(default_schema_name) {}

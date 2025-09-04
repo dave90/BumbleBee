@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/ClientContext.h"
+#include "bumblebee/ClientContext.hpp"
 
-#include "bumblebee/catalog/Catalog.h"
-#include "bumblebee/common/LocalFileSystem.h"
-#include "bumblebee/function/aggregate/Sum.h"
-#include "bumblebee/storage/InMemoryBlockManager.h"
+#include "bumblebee/catalog/Catalog.hpp"
+#include "bumblebee/common/LocalFileSystem.hpp"
+#include "bumblebee/function/aggregate/Sum.hpp"
+#include "bumblebee/storage/InMemoryBlockManager.hpp"
 
 namespace bumblebee{
 ClientContext::ClientContext():

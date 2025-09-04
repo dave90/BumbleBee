@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/storage/BufferManager.h"
+#include "bumblebee/storage/BufferManager.hpp"
 
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee{
 

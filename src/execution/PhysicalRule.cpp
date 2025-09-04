@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/PhysicalRule.h"
+#include "bumblebee/execution/PhysicalRule.hpp"
 
 namespace bumblebee{
 PhysicalRule::PhysicalRule(patom_ptr_t &source, patom_ptr_t &sink, patom_ptr_vector_t &patoms, idx_t priority): source_(std::move(source)),

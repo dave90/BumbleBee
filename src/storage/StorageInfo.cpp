@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/storage/StorageInfo.h"
+#include "bumblebee/storage/StorageInfo.hpp"
 
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/common/serializer/BufferedDeserializer.h"
-#include "bumblebee/common/serializer/BufferedSerializer.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/common/serializer/BufferedDeserializer.hpp"
+#include "bumblebee/common/serializer/BufferedSerializer.hpp"
 
 namespace bumblebee{
 

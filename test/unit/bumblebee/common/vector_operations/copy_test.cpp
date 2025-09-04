@@ -18,9 +18,9 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/common/vector_operations/VectorOperations.h"
-#include "bumblebee/common/types/Value.h"
-#include "bumblebee/common/Assert.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
+#include "bumblebee/common/types/Value.hpp"
+#include "bumblebee/common/Assert.hpp"
 
 using namespace bumblebee;
 

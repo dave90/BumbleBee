@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/expression/PhysicalExpression.h"
+#include "bumblebee/execution/atom/expression/PhysicalExpression.hpp"
 
 namespace bumblebee{
 

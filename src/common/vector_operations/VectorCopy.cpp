@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee {
 

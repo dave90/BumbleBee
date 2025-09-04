@@ -20,13 +20,13 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/parser/ParserInputDirector.h"
-#include "bumblebee/parser/statement/Atom.h"
-#include "bumblebee/parser/statement/Predicate.h"
-#include "bumblebee/parser/statement/Rule.h"
-#include "bumblebee/planner/rewriter/ArithRewriter.h"
-#include "bumblebee/planner/rewriter/VariablesRewriter.h"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/parser/ParserInputDirector.hpp"
+#include "bumblebee/parser/statement/Atom.hpp"
+#include "bumblebee/parser/statement/Predicate.hpp"
+#include "bumblebee/parser/statement/Rule.hpp"
+#include "bumblebee/planner/rewriter/ArithRewriter.hpp"
+#include "bumblebee/planner/rewriter/VariablesRewriter.hpp"
 #include "utils.h"
 
 using namespace bumblebee;

@@ -16,14 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/storage/SingleFileBlockManager.h"
+#include "bumblebee/storage/SingleFileBlockManager.hpp"
 
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/common/Helper.h"
-#include "bumblebee/common/serializer/BufferedDeserializer.h"
-#include "bumblebee/common/serializer/BufferedSerializer.h"
-#include "bumblebee/storage/MetaBlockReader.h"
-#include "bumblebee/storage/MetaBlockWriter.h"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/serializer/BufferedDeserializer.hpp"
+#include "bumblebee/common/serializer/BufferedSerializer.hpp"
+#include "bumblebee/storage/MetaBlockReader.hpp"
+#include "bumblebee/storage/MetaBlockWriter.hpp"
 
 
 namespace bumblebee{

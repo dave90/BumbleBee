@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 
-#include "bumblebee/common/Log.h"
-#include "bumblebee/parser/statement/Atom.h"
-#include "bumblebee/execution/JoinHashTable.h"
-#include "bumblebee/execution/PartitionedAggHT.h"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/parser/statement/Atom.hpp"
+#include "bumblebee/execution/JoinHashTable.hpp"
+#include "bumblebee/execution/PartitionedAggHT.hpp"
 
 namespace bumblebee{
 PredicateTables::PredicateTables(const char* name, unsigned arity): predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {

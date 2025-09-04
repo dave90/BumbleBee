@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/PhysicalRuleExecutor.h"
+#include "bumblebee/execution/PhysicalRuleExecutor.hpp"
 
 namespace bumblebee{
 PhysicalRuleExecutor::PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext* context): prule_(std::move(prule)), tcontext_(context) {

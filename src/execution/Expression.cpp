@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/Expression.h"
+#include "bumblebee/execution/Expression.hpp"
 
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 Expression::Expression(Binop op, const Operands &left, const Operands &right): op_(op),

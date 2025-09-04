@@ -20,16 +20,16 @@
 #include <numeric>
 #include <thread>
 
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 #include <gtest/gtest.h>
 
-#include "bumblebee/execution/Expression.h"
-#include "bumblebee/execution/PhysicalRule.h"
-#include "bumblebee/execution/atom/expression/PhysicalExpression.h"
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
-#include "bumblebee/parallel/Scheduler.h"
-#include "bumblebee/parallel/TaskExecutor.h"
+#include "bumblebee/execution/Expression.hpp"
+#include "bumblebee/execution/PhysicalRule.hpp"
+#include "bumblebee/execution/atom/expression/PhysicalExpression.hpp"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
+#include "bumblebee/parallel/Scheduler.hpp"
+#include "bumblebee/parallel/TaskExecutor.hpp"
 
 using namespace bumblebee;
 

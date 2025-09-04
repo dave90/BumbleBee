@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/LocalFileSystem.h"
+#include "bumblebee/common/LocalFileSystem.hpp"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -25,9 +25,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/common/StringUtils.h"
-#include "bumblebee/common/types/Assert.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/common/StringUtils.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee{
 

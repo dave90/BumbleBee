@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/common/Mutex.h"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/common/Mutex.hpp"
 
 #include "CLI11.hpp"
 

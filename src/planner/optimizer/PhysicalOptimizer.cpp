@@ -17,19 +17,19 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/planner/optimizer/PhysicalOptimizer.h"
+#include "bumblebee/planner/optimizer/PhysicalOptimizer.hpp"
 
-#include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/execution/Expression.h"
-#include "bumblebee/execution/NestedLoopJoin.h"
-#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.h"
-#include "bumblebee/execution/atom/expression/PhysicalExpression.h"
-#include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
-#include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
-#include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/execution/atom/output/PhysicalNopeOutput.h"
-#include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/execution/Expression.hpp"
+#include "bumblebee/execution/NestedLoopJoin.hpp"
+#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.hpp"
+#include "bumblebee/execution/atom/expression/PhysicalExpression.hpp"
+#include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
+#include "bumblebee/execution/atom/join/PhysicalHashJoin.hpp"
+#include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
+#include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 
 namespace bumblebee {
 PhysicalOptimizer::PhysicalOptimizer(ClientContext& context)

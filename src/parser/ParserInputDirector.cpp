@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/parser/ParserInputDirector.h"
+#include "bumblebee/parser/ParserInputDirector.hpp"
 
-#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/ErrorHandler.hpp"
 #include "aspcore2_lexer.hpp"
 #include "aspcore2_parser.hpp"
 

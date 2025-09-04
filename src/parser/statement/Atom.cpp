@@ -17,10 +17,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/parser/statement/Atom.h"
+#include "bumblebee/parser/statement/Atom.hpp"
 
-#include "bumblebee/common/Hash.h"
-#include "bumblebee/common/Log.h"
+#include "bumblebee/common/Hash.hpp"
+#include "bumblebee/common/Log.hpp"
 
 namespace bumblebee {
 

@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/execution/PhysicalAtom.h"
+#include "bumblebee/execution/PhysicalAtom.hpp"
 
 namespace bumblebee{
 

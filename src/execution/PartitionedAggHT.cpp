@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/PartitionedAggHT.h"
+#include "bumblebee/execution/PartitionedAggHT.hpp"
 #include <bit>
 
-#include "bumblebee/common/Helper.h"
+#include "bumblebee/common/Helper.hpp"
 
 namespace bumblebee{
 PartitionedAggHT::PartitionedAggHT(const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,

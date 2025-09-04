@@ -185,7 +185,7 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
     along with the validator.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "bumblebee/parser/ParserInputDirector.h"
+#include "bumblebee/parser/ParserInputDirector.hpp"
 #include <iostream>
 
 bool queryFound=false;

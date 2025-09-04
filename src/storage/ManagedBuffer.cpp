@@ -17,10 +17,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/storage/ManagedBuffer.h"
+#include "bumblebee/storage/ManagedBuffer.hpp"
 
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/common/types/Assert.h"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee {
 ManagedBuffer::ManagedBuffer(ClientContext &context, idx_t size, bool can_destroy, block_id_t id): FileBuffer(context.allocator_, FileBufferType::MANAGED_BUFFER, size)

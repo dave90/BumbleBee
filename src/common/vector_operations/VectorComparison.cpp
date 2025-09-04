@@ -17,9 +17,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/vector_operations/VectorOperations.h"
-#include "bumblebee/common/vector_operations/BinaryExecution.h"
-#include  "bumblebee/common/operator/ComparisonOperators.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
+#include "bumblebee/common/vector_operations/BinaryExecution.hpp"
+#include  "bumblebee/common/operator/ComparisonOperators.hpp"
 
 namespace bumblebee {
 

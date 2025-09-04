@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/function/FunctionRegister.h"
+#include "bumblebee/function/FunctionRegister.hpp"
 
-#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee{
 void FunctionRegister::registerFunction(function_ptr function) {

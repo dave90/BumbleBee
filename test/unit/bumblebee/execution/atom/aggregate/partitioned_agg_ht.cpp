@@ -17,13 +17,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/Constants.h"
+#include "bumblebee/common/Constants.hpp"
 #include <gtest/gtest.h>
 
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/execution/AggregateChunkOneHashTable.h"
-#include "bumblebee/function/aggregate/Sum.h"
-#include "bumblebee/execution/PartitionedAggHT.h"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/execution/AggregateChunkOneHashTable.hpp"
+#include "bumblebee/function/aggregate/Sum.hpp"
+#include "bumblebee/execution/PartitionedAggHT.hpp"
 
 using namespace bumblebee;
 

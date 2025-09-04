@@ -16,17 +16,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "include/bumblebee/BumbleBeeDB.h"
+#include "include/bumblebee/BumbleBeeDB.hpp"
 
 #include <CLI11.hpp>
 
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/common/Log.h"
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/parallel/TaskExecutor.h"
-#include "bumblebee/parser/ParserInputDirector.h"
-#include "bumblebee/planner/Planner.h"
-#include "bumblebee/planner/StatementDependency.h"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/parallel/TaskExecutor.hpp"
+#include "bumblebee/parser/ParserInputDirector.hpp"
+#include "bumblebee/planner/Planner.hpp"
+#include "bumblebee/planner/StatementDependency.hpp"
 
 namespace bumblebee {
 int BumbleBeeDB::parseArgs(int argc, char **argv) {

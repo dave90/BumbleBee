@@ -17,11 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/types/BumbleString.h"
+#include "bumblebee/common/types/BumbleString.hpp"
 
 #include <locale>
 
-#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee {
 BumbleString::BumbleString(const char *data): BumbleString(data, strlen(data)) {}

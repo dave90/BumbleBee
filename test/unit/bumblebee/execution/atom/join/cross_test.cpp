@@ -20,12 +20,12 @@
 #include <numeric>
 #include <thread>
 
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 #include <gtest/gtest.h>
 
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
-#include "bumblebee/parallel/ThreadContext.h"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
+#include "bumblebee/parallel/ThreadContext.hpp"
 
 using namespace bumblebee;
 

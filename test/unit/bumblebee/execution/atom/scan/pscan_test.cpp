@@ -20,10 +20,10 @@
 #include <numeric>
 #include <thread>
 
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 #include <gtest/gtest.h>
 
-#include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
+#include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 
 using namespace bumblebee;
 

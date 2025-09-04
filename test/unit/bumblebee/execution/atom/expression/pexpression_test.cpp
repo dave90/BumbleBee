@@ -20,10 +20,10 @@
 #include <memory>
 #include <gtest/gtest.h>
 
-#include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
-#include "bumblebee/execution/atom/expression/PhysicalExpression.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
+#include "bumblebee/execution/atom/expression/PhysicalExpression.hpp"
 using namespace bumblebee;
 
 

@@ -18,10 +18,10 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/common/types/DataChunk.h"
-#include "bumblebee/common/types/Value.h"
-#include "bumblebee/common/types/SelectionVector.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/types/DataChunk.hpp"
+#include "bumblebee/common/types/Value.hpp"
+#include "bumblebee/common/types/SelectionVector.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 using namespace bumblebee;
 

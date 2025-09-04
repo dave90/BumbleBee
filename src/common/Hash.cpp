@@ -1,7 +1,7 @@
 
 
 
-#include "bumblebee/common/Hash.h"
+#include "bumblebee/common/Hash.hpp"
 
 #include <functional>
 

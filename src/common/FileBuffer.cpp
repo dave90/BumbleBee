@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/FileBuffer.h"
+#include "bumblebee/common/FileBuffer.hpp"
 
 #include "CLI11.hpp"
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/common/Helper.h"
-#include "bumblebee/common/types/Assert.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee{
 

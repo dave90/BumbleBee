@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "gtest/gtest.h"
-#include "bumblebee/common/types/Vector.h"
-#include "bumblebee/common/types/Value.h"
-#include "bumblebee/common/TypeDefs.h"
+#include <gtest/gtest.h>
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/common/types/Value.hpp"
+#include "bumblebee/common/TypeDefs.hpp"
 
 using namespace bumblebee;
 

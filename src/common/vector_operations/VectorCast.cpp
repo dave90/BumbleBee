@@ -17,9 +17,9 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/operator/CastOperators.h"
-#include "bumblebee/common/vector_operations/UnaryExecution.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/operator/CastOperators.hpp"
+#include "bumblebee/common/vector_operations/UnaryExecution.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 
 namespace bumblebee {

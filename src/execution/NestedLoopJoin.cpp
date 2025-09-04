@@ -17,11 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/TypeDefs.h"
-#include "bumblebee/common/types/Vector.h"
-#include "bumblebee/execution/NestedLoopJoin.h"
+#include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/execution/NestedLoopJoin.hpp"
 
-#include "bumblebee/common/operator/ComparisonOperators.h"
+#include "bumblebee/common/operator/ComparisonOperators.hpp"
 
 namespace bumblebee {
 

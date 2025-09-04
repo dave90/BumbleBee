@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "../include/bumblebee/parallel/Scheduler.h"
+#include "bumblebee/parallel/Scheduler.hpp"
 
-#include "bumblebee/common/Log.h"
+#include "bumblebee/common/Log.hpp"
 
 enum TaskStatus : uint8_t {
     RUNNING = 0,

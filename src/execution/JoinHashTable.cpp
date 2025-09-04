@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/JoinHashTable.h"
+#include "bumblebee/execution/JoinHashTable.hpp"
 
-#include "bumblebee/common/Helper.h"
-#include "bumblebee/common/operator/ComparisonOperators.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/operator/ComparisonOperators.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 

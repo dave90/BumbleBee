@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/common/types/BumbleString.h"
+#include "bumblebee/common/types/BumbleString.hpp"
 
 using namespace bumblebee;
 
