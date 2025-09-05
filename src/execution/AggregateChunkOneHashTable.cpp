@@ -66,7 +66,7 @@ void AggregateChunkOneHashTable::addChunk(Vector& hash, DataChunk& groups, DataC
 
     // now update the states
     for (id_t i = 0;i<functions_.size();++i) {
-        AggregateFunction::updateState(payload.data_[i], states_[i].get(), groupSel, *functions_[i], payload.getSize());
+        AggregateFunction::updateStates(payload.data_[i], states_[i].get(), groupSel, *functions_[i], payload.getSize());
     }
 
 }
@@ -86,7 +86,7 @@ void AggregateChunkOneHashTable::addChunk(DataChunk &payload) {
     // update the first state
 
     for (id_t i = 0;i<functions_.size();++i) {
-        AggregateFunction::updateState(payload.data_[i], states_[i].get(), ConstantVector::ZERO_SELECTION_VECTOR, *functions_[i], payload.getSize());
+        AggregateFunction::updateStates(payload.data_[i], states_[i].get(), ConstantVector::ZERO_SELECTION_VECTOR, *functions_[i], payload.getSize());
     }
 }
 
@@ -159,7 +159,7 @@ void AggregateChunkOneHashTable::finalize() {
     idx_t counter = getGroups(0, sel, entries_);
     BB_ASSERT(entries_ == counter);
     for (idx_t i = 0; i < functions_.size(); i++)
-        AggregateFunction::finalizeState(payload_.data_[i], states_[i].get(), sel, *functions_[i], counter);
+        AggregateFunction::finalizeStates(payload_.data_[i], states_[i].get(), sel, *functions_[i], counter);
     ready_ = true;
 }
 

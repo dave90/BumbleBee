@@ -186,4 +186,23 @@ idx_t nextPowerOfTwo(idx_t n) {
     return n;
 }
 
+bool typeIsConstantSize(ConstantType type) {
+    switch (type) {
+        case TINYINT:
+        case SMALLINT:
+        case INTEGER:
+        case BIGINT:
+        case UTINYINT:
+        case USMALLINT:
+        case UINTEGER:
+        case UBIGINT:
+        case FLOAT:
+        case DOUBLE:
+            return true;
+        case STRING:
+        default:
+            return false;
+    }
+}
+
 }

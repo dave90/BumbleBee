@@ -85,6 +85,7 @@ bool operator==(const Value &lhs, const Value &rhs) {
             return lhs.value_.double_ == rhs.value_.double_;
         case ConstantType::STRING:
             return lhs.stringValue_ == rhs.stringValue_;
+
         default:
             ;
     }

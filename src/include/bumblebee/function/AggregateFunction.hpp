@@ -19,6 +19,8 @@
 #pragma once
 #include "Function.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/types/DataChunk.hpp"
+#include "bumblebee/common/types/RowLayout.hpp"
 #include "bumblebee/common/types/Vector.hpp"
 
 namespace bumblebee{
@@ -142,10 +144,17 @@ private:
 
 
 public:
+    // vector operations
     static void initStates(data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
     static void combineStates(data_ptr_t states, data_ptr_t targetStates, const SelectionVector& sel, const SelectionVector& targetSel, AggregateFunction& func, idx_t count);
-    static void updateState(Vector& input, data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
-    static void finalizeState(Vector& result, data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
+    static void updateStates(Vector& input, data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
+    static void finalizeStates(Vector& result, data_ptr_t states, const SelectionVector& sel, AggregateFunction& func, idx_t count);
+
+    // row operation
+    static void initStates(RowLayout &layout, Vector &addresses, const SelectionVector &sel, idx_t count);
+    static void updateStates(RowLayout &layout, Vector &addresses, Vector &payload, idx_t count, idx_t agg_idx);
+    static void combineStates(RowLayout &layout, Vector &sources, Vector &targets, const SelectionVector &sel, idx_t count);
+    static void finalizeStates(RowLayout &layout, Vector &addresses, DataChunk &result, idx_t count);
 
 };
 

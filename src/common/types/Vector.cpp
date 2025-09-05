@@ -484,6 +484,7 @@ void Vector::setValue(idx_t index, const Value &val) {
         case ConstantType::STRING:
             ((string_t*)data_)[index] = StringVector::addString(*this, val.stringValue_);
             break;
+
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type access");
     }

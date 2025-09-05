@@ -196,7 +196,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 			break;
 			}
 		default:
-			ErrorHandler::errorNotImplemented("Unimplemented type '%s' for copy!");
+			ErrorHandler::errorNotImplemented("Unimplemented type for copy!");
 	}
 
 	if (tvType != VectorType::FLAT_VECTOR) {

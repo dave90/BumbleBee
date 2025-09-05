@@ -46,6 +46,7 @@ public:
 	Value(double c);
 	Value(string&& c);
 	Value(string_t c);
+	Value(uintptr_t c);
 	Value(const char* c);
 	~Value() = default;
 

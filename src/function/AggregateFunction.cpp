@@ -19,7 +19,15 @@
 
 #include "bumblebee/function/AggregateFunction.hpp"
 
+#include "bumblebee/parser/statement/Term.hpp"
+
 namespace bumblebee {
+
+/* --------------------------------------------------------------------
+ *                  VECTOR LAYOUT
+ *--------------------------------------------------------------------
+*/
+
 void AggregateFunction::initStates(data_ptr_t states, const SelectionVector& sel, AggregateFunction &func, idx_t count) {
     auto size = func.stateSize_();
     for (idx_t i = 0; i < count; i++) {
@@ -60,7 +68,7 @@ template <class T>
     }
 }
 
-void AggregateFunction::updateState(Vector& input, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
+void AggregateFunction::updateStates(Vector& input, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
     idx_t count) {
 
     switch (input.getType()) {
@@ -109,7 +117,7 @@ void templatedFinalizeState(Vector &result, data_ptr_t states, const SelectionVe
 }
 
 
-void AggregateFunction::finalizeState(Vector &result, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
+void AggregateFunction::finalizeStates(Vector &result, data_ptr_t states, const SelectionVector &sel, AggregateFunction &func,
     idx_t count) {
 
     switch (result.getType()) {
@@ -141,4 +149,213 @@ void AggregateFunction::finalizeState(Vector &result, data_ptr_t states, const S
     }
 }
 
+
+/* --------------------------------------------------------------------
+ *                  ROW LAYOUT
+ *--------------------------------------------------------------------
+*/
+
+void AggregateFunction::initStates(RowLayout &layout, Vector &addresses, const SelectionVector &sel, idx_t count) {
+    if (count == 0) {
+        return;
+    }
+    BB_ASSERT(addresses.getVectorType() == VectorType::FLAT_VECTOR);
+    auto pointers = FlatVector::getData<data_ptr_t>(addresses);
+    auto &offsets = layout.getOffsets();
+    auto aggr_idx = layout.columnCount();
+
+    for (AggregateFunction* aggr : layout.getAggregates()) {
+        for (idx_t i = 0; i < count; ++i) {
+            auto row_idx = sel.getIndex(i);
+            auto row = pointers[row_idx];
+            aggr->initialize_(row + offsets[aggr_idx]);
+        }
+        ++aggr_idx;
+    }
+}
+
+template <class INPUT_TYPE>
+void templatedUpdateStateFlatLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict idata, data_ptr_t* __restrict sdata, idx_t agg_offset, idx_t count) {
+    for (idx_t i = 0; i < count; ++i) {
+        auto row = sdata[i];
+        aggr.update_((data_ptr_t)(idata +i), row + agg_offset);
+    }
+}
+
+template <class INPUT_TYPE>
+void templatedUpdateStateLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict idata, data_ptr_t* __restrict sdata,const SelectionVector& sidata,const SelectionVector& ssdata, idx_t agg_offset, idx_t count) {
+    for (idx_t i = 0; i < count; ++i) {
+        auto idx = sidata.getIndex(i);
+        auto row_idx = ssdata.getIndex(i);
+        auto row = sdata[row_idx];
+        aggr.update_((data_ptr_t)(idata +idx), row + agg_offset);
+    }
+}
+
+template <class INPUT_TYPE>
+void templatedUpdateState(RowLayout &layout, AggregateFunction &aggr, Vector &addresses, Vector &input, idx_t count, idx_t agg_idx) {
+
+    auto agg_offset = layout.getOffsets()[ layout.columnCount() + agg_idx];
+    if (input.getVectorType() == VectorType::CONSTANT_VECTOR &&
+            addresses.getVectorType() == VectorType::CONSTANT_VECTOR) {
+
+        // regular constant: get first state
+        auto idata = ConstantVector::getData<INPUT_TYPE>(input);
+        auto sdata = ConstantVector::getData<data_ptr_t>(addresses);
+        aggr.update_( (data_ptr_t)(idata), sdata[0] + agg_offset);
+
+    } else if (input.getVectorType() == VectorType::FLAT_VECTOR &&
+                       addresses.getVectorType() == VectorType::FLAT_VECTOR) {
+        auto idata = FlatVector::getData<INPUT_TYPE>(input);
+        auto sdata = FlatVector::getData<data_ptr_t>(addresses);
+        templatedUpdateStateFlatLoop<INPUT_TYPE>(aggr, idata, sdata, agg_offset, count);
+    } else {
+       VectorData idata, sdata;
+       input.orrify(count, idata);
+       addresses.orrify(count, sdata);
+       templatedUpdateStateLoop<INPUT_TYPE>(aggr, (INPUT_TYPE *)idata.data_, (data_ptr_t *)sdata.data_,
+                                                    *idata.sel_, *sdata.sel_, agg_offset, count);
+    }
+}
+
+void AggregateFunction::updateStates(RowLayout &layout, Vector &addresses, Vector &input, idx_t count, idx_t agg_idx) {
+    if (count == 0)
+        return;
+
+    BB_ASSERT(agg_idx < layout.getAggregates().size());
+    auto aggr = *layout.getAggregates()[agg_idx];
+    switch (input.getType()) {
+        case ConstantType::TINYINT:
+            return templatedUpdateState<int8_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::SMALLINT:
+            return templatedUpdateState<int16_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::INTEGER:
+            return templatedUpdateState<int32_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::BIGINT:
+            return templatedUpdateState<int64_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::UTINYINT:
+            return templatedUpdateState<uint8_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::USMALLINT:
+            return templatedUpdateState<uint16_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::UINTEGER:
+            return templatedUpdateState<uint32_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::UBIGINT:
+            return templatedUpdateState<uint64_t>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::FLOAT:
+            return templatedUpdateState<float>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::DOUBLE:
+            return templatedUpdateState<double>(layout, aggr, addresses, input, count, agg_idx);
+        case ConstantType::STRING:	{
+            return templatedUpdateState<string_t>(layout, aggr, addresses, input, count, agg_idx);
+        }
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+    }
+}
+
+void AggregateFunction::combineStates(RowLayout &layout, Vector &sources, Vector &targets, const SelectionVector &sel, idx_t count) {
+    if (count == 0)
+        return;
+
+    BB_ASSERT(sources.getVectorType() == VectorType::FLAT_VECTOR);
+    BB_ASSERT(targets.getVectorType() == VectorType::FLAT_VECTOR);
+    auto spointers = FlatVector::getData<data_ptr_t>(sources);
+    auto tpointers = FlatVector::getData<data_ptr_t>(targets);
+    auto &offsets = layout.getOffsets();
+    auto aggr_idx = layout.columnCount();
+
+    for (AggregateFunction* aggr : layout.getAggregates()) {
+        for (idx_t i = 0; i < count; ++i) {
+            auto row_idx = sel.getIndex(i);
+            auto srow = spointers[row_idx];
+            auto trow = tpointers[row_idx];
+            aggr->combine_(srow + offsets[aggr_idx], trow + offsets[aggr_idx]);
+        }
+        ++aggr_idx;
+    }
+}
+
+
+
+template <class INPUT_TYPE>
+void templatedFinalizeStateFlatLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata, idx_t agg_offset, idx_t count) {
+    for (idx_t i = 0; i < count; ++i) {
+        auto row = sdata[i];
+        aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +i));
+    }
+}
+
+template <class INPUT_TYPE>
+void templatedFinalizeStateLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata,const SelectionVector& srdata,const SelectionVector& ssdata, idx_t agg_offset, idx_t count) {
+    for (idx_t i = 0; i < count; ++i) {
+        auto idx = srdata.getIndex(i);
+        auto row_idx = ssdata.getIndex(i);
+        auto row = sdata[row_idx];
+        aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +idx));
+    }
+}
+
+template<class RESULT_TYPE>
+void templatedFinalizeState(AggregateFunction& aggr, Vector &addresses, Vector &result, idx_t count, idx_t agg_offset ) {
+
+    if (addresses.getVectorType() == VectorType::CONSTANT_VECTOR) {
+        BB_ASSERT(result.getVectorType() == VectorType::CONSTANT_VECTOR);
+        // regular constant: get first state
+        auto rdata = ConstantVector::getData<RESULT_TYPE>(result);
+        auto sdata = ConstantVector::getData<data_ptr_t>(addresses);
+        aggr.finalize_(  sdata[0] + agg_offset, (data_ptr_t)(rdata));
+
+    } else if (addresses.getVectorType() == VectorType::FLAT_VECTOR) {
+        BB_ASSERT(result.getVectorType() == VectorType::FLAT_VECTOR);
+        auto rdata = FlatVector::getData<RESULT_TYPE>(result);
+        auto sdata = FlatVector::getData<data_ptr_t>(addresses);
+        templatedFinalizeStateFlatLoop<RESULT_TYPE>(aggr, rdata, sdata, agg_offset, count);
+    } else {
+        VectorData rdata, sdata;
+        result.orrify(count, rdata);
+        addresses.orrify(count, sdata);
+        templatedFinalizeStateLoop<RESULT_TYPE>(aggr, (RESULT_TYPE *)rdata.data_, (data_ptr_t *)sdata.data_,
+                                                    *rdata.sel_, *sdata.sel_, agg_offset, count);
+   }
+}
+
+void templatedFinalizeStateSwitch(AggregateFunction& aggr, Vector &addresses, Vector &result, idx_t count, idx_t aggr_offset ) {
+    switch (result.getType()) {
+        case ConstantType::TINYINT:
+            return templatedFinalizeState<int8_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::SMALLINT:
+            return templatedFinalizeState<int16_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::INTEGER:
+            return templatedFinalizeState<int32_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::BIGINT:
+            return templatedFinalizeState<int64_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::UTINYINT:
+            return templatedFinalizeState<uint8_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::USMALLINT:
+            return templatedFinalizeState<uint16_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::UINTEGER:
+            return templatedFinalizeState<uint32_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::UBIGINT:
+            return templatedFinalizeState<uint64_t>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::FLOAT:
+            return templatedFinalizeState<float>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::DOUBLE:
+            return templatedFinalizeState<double>( aggr, addresses, result, count, aggr_offset);
+        case ConstantType::STRING:	{
+            return templatedFinalizeState<string_t>( aggr, addresses, result, count, aggr_offset);
+        }
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+    }
+}
+
+void AggregateFunction::finalizeStates(RowLayout &layout, Vector &addresses, DataChunk &result, idx_t count) {
+    BB_ASSERT(layout.getAggregates().size()  == result.columnCount());
+    idx_t agg_idx = 0;
+    for (auto& aggr : layout.getAggregates()) {
+        auto agg_offset = layout.getOffsets()[ layout.columnCount() + agg_idx];
+        templatedFinalizeStateSwitch(*aggr, addresses, result.data_[agg_idx],count, agg_offset);
+        ++agg_idx;
+    }
+}
 }

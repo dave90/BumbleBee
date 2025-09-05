@@ -18,7 +18,63 @@
  */
 #include "bumblebee/common/types/RowLayout.hpp"
 
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/function/AggregateFunction.hpp"
+
 namespace bumblebee{
+RowLayout::RowLayout(): dataWidth_(0), aggrWidth_(0), rowWidth_(0){
+}
 
+void RowLayout::initialize(vector<ConstantType> types, Aggregates aggregates, bool align) {
+    offsets_.clear();
+    types_ = std::move(types);
 
+    rowWidth_ = 0;
+    // Whether all columns are constant size.
+    for (const auto &type : types) {
+        allConstant_ = allConstant_ && typeIsConstantSize(type);
+    }
+
+    // This enables pointer swizzling for out-of-core computation.
+    if (!allConstant_) {
+        // When unswizzled the pointer lives here.
+        // When swizzled, the pointer is replaced by an offset.
+        heapPointerOffset_ = rowWidth_;
+        // The 8 byte pointer will be replaced with an 8 byte idx_t when swizzled.
+        rowWidth_ += sizeof(idx_t);
+    }
+
+    // Data columns. No alignment required.
+    for (const auto &type : types_) {
+        offsets_.push_back(rowWidth_);
+        rowWidth_ += getCTypeSize(type);
+    }
+
+    if (align) {
+        rowWidth_ = alignValue(rowWidth_);
+    }
+    dataWidth_ = rowWidth_;
+
+    // Aggregate fields.
+    aggregates_ = std::move(aggregates);
+    for (auto &aggregate : aggregates_) {
+        offsets_.push_back(rowWidth_);
+        auto payloadSize = aggregate->stateSize_();
+        rowWidth_ += payloadSize;
+    }
+    aggrWidth_ = rowWidth_ - dataWidth_;
+
+    // Alignment padding for the next row
+    if (align) {
+        rowWidth_ = alignValue(rowWidth_);
+    }
+}
+
+void RowLayout::initialize(vector<ConstantType> types, bool align) {
+    initialize(std::move(types),Aggregates(), align);
+}
+
+void RowLayout::initialize(Aggregates aggregates_p, bool align) {
+    initialize(vector<ConstantType>(),std::move(aggregates_p),align);
+}
 }

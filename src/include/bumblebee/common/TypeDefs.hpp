@@ -52,7 +52,7 @@ enum ConstantType: uint8_t  {
     FLOAT = 8,
     DOUBLE = 9,
     STRING = 10,
-    UNKNOWN = 11
+    UNKNOWN = 100
 };
 
 struct VectorConstHash {
@@ -115,5 +115,5 @@ string getBinopStr(Binop binop);
 string ctypeToString(ConstantType type);
 Binop getFlippedBinop(Binop op);
 idx_t nextPowerOfTwo(idx_t n);
-
+bool typeIsConstantSize(ConstantType type);
 }
