@@ -43,82 +43,113 @@ public:
 
         return result;
     }
+
+    unique_ptr<data_t[]> generateStates(RowLayout& layout, Vector& addresses,  idx_t size) {
+        unique_ptr<data_t[]> rowdata = unique_ptr<data_t[]>(new data_t[layout.getRowWidth() * size]);
+        addresses.initialize(size);
+        BB_ASSERT(addresses.getType() == UBIGINT);
+        BB_ASSERT(addresses.getVectorType() == VectorType::FLAT_VECTOR);
+        auto data = FlatVector::getData<data_ptr_t>(addresses);
+        for (idx_t i = 0; i < size; i++)
+            data[i] = rowdata.get() + (layout.getRowWidth() * i);
+
+        return rowdata;
+    }
 };
 
 
-TEST_F(AggFuncTest, InitSumStateTest ) {
+
+TEST_F(AggFuncTest, InitRowSumStateTest ) {
 
     vector args = {SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
+    idx_t count = 10;
 
-    auto stateSize = aggFunction.stateSize_();
-    auto n = 10;
-    auto size = n*stateSize;
+    vector types = {SMALLINT, SMALLINT};
+    RowLayout layout;
+    layout.initialize(types, {&aggFunction}, true);
+    Vector addresses(UBIGINT, count);
 
-    unique_ptr<data_t[]> states = generateStates(size);
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
-    AggregateFunction::initStates(states.get(), sel, aggFunction, n);
+    auto row_data = generateStates(layout, addresses, count);
+    AggregateFunction::initStates(layout, addresses, sel, count);
+    auto pointers = FlatVector::getData<data_ptr_t>(addresses);
     // check all states are 0
-    for (idx_t i = 0; i < n; i++) {
-        auto state = (SumState<int64_t>*) (states.get() + i*stateSize);
+    auto agg_offset = layout.getOffsets()[layout.columnCount()];
+    for (idx_t i = 0; i < count; i++) {
+        auto row = pointers[i];
+        EXPECT_EQ(row, row_data.get() + (layout.getRowWidth() * i));
+        auto state = (SumState<int64_t>*)(row + agg_offset);
         EXPECT_EQ(state->value, 0);
     }
 }
 
 
-TEST_F(AggFuncTest, UpdateSumStateTest ) {
+TEST_F(AggFuncTest, UpdateRowSumStateTest ) {
 
     vector args = {SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
+    idx_t n = 10;
 
-    // init the state
-    auto stateSize = aggFunction.stateSize_();
-    auto n = 10;
-    auto size = n*stateSize;
-    unique_ptr<data_t[]> states = generateStates(size);
+    // init the data
+    vector types = {BIGINT, SMALLINT};
+    RowLayout layout;
+    layout.initialize(types, {&aggFunction}, true);
+    Vector addresses(UBIGINT, n);
+
 
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
-    AggregateFunction::initStates(states.get(), sel, aggFunction, n);
+    auto row_data = generateStates(layout, addresses, n);
+    AggregateFunction::initStates(layout, addresses, sel, n);
+    auto pointers = FlatVector::getData<data_ptr_t>(addresses);
 
     // update the states with Input vector
     Vector input = generateVector(n, args[0]);
-    AggregateFunction::updateState(input, states.get(), sel, aggFunction, n);
+    AggregateFunction::updateStates(layout, addresses, input, n, 0);
 
-    // check the states
+    // check all states are 0
+    auto agg_offset = layout.getOffsets()[layout.columnCount()];
     for (idx_t i = 0; i < n; i++) {
-        auto state = (SumState<int64_t>*) (states.get() + i*stateSize);
+        auto row = pointers[i];
+        EXPECT_EQ(row, row_data.get() + (layout.getRowWidth() * i));
+        auto state = (SumState<int64_t>*)(row + agg_offset);
         EXPECT_EQ(state->value, i);
     }
 }
 
 
 
-TEST_F(AggFuncTest, FinalizeSumStateTest ) {
 
-    vector args = {USMALLINT};
-    auto result = UBIGINT;
+TEST_F(AggFuncTest, FinalizeRowSumStateTest ) {
+    vector args = {SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
+    idx_t n = 20;
 
-    auto stateSize = aggFunction.stateSize_();
-    auto n = 10;
-    auto size = n*stateSize;
-    unique_ptr<data_t[]> states = generateStates(size);
+    // init the data
+    vector types = {BIGINT, SMALLINT};
+    RowLayout layout;
+    layout.initialize(types, {&aggFunction}, true);
+    Vector addresses(UBIGINT, n);
+
 
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
-    AggregateFunction::initStates(states.get(), sel, aggFunction, n);
+    auto row_data = generateStates(layout, addresses, n);
+    AggregateFunction::initStates(layout, addresses, sel, n);
+    auto pointers = FlatVector::getData<data_ptr_t>(addresses);
 
     // update the states with Input vector
     Vector input = generateVector(n, args[0]);
-    AggregateFunction::updateState(input, states.get(), sel, aggFunction, n);
-
-    // update the 10 states again
-    AggregateFunction::updateState(input, states.get(), sel, aggFunction, 10);
+    AggregateFunction::updateStates(layout, addresses, input, n, 0);
+    // update again first 10 elements
+    AggregateFunction::updateStates(layout, addresses, input, 10, 0);
 
     // Fetch the results
-    Vector resultVec(result);
-    AggregateFunction::finalizeState(resultVec, states.get(), sel, aggFunction, n);
+    DataChunk result;
+    result.initialize({aggFunction.result_});
+    AggregateFunction::finalizeStates(layout, addresses, result, n);
 
     // check results
+    auto& resultVec = result.data_[0];
     for (idx_t i = 0; i < n; i++) {
         if (i < 10) // expected double value
             EXPECT_EQ(resultVec.getValue(i).getNumericValue<uint64_t>(), i*2);
@@ -128,38 +159,6 @@ TEST_F(AggFuncTest, FinalizeSumStateTest ) {
 }
 
 
-TEST_F(AggFuncTest, FinalizeSumMultipleindexStateTest ) {
-
-    vector args = {USMALLINT};
-    auto result = UBIGINT;
-    auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
-
-    auto stateSize = aggFunction.stateSize_();
-    auto n = 25;
-    auto size = n*stateSize;
-    unique_ptr<data_t[]> states = generateStates(size);
-
-    SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
-    AggregateFunction::initStates(states.get(), sel, aggFunction, n);
-
-    // update only first state
-    SelectionVector selZero = ConstantVector::ZERO_SELECTION_VECTOR;
-    Vector input = generateVector(n, args[0]);
-    AggregateFunction::updateState(input, states.get(), selZero, aggFunction, n);
-
-    // fetch result
-    Vector resultVec(result);
-    AggregateFunction::finalizeState(resultVec, states.get(), sel, aggFunction, n);
-
-    std::cout << resultVec.toString(n) << std::endl;
-    // check all states 0 (except first)
-    for (idx_t i = 1; i < n; i++) {
-        EXPECT_EQ(resultVec.getValue(i).getNumericValue<uint64_t>(), 0);
-    }
-    // first value should be
-    EXPECT_EQ(resultVec.getValue(0).getNumericValue<uint64_t>(), (n-1)*(n)/2); // sum of first n numbers (is n-1 because first is 0)
-
-}
 
 
 }
