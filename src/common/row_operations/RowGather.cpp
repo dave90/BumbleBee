@@ -25,8 +25,7 @@ namespace bumblebee {
 
 template <class T>
 static void templatedGatherLoop(Vector &rows, const SelectionVector &row_sel, Vector &col,
-                                const SelectionVector &col_sel, idx_t count, idx_t col_offset, idx_t col_no,
-                                idx_t build_size) {
+                                const SelectionVector &col_sel, idx_t count, idx_t col_offset) {
 
 	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
 	auto data = FlatVector::getData<T>(col);
@@ -41,7 +40,7 @@ static void templatedGatherLoop(Vector &rows, const SelectionVector &row_sel, Ve
 
 
 void RowOperations::gather(Vector &rows, const SelectionVector &row_sel, Vector &col, const SelectionVector &col_sel,
-                           const idx_t count, const idx_t col_offset, const idx_t col_no, const idx_t build_size) {
+                           const idx_t count, const idx_t col_offset) {
 	BB_ASSERT(rows.getVectorType() == VectorType::FLAT_VECTOR);
 	BB_ASSERT(rows.getType() == UBIGINT); // "Cannot gather from non-pointer type!"
 
@@ -49,37 +48,37 @@ void RowOperations::gather(Vector &rows, const SelectionVector &row_sel, Vector 
 
 	switch (col.getType()) {
 		case ConstantType::TINYINT:
-			templatedGatherLoop<int8_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<int8_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::SMALLINT:
-			templatedGatherLoop<int16_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<int16_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::INTEGER:
-			templatedGatherLoop<int32_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<int32_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::BIGINT:
-			templatedGatherLoop<int64_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<int64_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::UTINYINT:
-			templatedGatherLoop<uint8_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<uint8_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::USMALLINT:
-			templatedGatherLoop<uint16_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<uint16_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::UINTEGER:
-			templatedGatherLoop<uint32_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<uint32_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::UBIGINT:
-			templatedGatherLoop<uint64_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<uint64_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::FLOAT:
-			templatedGatherLoop<float>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<float>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::DOUBLE:
-			templatedGatherLoop<double>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<double>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		case ConstantType::STRING:	{
-			templatedGatherLoop<string_t>(rows, row_sel, col, col_sel, count, col_offset, col_no, build_size);
+			templatedGatherLoop<string_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		}
 		default:

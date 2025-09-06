@@ -47,29 +47,29 @@ BlockHandle::~BlockHandle() {
     buffer_manager->unregisterBlock(blockId_, canDestroy_);
 }
 
-buffer_handle_ptr_t BlockHandle::load() {
-    auto this_shared = block_shared_ptr_t(this);
-    if (state_ == BlockState::BLOCK_LOADED) {
+buffer_handle_ptr_t BlockHandle::load(std::shared_ptr<BlockHandle>& handle) {
+
+    if (handle->state_ == BlockState::BLOCK_LOADED) {
         // already loaded
-        BB_ASSERT(buffer_);
-        return buffer_handle_ptr_t( new BufferHandle(this_shared, buffer_.get()));
+        BB_ASSERT(handle->buffer_);
+        return buffer_handle_ptr_t( new BufferHandle(handle, handle->buffer_.get()));
     }
 
-    auto &buffer_manager = context_.bufferManager_;
-    auto &block_manager = context_.blockManager_;
-    if (blockId_ < MAXIMUM_BLOCK) {
-        auto block = block_ptr_t(new Block(context_.allocator_, blockId_));
+    auto &buffer_manager = handle->context_.bufferManager_;
+    auto &block_manager = handle->context_.blockManager_;
+    if (handle->blockId_ < MAXIMUM_BLOCK) {
+        auto block = block_ptr_t(new Block(handle->context_.allocator_, handle->blockId_));
         block_manager->read(*block);
-        buffer_ = std::move(block);
+        handle->buffer_ = std::move(block);
     } else {
-        if (canDestroy_) {
+        if (handle->canDestroy_) {
             return nullptr;
         } else {
-            buffer_ = buffer_manager->readTemporaryBuffer(blockId_);
+            handle->buffer_ = buffer_manager->readTemporaryBuffer(handle->blockId_);
         }
     }
-    state_ = BlockState::BLOCK_LOADED;
-    return buffer_handle_ptr_t( new BufferHandle(this_shared, buffer_.get()));
+    handle->state_ = BlockState::BLOCK_LOADED;
+    return buffer_handle_ptr_t( new BufferHandle(handle, handle->buffer_.get()));
 }
 
 void BlockHandle::unload() {

@@ -45,6 +45,7 @@ public:
 	Value(float c);
 	Value(double c);
 	Value(string&& c);
+	Value(const string& c);
 	Value(string_t c);
 	Value(uintptr_t c);
 	Value(const char* c);

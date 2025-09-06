@@ -90,10 +90,10 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 
 	// Compute the entry size of the variable size columns
 	vector<buffer_handle_ptr_t> handles;
-	BB_ASSERT(count <= STANDARD_VECTOR_SIZE);
-	data_ptr_t data_locations[STANDARD_VECTOR_SIZE];
+	idx_t locations_size = (count < STANDARD_VECTOR_SIZE) ? STANDARD_VECTOR_SIZE: count;
+	data_ptr_t data_locations[locations_size];
 	if (!layout.allConstant()) {
-		idx_t entry_sizes[STANDARD_VECTOR_SIZE];
+		idx_t entry_sizes[locations_size];
 		std::fill_n(entry_sizes, count, sizeof(uint32_t)); // all entry size start with 4 byte size (heap  size)
 		for (idx_t col_no = 0; col_no < types.size(); col_no++) {
 			if (typeIsConstantSize(types[col_no])) {

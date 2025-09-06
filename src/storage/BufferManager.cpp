@@ -54,7 +54,7 @@ BufferManager::~BufferManager() {
 
 
 
-block_shared_ptr_t BufferManager::registerBlock(block_id_t block_id) {
+block_handle_shared_ptr_t BufferManager::registerBlock(block_id_t block_id) {
 	lock_guard lock(blocksLock_);
 	// check if the block already exists
 	auto entry = blocks_.find(block_id);
@@ -67,7 +67,7 @@ block_shared_ptr_t BufferManager::registerBlock(block_id_t block_id) {
 		}
 	}
 	// create a new block pointer for this block
-	auto result = block_shared_ptr_t(new BlockHandle(context_, block_id));
+	auto result = block_handle_shared_ptr_t(new BlockHandle(context_, block_id));
 	// register the block pointer in the set of blocks as a weak pointer
 	blocks_[block_id] = std::weak_ptr<BlockHandle>(result);
 	return result;
@@ -75,7 +75,7 @@ block_shared_ptr_t BufferManager::registerBlock(block_id_t block_id) {
 
 
 
-block_shared_ptr_t BufferManager::registerMemory(idx_t block_size, bool can_destroy) {
+block_handle_shared_ptr_t BufferManager::registerMemory(idx_t block_size, bool can_destroy) {
 	auto alloc_size = block_size + Storage::BLOCK_HEADER_SIZE;
 	// first evict blocks until we have enough memory to store this buffer
 	if (!evictBlocks(alloc_size, maximumMemory_)) {
@@ -97,8 +97,8 @@ buffer_handle_ptr_t BufferManager::allocate(idx_t block_size) {
 }
 
 
-block_shared_ptr_t BufferManager::convertToPersistent(BlockManager &block_manager, block_id_t block_id,
-															   block_shared_ptr_t old_block) {
+block_handle_shared_ptr_t BufferManager::convertToPersistent(BlockManager &block_manager, block_id_t block_id,
+															   block_handle_shared_ptr_t old_block) {
 
 	// pin the old block to ensure we have it loaded in memory
 	auto old_handle = pin(old_block);
@@ -129,7 +129,7 @@ block_shared_ptr_t BufferManager::convertToPersistent(BlockManager &block_manage
 	return new_block;
 }
 
-void BufferManager::reAllocate(block_shared_ptr_t &handle, idx_t block_size) {
+void BufferManager::reAllocate(block_handle_shared_ptr_t &handle, idx_t block_size) {
 	BB_ASSERT(block_size >= Storage::BLOCK_SIZE);
 	lock_guard lock(handle->lock_);
 	BB_ASSERT(handle->state_ == BlockState::BLOCK_LOADED);
@@ -154,7 +154,7 @@ void BufferManager::reAllocate(block_shared_ptr_t &handle, idx_t block_size) {
 	handle->memoryUsage_ = alloc_size;
 }
 
-buffer_handle_ptr_t BufferManager::pin(block_shared_ptr_t &handle) {
+buffer_handle_ptr_t BufferManager::pin(block_handle_shared_ptr_t &handle) {
 	idx_t required_memory;
 	{
 		// lock the block
@@ -163,7 +163,7 @@ buffer_handle_ptr_t BufferManager::pin(block_shared_ptr_t &handle) {
 		if (handle->state_ == BlockState::BLOCK_LOADED) {
 			// the block is loaded, increment the reader count and return a pointer to the handle
 			handle->readers_++;
-			return handle->load();
+			return handle->load(handle);
 		}
 		required_memory = handle->memoryUsage_;
 	}
@@ -179,21 +179,21 @@ buffer_handle_ptr_t BufferManager::pin(block_shared_ptr_t &handle) {
 		// the block is loaded, increment the reader count and return a pointer to the handle
 		handle->readers_++;
 		currentMemory_ -= required_memory;
-		return handle->load();
+		return handle->load(handle);
 	}
 	// now we can actually load the current block
 	BB_ASSERT(handle->readers_ == 0);
 	handle->readers_ = 1;
-	return handle->load();
+	return handle->load(handle);
 }
 
-void BufferManager::addToEvictionQueue(block_shared_ptr_t &handle) {
+void BufferManager::addToEvictionQueue(block_handle_shared_ptr_t &handle) {
 	BB_ASSERT(handle->readers_ == 0);
 	handle->evictionTimestamp_++;
 	queue_->q.enqueue(make_unique<BufferEvictionNode>(std::weak_ptr(handle), handle->evictionTimestamp_));
 }
 
-void BufferManager::unpin(block_shared_ptr_t &handle) {
+void BufferManager::unpin(block_handle_shared_ptr_t &handle) {
 	lock_guard lock(handle->lock_);
 	BB_ASSERT(handle->readers_ > 0);
 	handle->readers_--;

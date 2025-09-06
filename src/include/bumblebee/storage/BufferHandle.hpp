@@ -18,22 +18,25 @@
  */
 #pragma once
 #include <memory>
+#include <utility>
 
 #include "bumblebee/common/FileBuffer.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 #include "bumblebee/storage/BlockHandle.hpp"
 
 namespace bumblebee{
 
 class BufferHandle {
 public:
-    BufferHandle(block_shared_ptr_t handle, FileBuffer *node): handle_(handle), node_(node) {}
+    BufferHandle(block_handle_shared_ptr_t handle, FileBuffer *node): handle_(std::move(handle)), node_(node) {}
     ~BufferHandle();
 
     // The block handle
-    block_shared_ptr_t handle_;
+    block_handle_shared_ptr_t handle_;
     //! The managed buffer node
     FileBuffer *node_;
-    data_ptr_t ptr() {
+    data_ptr_t ptr() const {
+        BB_ASSERT(node_->buffer_);
         return node_->buffer_;
     }
 };

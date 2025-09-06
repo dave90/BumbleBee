@@ -31,6 +31,7 @@ void RowLayout::initialize(vector<ConstantType> types, Aggregates aggregates, bo
 
     rowWidth_ = 0;
     // Whether all columns are constant size.
+    allConstant_ = true;
     for (const auto &type : types) {
         allConstant_ = allConstant_ && typeIsConstantSize(type);
     }

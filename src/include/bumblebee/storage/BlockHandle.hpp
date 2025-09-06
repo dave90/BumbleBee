@@ -54,7 +54,7 @@ public:
     }
 
 private:
-    std::unique_ptr<BufferHandle> load();
+    static std::unique_ptr<BufferHandle> load(std::shared_ptr<BlockHandle>& handle);
     void unload();
     bool canUnload();
 
@@ -77,6 +77,6 @@ private:
 };
 
 
-using block_shared_ptr_t = std::shared_ptr<BlockHandle>;
+using block_handle_shared_ptr_t = std::shared_ptr<BlockHandle>;
 
 }

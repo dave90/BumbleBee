@@ -56,6 +56,8 @@ Value::Value(double c)
 
 Value::Value(string &&c) :ctype_(STRING), stringValue_(std::move(c)) {}
 
+Value::Value(const string& c) :ctype_(STRING), stringValue_(c) {}
+
 Value::Value(string_t c):ctype_(STRING), stringValue_(c.c_str(), c.size()) {}
 
 Value::Value(const char *c):ctype_(STRING), stringValue_(c) {}

@@ -31,7 +31,7 @@ struct RowDataBlock {
 		block_ = buffer_manager.registerMemory(capacity * entry_size, false);
 	}
 	// The buffer block handle
-	block_shared_ptr_t block_;
+	block_handle_shared_ptr_t block_;
 	// Capacity (number of entries) and entry size that fit in this block
 	idx_t capacity_;
 	const idx_t entrySize_;

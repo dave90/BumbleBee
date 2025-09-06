@@ -36,9 +36,16 @@ struct RowOperations {
                         RowDataCollection &string_heap, const SelectionVector &sel, idx_t count);
     // Gather a single column.
     static void gather(Vector &rows, const SelectionVector &row_sel, Vector &col, const SelectionVector &col_sel,
-                       idx_t count, idx_t col_offset, idx_t col_no, idx_t build_size = 0);
+                       idx_t count, idx_t col_offset);
     // // Full Scan an entire columns
     static void fullScanColumn(const RowLayout &layout, Vector &rows, Vector &col, idx_t count, idx_t col_idx);
+
+
+    //===--------------------------------------------------------------------===//
+    // Comparison Operators
+    //===--------------------------------------------------------------------===//
+    static idx_t equal(DataChunk &columns, VectorData col_data[], const RowLayout &layout, Vector &rows,
+                        SelectionVector &sel, idx_t count, SelectionVector *no_match,idx_t &no_match_count);
 
 
 };

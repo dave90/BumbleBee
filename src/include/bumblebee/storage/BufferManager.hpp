@@ -93,26 +93,26 @@ public:
 	~BufferManager();
 
 	// Register a block with the given block id in the base file
-	block_shared_ptr_t registerBlock(block_id_t block_id);
+	block_handle_shared_ptr_t registerBlock(block_id_t block_id);
 
 	// Register an in-memory buffer of arbitrary size, as long as it is >= BLOCK_SIZE. can_destroy signifies whether or
 	// not the buffer can be destroyed when unpinned, or whether or not it needs to be written to a temporary file so
 	// it can be reloaded. The resulting buffer will already be allocated, but needs to be pinned in order to be used.
-	block_shared_ptr_t registerMemory(idx_t block_size, bool can_destroy);
+	block_handle_shared_ptr_t registerMemory(idx_t block_size, bool can_destroy);
 
 	// Convert an existing in-memory buffer into a persistent disk-backed block
-	block_shared_ptr_t convertToPersistent(BlockManager &block_manager, block_id_t block_id,
-	                                            block_shared_ptr_t old_block);
+	block_handle_shared_ptr_t convertToPersistent(BlockManager &block_manager, block_id_t block_id,
+	                                            block_handle_shared_ptr_t old_block);
 
 	// Allocate an in-memory buffer with a single pin.
 	// The allocated memory is released when the buffer handle is destroyed.
 	buffer_handle_ptr_t allocate(idx_t block_size);
 
 	// Reallocate an in-memory buffer that is pinned.
-	void reAllocate(block_shared_ptr_t &handle, idx_t block_size);
+	void reAllocate(block_handle_shared_ptr_t &handle, idx_t block_size);
 
-	buffer_handle_ptr_t pin(block_shared_ptr_t &handle);
-	void unpin(block_shared_ptr_t &handle);
+	buffer_handle_ptr_t pin(block_handle_shared_ptr_t &handle);
+	void unpin(block_handle_shared_ptr_t &handle);
 
 	void unregisterBlock(block_id_t block_id, bool can_destroy);
 
@@ -153,7 +153,7 @@ private:
 
 	void requireTemporaryDirectory();
 
-	void addToEvictionQueue(block_shared_ptr_t &handle);
+	void addToEvictionQueue(block_handle_shared_ptr_t &handle);
 
 
 private:

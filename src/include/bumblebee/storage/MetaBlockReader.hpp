@@ -34,7 +34,7 @@ public:
     }
 
     ClientContext &context_;
-    block_shared_ptr_t block_;
+    block_handle_shared_ptr_t block_;
     buffer_handle_ptr_t handle_;
     idx_t offset_;
     block_id_t nextBlock_;
