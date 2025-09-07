@@ -1,0 +1,126 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+#include <memory>
+
+#include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/types/DataChunk.hpp"
+#include "bumblebee/common/types/RowDataCollection.hpp"
+#include "bumblebee/common/types/RowLayout.hpp"
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/storage/BufferHandle.hpp"
+
+namespace bumblebee{
+
+struct HTEntry64 {
+    uint64_t hash_;
+    uint32_t pageOffset_;
+    uint32_t pageNum_;
+};
+
+class ProbeRLHashTable {
+public:
+
+    using distinct_ht_ptr_t = std::unique_ptr<ProbeRLHashTable>;
+
+    // The hash table load factor, when a resize is triggered
+    constexpr static float LOAD_FACTOR = 0.5;
+
+    ProbeRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = STANDARD_VECTOR_SIZE, bool resizable = true);
+    virtual ~ProbeRLHashTable() {};
+
+    ProbeRLHashTable(const ProbeRLHashTable &other) = delete;
+    ProbeRLHashTable(ProbeRLHashTable &&other) noexcept = delete;
+    ProbeRLHashTable & operator=(const ProbeRLHashTable &other) = delete;
+    ProbeRLHashTable & operator=(ProbeRLHashTable &&other) noexcept = delete;
+
+
+    // Add a given data to HT
+    void addChunk(Vector& hash, DataChunk& chunk);
+
+    // Scan the HT starting from the position until the result and group
+    idx_t scan(idx_t offset, DataChunk& result, idx_t size = STANDARD_VECTOR_SIZE);
+
+    // Find or creates groups
+    void findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses);
+    // Find or creates groups and return the matched index ( elements not created)
+    void findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses, idx_t& matchedCount, bool createGroups, SelectionVector& matchedSel);
+    // Find or creates groups and return the new groups index
+    void findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses, idx_t& newGroupsCount, SelectionVector& newGroupSel);
+
+    // Combine with other HT
+    void combine(ProbeRLHashTable& other);
+    // Partition the HT
+    void partition(vector<distinct_ht_ptr_t>& partitions, idx_t shift);
+
+    idx_t getSize() const;
+    idx_t getCapacity()const;
+    string toString(bool compact = true);
+    vector<ConstantType> getTypes() const;
+
+protected:
+
+    // Resize the HT
+    virtual void resize(idx_t size);
+
+    void findOrCreateGroupsInternal(Vector &hash, DataChunk &groups, Vector &addresses, idx_t& matchedCount, idx_t& newGroupsCount, bool createGroups = true, SelectionVector* matchedSel = nullptr, SelectionVector* newGroupSel = nullptr);
+
+    template <class FUNC = std::function<void(idx_t, idx_t, data_ptr_t)>>
+    void payloadApply(FUNC fun);
+
+    void newBlock();
+
+    void move(Vector &addresses, Vector &hashes, idx_t count);
+
+
+    vector<ConstantType> types_;
+    BufferManager &bufferManager_;
+    RowLayout layout_;
+
+    // The stringheap of the AggregateHashTable
+    std::unique_ptr<RowDataCollection> stringHeap_;
+
+    // The total tuple size
+    idx_t tupleSize_;
+    // The amount of tuples that fit in a single block
+    idx_t tuplesPerBlock_;
+    // The capacity of the HT. This can be increased using
+    idx_t capacity_;
+    // The amount of entries stored in the HT currently
+    idx_t entries_;
+    // If is resizable
+    bool resizable_;
+    // The data of the HT
+    vector<buffer_handle_ptr_t> payload_;
+    vector<data_ptr_t> payloadPtrs_;
+
+    // The hashes of the HT
+    buffer_handle_ptr_t hashes_;
+    data_ptr_t hashesPtr_;
+    data_ptr_t hashesEndPtr_; // end of of hashes
+
+    idx_t payloadPageOffset_; // current offset of the tuple inside the payload (block is full when payloadPageOffset_ == tuplesPerBlock_ )
+
+    // Bitmask for getting relevant bits from the hashes to determine the position
+    hash_t bitmask_;
+
+};
+
+
+}

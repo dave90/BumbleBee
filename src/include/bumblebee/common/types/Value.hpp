@@ -47,7 +47,6 @@ public:
 	Value(string&& c);
 	Value(const string& c);
 	Value(string_t c);
-	Value(uintptr_t c);
 	Value(const char* c);
 	~Value() = default;
 
@@ -102,6 +101,8 @@ public:
 		ErrorHandler::errorNotImplemented("Unimplemented template type for Value::GetValueUnsafe");
 		return this;
 	}
+
+	static Value cast(ConstantType type, data_ptr_t data);
 
 
 private:

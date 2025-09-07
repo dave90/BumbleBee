@@ -170,6 +170,37 @@ Value Value::cast(ConstantType type) const {
     return {};
 }
 
+Value Value::cast(ConstantType type, data_ptr_t data) {
+    switch (type) {
+        case ConstantType::TINYINT:
+            return Value( * ((int8_t*)data ));
+        case ConstantType::SMALLINT:
+            return Value(*((int16_t*)data));
+        case ConstantType::INTEGER:
+            return Value(*((int32_t*)data));
+        case ConstantType::BIGINT:
+            return Value(*((int64_t*)data));
+        case ConstantType::UTINYINT:
+            return Value(*((uint8_t*)data));
+        case ConstantType::USMALLINT:
+            return Value(*((uint16_t*)data));
+        case ConstantType::UINTEGER:
+            return Value(*((uint32_t*)data));
+        case ConstantType::UBIGINT:
+            return Value(*((uint64_t*)data));
+        case ConstantType::FLOAT:
+            return Value(*((float*)data));
+        case ConstantType::DOUBLE:
+            return Value(*((double*)data));
+        case ConstantType::STRING:
+            return Value(*(string_t*)data );
+        case ConstantType::UNKNOWN:
+            ;
+    }
+    ErrorHandler::errorNotImplemented("Cast not implemented.");
+    return {};
+}
+
 
 // --------------------  Template ------------------
 
