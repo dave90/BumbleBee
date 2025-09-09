@@ -28,7 +28,7 @@ namespace bumblebee {
 template <class T>
 static void templatedScatter(VectorData &col, Vector &rows, const SelectionVector &sel, const idx_t count,
                              const idx_t col_offset, const idx_t col_no) {
-	auto data = (T *)col.data_;
+	auto data = (T *) col.data_;
 	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
 
 	for (idx_t i = 0; i < count; i++) {

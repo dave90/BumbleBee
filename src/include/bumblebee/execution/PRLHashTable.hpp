@@ -34,21 +34,24 @@ struct HTEntry64 {
     uint32_t pageNum_;
 };
 
-class ProbeRLHashTable {
+/*
+ *  Probe Row Layout Hash Table
+ */
+class PRLHashTable {
 public:
 
-    using distinct_ht_ptr_t = std::unique_ptr<ProbeRLHashTable>;
+    using distinct_ht_ptr_t = std::unique_ptr<PRLHashTable>;
 
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.5;
 
-    ProbeRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = STANDARD_VECTOR_SIZE, bool resizable = true);
-    virtual ~ProbeRLHashTable() {};
+    PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = STANDARD_VECTOR_SIZE, bool resizable = true);
+    virtual ~PRLHashTable() {};
 
-    ProbeRLHashTable(const ProbeRLHashTable &other) = delete;
-    ProbeRLHashTable(ProbeRLHashTable &&other) noexcept = delete;
-    ProbeRLHashTable & operator=(const ProbeRLHashTable &other) = delete;
-    ProbeRLHashTable & operator=(ProbeRLHashTable &&other) noexcept = delete;
+    PRLHashTable(const PRLHashTable &other) = delete;
+    PRLHashTable(PRLHashTable &&other) noexcept = delete;
+    PRLHashTable & operator=(const PRLHashTable &other) = delete;
+    PRLHashTable & operator=(PRLHashTable &&other) noexcept = delete;
 
 
     // Add a given data to HT
@@ -65,7 +68,7 @@ public:
     void findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses, idx_t& newGroupsCount, SelectionVector& newGroupSel);
 
     // Combine with other HT
-    void combine(ProbeRLHashTable& other);
+    void combine(PRLHashTable& other);
     // Partition the HT
     void partition(vector<distinct_ht_ptr_t>& partitions, idx_t shift);
 
@@ -77,7 +80,7 @@ public:
 protected:
 
     // Resize the HT
-    virtual void resize(idx_t size);
+    void resize(idx_t size, bool initResize = false);
 
     void findOrCreateGroupsInternal(Vector &hash, DataChunk &groups, Vector &addresses, idx_t& matchedCount, idx_t& newGroupsCount, bool createGroups = true, SelectionVector* matchedSel = nullptr, SelectionVector* newGroupSel = nullptr);
 
@@ -86,7 +89,7 @@ protected:
 
     void newBlock();
 
-    void move(Vector &addresses, Vector &hashes, idx_t count);
+    Vector move(Vector &addresses, Vector &hashes, idx_t count);
 
 
     vector<ConstantType> types_;

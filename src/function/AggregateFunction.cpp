@@ -358,4 +358,10 @@ void AggregateFunction::finalizeStates(RowLayout &layout, Vector &addresses, Dat
         ++agg_idx;
     }
 }
+
+void AggregateFunction::finalizeStates(RowLayout &layout, Vector &addresses, Vector &result, idx_t agg_index, idx_t count) {
+    auto& aggrFunction = layout.getAggregates()[agg_index];
+    auto agg_offset = layout.getOffsets()[ layout.columnCount() + agg_index];
+    templatedFinalizeStateSwitch(*aggrFunction, addresses, result, count, agg_offset);
+}
 }

@@ -17,25 +17,27 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "ChunkOneHashTable.hpp"
-#include "bumblebee/function/AggregateFunction.hpp"
+#include "PRLHashTable.hpp"
 
 namespace bumblebee{
 
 
-class AggregateChunkOneHashTable : public ChunkOneHashTable {
+class AggregatePRLHashTable : public PRLHashTable{
 public:
-    using agg_ht_ptr_t = std::unique_ptr<AggregateChunkOneHashTable>;
+    using agg_ht_ptr_t = std::unique_ptr<AggregatePRLHashTable>;
 
-    AggregateChunkOneHashTable(const vector<ConstantType> &types, idx_t capacity, bool resizable,
+    AggregatePRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity, bool resizable,
         const vector<AggregateFunction *> &functions);
-    virtual ~AggregateChunkOneHashTable() = default;
+
+    ~AggregatePRLHashTable() override;
+
 
     void addChunk(Vector& hash, DataChunk& groups, DataChunk& payload);
     // add the paylaod to the first state (in case of no groups)
     void addChunk(DataChunk& payload);
 
-    void combine(AggregateChunkOneHashTable& other);
+    void combine(AggregatePRLHashTable& other);
+
 
     // Fetch the aggregates for specific groups from the HT and place them in the result
     // filter out the groups that does not matched
@@ -46,22 +48,11 @@ public:
     void fetchAggregates(DataChunk& result);
     void fetchAggregates(Vector& result, idx_t function);
 
-
-    void finalize();
-    bool isReady();
-    string toString(bool compact);
-
 private:
-    void resize(idx_t size) override;
+    void findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups);
 
     // Aggregates functions
     vector<AggregateFunction*> functions_;
-    // Aggregated data for each function
-    DataChunk payload_;
-    // Holds the states for each aggregation
-    vector<agg_states_ptr> states_;
-    // If is ready to be used
-    bool ready_;
 };
 
 

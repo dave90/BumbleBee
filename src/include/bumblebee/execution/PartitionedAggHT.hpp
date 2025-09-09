@@ -19,23 +19,22 @@
 #pragma once
 #include <memory>
 
-#include "AggregateChunkOneHashTable.hpp"
 #include "bumblebee/common/Mutex.hpp"
 #include "bumblebee/common/Vector.hpp"
+#include "bumblebee/execution/AggregatePRLHashTable.hpp"
 
 namespace bumblebee{
 
-using agg_ht_ptr_t = AggregateChunkOneHashTable::agg_ht_ptr_t;
+using agg_ht_ptr_t = AggregatePRLHashTable::agg_ht_ptr_t;
+using distinct_ht_ptr_t = PRLHashTable::distinct_ht_ptr_t;
 
 // Inspired by : https://db.in.tum.de/~leis/papers/morsels.pdf
 class PartitionedAggHT {
 public:
 
-    static constexpr idx_t PARTITIONS = 8; // consider that in Agg HT last bit is always 1
+    static constexpr idx_t PARTITIONS = 8;
 
-    explicit PartitionedAggHT(const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
-    PartitionedAggHT(PartitionedAggHT &&other) noexcept;
-    PartitionedAggHT & operator=(PartitionedAggHT &&other) noexcept;
+    explicit PartitionedAggHT(const ClientContext& context, const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
 
     PartitionedAggHT & operator=(const PartitionedAggHT &other) = delete;
     PartitionedAggHT(const PartitionedAggHT &other) = delete;
@@ -82,6 +81,8 @@ public:
     bool checkPayload(const vector<idx_t>& payload, const vector<AggregateFunction*>& functions);
 
 private:
+    const ClientContext& context_;
+
     // the final Aggregate HT table
     agg_ht_ptr_t table_;
     // vector of distinct HT

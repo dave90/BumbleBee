@@ -26,12 +26,12 @@ class PhysicalPartitionedAggHT : public PhysicalAtom {
 
 public:
     // constructor for sink and source
-    PhysicalPartitionedAggHT(const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
+    PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
         const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
         PhysicalHashType type);
     // constructor for probe
-    PhysicalPartitionedAggHT(const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
-        const vector<idx_t> &payload_cols, AggregateChunkOneHashTable* aht);
+    PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
+        const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht);
 
     ~PhysicalPartitionedAggHT() override = default;
 
@@ -53,8 +53,10 @@ public:
 
 
 private:
+    const ClientContext& context_;
+
     PredicateTables* pt_;
-    AggregateChunkOneHashTable* aht_; // used during probe phase
+    AggregatePRLHashTable* aht_; // used during probe phase
     // during build phase point to the internal predicate table columns
     // on probe point to the group column in input data chunk
     vector<idx_t> groupCols_;

@@ -16,16 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee//execution/ProbeRLHashTable.hpp"
+#include "bumblebee//execution/PRLHashTable.hpp"
 
 #include "bumblebee/common/row_operations/RowOperations.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
-ProbeRLHashTable::ProbeRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity,
-    bool resizable) : bufferManager_(manager), types_(types), capacity_(capacity), resizable_(resizable),
+PRLHashTable::PRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity,
+    bool resizable) : bufferManager_(manager), capacity_(0), types_(types), resizable_(resizable),
     entries_(0), payloadPageOffset_(0), bitmask_(capacity-1){
-    BB_ASSERT(capacity_ != 0 && (capacity_ & (capacity_ - 1)) == 0); // capacity should be power of 2
+    BB_ASSERT(capacity != 0 && (capacity & (capacity - 1)) == 0); // capacity should be power of 2
 
     layout_.initialize(types);
     tupleSize_ = layout_.getRowWidth();
@@ -35,17 +35,17 @@ ProbeRLHashTable::ProbeRLHashTable(BufferManager &manager, const vector<Constant
     hashes_ = bufferManager_.allocate(Storage::BLOCK_SIZE);
     hashesPtr_ = hashes_->ptr();
 
-    ProbeRLHashTable::resize(STANDARD_VECTOR_SIZE);
+    PRLHashTable::resize(capacity, true);
     stringHeap_ = std::make_unique<RowDataCollection>(bufferManager_, (idx_t)Storage::BLOCK_SIZE, 1, true);
 }
 
-void ProbeRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
+void PRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
     Vector addresses(UBIGINT, chunk.getSize());
 
     findOrCreateGroups(hash, chunk, addresses);
 }
 
-idx_t ProbeRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
+idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
     BB_ASSERT(offset < entries_);
     BB_ASSERT(result.getCapacity() >= size);
     BB_ASSERT(result.columnCount() == types_.size());
@@ -78,42 +78,41 @@ idx_t ProbeRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
             layout_.getOffsets()[i]);
     }
 
-    result.setCapacity(toScan);
     result.setCardinality(toScan);
     return result.getSize();
 }
 
-void ProbeRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses) {
+void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses) {
     idx_t matchedCount = 0;
     idx_t newGroupsCount = 0;
     findOrCreateGroupsInternal(hash, groups, addresses, matchedCount, newGroupsCount, true, nullptr, nullptr );
 }
 
-void ProbeRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses,
+void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses,
     idx_t &matchedCount, bool createGroups, SelectionVector &matchedSel) {
     idx_t newGroupsCount = 0;
     findOrCreateGroupsInternal(hash, groups, addresses, matchedCount, newGroupsCount, createGroups, &matchedSel, nullptr );
 
 }
 
-void ProbeRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses,
+void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses,
     idx_t &newGroupsCount, SelectionVector &newGroupSel) {
     idx_t matchedCount = 0;
     findOrCreateGroupsInternal(hash, groups, addresses, matchedCount, newGroupsCount, true, nullptr, &newGroupSel );
 }
 
-void ProbeRLHashTable::combine(ProbeRLHashTable &other) {
+void PRLHashTable::combine(PRLHashTable &other) {
     if (other.entries_ == 0)
         return;
 
     BB_ASSERT(types_ == other.types_);
 
     idx_t position = 0;
+    DataChunk group;
+    group.initialize(other.types_);
+    Vector hash(UBIGINT);
     while (position < other.entries_) {
-        DataChunk group;
-        group.initialize(other.types_);
         other.scan(position, group);
-        Vector hash(UBIGINT);
         group.hash(hash);
         addChunk(hash, group);
 
@@ -133,7 +132,7 @@ struct PartitionInfo {
     idx_t size_;
 };
 
-void ProbeRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t shift) {
+void PRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t shift) {
     vector<PartitionInfo> partitionsInfo;
     partitionsInfo.resize(partitions.size());
     for (idx_t i = 0; i < capacity_; ++i) {
@@ -149,7 +148,7 @@ void ProbeRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t sh
         if (info.size_ >= STANDARD_VECTOR_SIZE) {
             // merge with the partition table
             if (!partitions[p])
-                partitions[p] = distinct_ht_ptr_t(new ProbeRLHashTable(bufferManager_, types_));
+                partitions[p] = distinct_ht_ptr_t(new PRLHashTable(bufferManager_, types_));
             partitions[p]->move(info.groupAddresses_, info.hashes_, info.size_);
             info.size_ = 0;
         }
@@ -159,9 +158,13 @@ void ProbeRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t sh
     idx_t infoIdx = 0;
     idx_t totalCount = 0;
     for (auto &pInfo : partitionsInfo) {
+        if (pInfo.size_ == 0 && !partitions[infoIdx]) {
+            infoIdx++;
+            continue;
+        }
         if (!partitions[infoIdx])
-            partitions[infoIdx] = distinct_ht_ptr_t(new ProbeRLHashTable(bufferManager_, types_));
-        partitions[infoIdx]->move(pInfo.groupAddresses_, pInfo.hashes_, info.pInfo);
+            partitions[infoIdx] = distinct_ht_ptr_t(new PRLHashTable(bufferManager_, types_));
+        partitions[infoIdx]->move(pInfo.groupAddresses_, pInfo.hashes_, pInfo.size_);
         pInfo.size_ = 0;
 
         partitions[infoIdx]->stringHeap_->merge(*stringHeap_);
@@ -172,15 +175,15 @@ void ProbeRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t sh
 
 }
 
-idx_t ProbeRLHashTable::getSize() const {
+idx_t PRLHashTable::getSize() const {
     return entries_;
 }
 
-idx_t ProbeRLHashTable::getCapacity() const {
+idx_t PRLHashTable::getCapacity() const {
     return capacity_;
 }
 
-string ProbeRLHashTable::toString(bool compact) {
+string PRLHashTable::toString(bool compact) {
     string result = "ProbeRLHashTable - "
         +std::to_string(capacity_)+" - "
         +std::to_string(entries_)+" - "
@@ -208,7 +211,7 @@ string ProbeRLHashTable::toString(bool compact) {
     return result;
 }
 
-vector<ConstantType> ProbeRLHashTable::getTypes() const {
+vector<ConstantType> PRLHashTable::getTypes() const {
     return types_;
 }
 
@@ -217,18 +220,19 @@ void rehash(const HTEntry64* __restrict hashes, HTEntry64* __restrict newHashes,
     for (idx_t i = 0; i < capacity; ++i) {
         const auto& entry = hashes[i];
         const auto bucket = entry.hash_ & bitmask;
-        newHashes[bucket].pageNum_    = entry.pageNum_;
+        // do not overwrite the page num bucket if the pageNum is 0 (empty page)
+        newHashes[bucket].pageNum_    = (entry.pageNum_)? entry.pageNum_:newHashes[bucket].pageNum_;
         newHashes[bucket].pageOffset_ = entry.pageOffset_;
         newHashes[bucket].hash_       = entry.hash_;
     }
 }
 
-void ProbeRLHashTable::resize(idx_t size) {
+void PRLHashTable::resize(idx_t size, bool initResize) {
     BB_ASSERT(size > capacity_);
     BB_ASSERT(size != 0 && (size & (size - 1)) == 0); // new size should be power of 2
-    BB_ASSERT(resizable_);
+    BB_ASSERT(resizable_ || initResize);
 
-    auto byteSize =  size * sizeof(HTEntry64);
+    auto byteSize =  (size * sizeof(HTEntry64) > Storage::BLOCK_SIZE)? size * sizeof(HTEntry64): Storage::BLOCK_SIZE;
     auto hashes = bufferManager_.allocate(byteSize);
     auto hashesPtr = hashes->ptr();
     memset(hashesPtr, 0, byteSize);
@@ -245,7 +249,7 @@ void ProbeRLHashTable::resize(idx_t size) {
 
 
 template <class FUNC>
-void ProbeRLHashTable::payloadApply(FUNC fun) {
+void PRLHashTable::payloadApply(FUNC fun) {
     if (entries_ == 0) {
         return;
     }
@@ -267,16 +271,19 @@ void ProbeRLHashTable::payloadApply(FUNC fun) {
 }
 
 
-void ProbeRLHashTable::newBlock() {
+void PRLHashTable::newBlock() {
     auto pin = bufferManager_.allocate(Storage::BLOCK_SIZE);
     payload_.push_back(std::move(pin));
     payloadPtrs_.push_back(payload_.back()->ptr());
     payloadPageOffset_ = 0;
 }
 
-void ProbeRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
+Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
     BB_ASSERT(addresses.getType() == UBIGINT);
     BB_ASSERT(hashes.getType() == UBIGINT);
+
+    Vector groupAddresses(UBIGINT);
+    if (count == 0) return groupAddresses;
 
     DataChunk groups;
     groups.initialize(types_);
@@ -288,19 +295,20 @@ void ProbeRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
                               FlatVector::INCREMENTAL_SELECTION_VECTOR, count, colOffset);
     }
 
-    Vector groupAddresses(UBIGINT);
     Vector hash(UBIGINT);
     groups.hash(hash);
 
     findOrCreateGroups(hash, groups, groupAddresses);
+    return groupAddresses;
 }
 
-void ProbeRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
+void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
                                                   Vector &addresses, idx_t &matchedCount, idx_t &newGroupsCount, bool createGroups, SelectionVector *matchedSel,
                                                   SelectionVector *newGroupSel) {
 
     idx_t size = groups.getSize();
-    if (groups.getSize() + entries_ >= capacity_  || (float)(entries_ + size) / (float)capacity_ > LOAD_FACTOR  ) {
+    if (createGroups &&
+        (groups.getSize() + entries_ >= capacity_  || (float)(entries_ + size) / (float)capacity_ > LOAD_FACTOR  )) {
         resize(capacity_ * 2);
     }
 
@@ -324,7 +332,7 @@ void ProbeRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &group
     addresses.normalify(size);
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
 
-    auto groupsData = groups.orrify().get();
+    auto groupsData = groups.orrify();
 
     SelectionVector selVector;
     // sel of index and buckets of new groups
@@ -332,7 +340,7 @@ void ProbeRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &group
     // sel of index and buckets of the to be matched groups
     SelectionVector compareSel(size);
     // sel of the no match groups
-    SelectionVector notMatchSel(size);
+    SelectionVector noMatchSel(size);
 
 
     idx_t remainingEntries = size;
@@ -358,7 +366,7 @@ void ProbeRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &group
                 if (payloadPageOffset_ == tuplesPerBlock_ || payload_.empty())
                     newBlock();
 
-                auto entry = payloadPtrs_.back() + (payloadPageOffset_ * tupleSize_)
+                auto entry = payloadPtrs_.back() + (payloadPageOffset_ * tupleSize_);
                 BB_ASSERT(payloadPageOffset_ < tuplesPerBlock_);
 
                 htEntry->pageNum_ = payload_.size(); // assign to size() as 0 is for empty buckets
@@ -378,38 +386,44 @@ void ProbeRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &group
                     auto entry = payloadPtrs_[ htEntry->pageNum_ -1] + (htEntry->pageOffset_ * tupleSize_);
                     addressesPtr[index] = entry;
                 }else
-                    notMatchSel.setIndex(newNoMatchCount++, index);
+                    noMatchSel.setIndex(newNoMatchCount++, index);
             }
 
 
-            // Scatter the new groups in the row storage
-            RowOperations::scatter(groups, groupsData, layout_, addresses, *stringHeap_, emptySel, newEntryCount);
-
-            // Now let's try to match the groups with same hash of our ht
-            SelectionVector noMatchSel;
-            idx_t noMatchCount = 0;
-            idx_t matchCount = RowOperations::equal(groups, groupsData, layout_, addresses, compareSel, newNeedCompareCount, &noMatchSel, noMatchCount);
-            if (matchedSel) {
-                // add the matched index
-                for (idx_t j = 0; j< matchCount; j++) {
-                    matchedSel->setIndex(matchedCount++, compareSel.getIndex(j));
-                }
-            }else
-                matchedCount += matchCount;
-
-            // each of the entries that do not match we move them to the next bucket in the HT
-            for (idx_t j = 0; j< noMatchCount; j++) {
-                idx_t idx = noMatchSel.getIndex(j);
-                bucketsPtr[idx]++;
-                if (bucketsPtr[idx] >= capacity_) {
-                    bucketsPtr[idx] = 0;
-                }
-            }
-            // next iteration take in consideration only the non-matched
-            selVector.initialize(notMatchSel);
-            remainingEntries = noMatchCount;
         }
 
+
+        // Scatter the new groups in the row storage
+        RowOperations::scatter(groups, groupsData.get(), layout_, addresses, *stringHeap_, emptySel, newEntryCount);
+
+        // Now let's try to match the groups with same hash of our ht
+        SelectionVector nms;
+        idx_t noMatchCount = 0;
+        idx_t matchCount = RowOperations::equal(groups, groupsData.get(), layout_, addresses, compareSel, newNeedCompareCount, &nms, noMatchCount);
+        if (matchedSel) {
+            // add the matched index
+            for (idx_t j = 0; j< matchCount; j++) {
+                matchedSel->setIndex(matchedCount++, compareSel.getIndex(j));
+            }
+        }else
+            matchedCount += matchCount;
+
+        // add the non match index to noMatchSel
+        for (idx_t j = 0; j< noMatchCount; j++) {
+            noMatchSel.setIndex(newNoMatchCount++, nms.getIndex(j));
+        }
+
+        // each of the entries that do not match we move them to the next bucket in the HT
+        for (idx_t j = 0; j< newNoMatchCount; j++) {
+            idx_t idx = noMatchSel.getIndex(j);
+            bucketsPtr[idx]++;
+            if (bucketsPtr[idx] >= capacity_) {
+                bucketsPtr[idx] = 0;
+            }
+        }
+        // next iteration take in consideration only the non-matched
+        selVector.initialize(noMatchSel);
+        remainingEntries = newNoMatchCount;
 
     }
 

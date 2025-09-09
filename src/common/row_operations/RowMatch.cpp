@@ -233,6 +233,10 @@ static void templatedMatch(DataChunk &columns, VectorData col_data[], const RowL
 idx_t RowOperations::equal(DataChunk &columns, VectorData col_data[], const RowLayout &layout, Vector &rows,
                             SelectionVector &sel, idx_t count, SelectionVector *no_match,
                            idx_t &no_match_count) {
+	if (count == 0) {
+		no_match_count = 0;
+		return 0;
+	}
 	if (no_match) {
 		templatedMatch<Equals, true>(columns, col_data, layout, rows, sel, count, no_match, no_match_count);
 	} else {

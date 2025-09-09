@@ -21,13 +21,11 @@
 #include <gtest/gtest.h>
 
 #include "bumblebee/ClientContext.hpp"
-#include "bumblebee/execution/AggregateChunkOneHashTable.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
 #include "bumblebee/execution/PartitionedAggHT.hpp"
 
 using namespace bumblebee;
 
-using agg_ht_ptr = AggregateChunkOneHashTable::agg_ht_ptr_t;
 
 class PartitionedAggHTTest : public ::testing::Test {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
@@ -40,6 +38,7 @@ class PartitionedAggHTTest : public ::testing::Test {
 protected:
 
     vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
+    ClientContext context;
 
     DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
@@ -59,7 +58,7 @@ protected:
             bool resize = false) {
 
         if (!ht)
-            ht = distinct_ht_ptr_t(new ChunkOneHashTable(tLeft, capacity, resize));
+            ht = distinct_ht_ptr_t(new PRLHashTable(*context.bufferManager_, tLeft, capacity, resize));
 
         Vector hash(UBIGINT, chunk.getSize());
         chunk.hash(hash);
@@ -69,11 +68,11 @@ protected:
             vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE,
             bool resize = false) {
         if (!pht)
-            pht = partitioned_agg_ht_ptr_t(new PartitionedAggHT(groups, payloads, functions));
+            pht = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, functions));
         pht->partitionHT(ht);
     }
 
-    DataChunk probeToHT(agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
+    DataChunk probeToHT(agg_ht_ptr_t& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
         vector<ConstantType> groupTypes, payloadTypes;
         for (auto g : groups)
             groupTypes.push_back(chunk.getTypes()[g]);

@@ -77,10 +77,10 @@ bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
     return false;
 }
 
-partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
+partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const ClientContext& context, const vector<idx_t> &groups, const vector<idx_t> &payloads,
     const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
-    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(groups, payloads, aggregateFunctions));
+    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, aggregateFunctions));
     return partitionedAggHT_;
 }
 

@@ -155,6 +155,7 @@ public:
     static void updateStates(RowLayout &layout, Vector &addresses, Vector &payload, idx_t count, idx_t agg_idx);
     static void combineStates(RowLayout &layout, Vector &sources, Vector &targets, const SelectionVector &sel, idx_t count);
     static void finalizeStates(RowLayout &layout, Vector &addresses, DataChunk &result, idx_t count);
+    static void finalizeStates(RowLayout &layout, Vector &addresses, Vector& result, idx_t agg_index, idx_t count);
 
 };
 
