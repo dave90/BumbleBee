@@ -170,4 +170,8 @@ void BumbleBeeDB::print() {
     }
 }
 
+BumbleBeeDB::~BumbleBeeDB() {
+    Catalog::instance().dropCatalog();
+}
+
 } // bumblebee

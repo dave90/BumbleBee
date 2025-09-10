@@ -27,7 +27,7 @@ namespace bumblebee {
 class BumbleBeeDB {
 public:
     BumbleBeeDB() = default;
-    ~BumbleBeeDB() = default;
+    ~BumbleBeeDB();
 
     int parseArgs(int, char **);
     void printArgs();

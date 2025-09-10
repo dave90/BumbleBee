@@ -96,6 +96,20 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
     Vector hashes(UBIGINT);
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
     auto hashesPtr = FlatVector::getData<uint64_t>(hashes);
+    if (types_.size() == 0) {
+        // no groups, so merge the first state
+        BB_ASSERT(entries_ == 1);
+        Vector groupAddresses(UBIGINT, 1);
+        auto groupAddressesPtr = FlatVector::getData<data_ptr_t>(groupAddresses);
+        groupAddressesPtr[0] = payloadPtrs_.back();
+        addressesPtr[0] = other.payloadPtrs_.back();
+
+        for (idx_t j = 0; j < functions_.size(); ++j)
+            AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, 1);
+
+        return ;
+    }
+
     idx_t idx = 0;
     for (idx_t i = 0; i < other.capacity_; ++i) {
         auto hashEntryPtr = (HTEntry64*)other.hashesPtr_ + i;
@@ -122,8 +136,7 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
         AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
 
 
-    for (idx_t j = 0; j < functions_.size(); ++j)
-        AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
+    AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
 }
 
 void AggregatePRLHashTable::findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups) {
@@ -175,6 +188,7 @@ void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, Vec
     }
     // copy the agg results value in the result chunk
     AggregateFunction::finalizeStates(layout_, addresses, result, aggIndex, matchedGroups);
+    groups.slice(sel, matchedGroups);
 }
 
 void AggregatePRLHashTable::fetchAggregates(DataChunk &result) {

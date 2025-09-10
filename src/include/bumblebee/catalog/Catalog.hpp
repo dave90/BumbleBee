@@ -34,17 +34,23 @@ public:
 
     // Access the singleton instance
     static Catalog& instance() {
-        static Catalog instance;
-        return instance;
+        if (!instance_)
+            instance_ = std::unique_ptr<Catalog>(new Catalog());
+        return *instance_;
     }
 
     Schema& getDefaultSchema();
 
+    static void dropCatalog();
+
+    ~Catalog() = default;
 
 private:
+
+    static std::unique_ptr<Catalog> instance_;
+
     // Private constructor to prevent external instantiation
     Catalog();
-    ~Catalog() = default;
 
     schema_map schemas_;
     Schema default_schema_;

@@ -18,6 +18,8 @@
  */
 #include "bumblebee/common/ErrorHandler.hpp"
 
+#include "bumblebee/common/types/Assert.hpp"
+
 namespace bumblebee {
 
 void ErrorHandler::errorParsing( const std::string& message )

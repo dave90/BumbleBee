@@ -19,9 +19,16 @@
 #include "bumblebee/catalog/Catalog.hpp"
 
 namespace bumblebee{
+std::unique_ptr<Catalog> Catalog::instance_ = nullptr;
+
 Catalog::Catalog(): default_schema_(default_schema_name) {}
 
 Schema & Catalog::getDefaultSchema() {
     return default_schema_;
+}
+
+void Catalog::dropCatalog() {
+    // delete the catalog instance
+    instance_ = nullptr;
 }
 }

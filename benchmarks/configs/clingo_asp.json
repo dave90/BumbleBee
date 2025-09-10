@@ -87,6 +87,11 @@
       "test": "Join HT 5",
       "input_file": "join_ht.5",
       "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Aggregates 1",
+      "input_file": "agg.1",
+      "commands": ["clingo --mode=gringo --text $file"]
     }
   ]
 }

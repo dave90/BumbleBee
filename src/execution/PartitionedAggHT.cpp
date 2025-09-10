@@ -122,7 +122,7 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     Vector hash(UBIGINT);
 
     while (position <= dht->getSize()) {
-        idx_t toScan = minValue(position+STANDARD_VECTOR_SIZE, dht->getSize());
+        idx_t toScan = minValue<idx_t>(STANDARD_VECTOR_SIZE, dht->getSize());
         // fetch the distinct values from final ht
         dht->scan(position, result, toScan);
 

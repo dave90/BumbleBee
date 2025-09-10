@@ -73,9 +73,11 @@ static void templatedMatchOpSwitchCommon(Vector &vec, VectorData &col, const idx
 		case ConstantType::UBIGINT:
 		case ConstantType::BIGINT:
 			templatedMatchType<ROW_TYPE,VEC_TYPE, ComparisonCommonCast<ROW_TYPE, VEC_TYPE, int64_t, OP>, NO_MATCH_SEL>(col, rows, sel, count, col_offset, col_no, no_match, no_match_count);
+			break;
 		case ConstantType::FLOAT:
 		case ConstantType::DOUBLE:
 			templatedMatchType<ROW_TYPE,VEC_TYPE, ComparisonCommonCast<ROW_TYPE, VEC_TYPE, double, OP>, NO_MATCH_SEL>(col, rows, sel, count, col_offset, col_no, no_match, no_match_count);
+			break;
 		default:
 			ErrorHandler::errorNotImplemented("Unimplemented row equal for select operation!");
 	}
