@@ -109,13 +109,21 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
             auto groupAddresses = move(addresses, hashes, idx);
             for (idx_t j = 0; j < functions_.size(); ++j)
                 AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
+            idx = 0;
         }
     }
 
-    auto groupAddresses = move(addresses, hashes, idx);
+    SelectionVector newGroupsSel(idx);
+    idx_t newGroupsCount = 0;
+    auto groupAddresses = move(addresses, hashes, idx, &newGroupsSel, newGroupsCount);
+
+    // init new states
+    for (idx_t i = 0; i < functions_.size(); i++)
+        AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
+
+
     for (idx_t j = 0; j < functions_.size(); ++j)
         AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
-
 }
 
 void AggregatePRLHashTable::findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups) {

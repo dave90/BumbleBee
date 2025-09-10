@@ -45,7 +45,7 @@ public:
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.5;
 
-    PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = STANDARD_VECTOR_SIZE, bool resizable = true);
+    PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = STANDARD_VECTOR_SIZE/LOAD_FACTOR, bool resizable = true);
     virtual ~PRLHashTable() {};
 
     PRLHashTable(const PRLHashTable &other) = delete;
@@ -90,6 +90,7 @@ protected:
     void newBlock();
 
     Vector move(Vector &addresses, Vector &hashes, idx_t count);
+    Vector move(Vector &addresses, Vector &hashes, idx_t count, SelectionVector* newGroupSel, idx_t& newGroupsCount);
 
 
     vector<ConstantType> types_;

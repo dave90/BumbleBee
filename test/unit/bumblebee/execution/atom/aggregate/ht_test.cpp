@@ -202,4 +202,20 @@ TEST_F(ProbeRLHTTest, HTCombineTest) {
     compareChunks(result, chunk);
 }
 
+TEST_F(ProbeRLHTTest, HTpartitionTest) {
+    std::unique_ptr<PRLHashTable> ht;
+    idx_t size = STANDARD_VECTOR_SIZE;
+    vector<ConstantType> types = {UTINYINT, UBIGINT};
+    // generate same chunks
+    vector<vector<Value>> data;
+    addData(data, std::vector<int>(size, 0));
+    int start = (int)0, end = start + (int)size;
+    addData(data, geenrateSequence(start,end, 1 ));
+    DataChunk chunk = generateDataChunk(types, data);
+    addChunkToHT(ht, chunk, size, true);
+
+    vector<distinct_ht_ptr_t> partitions;
+    partitions.resize(8);
+    ht->partition(partitions, 64-3);
+}
 

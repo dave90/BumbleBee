@@ -98,38 +98,42 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     }
     if (!dht) return; // no data for the partition
     auto dhtCapacity = dht->getCapacity();
-    // fetch the distinct values from final ht
+    auto& pht = partitionsAggVec_[partition];
     auto types = dht->getTypes();
-    DataChunk result;
-    result.initializeEmpty(types);
-    dht->scan(0, result, dht->getSize());
-    result.setCapacity(dht->getSize());
-
     vector<ConstantType> groupColsType;
     for (auto& col: groupCols_) {
         BB_ASSERT(col < types.size());
         groupColsType.push_back(types[col]);
     }
     partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType, dhtCapacity, true, functions_));
-    auto& pht = partitionsAggVec_[partition];
-
-    // split the result chunk in groups and payload
-    DataChunk groups, payloads;
-    groups.initializeEmpty(pht->getTypes());
-    groups.reference(result, groupCols_);
     vector<ConstantType> payloadTypeCols;
     for (idx_t i = 0; i < payloadCols_.size(); i++) {
         auto col = payloadCols_[i];
         BB_ASSERT(col < types.size());
         payloadTypeCols.push_back(types[col]);
     }
-    payloads.initializeEmpty(payloadTypeCols);
-    payloads.reference(result, payloadCols_);
-    Vector hash(UBIGINT, groups.getSize());
-    groups.hash(hash);
 
-    // add into the agg HT
-    pht->addChunk(hash, groups, payloads);
+    idx_t position = 0;
+    DataChunk groups, payloads;
+    groups.initializeEmpty(pht->getTypes());
+    payloads.initializeEmpty(payloadTypeCols);
+    DataChunk result;
+    result.initialize(types);
+    Vector hash(UBIGINT);
+
+    while (position <= dht->getSize()) {
+        idx_t toScan = minValue(position+STANDARD_VECTOR_SIZE, dht->getSize());
+        // fetch the distinct values from final ht
+        dht->scan(position, result, toScan);
+
+        // split the result chunk in groups and payload
+        groups.reference(result, groupCols_);
+        payloads.reference(result, payloadCols_);
+        groups.hash(hash);
+        // add into the agg HT
+        pht->addChunk(hash, groups, payloads);
+        position += STANDARD_VECTOR_SIZE;
+    }
 }
 
 void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
@@ -141,7 +145,7 @@ void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
             partitionIndex = i;
             continue;
         }
-        // merge large partition with small
+        // merge large partition with smaller
         if (partitionsAggVec_[partitionIndex]->getSize() >partitionsAggVec_[i]->getSize()) {
             partitionsAggVec_[partitionIndex]->combine(*partitionsAggVec_[i]);
             partitionsAggVec_[i] = nullptr;

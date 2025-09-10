@@ -20,6 +20,7 @@
 
 #include "bumblebee/common/row_operations/RowOperations.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
+#include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee{
 PRLHashTable::PRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity,
@@ -120,11 +121,12 @@ void PRLHashTable::combine(PRLHashTable &other) {
     }
 }
 
-struct PartitionInfo {
-    explicit PartitionInfo (): groupAddresses_(UBIGINT), hashes_(UBIGINT), size_(0) {
+struct PRLPartitionInfo {
+    explicit PRLPartitionInfo (): groupAddresses_(UBIGINT, STANDARD_VECTOR_SIZE), hashes_(UBIGINT, STANDARD_VECTOR_SIZE), size_(0) {
         addressesPtr_ = FlatVector::getData<data_ptr_t>(groupAddresses_);
         hashesPtr_ = FlatVector::getData<uint64_t>(hashes_);
     };
+
     Vector groupAddresses_;
     data_ptr_t *addressesPtr_;
     Vector hashes_;
@@ -133,8 +135,7 @@ struct PartitionInfo {
 };
 
 void PRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t shift) {
-    vector<PartitionInfo> partitionsInfo;
-    partitionsInfo.resize(partitions.size());
+    vector<PRLPartitionInfo> partitionsInfo(partitions.size());
     for (idx_t i = 0; i < capacity_; ++i) {
         auto hashEntryPtr = (HTEntry64*)hashesPtr_ + i;
         if (hashEntryPtr->pageNum_ == 0 ) continue;
@@ -199,11 +200,22 @@ string PRLHashTable::toString(bool compact) {
     }
     result += "\nPayload : \n";
     payloadApply([&](idx_t page_nr, idx_t page_offset, data_ptr_t ptr) {
-        result += std::to_string(page_nr)+" - "+std::to_string(page_offset)+" - ";
-        for (idx_t i=0;i<types_.size();++i) {
+        std::string address = std::format("{}", static_cast<void*>(ptr));
+        result += std::to_string(page_nr)+" - "+std::to_string(page_offset)+" - "+address;
+        for (idx_t i=0;i<layout_.getTypes().size();++i) {
             auto colOffset = layout_.getOffsets()[i];
             auto col = ptr +colOffset;
             result += " - "+Value::cast(types_[i], col).toString();
+        }
+        for (idx_t i=0;i<layout_.getAggregates().size();++i) {
+            auto colOffset = layout_.getOffsets()[layout_.columnCount()+i];
+            auto col = ptr +colOffset;
+            auto sizeResult = getCTypeSize(layout_.getAggregates()[i]->result_);
+            auto resultData = std::unique_ptr<data_t[]>(new data_t[sizeResult]);
+            layout_.getAggregates()[i]->finalize_(col, resultData.get());
+            result += " - "+Value::cast(layout_.getAggregates()[i]->result_, resultData.get()).toString();
+            // address = std::format("{}", static_cast<void*>(col));
+            // result += " - "+address;
         }
         result += "\n";
     });
@@ -278,7 +290,7 @@ void PRLHashTable::newBlock() {
     payloadPageOffset_ = 0;
 }
 
-Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
+Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count, SelectionVector* newGroupSel, idx_t& newGroupsCount) {
     BB_ASSERT(addresses.getType() == UBIGINT);
     BB_ASSERT(hashes.getType() == UBIGINT);
 
@@ -298,13 +310,20 @@ Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
     Vector hash(UBIGINT);
     groups.hash(hash);
 
-    findOrCreateGroups(hash, groups, groupAddresses);
+
+    idx_t matchedCount=0;
+    findOrCreateGroupsInternal(hash, groups, groupAddresses, matchedCount, newGroupsCount, true, nullptr, newGroupSel );
     return groupAddresses;
 }
 
+Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
+    idx_t newGroupsCount = 0;
+    return move(addresses, hashes, count, nullptr, newGroupsCount);
+}
+
 void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
-                                                  Vector &addresses, idx_t &matchedCount, idx_t &newGroupsCount, bool createGroups, SelectionVector *matchedSel,
-                                                  SelectionVector *newGroupSel) {
+                                              Vector &addresses, idx_t &matchedCount, idx_t &newGroupsCount, bool createGroups, SelectionVector *matchedSel,
+                                              SelectionVector *newGroupSel) {
 
     idx_t size = groups.getSize();
     if (createGroups &&
