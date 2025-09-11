@@ -93,7 +93,12 @@
     {
       "test": "Aggregates 1",
       "input_file": "agg.1",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
+    },
+    {
+      "test": "Aggregates 2",
+      "input_file": "agg.2",
+      "commands": ["../cmake-build-release/BumbleBee -t 1 -i $file"]
     }
   ]
 }

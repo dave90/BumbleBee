@@ -56,9 +56,9 @@ def create_expected():
 
                 print(f"Output written to {output_path}")
             except subprocess.CalledProcessError as e:
-                print(f"Error processing {filename}: {e}")
+                print(f"Error processing {filename}: {e} ---------------------------")
                 with open(output_path, 'w') as f:
-                    f.write("")
+                    f.write("ERROR")
 
 # return a test file without the
 def get_input_no_filters(input_file:str):

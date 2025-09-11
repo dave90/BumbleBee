@@ -92,6 +92,11 @@
       "test": "Aggregates 1",
       "input_file": "agg.1",
       "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Aggregates 2",
+      "input_file": "agg.2",
+      "commands": ["clingo --mode=gringo --text $file"]
     }
   ]
 }

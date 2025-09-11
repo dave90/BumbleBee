@@ -97,6 +97,9 @@ public:
 	// The finalize is called when ALL threads are finished execution. It is called only once per pipeline, and is
 	// entirely single threaded.
 	virtual void finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const;
+	// The combine is called when a single thread has completed execution of its part of the pipeline, it is the final
+	// time that a specific LocalState is accessible.
+	virtual void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const;
 
 	// Return and set the maximum number of threads that can run this physical atom
 	virtual idx_t getMaxThreads() const;

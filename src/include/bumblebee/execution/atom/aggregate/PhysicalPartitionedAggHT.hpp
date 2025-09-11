@@ -50,7 +50,7 @@ public:
         GlobalPhysicalAtomState &gstate) const override;
     AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
         GlobalPhysicalAtomState &gstate) const override;
-
+    void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
 
 private:
     const ClientContext& context_;

@@ -53,7 +53,6 @@ public:
     AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
             PhysicalAtomState &state) const override;
 
-
 private:
 
     PredicateTables* pt_;

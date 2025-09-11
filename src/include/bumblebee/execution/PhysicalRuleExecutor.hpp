@@ -42,6 +42,8 @@ public:
     void execute();
     // Execute the intermediate patom pushing the chunks
     void executePush();
+    // Execute the combine (sink)
+    void executeCombine();
     // Fetch from the source
     void fetchFromSource(DataChunk& input);
     // Call the finalize on the sink and source patoms, It is called only once per pipeline

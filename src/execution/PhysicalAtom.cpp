@@ -51,6 +51,9 @@ AtomResultType PhysicalAtom::sink(ThreadContext& context, DataChunk &input, Phys
 void PhysicalAtom::finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const {
 }
 
+void PhysicalAtom::combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
+}
+
 bool PhysicalAtom::isSource() const {
     return false;
 }

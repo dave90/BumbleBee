@@ -32,6 +32,8 @@ public:
     ~PhysicalChunkOutput() override;
     AtomResultType sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
     void finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const override;
+    void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+
     bool isSink() const override;
     string getName() const override;
     string toString() const override;

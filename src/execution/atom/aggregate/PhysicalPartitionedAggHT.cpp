@@ -178,27 +178,40 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
     if (!cstate.ht_) {
         cstate.ht_ = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, dcColsType_, HT_INIT_CAPACITY,  false));
     }
-    if (input.getSize() == 0 && cstate.ht_->getSize() == 0) {
+    if (input.getSize() == 0) {
         context.profiler_.endPhysicalAtom(input);
         return AtomResultType::NEED_MORE_INPUT;
     }
-    if (input.getSize() == 0
-        || (((float)input.getSize() + (float)cstate.ht_->getSize() ) / (float)cstate.ht_->getCapacity()) > PRLHashTable::LOAD_FACTOR ) {
+    if ((((float)input.getSize() + (float)cstate.ht_->getSize() ) / (float)cstate.ht_->getCapacity()) > PRLHashTable::LOAD_FACTOR ) {
         // flush the ht to partitioned agg table
         cgstate.pht_.partitionHT(cstate.ht_);
         cstate.ht_ = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, dcColsType_,HT_INIT_CAPACITY, false));
     }
 
-    if (input.getSize() == 0) {
-        context.profiler_.endPhysicalAtom(input);
-        return AtomResultType::NEED_MORE_INPUT;
-    }
     DataChunk sinput = projectColumns(input);
     Vector hash(UBIGINT, input.getSize());
     sinput.hash(hash);
     cstate.ht_->addChunk(hash, sinput);
-
+    context.profiler_.endPhysicalAtom(input);
     return AtomResultType::HAVE_MORE_OUTPUT;
+}
+
+void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+    DataChunk input;
+
+    auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
+    auto& cstate = (PartitionedAggHTJoinAtomState&)state;
+
+    if (cstate.ht_->getSize() == 0) {
+        context.profiler_.endPhysicalAtom(input);
+        return;
+    }
+    input.setCapacity(cstate.ht_->getSize());
+    input.setCardinality(cstate.ht_->getSize());
+    cgstate.pht_.partitionHT(cstate.ht_);
+    context.profiler_.endPhysicalAtom(input);
 }
 
 void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {

@@ -64,17 +64,14 @@ void PhysicalRuleExecutor::execute() {
 
         fetchFromSource(*chunks_[0]);
         if (sourceResult_ == AtomResultType::FINISHED) {
-            // no more data to source
-            // flush the sink passing an empty data chunk
-            chunks_[chunks_.size()-1]->setCardinality(0);
-            while (sinkResult_ == AtomResultType::HAVE_MORE_OUTPUT)
-                sinkResult_ = prule_->sink_->sink(*tcontext_, *chunks_[chunks_.size()-1], *sinkState_, *prule_->sinkGlobalState_);
             finished_ = true;
             break;
         }
         executePush();
-
     }
+    // execute the combine
+    prule_->sink_->combine(*tcontext_, *sinkState_, *prule_->sinkGlobalState_);
+
     prule_->incrementCompleted();
 }
 
