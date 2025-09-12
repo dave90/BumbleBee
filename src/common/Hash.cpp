@@ -1,7 +1,7 @@
 
 
 
-#include "bumblebee/common/Hash.h"
+#include "bumblebee/common/Hash.hpp"
 
 #include <functional>
 
@@ -70,4 +70,6 @@ hash_t Hash(const char *val, size_t size) {
     auto hash_val = JenkinsOneAtATimeHash(val, size);
     return Hash<uint32_t>(hash_val);
 }
+
+
 }

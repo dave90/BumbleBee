@@ -44,6 +44,41 @@
       "test": "Join HT 5",
       "input_file": "join_ht.5",
       "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates 1",
+      "input_file": "agg.1",
+      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates 2",
+      "input_file": "agg.2",
+      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates Complex 1",
+      "input_file": "agg.complex.1",
+      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates MinMax 1",
+      "input_file": "agg.minmax.1",
+      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates Single 1",
+      "input_file": "agg.single.1",
+      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates Single 2",
+      "input_file": "agg.single.2",
+      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+    },
+    {
+      "test": "Aggregates Single 3",
+      "input_file": "agg.single.3",
+      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
     }
   ]
 }

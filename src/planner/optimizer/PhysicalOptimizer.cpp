@@ -17,19 +17,19 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/planner/optimizer/PhysicalOptimizer.h"
+#include "bumblebee/planner/optimizer/PhysicalOptimizer.hpp"
 
-#include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/execution/Expression.h"
-#include "bumblebee/execution/NestedLoopJoin.h"
-#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.h"
-#include "bumblebee/execution/atom/expression/PhysicalExpression.h"
-#include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
-#include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
-#include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/execution/atom/output/PhysicalNopeOutput.h"
-#include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/execution/Expression.hpp"
+#include "bumblebee/execution/NestedLoopJoin.hpp"
+#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.hpp"
+#include "bumblebee/execution/atom/expression/PhysicalExpression.hpp"
+#include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
+#include "bumblebee/execution/atom/join/PhysicalHashJoin.hpp"
+#include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
+#include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 
 namespace bumblebee {
 PhysicalOptimizer::PhysicalOptimizer(ClientContext& context)
@@ -248,7 +248,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
     vector<idx_t> selCols; // empty selCols
     BB_ASSERT(atom.getAggsAtoms().size() > 0);
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
-    AggregateChunkOneHashTable *aht;
+    AggregatePRLHashTable *aht;
     idx_t internalPayloadIndex = getAggPayloadIndex(atom); // index of the payload
     idx_t payload = 0; // find the payload to extract (can be multiple payloads)
     bool payloadFound = false;
@@ -278,7 +278,6 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
         }
         BB_ASSERT(pt->existPartitionedAggHashTable());
         aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
-        BB_ASSERT(aht->isReady());
         BB_ASSERT(payloadFound);
     }
 
@@ -294,7 +293,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
             groupCols.push_back(colsMap_[var.getVariable()]);
     }
     vector payloads = {payload};
-    patoms.emplace_back(new PhysicalPartitionedAggHT(types_, cols,selCols,groupCols, payloads, aht));
+    patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, aht));
 }
 
 void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<ConstantType> types,patom_ptr_vector_t& patoms ) {
@@ -488,13 +487,13 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
             aggFunctions.push_back((AggregateFunction*) function.get());
         }
         vector<idx_t> selCols;
-        sink = patom_ptr_t(new PhysicalPartitionedAggHT(types, headCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::COLLECT  ));
+        sink = patom_ptr_t(new PhysicalPartitionedAggHT(context_, types, headCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::COLLECT  ));
 
         // now create also the build rule with priority +1
         vector<idx_t> dcCols;
         idx_t estinametedCardinality = 0;
         // does not need dcCols and sel cols
-        auto source = patom_ptr_t(new PhysicalPartitionedAggHT(types, dcCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::BUILD  ));
+        auto source = patom_ptr_t(new PhysicalPartitionedAggHT(context_, types, dcCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::BUILD  ));
         auto nopeSink = patom_ptr_t(new PhysicalNopeOutput(types, dcCols, selCols ));
 
         vector<patom_ptr_t> empty;

@@ -19,9 +19,9 @@
 
 #include <gtest/gtest.h>
 
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/common/types/Vector.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 using namespace bumblebee;
 

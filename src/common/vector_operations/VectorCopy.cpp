@@ -17,22 +17,36 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee {
 
 
-template <class T>
-static void TemplatedCopy(const Vector &source, const SelectionVector &sel, Vector &target, const SelectionVector &targetSel, idx_t source_offset,
+template <class T, bool HASH_TARGET_SEL>
+static void TemplatedCopy(const Vector &source, const SelectionVector &sel, Vector &target,const SelectionVector *targetSel, idx_t source_offset,
                           idx_t target_offset, idx_t copy_count) {
     auto ldata = FlatVector::getData<T>(source);
     auto tdata = FlatVector::getData<T>(target);
     for (idx_t i = 0; i < copy_count; i++) {
         auto source_idx = sel.getIndex(source_offset + i);
-        auto target_idx = targetSel.getIndex(target_offset + i);
-        tdata[target_idx] = ldata[source_idx];
+    	if (HASH_TARGET_SEL) {
+    		auto target_idx = targetSel->getIndex(target_offset + i);
+    		tdata[target_idx] = ldata[source_idx];
+    	}else
+    		tdata[target_offset + i] = ldata[source_idx];
     }
 }
+
+template <class T>
+static void TemplatedCopyTargetSelSwitch(const Vector &source, const SelectionVector &sel, Vector &target,const SelectionVector *targetSel, idx_t source_offset,
+						  idx_t target_offset, idx_t copy_count) {
+	if (targetSel)
+		TemplatedCopy<T,true>(source, sel, target, targetSel, source_offset, target_offset, copy_count);
+	else
+		TemplatedCopy<T,false>(source, sel, target, targetSel, source_offset, target_offset, copy_count);
+}
+
+
 
 
 void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
@@ -51,7 +65,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCo
             break;
         }
         case VectorType::FLAT_VECTOR: {
-            VectorOperations::copy(source, target, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,
+            VectorOperations::copy(source, target, nullptr, sourceCount, sourceOffset,
                                    targetOffset);
             break;
         }
@@ -60,7 +74,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCo
             SequenceVector::getSequence(source, start, increment);
             Vector flattened(source.getType());
             VectorOperations::generateSequence(flattened, sourceCount, start, increment);
-            VectorOperations::copy(flattened, target, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,
+            VectorOperations::copy(flattened, target, nullptr, sourceCount, sourceOffset,
                                    targetOffset);
             break;
         }
@@ -69,7 +83,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCo
         	CircularSequenceVector::getSequence(source, start, offset, stride, end);
         	Vector flattened(source.getType());
         	VectorOperations::generateSequence(flattened, sourceCount, start, offset, stride, end);
-        	VectorOperations::copy(flattened, target, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,
+        	VectorOperations::copy(flattened, target, nullptr, sourceCount, sourceOffset,
 								   targetOffset);
         	break;
     	}
@@ -79,10 +93,10 @@ void VectorOperations::copy(const Vector &source, Vector &target, idx_t sourceCo
 }
 
 void VectorOperations::copy(const Vector &source, Vector &target, const SelectionVector &sel, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
-	VectorOperations::copy(source, target, sel, FlatVector::INCREMENTAL_SELECTION_VECTOR, sourceCount, sourceOffset,targetOffset);
+	VectorOperations::copy(source, target, sel, nullptr, sourceCount, sourceOffset,targetOffset);
 }
 
-void VectorOperations::copy(const Vector &source, Vector &target, const SelectionVector &sel,const SelectionVector &targetSel, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
+void VectorOperations::copy(const Vector &source, Vector &target, const SelectionVector &sel,const SelectionVector *targetSel, idx_t sourceCount, idx_t sourceOffset, idx_t targetOffset) {
 	BB_ASSERT(sourceOffset <= sourceCount);
 	BB_ASSERT(source.getType() == target.getType());
 	idx_t copyCount = sourceCount - sourceOffset;
@@ -137,51 +151,52 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 	}
 	BB_ASSERT(target.getVectorType() == VectorType::FLAT_VECTOR);
 
-
 	// now copy over the data
 	switch (source.getType()) {
 		case ConstantType::TINYINT:
-			TemplatedCopy<int8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<int8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::SMALLINT:
-			TemplatedCopy<int16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<int16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::INTEGER:
-			TemplatedCopy<int32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<int32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::BIGINT:
-			TemplatedCopy<int64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<int64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::UTINYINT:
-			TemplatedCopy<uint8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<uint8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::USMALLINT:
-			TemplatedCopy<uint16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<uint16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::UINTEGER:
-			TemplatedCopy<uint32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<uint32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::UBIGINT:
-			TemplatedCopy<uint64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<uint64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::FLOAT:
-			TemplatedCopy<float>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<float>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::DOUBLE:
-			TemplatedCopy<double>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
+			TemplatedCopyTargetSelSwitch<double>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
 		case ConstantType::STRING:	{
 			auto ldata = FlatVector::getData<string_t>(source);
 			auto tdata = FlatVector::getData<string_t>(target);
+			if (!targetSel)
+				targetSel = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
 			for (idx_t i = 0; i < copyCount; i++) {
 				auto source_idx = sel.getIndex(sourceOffset + i);
-				auto target_idx = targetSel.getIndex(targetOffset + i);
+				auto target_idx = targetSel->getIndex(targetOffset + i);
 				tdata[target_idx] = StringVector::addString(target, ldata[source_idx]);
 			}
 			break;
 			}
 		default:
-			ErrorHandler::errorNotImplemented("Unimplemented type '%s' for copy!");
+			ErrorHandler::errorNotImplemented("Unimplemented type for copy!");
 	}
 
 	if (tvType != VectorType::FLAT_VECTOR) {

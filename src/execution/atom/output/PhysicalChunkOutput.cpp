@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/common/Mutex.h"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/common/Mutex.hpp"
 
 #include "CLI11.hpp"
 
@@ -132,18 +132,11 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
 
     auto& cstate = (ChunkOutputState&)state;
     auto& gcstate = (GlobalChunkOutputState&)gstate;
-    if (input.getSize() == 0 && cstate.cachedChunk_.getSize() == 0) {
+    if (input.getSize() == 0) {
         context.profiler_.endPhysicalAtom(input);
         return AtomResultType::NEED_MORE_INPUT;
     }
 
-    if ( input.getSize() == 0 && cstate.cachedChunk_.getSize() > 0) {
-        // input is empty and cache not, send the cache to global state
-        gcstate.sinkChunk(cstate.cachedChunk_);
-        cstate.cachedChunk_.destroy();
-        context.profiler_.endPhysicalAtom(input);
-        return AtomResultType::NEED_MORE_INPUT;
-    }
     BB_ASSERT(input.getSize() > 0);
     DataChunk pinput = projectColumns(input);
     BB_ASSERT(pinput.columnCount() == dcColsType_.size());
@@ -199,6 +192,23 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     pinput.copy(cstate.cachedChunk_, inputOffset);
     context.profiler_.endPhysicalAtom(pinput);
     return AtomResultType::HAVE_MORE_OUTPUT;
+}
+
+void PhysicalChunkOutput::combine(ThreadContext &context, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+
+    auto& cstate = (ChunkOutputState&)state;
+    auto& gcstate = (GlobalChunkOutputState&)gstate;
+    if ( cstate.cachedChunk_.getSize() == 0) {
+        context.profiler_.endPhysicalAtom(cstate.cachedChunk_);
+        return;
+    }
+
+    // send the cache to global state
+    gcstate.sinkChunk(cstate.cachedChunk_);
+    cstate.cachedChunk_.destroy();
+    context.profiler_.endPhysicalAtom(cstate.cachedChunk_);
 }
 
 

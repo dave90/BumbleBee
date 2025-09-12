@@ -17,10 +17,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/parser/statement/Atom.h"
+#include "bumblebee/parser/statement/Atom.hpp"
 
-#include "bumblebee/common/Hash.h"
-#include "bumblebee/common/Log.h"
+#include "bumblebee/common/Hash.hpp"
+#include "bumblebee/common/Log.hpp"
 
 namespace bumblebee {
 
@@ -143,6 +143,13 @@ bool Atom::containsConstant() const {
         if (term.getType() == TermType::CONSTANT)
             return true;
     return false;
+}
+
+bool Atom::containsVariables(set_term_variable_t &vars) {
+    set_term_variable_t atomVars, result;
+    getVariables(atomVars);
+    Term::intersetVariables(atomVars, vars, result);
+    return result.size();
 }
 
 bool Atom::isConstantAssignment() {
@@ -304,6 +311,32 @@ void Atom::calculateIsGround() {
         }
     }
     ground_ = true;
+}
+
+Atom Atom::clone() {
+    terms_vector_t terms;
+    for (auto& term : terms_)
+        terms.emplace_back(term);
+
+    switch (type_) {
+        case AGGREGATE: {
+            vector<Atom> aggAtoms;
+            for (auto& atom : aggAtoms_) {
+                Atom cloned = atom.clone();
+                aggAtoms.push_back(std::move(cloned));
+            }
+            terms_vector_t aggTerms;
+            for (auto& term : aggTerms_)
+                aggTerms.emplace_back(term);
+            BB_ASSERT(terms.size() == 2);
+            return createAggregateAtom(aggregate_, binop_, secondBinop_, terms[0],terms[1], std::move(aggTerms), std::move(aggAtoms));
+        }case BUILTIN: {
+            return createBuiltinAtom(std::move(terms), binop_);
+        }case CLASSICAL: {
+            return createClassicalAtom(predicate_, std::move(terms));
+        }
+    }
+    return {};
 }
 
 Atom Atom::createClassicalAtom(Predicate*p, terms_vector_t &&t) {

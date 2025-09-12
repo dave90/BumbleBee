@@ -17,11 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/types/BumbleString.h"
+#include "bumblebee/common/types/BumbleString.hpp"
 
 #include <locale>
 
-#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee {
 BumbleString::BumbleString(const char *data): BumbleString(data, strlen(data)) {}
@@ -68,6 +68,12 @@ bool BumbleString::operator<(const BumbleString &r) const {
     // compare the data
     auto cmp = strcmp(getDataUnsafe(), r.getDataUnsafe());
     return (cmp < 0);
+}
+
+bool BumbleString::operator>(const BumbleString &r) const {
+    // compare the data
+    auto cmp = strcmp(getDataUnsafe(), r.getDataUnsafe());
+    return (cmp > 0);
 }
 
 const char * BumbleString::c_str() const {

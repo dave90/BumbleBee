@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/common/types/SelectionVector.h"
+#include "bumblebee/common/types/SelectionVector.hpp"
 
 using namespace bumblebee;
 

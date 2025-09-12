@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "bumblebee/BumbleBeeDB.h"
+#include "bumblebee/BumbleBeeDB.hpp"
 
 
 int main(int argc, char** argv){

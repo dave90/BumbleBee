@@ -532,7 +532,7 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
 */
 
 #include "aspcore2_parser.h"
-#include "bumblebee/parser/ParserInputDirector.h"
+#include "bumblebee/parser/ParserInputDirector.hpp"
 
 #define YY_DECL int yylex(bumblebee::ParserInputDirector& director)
 

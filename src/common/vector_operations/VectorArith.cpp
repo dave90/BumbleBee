@@ -18,9 +18,9 @@
  */
 
 #include "CLI11.hpp"
-#include "bumblebee/common/operator/ArithOperators.h"
-#include "bumblebee/common/vector_operations/BinaryExecution.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/operator/ArithOperators.hpp"
+#include "bumblebee/common/vector_operations/BinaryExecution.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee {
 

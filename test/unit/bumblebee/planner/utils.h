@@ -20,9 +20,9 @@
 
 #include <filesystem>
 
-#include "bumblebee/output/OutputBuilder.h"
-#include "bumblebee/parser/ParserInputDirector.h"
-#include "bumblebee/parser/statement/Rule.h"
+#include "bumblebee/output/OutputBuilder.hpp"
+#include "bumblebee/parser/ParserInputDirector.hpp"
+#include "bumblebee/parser/statement/Rule.hpp"
 using namespace std;
 using namespace filesystem;
 using namespace bumblebee;

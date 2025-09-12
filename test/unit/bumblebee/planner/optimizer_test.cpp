@@ -21,11 +21,11 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 
-#include "bumblebee/parser/ParserInputDirector.h"
-#include "bumblebee/parser/statement/Rule.h"
+#include "bumblebee/parser/ParserInputDirector.hpp"
+#include "bumblebee/parser/statement/Rule.hpp"
 #include "utils.h"
-#include "bumblebee/planner/optimizer/PhysicalOptimizer.h"
-#include "bumblebee/planner/rewriter/FilterPushDownRewriter.h"
+#include "bumblebee/planner/optimizer/PhysicalOptimizer.hpp"
+#include "bumblebee/planner/rewriter/FilterPushDownRewriter.hpp"
 
 using namespace bumblebee;
 using namespace std;

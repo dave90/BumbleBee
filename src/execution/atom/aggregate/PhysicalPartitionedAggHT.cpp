@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.h"
+#include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.hpp"
 
 
 
@@ -62,10 +62,11 @@ private:
 };
 
 
-PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
     const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
     PhysicalHashType type): PhysicalAtom(types, dcCols, selectedCols),
+                                context_(context),
                                 pt_(pt),
                                 groupCols_(group_cols),
                                 payloadCols_(payload_cols),
@@ -78,9 +79,10 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const vector<ConstantType> &t
         payloadColsTypes_.push_back(types_[i]);
 }
 
-PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, const vector<idx_t> &group_cols, const vector<idx_t> &payload_cols,
-    AggregateChunkOneHashTable *aht): PhysicalAtom(types, dcCols, selectedCols) ,
+    AggregatePRLHashTable *aht): PhysicalAtom(types, dcCols, selectedCols) ,
+                                    context_(context),
                                     aht_(aht),
                                     pt_(nullptr),
                                     groupCols_(group_cols),
@@ -136,7 +138,7 @@ pstate_ptr_t PhysicalPartitionedAggHT::getState() const {
 }
 
 gpstate_ptr_t PhysicalPartitionedAggHT::getGlobalState() const {
-    auto& paht = pt_->createPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_);
+    auto& paht = pt_->createPartitionedAggHashTable(context_, groupCols_, payloadCols_, aggregateFunctions_);
     BB_ASSERT(!paht->isReady()); // during build or collect we do not expect is ready
     return gpstate_ptr_t(new GlobalAggHTJoinAtomState(*paht));
 }
@@ -164,8 +166,6 @@ AtomResultType PhysicalPartitionedAggHT::getData(ThreadContext &context, DataChu
     chunk.setCardinality(0);
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::FINISHED;
-
-
 }
 
 AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
@@ -176,29 +176,42 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
 
     // init ht if null
     if (!cstate.ht_) {
-        cstate.ht_ = distinct_ht_ptr_t(new ChunkOneHashTable(dcColsType_, MORSEL_SIZE, false));
+        cstate.ht_ = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, dcColsType_, HT_INIT_CAPACITY,  false));
     }
-    if (input.getSize() == 0 && cstate.ht_->getSize() == 0) {
-        context.profiler_.endPhysicalAtom(input);
-        return AtomResultType::NEED_MORE_INPUT;
-    }
-    if (input.getSize() == 0
-        || (((float)input.getSize() + (float)cstate.ht_->getSize() ) / (float)cstate.ht_->getCapacity()) > ChunkOneHashTable::LOAD_FACTOR ) {
-        // flush the ht to partitioned agg table
-        cgstate.pht_.partitionHT(cstate.ht_);
-        cstate.ht_ = distinct_ht_ptr_t(new ChunkOneHashTable(dcColsType_, MORSEL_SIZE, false));
-    }
-
     if (input.getSize() == 0) {
         context.profiler_.endPhysicalAtom(input);
         return AtomResultType::NEED_MORE_INPUT;
     }
+    if ((((float)input.getSize() + (float)cstate.ht_->getSize() ) / (float)cstate.ht_->getCapacity()) > PRLHashTable::LOAD_FACTOR ) {
+        // flush the ht to partitioned agg table
+        cgstate.pht_.partitionHT(cstate.ht_);
+        cstate.ht_ = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, dcColsType_,HT_INIT_CAPACITY, false));
+    }
+
     DataChunk sinput = projectColumns(input);
     Vector hash(UBIGINT, input.getSize());
     sinput.hash(hash);
     cstate.ht_->addChunk(hash, sinput);
-
+    context.profiler_.endPhysicalAtom(input);
     return AtomResultType::HAVE_MORE_OUTPUT;
+}
+
+void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+    DataChunk input;
+
+    auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
+    auto& cstate = (PartitionedAggHTJoinAtomState&)state;
+
+    if (cstate.ht_->getSize() == 0) {
+        context.profiler_.endPhysicalAtom(input);
+        return;
+    }
+    input.setCapacity(cstate.ht_->getSize());
+    input.setCardinality(cstate.ht_->getSize());
+    cgstate.pht_.partitionHT(cstate.ht_);
+    context.profiler_.endPhysicalAtom(input);
 }
 
 void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {
@@ -221,7 +234,7 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     PhysicalAtomState &state) const {
     context.profiler_.startPhysicalAtom(this);
 
-    BB_ASSERT(aht_ && aht_->isReady());
+    BB_ASSERT(aht_ );
     BB_ASSERT(payloadCols_.size() == 1);
     BB_ASSERT(dcCols_.size() == payloadCols_.size());
 
@@ -234,11 +247,12 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     // used for total aggregations (no groups)
     if (groupCols_.empty()) {
         // no group to fetch, call directly the fetchAggregate with the result chunk
-        Vector result(Value(0).cast(chunk.data_[dcCols_[0]].getType())); // init with 0 value, will be updated wih the fetchAggregates
+        Vector result(chunk.data_[dcCols_[0]].getType(), 1);
         aht_->fetchAggregates(result, payloadInternalCol);
+        BB_ASSERT(result.getVectorType() == VectorType::CONSTANT_VECTOR);
         // reference in the return chunk
+        chunk.reference(input);
         chunk.data_[dcCols_[0]].reference(result);
-        chunk.setCardinality(1);
 
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
@@ -256,7 +270,7 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
 
     Vector hash(UBIGINT, group.getSize());
     group.hash(hash);
-    Vector result(dcColsType_[0], STANDARD_VECTOR_SIZE);
+    Vector result(dcColsType_[0]);
 
     SelectionVector sel(group.getSize());
     aht_->fetchAggregates(hash, group, result, payloadInternalCol, sel);

@@ -28,11 +28,11 @@
 
 #include <gtest/gtest.h>
 
-#include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/parallel/ThreadContext.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/parallel/ThreadContext.hpp"
 
-#include "bumblebee/execution/atom/join/PhysicalHashJoin.h"
+#include "bumblebee/execution/atom/join/PhysicalHashJoin.hpp"
 
 using namespace bumblebee;
 

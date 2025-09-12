@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/scan/PhysicalChunkScan.h"
+#include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 
-#include "bumblebee/catalog/Schema.h"
-#include "bumblebee/common/Mutex.h"
+#include "bumblebee/catalog/Schema.hpp"
+#include "bumblebee/common/Mutex.hpp"
 
 namespace bumblebee{
 class GlobalChunkScanState : public  GlobalPhysicalAtomState {

@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/common/types/Graph.h"
+#include "bumblebee/common/types/Graph.hpp"
 
 using namespace bumblebee;
 

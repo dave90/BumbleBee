@@ -17,8 +17,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/Hash.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/Hash.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee {
 

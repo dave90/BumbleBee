@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 
-#include "bumblebee/common/Log.h"
-#include "bumblebee/parser/statement/Atom.h"
-#include "bumblebee/execution/JoinHashTable.h"
-#include "bumblebee/execution/PartitionedAggHT.h"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/parser/statement/Atom.hpp"
+#include "bumblebee/execution/JoinHashTable.hpp"
+#include "bumblebee/execution/PartitionedAggHT.hpp"
 
 namespace bumblebee{
 PredicateTables::PredicateTables(const char* name, unsigned arity): predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
@@ -77,10 +77,10 @@ bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
     return false;
 }
 
-partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const vector<idx_t> &groups, const vector<idx_t> &payloads,
+partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const ClientContext& context, const vector<idx_t> &groups, const vector<idx_t> &payloads,
     const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
-    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(groups, payloads, aggregateFunctions));
+    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, aggregateFunctions));
     return partitionedAggHT_;
 }
 

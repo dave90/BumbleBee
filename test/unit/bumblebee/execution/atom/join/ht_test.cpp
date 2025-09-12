@@ -20,15 +20,15 @@
 #include <numeric>
 #include <thread>
 
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 #include <gtest/gtest.h>
 
-#include "bumblebee/ClientContext.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
-#include "bumblebee/execution/JoinHashTable.h"
-#include "bumblebee/execution/atom/join/PhysicalCrossProduct.h"
-#include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
-#include "bumblebee/parallel/ThreadContext.h"
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
+#include "bumblebee/execution/JoinHashTable.hpp"
+#include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
+#include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
+#include "bumblebee/parallel/ThreadContext.hpp"
 
 using namespace bumblebee;
 

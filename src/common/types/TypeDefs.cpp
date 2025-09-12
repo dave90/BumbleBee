@@ -17,10 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/common/TypeDefs.h"
+#include "bumblebee/common/TypeDefs.hpp"
 
-#include "bumblebee/common/ErrorHandler.h"
-#include "bumblebee/common/types/BumbleString.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+#include "bumblebee/common/Hash.hpp"
+#include "bumblebee/common/types/BumbleString.hpp"
 namespace bumblebee {
 
 
@@ -183,6 +184,25 @@ idx_t nextPowerOfTwo(idx_t n) {
     n |= n >> 32; // Needed for 64-bit numbers
     n++;
     return n;
+}
+
+bool typeIsConstantSize(ConstantType type) {
+    switch (type) {
+        case TINYINT:
+        case SMALLINT:
+        case INTEGER:
+        case BIGINT:
+        case UTINYINT:
+        case USMALLINT:
+        case UINTEGER:
+        case UBIGINT:
+        case FLOAT:
+        case DOUBLE:
+            return true;
+        case STRING:
+        default:
+            return false;
+    }
 }
 
 }

@@ -14,7 +14,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # list of tests with filtered atoms (clingo does not support it)
 
 FILTER_PREDICATES = {}
-TEST_TO_EXCLUDE = ["agg.sum.1","agg.sum.4"]
+TEST_TO_EXCLUDE = ["agg.sum.1","agg.sum.4","agg.avg.1"]
 
 def create_expected():
     # Iterate over all files in the input directory
@@ -56,9 +56,9 @@ def create_expected():
 
                 print(f"Output written to {output_path}")
             except subprocess.CalledProcessError as e:
-                print(f"Error processing {filename}: {e}")
+                print(f"Error processing {filename}: {e} ---------------------------")
                 with open(output_path, 'w') as f:
-                    f.write("")
+                    f.write("ERROR")
 
 # return a test file without the
 def get_input_no_filters(input_file:str):

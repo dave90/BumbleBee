@@ -1,0 +1,231 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "bumblebee/execution/AggregatePRLHashTable.hpp"
+
+#include "bumblebee/function/AggregateFunction.hpp"
+
+namespace bumblebee{
+AggregatePRLHashTable::AggregatePRLHashTable(BufferManager &manager, const vector<ConstantType> &types,
+    idx_t capacity, bool resizable, const vector<AggregateFunction *> &functions): PRLHashTable(manager, types, capacity, resizable), functions_(functions) {
+    layout_.initialize(types, functions);
+    tupleSize_ = layout_.getRowWidth();
+    BB_ASSERT(tupleSize_ < Storage::BLOCK_SIZE);
+    tuplesPerBlock_ = Storage::BLOCK_SIZE / tupleSize_;
+}
+
+AggregatePRLHashTable::~AggregatePRLHashTable() {}
+
+void AggregatePRLHashTable::addChunk(Vector &hash, DataChunk &groups, DataChunk &payload) {
+    if (groups.columnCount() == 0) {
+        addChunk(payload);
+        return;
+    }
+
+    // now insert or find the groups
+    // find the buckets for each row in the group
+    Vector addresses(UBIGINT, groups.getSize());
+    SelectionVector newGroupsSel(groups.getSize());
+    idx_t newGroupCount = 0;
+    findOrCreateGroups(hash, groups, addresses, newGroupCount, newGroupsSel);
+
+
+    // init the states
+    for (idx_t i = 0; i < functions_.size(); i++)
+        AggregateFunction::initStates(layout_, addresses, newGroupsSel, newGroupCount);
+
+
+    // now update the states
+    for (id_t i = 0;i<functions_.size();++i)
+        AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
+
+}
+
+void AggregatePRLHashTable::addChunk(DataChunk &payload) {
+    if (payload.getSize()==0)return;
+    // set the address of the first state
+    Vector addresses(UBIGINT, 1);
+    auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+
+    SelectionVector sel;
+    if (entries_ == 0) {
+        newBlock();
+        addrPtr[0] = payloadPtrs_.back();
+
+        // init the first state
+        for (idx_t i = 0; i < functions_.size(); i++)
+            AggregateFunction::initStates(layout_, addresses, sel, 1);
+        entries_ = 1;
+    }
+    addrPtr[0] = payloadPtrs_.back();
+
+    // reinterpret addresses as const vector
+    auto val = Value((uint64_t)payloadPtrs_.back());
+    addresses.reference(val);
+    BB_ASSERT(addresses.getVectorType() == VectorType::CONSTANT_VECTOR);
+    // update the payload with the first state
+    for (id_t i = 0;i<functions_.size();++i)
+        AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
+}
+
+void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
+    BB_ASSERT(types_ == other.types_);
+    BB_ASSERT(functions_ == other.functions_);
+    BB_ASSERT(layout_.getRowWidth() == other.layout_.getRowWidth());
+    BB_ASSERT(layout_.getOffsets() == other.layout_.getOffsets());
+    BB_ASSERT(tupleSize_ == other.tupleSize_);
+
+    if (other.entries_ == 0)return;
+
+    Vector addresses(UBIGINT);
+    Vector hashes(UBIGINT);
+    auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
+    auto hashesPtr = FlatVector::getData<uint64_t>(hashes);
+    if (types_.size() == 0) {
+        // no groups, so merge the first state
+        BB_ASSERT(entries_ == 1);
+        Vector groupAddresses(UBIGINT, 1);
+        auto groupAddressesPtr = FlatVector::getData<data_ptr_t>(groupAddresses);
+        groupAddressesPtr[0] = payloadPtrs_.back();
+        addressesPtr[0] = other.payloadPtrs_.back();
+
+        for (idx_t j = 0; j < functions_.size(); ++j)
+            AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, 1);
+
+        return ;
+    }
+
+    idx_t idx = 0;
+    for (idx_t i = 0; i < other.capacity_; ++i) {
+        auto hashEntryPtr = (HTEntry64*)other.hashesPtr_ + i;
+        if (hashEntryPtr->pageNum_ == 0 ) continue;
+        auto hash = hashEntryPtr->hash_;
+        addressesPtr[idx] = other.payloadPtrs_[ hashEntryPtr->pageNum_ -1] + (hashEntryPtr->pageOffset_ * tupleSize_);
+        hashesPtr[idx] = hash;
+        ++idx;
+        if (idx >= STANDARD_VECTOR_SIZE) {
+            // merge now
+            auto groupAddresses = move(addresses, hashes, idx);
+            for (idx_t j = 0; j < functions_.size(); ++j)
+                AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
+            idx = 0;
+        }
+    }
+
+    SelectionVector newGroupsSel(idx);
+    idx_t newGroupsCount = 0;
+    auto groupAddresses = move(addresses, hashes, idx, &newGroupsSel, newGroupsCount);
+
+    // init new states
+    for (idx_t i = 0; i < functions_.size(); i++)
+        AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
+
+
+    AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
+}
+
+void AggregatePRLHashTable::findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups) {
+    matchedGroups = 0;
+    findOrCreateGroups(hash, groups, addresses,matchedGroups, false, sel);
+
+    if (matchedGroups < groups.getSize()) {
+        // not all groups are presents, so filter out the missing groups
+        addresses.slice(sel, matchedGroups);
+        groups.slice(sel, matchedGroups);
+    }
+}
+
+void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, DataChunk &result, SelectionVector &sel) {
+    BB_ASSERT(result.columnCount() == functions_.size());
+    BB_ASSERT(result.getCapacity() >= groups.getSize());
+    if (entries_ == 0 || groups.getSize() == 0) {
+        result.setCardinality(0);
+        return;
+    }
+
+    Vector addresses(UBIGINT, groups.getSize());
+    idx_t matchedGroups;
+    findAddresses(hash, groups, sel, addresses, matchedGroups);
+    result.setCardinality(matchedGroups);
+    if (matchedGroups == 0) {
+        result.setCardinality(0);
+        groups.setCardinality(0);
+        return;
+    }
+    // copy the agg results value in the result chunk
+    for (id_t i = 0;i<functions_.size();++i)
+        AggregateFunction::finalizeStates(layout_, addresses, result, matchedGroups);
+
+}
+
+void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, Vector &result, idx_t aggIndex,
+    SelectionVector &sel) {
+    if (groups.getSize() == 0) {
+        return;
+    }
+
+    Vector addresses(UBIGINT, groups.getSize());
+    idx_t matchedGroups;
+    findAddresses(hash, groups, sel, addresses, matchedGroups);
+    if (matchedGroups == 0) {
+        groups.setCardinality(0);
+        return;
+    }
+    // copy the agg results value in the result chunk
+    AggregateFunction::finalizeStates(layout_, addresses, result, aggIndex, matchedGroups);
+    groups.slice(sel, matchedGroups);
+}
+
+void AggregatePRLHashTable::fetchAggregates(DataChunk &result) {
+    // fetch the aggregates from the first state
+    BB_ASSERT(result.columnCount() == functions_.size());
+    if (entries_ == 0) {
+        result.setCardinality(0);
+        return;
+    }
+    Vector addresses(UBIGINT, 1);
+    auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+    addrPtr[0] = payloadPtrs_.back();
+
+    for (id_t i = 0;i<functions_.size();++i)
+        AggregateFunction::finalizeStates(layout_, addresses, result, 1);
+
+    result.setCardinality(1);
+    // transform the vectors in the results as constant vector
+    // as the result is always one without groups
+    for (idx_t i = 0;i<result.columnCount();++i) {
+        auto val = result.getValue(i, 0);
+        result.data_[i].reference(val);
+    }
+
+}
+
+void AggregatePRLHashTable::fetchAggregates(Vector &result, idx_t aggIndex) {
+    Vector addresses(UBIGINT, 1);
+    auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+    addrPtr[0] = payloadPtrs_.back();
+
+    AggregateFunction::finalizeStates(layout_, addresses,result, aggIndex, 1);
+
+    // transform the vectors in the results as constant vector
+    // as the result is always one without groups
+    auto val = result.getValue(0);
+    result.reference(val);
+}
+
+}

@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/output/OutputBuilder.h"
+#include "bumblebee/output/OutputBuilder.hpp"
 
 namespace bumblebee {
 

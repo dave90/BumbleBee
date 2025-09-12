@@ -18,8 +18,8 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/common/types/ChunkCollection.h"
-#include "bumblebee/common/types/Value.h"
+#include "bumblebee/common/types/ChunkCollection.hpp"
+#include "bumblebee/common/types/Value.hpp"
 
 using namespace bumblebee;
 

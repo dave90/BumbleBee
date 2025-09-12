@@ -16,7 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/ErrorHandler.h"
+#include "bumblebee/common/ErrorHandler.hpp"
+
+#include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee {
 
@@ -42,14 +44,25 @@ void ErrorHandler::errorGeneric( const char* message )
     exit( ERROR_GENERIC_CODE );
 }
 
-void ErrorHandler::errorNotImplemented( const std::string& message )
-{
-    errorGeneric( message.c_str() );
-}
-
-void ErrorHandler::errorNotImplemented( const char* message )
-{
+void ErrorHandler::errorNotImplemented(const char *message) {
     std::cerr << ERROR_NOT_IMPLEMENTED << ": " << message << std::endl;
     exit( ERROR_NOT_IMPLEMENTED );
+}
+
+void ErrorHandler::errorNotImplemented( const std::string& message )
+{
+    errorNotImplemented( message.c_str() );
+}
+
+void ErrorHandler::outOfMemory( const std::string& message )
+{
+    std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
+    exit( ERROR_OUT_OF_MEMORY );
+}
+
+void ErrorHandler::outOfMemory( const char* message )
+{
+    std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
+    exit( ERROR_OUT_OF_MEMORY );
 }
 } // bumblebee

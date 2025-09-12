@@ -19,10 +19,11 @@
 
 #include <climits>
 
-#include "bumblebee/parser/ParserInputBuilder.h"
+#include "bumblebee/parser/ParserInputBuilder.hpp"
 
 #include "CLI11.hpp"
-#include "bumblebee/common/Log.h"
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/Log.hpp"
 
 namespace bumblebee {
 

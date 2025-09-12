@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/parser/statement/Term.h"
+#include "bumblebee/parser/statement/Term.hpp"
 
 #include "CLI11.hpp"
-#include "bumblebee/common/Hash.h"
-#include "bumblebee/common/Log.h"
-#include "bumblebee/common/types/Assert.h"
+#include "bumblebee/common/Hash.hpp"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 
 
 namespace bumblebee {

@@ -17,10 +17,10 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #include <gtest/gtest.h>
-#include "bumblebee/common/types/VectorDataMngr.h"
-#include "bumblebee/common/TypeDefs.h"
-#include "bumblebee/common/types/SelectionVector.h"
-#include "bumblebee/common/types/Vector.h"
+#include "bumblebee/common/types/VectorDataMngr.hpp"
+#include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/types/SelectionVector.hpp"
+#include "bumblebee/common/types/Vector.hpp"
 
 using namespace bumblebee;
 

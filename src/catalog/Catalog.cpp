@@ -16,12 +16,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/catalog/Catalog.h"
+#include "bumblebee/catalog/Catalog.hpp"
 
 namespace bumblebee{
+std::unique_ptr<Catalog> Catalog::instance_ = nullptr;
+
 Catalog::Catalog(): default_schema_(default_schema_name) {}
 
 Schema & Catalog::getDefaultSchema() {
     return default_schema_;
+}
+
+void Catalog::dropCatalog() {
+    // delete the catalog instance
+    instance_ = nullptr;
 }
 }

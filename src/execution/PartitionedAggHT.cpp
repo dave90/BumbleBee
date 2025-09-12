@@ -16,46 +16,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/PartitionedAggHT.h"
+#include "bumblebee/execution/PartitionedAggHT.hpp"
 #include <bit>
 
+#include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/Helper.hpp"
+
 namespace bumblebee{
-PartitionedAggHT::PartitionedAggHT(const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
+PartitionedAggHT::PartitionedAggHT(const ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
     const vector<AggregateFunction*>& functions, idx_t partitions)
-    :ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions) {
+    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions) {
     BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2
     BB_ASSERT(payloadCols_.size() == functions_.size());
     shift_ = (sizeof(hash_t)*8) - std::bit_width(partitions_) + 1;
     partitionsAggVec_.resize(partitions_);
 }
 
-PartitionedAggHT::PartitionedAggHT(PartitionedAggHT &&other) noexcept: table_(std::move(other.table_)),
-                                                                       partitionsVec_(std::move(other.partitionsVec_)),
-                                                                       partitionsAggVec_(std::move(other.partitionsAggVec_)),
-                                                                       partitions_(other.partitions_),
-                                                                       shift_(other.shift_),
-                                                                       ready_(other.ready_),
-                                                                       partitionEntries_(std::move(other.partitionEntries_)),
-                                                                       groupCols_(std::move(other.groupCols_)),
-                                                                       payloadCols_(std::move(other.payloadCols_)),
-                                                                       functions_(std::move(other.functions_)) {
-}
-
-PartitionedAggHT & PartitionedAggHT::operator=(PartitionedAggHT &&other) noexcept {
-    if (this == &other)
-        return *this;
-    table_ = std::move(other.table_);
-    partitionsVec_ = std::move(other.partitionsVec_);
-    partitionsAggVec_ = std::move(other.partitionsAggVec_);
-    partitions_ = other.partitions_;
-    shift_ = other.shift_;
-    ready_ = other.ready_;
-    partitionEntries_ = std::move(other.partitionEntries_);
-    groupCols_ = std::move(other.groupCols_);
-    payloadCols_ = std::move(other.payloadCols_);
-    functions_ = std::move(other.functions_);
-    return *this;
-}
 
 void PartitionedAggHT::partitionHT(distinct_ht_ptr_t& ht) {
     if (ht->getSize() == 0)return;
@@ -92,8 +68,6 @@ void PartitionedAggHT::finalize() {
         table_->combine(*aht);
         aht = nullptr; // free memory
     }
-    if (table_)
-        table_->finalize();
     ready_ = true;
 }
 
@@ -124,38 +98,42 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     }
     if (!dht) return; // no data for the partition
     auto dhtCapacity = dht->getCapacity();
-    // fetch the distinct values from final ht
+    auto& pht = partitionsAggVec_[partition];
     auto types = dht->getTypes();
-    DataChunk result;
-    result.initializeEmpty(types);
-    dht->scan(0, result, dht->getSize());
-    result.setCapacity(dht->getSize());
-
     vector<ConstantType> groupColsType;
     for (auto& col: groupCols_) {
         BB_ASSERT(col < types.size());
         groupColsType.push_back(types[col]);
     }
-    partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregateChunkOneHashTable(groupColsType, dhtCapacity, true, functions_));
-    auto& pht = partitionsAggVec_[partition];
-
-    // split the result chunk in groups and payload
-    DataChunk groups, payloads;
-    groups.initializeEmpty(pht->getTypes());
-    groups.reference(result, groupCols_);
+    partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType, dhtCapacity, true, functions_));
     vector<ConstantType> payloadTypeCols;
     for (idx_t i = 0; i < payloadCols_.size(); i++) {
         auto col = payloadCols_[i];
         BB_ASSERT(col < types.size());
         payloadTypeCols.push_back(types[col]);
     }
-    payloads.initializeEmpty(payloadTypeCols);
-    payloads.reference(result, payloadCols_);
-    Vector hash(UBIGINT, groups.getSize());
-    groups.hash(hash);
 
-    // add into the agg HT
-    pht->addChunk(hash, groups, payloads);
+    idx_t position = 0;
+    DataChunk groups, payloads;
+    groups.initializeEmpty(pht->getTypes());
+    payloads.initializeEmpty(payloadTypeCols);
+    DataChunk result;
+    result.initialize(types);
+    Vector hash(UBIGINT);
+
+    while (position <= dht->getSize()) {
+        idx_t toScan = minValue<idx_t>(STANDARD_VECTOR_SIZE, dht->getSize());
+        // fetch the distinct values from final ht
+        dht->scan(position, result, toScan);
+
+        // split the result chunk in groups and payload
+        groups.reference(result, groupCols_);
+        payloads.reference(result, payloadCols_);
+        groups.hash(hash);
+        // add into the agg HT
+        pht->addChunk(hash, groups, payloads);
+        position += STANDARD_VECTOR_SIZE;
+    }
 }
 
 void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
@@ -167,7 +145,7 @@ void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
             partitionIndex = i;
             continue;
         }
-        // merge large partition with small
+        // merge large partition with smaller
         if (partitionsAggVec_[partitionIndex]->getSize() >partitionsAggVec_[i]->getSize()) {
             partitionsAggVec_[partitionIndex]->combine(*partitionsAggVec_[i]);
             partitionsAggVec_[i] = nullptr;

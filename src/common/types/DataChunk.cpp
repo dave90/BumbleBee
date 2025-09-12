@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/DataChunk.h"
+#include "bumblebee/common/types/DataChunk.hpp"
 
-#include "bumblebee/common/Log.h"
-#include "bumblebee/common/types/Vector.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 DataChunk::DataChunk(): count_(0), capacity_(STANDARD_VECTOR_SIZE) {}

@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/StringHeap.h"
+#include "bumblebee/common/types/StringHeap.hpp"
 
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/common/types/Assert.h"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee{
 

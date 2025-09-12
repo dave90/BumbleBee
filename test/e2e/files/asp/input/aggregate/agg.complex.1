@@ -1,0 +1,8 @@
+% Complex test: join, filter, #sum and #max
+input("a", 1, 10).
+input("a", 2, 5).
+input("b", 1, 7).
+input("b", 2, 3).
+filter(X, Y, V) :- input(X, Y, V), V > 5.
+sumval(X, S) :- filter(X, _, _), S = #sum{V : filter(X, _, V)}.
+maxval(M) :- M = #max{V : filter(X, _, V)}.

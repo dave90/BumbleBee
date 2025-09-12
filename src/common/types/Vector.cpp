@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/Vector.h"
+#include "bumblebee/common/types/Vector.hpp"
 
-#include "bumblebee/common/Helper.h"
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 Vector::Vector(Vector &other):ctype_(other.ctype_), vtype_(other.vtype_) {
@@ -484,6 +484,7 @@ void Vector::setValue(idx_t index, const Value &val) {
         case ConstantType::STRING:
             ((string_t*)data_)[index] = StringVector::addString(*this, val.stringValue_);
             break;
+
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type access");
     }

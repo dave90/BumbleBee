@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/execution/PhysicalAtom.h"
+#include "bumblebee/execution/PhysicalAtom.hpp"
 
 namespace bumblebee{
 
@@ -49,6 +49,9 @@ AtomResultType PhysicalAtom::sink(ThreadContext& context, DataChunk &input, Phys
 }
 
 void PhysicalAtom::finalize(ThreadContext& context, GlobalPhysicalAtomState& gstate) const {
+}
+
+void PhysicalAtom::combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
 }
 
 bool PhysicalAtom::isSource() const {

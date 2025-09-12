@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/Value.h"
+#include "bumblebee/common/types/Value.hpp"
 
 namespace bumblebee{
 Value::Value() {}
@@ -56,6 +56,8 @@ Value::Value(double c)
 
 Value::Value(string &&c) :ctype_(STRING), stringValue_(std::move(c)) {}
 
+Value::Value(const string& c) :ctype_(STRING), stringValue_(c) {}
+
 Value::Value(string_t c):ctype_(STRING), stringValue_(c.c_str(), c.size()) {}
 
 Value::Value(const char *c):ctype_(STRING), stringValue_(c) {}
@@ -85,6 +87,7 @@ bool operator==(const Value &lhs, const Value &rhs) {
             return lhs.value_.double_ == rhs.value_.double_;
         case ConstantType::STRING:
             return lhs.stringValue_ == rhs.stringValue_;
+
         default:
             ;
     }
@@ -160,6 +163,37 @@ Value Value::cast(ConstantType type) const {
             return Value(getNumericValue<double>());
         case ConstantType::STRING:
             return Value(toString());
+        case ConstantType::UNKNOWN:
+            ;
+    }
+    ErrorHandler::errorNotImplemented("Cast not implemented.");
+    return {};
+}
+
+Value Value::cast(ConstantType type, data_ptr_t data) {
+    switch (type) {
+        case ConstantType::TINYINT:
+            return Value( * ((int8_t*)data ));
+        case ConstantType::SMALLINT:
+            return Value(*((int16_t*)data));
+        case ConstantType::INTEGER:
+            return Value(*((int32_t*)data));
+        case ConstantType::BIGINT:
+            return Value(*((int64_t*)data));
+        case ConstantType::UTINYINT:
+            return Value(*((uint8_t*)data));
+        case ConstantType::USMALLINT:
+            return Value(*((uint16_t*)data));
+        case ConstantType::UINTEGER:
+            return Value(*((uint32_t*)data));
+        case ConstantType::UBIGINT:
+            return Value(*((uint64_t*)data));
+        case ConstantType::FLOAT:
+            return Value(*((float*)data));
+        case ConstantType::DOUBLE:
+            return Value(*((double*)data));
+        case ConstantType::STRING:
+            return Value(*(string_t*)data );
         case ConstantType::UNKNOWN:
             ;
     }

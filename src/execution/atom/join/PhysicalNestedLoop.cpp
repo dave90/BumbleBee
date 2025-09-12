@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/join/PhysicalNestedLoop.h"
-#include "bumblebee/execution/NestedLoopJoin.h"
+#include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
+#include "bumblebee/execution/NestedLoopJoin.hpp"
 
 namespace bumblebee{
 

@@ -21,9 +21,9 @@
 #include <thread>
 #include <gtest/gtest.h>
 
-#include "bumblebee/catalog/PredicateTables.h"
-#include "bumblebee/execution/atom/output/PhysicalChunkOutput.h"
-#include "bumblebee/output/OutputBuilder.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
+#include "bumblebee/output/OutputBuilder.hpp"
 
 using namespace bumblebee;
 
@@ -136,10 +136,8 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputFlushPartialChunksTest) {
             }
             // final chunk is not full so expected have more output
             EXPECT_EQ(result, AtomResultType::HAVE_MORE_OUTPUT);
-            // Call passing empty chunk
-            DataChunk chunk = createChunkWithValue(0, 0, false);
-            result = pco.sink(context, chunk, *state, *gstate);
-            EXPECT_EQ(result, AtomResultType::NEED_MORE_INPUT);
+            // Call combine
+            pco.combine(context, *state, *gstate);
         });
     }
 

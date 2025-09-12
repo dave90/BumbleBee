@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "bumblebee/catalog/PredicateTables.h"
+#include "bumblebee/catalog/PredicateTables.hpp"
 
 using namespace bumblebee;
 

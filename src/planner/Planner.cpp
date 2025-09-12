@@ -17,13 +17,13 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/planner/Planner.h"
+#include "bumblebee/planner/Planner.hpp"
 
-#include "bumblebee/common/Log.h"
-#include "bumblebee/planner/optimizer/PhysicalOptimizer.h"
-#include "bumblebee/planner/rewriter/ArithRewriter.h"
-#include "bumblebee/planner/rewriter/FilterPushDownRewriter.h"
-#include "bumblebee/planner/rewriter/VariablesRewriter.h"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/planner/optimizer/PhysicalOptimizer.hpp"
+#include "bumblebee/planner/rewriter/ArithRewriter.hpp"
+#include "bumblebee/planner/rewriter/FilterPushDownRewriter.hpp"
+#include "bumblebee/planner/rewriter/VariablesRewriter.hpp"
 
 namespace bumblebee {
 

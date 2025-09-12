@@ -16,9 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/ChunkCollection.h"
+#include "bumblebee/common/types/ChunkCollection.hpp"
 
-#include "bumblebee/common/vector_operations/VectorOperations.h"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 void ChunkCollection::append(DataChunk &chunk) {

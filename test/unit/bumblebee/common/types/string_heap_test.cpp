@@ -18,8 +18,8 @@
  */
 #include <gtest/gtest.h>
 
-#include "bumblebee/common/Constants.h"
-#include "bumblebee/common/types/StringHeap.h"
+#include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/types/StringHeap.hpp"
 using namespace bumblebee;
 
 class StringHeapTest : public ::testing::Test {

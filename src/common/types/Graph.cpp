@@ -16,13 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/common/types/Graph.h"
+#include "bumblebee/common/types/Graph.hpp"
 
 #include <iostream>
 #include <stack>
 #include <__ostream/basic_ostream.h>
 
-#include "bumblebee/common/Log.h"
+#include "bumblebee/common/Log.hpp"
 
 namespace bumblebee{
 

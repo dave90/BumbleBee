@@ -16,10 +16,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/ClientContext.h"
+#include "bumblebee/ClientContext.hpp"
 
-#include "bumblebee/catalog/Catalog.h"
-#include "bumblebee/function/aggregate/Sum.h"
+#include "bumblebee/catalog/Catalog.hpp"
+#include "bumblebee/common/LocalFileSystem.hpp"
+#include "bumblebee/function/aggregate/Avg.hpp"
+#include "bumblebee/function/aggregate/Min.hpp"
+#include "bumblebee/function/aggregate/Max.hpp"
+#include "bumblebee/function/aggregate/Sum.hpp"
+#include "bumblebee/storage/InMemoryBlockManager.hpp"
 
 namespace bumblebee{
 ClientContext::ClientContext():
@@ -28,13 +33,25 @@ ClientContext::ClientContext():
     threads_(1),
     printAll_(false),
     printProfiling_(false),
-    singleShot_(true) {
+    singleShot_(true),
+    maxMemory_((idx_t)-1),
+    tempDirectory_(DEFAULT_TMP_DIR),
+    blockManager_(new InMemoryBlockManager()){
 
+    bufferManager_ = buffer_mngr_ptr_ptr_t(new BufferManager(*this,tempDirectory_,maxMemory_));
     registerFunctions();
-
+    initFileSystem();
 }
 
 void ClientContext::registerFunctions() {
     SumFunc::registerFunction(functionRegister_);
+    MinFunc::registerFunction(functionRegister_);
+    MaxFunc::registerFunction(functionRegister_);
+    AvgFunc::registerFunction(functionRegister_);
 }
+
+void ClientContext::initFileSystem() {
+    fileSystem_ = fs_ptr_t(new LocalFileSystem());
+}
+
 }

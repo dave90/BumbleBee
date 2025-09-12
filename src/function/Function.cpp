@@ -17,7 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "bumblebee/function/Function.h"
+#include "bumblebee/function/Function.hpp"
 
 namespace bumblebee {
 Function::Function(const string &name, const vector<ConstantType> &arguments, ConstantType result): name_(name),
