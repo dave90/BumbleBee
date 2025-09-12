@@ -21,7 +21,19 @@
 
 namespace bumblebee{
 
-
+/*
+ * Class AggregatePRLHashTable
+ * Aggregate hash table built on top of PRLHashTable that maintains aggregate states per group
+ *
+ * Overview
+ * - Extends PRLHashTable to append aggregate state columns after the group columns inside the row layout
+ *
+ * Data layout and storage
+ * - Each row consists of the group key columns followed by aggregate state slots determined by AggregateFunction metadata
+ * - Variable length data is stored in the inherited string heap and is preserved when moving or combining tables
+ * - Layout offsets and tuple size are recomputed in the constructor to include aggregate states
+ *
+ */
 class AggregatePRLHashTable : public PRLHashTable{
 public:
     using agg_ht_ptr_t = std::unique_ptr<AggregatePRLHashTable>;

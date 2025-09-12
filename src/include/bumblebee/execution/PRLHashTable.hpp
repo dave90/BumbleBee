@@ -28,6 +28,7 @@
 
 namespace bumblebee{
 
+// Hash table bucket entry
 struct HTEntry64 {
     uint64_t hash_;
     uint32_t pageOffset_;
@@ -36,6 +37,47 @@ struct HTEntry64 {
 
 /*
  *  Probe Row Layout Hash Table
+ *
+ * This hash table stores tuples in row layout blocks managed by a BufferManager,
+ * while a separate open-addressed hash array (HTEntry64) maps hash buckets to tuple
+ * locations. Collisions are handled with linear probing. The table is designed for
+ * high-throughput vectorized execution:
+ *
+ *
+ * - Core method is findOrCreateGroups that optionally
+ *   creates new groups, and return row addresses of the rows.
+ *   Matched and/or newly created indices can be reported via
+ *   SelectionVector`s.
+ *
+ * Storage layout
+ * - Payload rows are packed into fixed-size blocks (Storage::BLOCK_SIZE) according
+ *   to RowLayout. Variable-length data live in stringHeap_ (RowDataCollection)
+ *   which is merged during partitioning/combining.
+ * - The hash directory is an array of HTEntry64 {hash_, pageOffset_, pageNum_}.
+ *   pageNum_ == 0 denotes an empty bucket. pageNum_ is 1-based to avoid the
+ *   empty sentinel.
+ *
+ * Resizing policy
+ * - The table grows by powers of two when `LOAD_FACTOR` would be exceeded or
+ *   when initial capacity is insufficient. Resize rehashes the directory and preserves
+ *   existing payload blocks. If `resizable_ == false`, only the initial build is allowed
+ *   to set capacity (`initResize == true`).
+ *
+*- Partitioning/Combining:
+ *   - partition redistributes entries across a set of PRLHashTables using higher
+ *     hash bits. For each hash entry it computes the partition index as
+ *     hash >> shift, where shift determines how many of the most significant
+ *     bits are used to decide the partition.
+ *   - Each partition receives its subset of rows and the associated string heap data,
+ *     so partitions are self-contained and can be processed independently
+ *     (e.g., in parallel or as input to distributed operators).
+ *   - Buffers are flushed to the target partition once a vector-size batch fills,
+ *     ensuring efficient batched movement of tuples.
+ *
+ * Thread-safety
+ * - This structure is not thread-safe; external synchronization is required for
+ *   concurrent writers/readers.
+ *
  */
 class PRLHashTable {
 public:
@@ -45,7 +87,7 @@ public:
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.5;
 
-    PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = STANDARD_VECTOR_SIZE/LOAD_FACTOR, bool resizable = true);
+    PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
     virtual ~PRLHashTable() {};
 
     PRLHashTable(const PRLHashTable &other) = delete;
@@ -93,8 +135,11 @@ protected:
     Vector move(Vector &addresses, Vector &hashes, idx_t count, SelectionVector* newGroupSel, idx_t& newGroupsCount);
 
 
+    // Types of the columns in the hash table
     vector<ConstantType> types_;
+    // Buffer manager of hash and data blocks
     BufferManager &bufferManager_;
+    // Layout of the payload data in row layout
     RowLayout layout_;
 
     // The stringheap of the AggregateHashTable
@@ -119,11 +164,11 @@ protected:
     data_ptr_t hashesPtr_;
     data_ptr_t hashesEndPtr_; // end of of hashes
 
-    idx_t payloadPageOffset_; // current offset of the tuple inside the payload (block is full when payloadPageOffset_ == tuplesPerBlock_ )
+    // current offset of the tuple inside the payload (block is full when payloadPageOffset_ == tuplesPerBlock_ )
+    idx_t payloadPageOffset_;
 
     // Bitmask for getting relevant bits from the hashes to determine the position
     hash_t bitmask_;
-
 };
 
 

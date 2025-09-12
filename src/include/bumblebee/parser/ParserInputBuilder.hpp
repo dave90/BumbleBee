@@ -94,8 +94,6 @@ public:
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
 	rules_vector_t& getProgram();
-	// Atom extractRuleFromAgg(vector<Term>&, vector<Atom>& atoms);
-	// Predicate* getAuxHeadAtomAggRule(vector<Term>& aggTerms, vector<Atom>& atoms);
 	void rewriteAggregates();
 
 protected:

@@ -1,0 +1,5 @@
+% Simple test: #max aggregate
+input(1, 10).
+input(2, 5).
+input(3, 7).
+maxval(M) :- M = #max{V : input(_, V)}.

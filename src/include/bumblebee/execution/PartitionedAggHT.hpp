@@ -28,7 +28,29 @@ namespace bumblebee{
 using agg_ht_ptr_t = AggregatePRLHashTable::agg_ht_ptr_t;
 using distinct_ht_ptr_t = PRLHashTable::distinct_ht_ptr_t;
 
-// Inspired by : https://db.in.tum.de/~leis/papers/morsels.pdf
+/*
+ * Class PartitionedAggHT
+ * Partitioned driver for grouped and global aggregation based on PRLHashTable and AggregatePRLHashTable
+ *
+ * Overview
+ * - Splits a stream of distinct hash tables into power of two partitions and aggregates each partition independently
+ * - Uses high hash bits to choose the destination partition and preserves row layout including aggregate state columns
+ * - Enables parallelism by allowing different threads to process different partitions without locks
+ *
+ *
+ * Aggregation per partition
+ * - aggregatePartition(p) merges all PRLHashTable instances that landed in partition p into a single PRLHashTable
+ * - Builds an AggregatePRLHashTable for that partition using the group column types, capacity of the merged distinct table, and the provided aggregate functions
+ * - Scans the merged distinct table in vectors, splits each chunk into groups and payloads by column index, hashes groups, and updates aggregate states
+ * - No locks are taken inside this method, different partitions must be processed by different threads
+ *
+ * Concurrency
+ * - partitionHT uses a mutex to protect shared bookkeeping when pushing new partition vectors and updating statistics
+ * - aggregatePartition and combinePartitions assume disjoint partition indices are processed by different threads and therefore avoid locking
+ *
+ * Inspired by : https://db.in.tum.de/~leis/papers/morsels.pdf
+ */
+
 class PartitionedAggHT {
 public:
 

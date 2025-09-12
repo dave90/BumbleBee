@@ -6,11 +6,14 @@
 - Benchmark agg
 - Test with double, float and string
 - Default minimum integer (small int or int 32 bit not tiny as now)
+- Test: TPC-H, ClickBench https://github.com/electrum/tpch-dbgen
+
 
 ## Next
-- Aggregation
 - Negative
 - Distinct
+- Distinct head (usefull also for recursion)
+- Recursion ( hash row layout + scan with delta , chunk index of iteration and use only latest)
 - CSV
 - CICD
 - SQL
@@ -22,7 +25,6 @@
 ## Next of Next
  
 
-- Recursion
 - Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner with statistics better optimizer and rule ordering
 - functions

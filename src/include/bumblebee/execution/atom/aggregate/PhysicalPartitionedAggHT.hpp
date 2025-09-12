@@ -21,7 +21,7 @@
 
 namespace bumblebee{
 
-
+// Physical atom for aggregates
 class PhysicalPartitionedAggHT : public PhysicalAtom {
 
 public:
@@ -56,7 +56,8 @@ private:
     const ClientContext& context_;
 
     PredicateTables* pt_;
-    AggregatePRLHashTable* aht_; // used during probe phase
+    // used during probe phase
+    AggregatePRLHashTable* aht_;
     // during build phase point to the internal predicate table columns
     // on probe point to the group column in input data chunk
     vector<idx_t> groupCols_;

@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "bumblebee/function/AggregateFunction.hpp"
 #include "bumblebee/function/Function.hpp"
 #include "bumblebee/function/FunctionRegister.hpp"
 
@@ -25,82 +26,86 @@ namespace bumblebee{
 
 
 template <class T>
-struct SumState {
+struct AvgState {
     T value;
+    uint64_t count;
 
     void initialize() {
         value = 0;
+        count = 0;
     }
 
-    void combine(SumState<T>* other) {
-        this->value += other->value;
+    void combine(AvgState<T>* other) {
+        value += other->value;
+        count += other->count;
     }
 };
 
 template <class INPUT_TYPE, class RESULT_TYPE>
-struct SumOperation {
+struct AvgOperation {
 
-    static void initialize(SumState<RESULT_TYPE> *state) {
+    static void initialize(AvgState<RESULT_TYPE> *state) {
         state->initialize();
     }
 
-    static void combine(SumState<RESULT_TYPE>* source, SumState<RESULT_TYPE> *target) {
+    static void combine(AvgState<RESULT_TYPE>* source, AvgState<RESULT_TYPE> *target) {
         target->combine(source);
     }
 
-    static void operation(INPUT_TYPE *input, SumState<RESULT_TYPE> *state) {
-        state->value += ((RESULT_TYPE)(*input));
+    static void operation(INPUT_TYPE *input, AvgState<RESULT_TYPE> *state) {
+        state->value += (RESULT_TYPE)(*input);
+        ++state->count;
     }
 
-    static void finalize(SumState<RESULT_TYPE> *state, RESULT_TYPE *result) {
-        *result = state->value;
+    static void finalize(AvgState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+        *result = state->value / (RESULT_TYPE)(state->count);
     }
 };
 
-class SumFunc {
+class AvgFunc {
 public:
     // get the function from the type
     static function_ptr getFunction(ConstantType type) {
-        string name = "#sum";
+        string name = "#avg";
         switch (type) {
             case ConstantType::TINYINT: {
-                auto func = AggregateFunction::unaryAggregate<SumState,int8_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,int8_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::SMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int16_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,int16_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::INTEGER:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int32_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,int32_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::BIGINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int64_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,int64_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::UTINYINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint8_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,uint8_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::USMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint16_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,uint16_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::UINTEGER:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint32_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,uint32_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::UBIGINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint64_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,uint64_t,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::FLOAT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,float,float,SumOperation>(name, {type}, FLOAT);
+                auto func = AggregateFunction::unaryAggregate<AvgState,float,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::DOUBLE:{
-                auto func = AggregateFunction::unaryAggregate<SumState,double,double,SumOperation>(name, {type}, DOUBLE);
+                auto func = AggregateFunction::unaryAggregate<AvgState,double,double,AvgOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::STRING:	{
@@ -108,7 +113,7 @@ public:
             }
 
             default:
-                ErrorHandler::errorNotImplemented("Unimplemented type for sum operation!");
+                ErrorHandler::errorNotImplemented("Unimplemented type for min operation!");
         }
         return nullptr;
     }

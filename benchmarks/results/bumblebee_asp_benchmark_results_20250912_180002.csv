@@ -1,0 +1,25 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_prev,output_match
+edge 1M,edge1M,0.7184,0.7165,0.7210,-2.3269,-0.0032,match
+edge 1M Filter 1,edge1M.filter.1,0.8790,0.8765,0.8824,-2.5202,0.0034,match
+edge 1M Filter 2,edge1M.filter.2,1.0543,1.0366,1.0894,-3.4927,0.0106,match
+Col500K,col500K,0.5531,0.5521,0.5539,-3.6712,-0.0064,match
+Cross product 1,join_cp.1,1.1865,1.1589,1.2057,-7.8978,0.0020,match
+Cross product 2,join_cp.2,0.6116,0.6091,0.6149,-2.7305,-0.0164,match
+Cross product 3,join_cp.3,9.0959,9.0725,9.1154,-79.0041,0.0030,match
+Join NL 1,join_nl.1,0.3991,0.3984,0.3998,-0.8387,-0.0026,match
+Join NL 2,join_nl.2,0.2908,0.2889,0.2928,-0.4272,-0.0011,match
+Join NL 3,join_nl.3,1.9918,1.9603,2.0104,-2.9191,0.0295,match
+Join NL 4,join_nl.4,1.3668,1.3552,1.3768,-16.6948,0.0485,match
+Join NL 5,join_nl.5,0.1835,0.1773,0.1892,-0.1097,0.0003,match
+Join HT 1,join_ht.1,7.1183,7.0432,7.2393,-5.0002,-0.0367,match
+Join HT 2,join_ht.2,0.8393,0.8260,0.8627,-0.2633,0.0091,match
+Join HT 3,join_ht.3,12.0832,12.0418,12.1042,-107.9168,0.0219,mismatch
+Join HT 4,join_ht.4,12.6886,12.6199,12.7495,-11.0815,-0.1645,match
+Join HT 5,join_ht.5,17.7561,17.7018,17.8640,14.6607,-0.1790,match
+Aggregates 1,agg.1,1.4932,1.4463,1.5695,1.3167,0.0462,match
+Aggregates 2,agg.2,1.3129,1.2855,1.3348,-3.1976,-0.0161,match
+Aggregates Complex 1,agg.complex.1,46.8614,46.6547,47.0737,42.1635,-,mismatch
+Aggregates MinMax 1,agg.minmax.1,7.9083,7.8929,7.9303,-15.0075,-,match
+Aggregates Single 1,agg.single.1,17.4577,17.3563,17.6067,-102.5423,-,mismatch
+Aggregates Single 2,agg.single.2,17.3861,17.3407,17.4177,-102.6139,-,mismatch
+Aggregates Single 3,agg.single.3,17.3996,17.1054,17.5937,-102.6004,-,mismatch

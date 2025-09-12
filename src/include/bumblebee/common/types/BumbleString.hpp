@@ -72,6 +72,7 @@ public:
     string getString() const;
 
     bool operator<(const BumbleString &r) const;
+    bool operator>(const BumbleString &r) const;
     const char* c_str() const;
 
     // return true if the string is inline

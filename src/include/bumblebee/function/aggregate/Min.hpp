@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "bumblebee/function/AggregateFunction.hpp"
 #include "bumblebee/function/Function.hpp"
 #include "bumblebee/function/FunctionRegister.hpp"
 
@@ -25,97 +26,101 @@ namespace bumblebee{
 
 
 template <class T>
-struct SumState {
+struct MinState {
     T value;
+    bool init;
 
     void initialize() {
-        value = 0;
+        init = false;
     }
 
-    void combine(SumState<T>* other) {
-        this->value += other->value;
+    void combine(MinState<T>* other) {
+        value = (other->init && ( !init || value > other->value))?other->value: value;
+        init = true;
     }
 };
 
 template <class INPUT_TYPE, class RESULT_TYPE>
-struct SumOperation {
+struct MinOperation {
 
-    static void initialize(SumState<RESULT_TYPE> *state) {
+    static void initialize(MinState<RESULT_TYPE> *state) {
         state->initialize();
     }
 
-    static void combine(SumState<RESULT_TYPE>* source, SumState<RESULT_TYPE> *target) {
+    static void combine(MinState<RESULT_TYPE>* source, MinState<RESULT_TYPE> *target) {
         target->combine(source);
     }
 
-    static void operation(INPUT_TYPE *input, SumState<RESULT_TYPE> *state) {
-        state->value += ((RESULT_TYPE)(*input));
+    static void operation(INPUT_TYPE *input, MinState<RESULT_TYPE> *state) {
+        state->value = (!state->init || state->value > (RESULT_TYPE)(*input))? ((RESULT_TYPE)(*input)): state->value;
+        state->init = true;
     }
 
-    static void finalize(SumState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    static void finalize(MinState<RESULT_TYPE> *state, RESULT_TYPE *result) {
         *result = state->value;
     }
 };
 
-class SumFunc {
+class MinFunc {
 public:
     // get the function from the type
     static function_ptr getFunction(ConstantType type) {
-        string name = "#sum";
+        string name = "#min";
         switch (type) {
             case ConstantType::TINYINT: {
-                auto func = AggregateFunction::unaryAggregate<SumState,int8_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int8_t,int64_t,MinOperation>(name, {type}, BIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::SMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int16_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int16_t,int64_t,MinOperation>(name, {type}, BIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::INTEGER:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int32_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int32_t,int64_t,MinOperation>(name, {type}, BIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::BIGINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int64_t,int64_t,SumOperation>(name, {type}, BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int64_t,int64_t,MinOperation>(name, {type}, BIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::UTINYINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint8_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint8_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::USMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint16_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint16_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::UINTEGER:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint32_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint32_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::UBIGINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint64_t,uint64_t,SumOperation>(name, {type}, UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint64_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::FLOAT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,float,float,SumOperation>(name, {type}, FLOAT);
+                auto func = AggregateFunction::unaryAggregate<MinState,float,float,MinOperation>(name, {type}, FLOAT);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::DOUBLE:{
-                auto func = AggregateFunction::unaryAggregate<SumState,double,double,SumOperation>(name, {type}, DOUBLE);
+                auto func = AggregateFunction::unaryAggregate<MinState,double,double,MinOperation>(name, {type}, DOUBLE);
                 return function_ptr(new AggregateFunction(func));
             }
             case ConstantType::STRING:	{
-                ErrorHandler::errorNotImplemented("Aggregate string sum not supported");
+                auto func = AggregateFunction::unaryAggregate<MinState,string_t,string_t,MinOperation>(name, {type}, STRING);
+                return function_ptr(new AggregateFunction(func));
             }
 
             default:
-                ErrorHandler::errorNotImplemented("Unimplemented type for sum operation!");
+                ErrorHandler::errorNotImplemented("Unimplemented type for min operation!");
         }
         return nullptr;
     }
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {
-        vector<ConstantType> supportedTypes = {TINYINT, SMALLINT, INTEGER, BIGINT, UTINYINT, USMALLINT, UINTEGER, UBIGINT, DOUBLE, FLOAT};
+        vector<ConstantType> supportedTypes = {TINYINT, SMALLINT, INTEGER, BIGINT, UTINYINT, USMALLINT, UINTEGER, UBIGINT, DOUBLE, FLOAT, STRING};
         for (auto& c: supportedTypes) {
             funcRegister.registerFunction(getFunction(c));
         }

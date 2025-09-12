@@ -14,7 +14,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # list of tests with filtered atoms (clingo does not support it)
 
 FILTER_PREDICATES = {}
-TEST_TO_EXCLUDE = ["agg.sum.1","agg.sum.4"]
+TEST_TO_EXCLUDE = ["agg.sum.1","agg.sum.4","agg.avg.1"]
 
 def create_expected():
     # Iterate over all files in the input directory

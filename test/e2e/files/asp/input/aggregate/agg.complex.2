@@ -1,0 +1,8 @@
+input("a", 1, 10).
+input("a", 2, 5).
+input("b", 1, 7).
+input("b", 2, 3).
+input("c", 1, 8).
+join(X, Y, V) :- input(X, Y, V), V >= 5.
+minval(X, M) :-  input(X, _, _),  M = #min{V: join(X, _, V)}.
+maxval(X, A) :-  input(X, _, _),  A =  #max{V: join(X, _, V)}.

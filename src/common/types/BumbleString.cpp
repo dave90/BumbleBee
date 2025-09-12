@@ -70,6 +70,12 @@ bool BumbleString::operator<(const BumbleString &r) const {
     return (cmp < 0);
 }
 
+bool BumbleString::operator>(const BumbleString &r) const {
+    // compare the data
+    auto cmp = strcmp(getDataUnsafe(), r.getDataUnsafe());
+    return (cmp > 0);
+}
+
 const char * BumbleString::c_str() const {
     return getDataUnsafe();
 }

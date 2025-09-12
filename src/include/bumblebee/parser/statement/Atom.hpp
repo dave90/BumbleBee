@@ -65,6 +65,7 @@ public:
     void getAggSharedVariables(const set_term_variable_t& globalVariables,set_term_variable_t& sharedVariables);
     bool isGround();
     std::string toString() const;
+    Atom clone();
 
 
     friend bool operator==(const Atom &lhs, const Atom &rhs);
@@ -87,6 +88,7 @@ public:
     bool containsRange() const;
     bool containsArith() const;
     bool containsConstant() const;
+    bool containsVariables(set_term_variable_t& vars);
     // return true if is constant assignment , i.e X == 10
     bool isConstantAssignment();
     bool isAggregateAssignment();
