@@ -28,9 +28,10 @@
 namespace bumblebee {
 
 
-ParserInputBuilder::ParserInputBuilder(OutputType type,bool hiddenNewPredicates):
+ParserInputBuilder::ParserInputBuilder(OutputType type,bool hiddenNewPredicates, bool distinctNewPredicate):
     currentSchema_(Catalog::instance().getDefaultSchema()),
     hiddenNewPredicate(hiddenNewPredicates),
+    distinctNewPredicate_(distinctNewPredicate),
     output_builder_(type) {
 }
 
@@ -147,6 +148,9 @@ void ParserInputBuilder::onPredicateName(char *name) {
     if (!hiddenNewPredicate) {
         predicate->setInternal(false);
     }
+    if (distinctNewPredicate_)
+        predicate->setDistinct();
+
     currentAtom = Atom::createClassicalAtom(predicate, std::move(terms_parsered));
     terms_parsered.clear();
 }

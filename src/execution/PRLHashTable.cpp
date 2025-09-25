@@ -24,8 +24,21 @@
 
 namespace bumblebee{
 PRLHashTable::PRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity,
-    bool resizable) : bufferManager_(manager), capacity_(0), types_(types), resizable_(resizable),
-    entries_(0), payloadPageOffset_(0), bitmask_(capacity-1){
+    bool resizable) : bufferManager_(manager){
+    initialize( types,  capacity,resizable);
+}
+
+PRLHashTable::PRLHashTable(BufferManager &manager): bufferManager_(manager) {
+}
+
+void PRLHashTable::initialize(const vector<ConstantType> &types, idx_t capacity,
+                              bool resizable) {
+    capacity_ = 0;
+    types_ = types;
+    resizable_ = resizable;
+    entries_ = 0;
+    payloadPageOffset_ = 0;
+    bitmask_ = capacity -1;
     BB_ASSERT(capacity != 0 && (capacity & (capacity - 1)) == 0); // capacity should be power of 2
 
     layout_.initialize(types);
@@ -38,6 +51,7 @@ PRLHashTable::PRLHashTable(BufferManager &manager, const vector<ConstantType> &t
 
     PRLHashTable::resize(capacity, true);
     stringHeap_ = std::make_unique<RowDataCollection>(bufferManager_, (idx_t)Storage::BLOCK_SIZE, 1, true);
+
 }
 
 void PRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
@@ -93,7 +107,6 @@ void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &a
     idx_t &matchedCount, bool createGroups, SelectionVector &matchedSel) {
     idx_t newGroupsCount = 0;
     findOrCreateGroupsInternal(hash, groups, addresses, matchedCount, newGroupsCount, createGroups, &matchedSel, nullptr );
-
 }
 
 void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses,
@@ -360,6 +373,7 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
     SelectionVector compareSel(size);
     // sel of the no match groups
     SelectionVector noMatchSel(size);
+    SelectionVector nms(size);
 
 
     idx_t remainingEntries = size;
@@ -416,7 +430,6 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
         RowOperations::scatter(groups, groupsData.get(), layout_, addresses, *stringHeap_, emptySel, newEntryCount);
 
         // Now let's try to match the groups with same hash of our ht
-        SelectionVector nms;
         idx_t noMatchCount = 0;
         idx_t matchCount = RowOperations::equal(groups, groupsData.get(), layout_, addresses, compareSel, newNeedCompareCount, &nms, noMatchCount);
         if (matchedSel) {
@@ -428,9 +441,9 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
             matchedCount += matchCount;
 
         // add the non match index to noMatchSel
-        for (idx_t j = 0; j< noMatchCount; j++) {
+        for (idx_t j = 0; j< noMatchCount; j++)
             noMatchSel.setIndex(newNoMatchCount++, nms.getIndex(j));
-        }
+
 
         // each of the entries that do not match we move them to the next bucket in the HT
         for (idx_t j = 0; j< newNoMatchCount; j++) {

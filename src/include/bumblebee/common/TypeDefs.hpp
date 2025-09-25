@@ -89,7 +89,7 @@ enum Binop {
 enum PhysicalHashType : uint8_t {
     PROBE = 0,
     COLLECT = 1,
-    BUILD = 2
+    BUILD = 2 // or source
 };
 
 using hash_t = uint64_t;

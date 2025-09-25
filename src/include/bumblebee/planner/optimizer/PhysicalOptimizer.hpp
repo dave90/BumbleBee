@@ -60,6 +60,9 @@ private:
 
     void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
                               prule_ptr_vector_t& prules, idx_t& priority);
+    void generatePRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
+                              prule_ptr_vector_t& prules, idx_t& priority);
+
 
     // global client context
     ClientContext& context_;

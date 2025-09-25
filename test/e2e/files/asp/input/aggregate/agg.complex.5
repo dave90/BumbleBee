@@ -1,0 +1,6 @@
+b(X,Y,Sum,Min,Max)?
+a1(1..20,1..20,1..10).
+a2(1..11, 1..201).
+a3(1,1,1).
+a4(1,1,1).
+b(X,Y,Sum,Min,Max) :- a3(X,Y,_), a4(X,Y,_), Sum = #sum{B : a1(X,B,C), a2(C,Y)}, Min = #min{B : a1(X,B,C), a2(C,Y)}, Max = #max{B : a1(X,B,C), a2(C,Y)}.

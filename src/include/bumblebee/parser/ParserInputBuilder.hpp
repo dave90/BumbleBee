@@ -33,7 +33,7 @@ namespace bumblebee {
 class ParserInputBuilder {
 public:
 	// TODO refactor pass client context
-	ParserInputBuilder(OutputType type, bool hiddenNewPredicates);
+	ParserInputBuilder(OutputType type, bool hiddenNewPredicates, bool distinctNewPredicate);
 	virtual ~ParserInputBuilder();
 
 	virtual void onDirective( char* directiveName, char* directiveValue );
@@ -123,6 +123,7 @@ protected:
 	vector<idx_t> rulesWithAggregates_;
 
 	idx_t newPredCounter_{0};
+	bool distinctNewPredicate_;
 
 };
 

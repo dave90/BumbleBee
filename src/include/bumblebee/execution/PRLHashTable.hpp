@@ -87,14 +87,18 @@ public:
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.5;
 
+
+
     PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
+    PRLHashTable(BufferManager& manager);
     virtual ~PRLHashTable() {};
+
+    void initialize(const vector<ConstantType> &types, idx_t capacity,bool resizable);
 
     PRLHashTable(const PRLHashTable &other) = delete;
     PRLHashTable(PRLHashTable &&other) noexcept = delete;
     PRLHashTable & operator=(const PRLHashTable &other) = delete;
     PRLHashTable & operator=(PRLHashTable &&other) noexcept = delete;
-
 
     // Add a given data to HT
     void addChunk(Vector& hash, DataChunk& chunk);

@@ -104,8 +104,7 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
         groupAddressesPtr[0] = payloadPtrs_.back();
         addressesPtr[0] = other.payloadPtrs_.back();
 
-        for (idx_t j = 0; j < functions_.size(); ++j)
-            AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, 1);
+        AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, 1);
 
         return ;
     }
@@ -121,8 +120,7 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
         if (idx >= STANDARD_VECTOR_SIZE) {
             // merge now
             auto groupAddresses = move(addresses, hashes, idx);
-            for (idx_t j = 0; j < functions_.size(); ++j)
-                AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
+            AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
             idx = 0;
         }
     }

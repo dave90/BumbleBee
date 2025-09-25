@@ -38,6 +38,7 @@ public:
     idx_t threads_;
     bool printAll_;
     bool printProfiling_;
+    bool distinct_;
     FunctionRegister functionRegister_;
     fs_ptr_t fileSystem_;
     Allocator allocator_;

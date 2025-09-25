@@ -130,7 +130,7 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 		VectorOperations::copy(seq, target, sel, targetSel, sourceCount, sourceOffset, targetOffset);
 		return;
 		}
-	case VectorType::CONSTANT_VECTOR:
+		case VectorType::CONSTANT_VECTOR:
 		// sel SHOULD BE a ZERO SELECTION VECTOR
 		break; // carry on with below code
 	case VectorType::FLAT_VECTOR:

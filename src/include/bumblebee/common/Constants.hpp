@@ -48,7 +48,7 @@ namespace bumblebee {
 // String Heap. NOTE: Maximum string supported is 4096 bytes
 #define MINIMUM_HEAP_SIZE 4096
 
-// Default size of morsel (chunk to process in one thread)
+// Default size of morsel (chunk to process in one thread) Must be multiple of STANDARD_VECTOR_SIZE
 #define MORSEL_SIZE (STANDARD_VECTOR_SIZE*4)
 
 #define OUTPUT_BUFFER_SIZE 1024

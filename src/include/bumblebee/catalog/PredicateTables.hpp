@@ -23,6 +23,7 @@
 #include "bumblebee/parser/statement/Atom.hpp"
 #include "bumblebee/function/AggregateFunction.hpp"
 #include "bumblebee/execution/JoinHashTable.hpp"
+#include "bumblebee/execution/JoinPRLHashTable.hpp"
 #include "bumblebee/execution/PartitionedAggHT.hpp"
 
 namespace bumblebee{
@@ -62,8 +63,19 @@ public:
         return facts_;
     }
 
+    vector<idx_t> getKeys() const{
+        vector<idx_t> keys;
+        for (idx_t i = 0; i < predicate_->getArity(); ++i)
+            keys.push_back(i);
+        return keys;
+    }
+
     void setTypes(const vector<ConstantType>& types) {
         types_ = types;
+    }
+
+    bool isDistinct() const {
+        return predicate_->isDistinct();
     }
 
     // Get a value given a row and column index
@@ -80,13 +92,18 @@ public:
     joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys);
     bool existJoinHashTable(const vector<idx_t>& keys);
 
+    // Return a join PRL hash table with the same keys and payloads.
+    join_prl_ht_ptr_t& getJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
+    void createJoinPRLHashTable(BufferManager &manager, const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
+    bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload);
+
     // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
     partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
         return partitionedAggHT_;
     }
     partitioned_agg_ht_ptr_t& createPartitionedAggHashTable(const ClientContext& context, const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
     bool existPartitionedAggHashTable();
-
+    void mergeIntoDistinctHT(JoinPRLHashTable& ht);
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
@@ -94,12 +111,15 @@ public:
     friend bool operator==(const PredicateTables &lhs, const PredicateTables &rhs);
     friend bool operator!=(const PredicateTables &lhs, const PredicateTables &rhs);
 
+
 protected:
     // Update current types based on new types
     void updateTypes(vector<ConstantType> &newTypes);
     void loadFacts();
     void loadRanges();
     void castEntirePredicateTable(const vector<ConstantType> &newTypes);
+    void moveChunksToHT();
+    JoinPRLHashTable* getDistinctHT() const;
 
     // Types of the columns
     vector<ConstantType> types_;
@@ -120,9 +140,10 @@ protected:
 
     // hash tables data structures
     vector<joinht_ptr_t> jhtables_;
+    // PRL hash tables
+    vector<join_prl_ht_ptr_t> prlHTables_;
     // partitioned aggregate hash table (for aggregates)
     partitioned_agg_ht_ptr_t partitionedAggHT_;
-
 };
 
 using predicate_table_ptr_t = std::unique_ptr<PredicateTables>;

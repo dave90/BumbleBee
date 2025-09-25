@@ -46,6 +46,8 @@ struct RowOperations {
     //===--------------------------------------------------------------------===//
     static idx_t equal(DataChunk &columns, VectorData col_data[], const RowLayout &layout, Vector &rows,
                         SelectionVector &sel, idx_t count, SelectionVector *no_match,idx_t &no_match_count);
+    static idx_t equal(DataChunk &columns, VectorData col_data[], const RowLayout &layout, Vector &rows,
+                        SelectionVector &chunkSel,SelectionVector &rowSel, idx_t count, SelectionVector *no_match,idx_t &no_match_count);
 
 
 };

@@ -29,7 +29,7 @@ class ParserInputDirector {
 
 public:
     // TODO refactor pass client context
-    ParserInputDirector(OutputType type, bool hiddenNewPredicates);
+    ParserInputDirector(OutputType type, bool hiddenNewPredicates, bool distinctNewPredicates );
     ~ParserInputDirector() = default;
 
     void configureBuilder( builder_ptr_t );

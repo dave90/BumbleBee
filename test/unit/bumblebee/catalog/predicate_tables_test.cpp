@@ -310,6 +310,25 @@ TEST_F(PredicateTablesTest, TestMultipleBigSequence) {
 
 }
 
+
+TEST_F(PredicateTablesTest, TestMultipleBigSequenceWithSmallChunks) {
+    IntervalTerm i1 = {0,1024};
+    IntervalTerm i2 = {0,  0};
+    IntervalTerm i3 = {0,0};
+    vector<IntervalTerm> intervals = {i1,i2,i3};
+    auto fact1 = generateRangeAtom(table->predicate_.get(), intervals);
+    table->addFact(fact1);
+    auto fact2 = generateRangeAtom(table->predicate_.get(), intervals);
+    table->addFact(fact2);
+    auto fact3 = generateRangeAtom(table->predicate_.get(), intervals);
+    table->addFact(fact3);
+
+    table->initializeChunks();
+    EXPECT_EQ(table->getCount(), 1025 * 3);
+    EXPECT_EQ(table->chunkCount(), 4);
+}
+
+
 // sequence with facts
 
 

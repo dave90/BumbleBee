@@ -27,6 +27,7 @@
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
 #include "bumblebee/execution/atom/join/PhysicalHashJoin.hpp"
 #include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
+#include "bumblebee/execution/atom/join/PhysicalPRLHashJoin.hpp"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
@@ -326,6 +327,33 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& co
     patoms.push_back(std::move(patom));
 }
 
+
+void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
+        vector<idx_t>& keys, prule_ptr_vector_t& prules, idx_t& priority) {
+
+
+    vector<idx_t> cols;
+    for (idx_t i = 0;i<pred->predicate_->getArity();++i)
+        cols.push_back(i);
+
+    auto types = pred->getTypes();
+
+    patom_ptr_vector_t empty;
+    {
+        auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
+        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
+        dbCols = cols; selCols = cols;
+        // create prl ht table
+        pred->createJoinPRLHashTable(*context_.bufferManager_, pred->getTypes() , keys, {});
+        patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , pred));
+
+        prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
+        prules.push_back(std::move(pruleStats));
+    }
+    if (priority == 0)priority = 1;
+}
+
+
 void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     vector<idx_t>& keys, prule_ptr_vector_t& prules, idx_t& priority) {
 
@@ -346,7 +374,6 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     }
     {
         auto dbCols = cols, selCols = cols;
-        auto estimatedBuckets = nextPowerOfTwo(pred->getCount());
         patom_ptr_t source = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, BUILD));
         dbCols = cols; selCols = cols;
         patom_ptr_t sink = patom_ptr_t(new PhysicalNopeOutput(types, dbCols, selCols ));
@@ -443,8 +470,25 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         patoms.push_back(std::move(nj));
         return;
     }
-    // hash join possible, check if the hash table is present
+    if (atom.isNegative()) {
+        BB_ASSERT(keys.size() == pred->predicate_->getArity());
+        // negative atom use PRL join
+        if (!pred->existJoinPRLHashTable(keys, {})) {
+            // generate the build rule
+            generatePRLHTBuildRules(pred, keys, prules, priority);
+        }else if (!pred->getJoinPRLHashTable(keys, {})->isReady()) {
+            // ht is not ready so will be created in priority 0
+            // then increment prio if is 0
+            if (priority == 0)priority = 1;
 
+        }
+
+        auto nj = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dcCols, selCols, pred, keys, dcKeys, true ));
+        patoms.push_back(std::move(nj));
+        return;
+    }
+
+    // hash join is possible, check if the hash table is present
     if (!pred->existJoinHashTable(keys) ) {
         // we need to build the hash table
         generateHTBuildRules(pred, keys, prules, priority);
@@ -455,7 +499,6 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
 
     auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, dcKeys, joinConditions ));
     patoms.push_back(std::move(nj));
-
 }
 
 void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules, idx_t priority) {
@@ -491,7 +534,6 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
 
         // now create also the build rule with priority +1
         vector<idx_t> dcCols;
-        idx_t estinametedCardinality = 0;
         // does not need dcCols and sel cols
         auto source = patom_ptr_t(new PhysicalPartitionedAggHT(context_, types, dcCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::BUILD  ));
         auto nopeSink = patom_ptr_t(new PhysicalNopeOutput(types, dcCols, selCols ));
@@ -503,7 +545,19 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
 
         return;
     }
-    sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols, ptSink.get()));
+    if (!ptSink->isDistinct())
+        sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols, ptSink.get()));
+    else {
+        vector<idx_t> keys = ptSink->getKeys();
+        vector<ConstantType> headTypes;
+        for (auto c: headCols)
+            headTypes.push_back(types[c]);
+
+        if (!ptSink->existJoinPRLHashTable(keys, {})) {
+            ptSink->createJoinPRLHashTable(*context_.bufferManager_,headTypes,keys,{});
+        }
+        sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, headCols, ptSink.get()));
+    }
 }
 
 prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
@@ -523,8 +577,14 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     firstAtom.getVariables(vars);
     auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
     auto types = types_;
-    source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
-
+    if (!ptSource->isDistinct())
+        source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
+    else {
+        if (!ptSource->existJoinPRLHashTable(ptSource->getKeys(), {})) {
+            ptSource->createJoinPRLHashTable(*context_.bufferManager_,ptSource->getTypes(),ptSource->getKeys(),{});
+        }
+        source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, cols_[0], selectedCols_[0], ptSource.get()));
+    }
 
     for (idx_t i=1;i<rule.getBody().size();++i) {
         if (skipAtom_.contains(i) && skipAtom_[i])continue;

@@ -1,0 +1,68 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+#include "PRLHashTable.hpp"
+#include "bumblebee/parser/statement/Predicate.hpp"
+
+namespace bumblebee{
+
+
+class JoinPRLHashTable: public PRLHashTable {
+
+public:
+    JoinPRLHashTable(BufferManager &manager, const vector<ConstantType> &types,
+        const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
+
+
+    // Add a given data to HT
+    void addChunk(DataChunk& payload);
+
+    // Probe the left chunk (classical join)
+    void probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,SelectionVector &lsel, SelectionVector &rsel, DataChunk &result);
+
+
+    // Execute the match operation (if row exist or not)
+    void match(DataChunk &lchunk, Vector& lhash,SelectionVector &matchSel, idx_t& matchCount, SelectionVector &nonMatchSel, idx_t& noMatchCount);
+
+    bool checkKeysAndPayloads(const vector<idx_t>& keys,const vector<idx_t>& payloads);
+
+    bool isReady();
+    void setReady();
+private:
+    void incrementBuckets(Vector& buckets, SelectionVector& notEqual, idx_t notEqualCount);
+    void findAddresses(const SelectionVector* sel, idx_t size, Vector &buckets, Vector &lhash, SelectionVector &nonMatchSel, idx_t& noMatchCount,SelectionVector& toMatch , idx_t& toMatchCount, Vector& addresses);
+
+
+    // Keys of the HT
+    vector<idx_t> keyColumns_;
+    // Payload of the HT
+    vector<idx_t> payloadColumns_;
+    // Keys and payload columns
+    vector<idx_t> cols_;
+    // keys row layout
+    RowLayout keyLayout_;
+
+    bool ready_{false};
+
+
+};
+
+using join_prl_ht_ptr_t = std::unique_ptr<JoinPRLHashTable>;
+
+}

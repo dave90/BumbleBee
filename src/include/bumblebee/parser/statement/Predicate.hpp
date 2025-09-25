@@ -61,6 +61,9 @@ public:
     hash_t  hash() const;
     std::string toString();
 
+    bool isDistinct();
+    void setDistinct();
+
 private:
     // name of the rpedicate
     std::unique_ptr<char[]> name_;
@@ -72,7 +75,8 @@ private:
     bool internal_{true};
     // If the predicated is solved or undefined
     bool solved_{true};
-
+    // true if contains distinct data ( for example recursion predicate )
+    bool distinct_{false};
 public:
     //static functions
     static string buildAggregateInternalPredicate(idx_t suffixCounter, const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<string>& funcNames);

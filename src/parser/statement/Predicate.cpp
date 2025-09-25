@@ -89,6 +89,14 @@ std::string Predicate::toString() {
     return name_.get();
 }
 
+bool Predicate::isDistinct() {
+    return distinct_;
+}
+
+void Predicate::setDistinct() {
+    distinct_ = true;
+}
+
 bool PredicateMapEntry::operator==(const PredicateMapEntry &other) const {
     return arity_ == other.arity_ && strcmp(name_, other.name_) == 0;
 }

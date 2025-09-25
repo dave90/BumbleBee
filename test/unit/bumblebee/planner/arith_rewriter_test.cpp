@@ -36,7 +36,7 @@ using namespace filesystem;
 
 
 TEST(ArithRewriterTest, NoRewriting) {
-    ParserInputDirector pid(TEXT, true);
+    ParserInputDirector pid(TEXT, true, false);
 
     auto program = getRulesFromFile("rule3");
     EXPECT_EQ(program.size(), 1);
@@ -51,7 +51,7 @@ TEST(ArithRewriterTest, NoRewriting) {
 }
 
 TEST(ArithRewriterTest, RewriteArith) {
-    ParserInputDirector pid(TEXT, true);
+    ParserInputDirector pid(TEXT, true, false);
 
     auto program = getRulesFromFile("rule4");
     EXPECT_EQ(program.size(), 1);
@@ -69,7 +69,7 @@ TEST(ArithRewriterTest, RewriteArith) {
 
 
 TEST(ArithRewriterTest, RewriteArithWithConstant) {
-    ParserInputDirector pid(TEXT,true );
+    ParserInputDirector pid(TEXT,true ,false);
 
     auto program = getRulesFromFile("rule6");
     EXPECT_EQ(program.size(), 1);

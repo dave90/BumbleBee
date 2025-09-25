@@ -15,8 +15,16 @@ input_files = [p for p in input_folder.rglob("*") if p.is_file()]
 RERUN_MT = 4
 THREAD = 4
 
+# makes id friendly (pytest test.py::test_asp -q --collect-onl)
+# so you can run test:  pytest  'test.py::test_asp[aggregate/agg.complex.5]'
+def _id(p: Path):
+    try:
+        return p.relative_to(input_folder).as_posix()
+    except ValueError:
+        return p.as_posix()
+
 # Main pytest function
-@pytest.mark.parametrize("input_file", input_files)
+@pytest.mark.parametrize("input_file", input_files, ids=_id)
 def test_asp(input_file: Path):
     actual_folder.mkdir(exist_ok=True)
 
@@ -34,7 +42,7 @@ def test_asp(input_file: Path):
     assert compare_files_no_duplicates(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"
 
 
-@pytest.mark.parametrize("input_file", input_files)
+@pytest.mark.parametrize("input_file", input_files, ids=_id)
 def test_mt_asp(input_file: Path):
     actual_folder.mkdir(exist_ok=True)
 

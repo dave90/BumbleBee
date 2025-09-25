@@ -39,6 +39,7 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
     app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(1);
     app.add_flag("-a,--print-all", context_.printAll_, "Print all predicates")->default_val(0);
     app.add_flag("-r,--print-profiling", context_.printProfiling_, "Print profilings")->default_val(0);
+    app.add_flag("-d,--distinct", context_.distinct_, "Set distinct all the predicates")->default_val(0);
 
     CLI11_PARSE(app, argc, argv);
     init_logger(context_.logFilename_.c_str()  , context_.printLog_);
@@ -47,17 +48,18 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
 }
 
 void BumbleBeeDB::printArgs() {
-    LOG_INFO("Arguments:\n\tLog Filename: %s\n\tPrint Log: %d\n\tSingle shot: %d \n\tThreads:%d \n\tPrint all predicates:%d",
+    LOG_INFO("Arguments:\n\tLog Filename: %s\n\tPrint Log: %d\n\tSingle shot: %d \n\tThreads:%d \n\tPrint all predicates:%d \n\tDistinct:%d",
         context_.logFilename_.c_str(),
         context_.printLog_,
         context_.singleShot_,
         context_.threads_,
-        context_.printAll_);
+        context_.printAll_,
+        context_.distinct_);
 }
 
 void BumbleBeeDB::parseProgram(rules_vector_t &program) {
     // Parse the program
-    ParserInputDirector inputDirector(TEXT, !context_.printAll_); // DEFAULT TEXT output
+    ParserInputDirector inputDirector(TEXT, !context_.printAll_, context_.distinct_); // DEFAULT TEXT output
     inputDirector.parse(context_.inputFiles_);
     // Check errors during parsing
     if (inputDirector.getBuilder()->isFoundASafetyError()) {
@@ -163,9 +165,22 @@ void BumbleBeeDB::print() {
         if (predicate->isInternal())continue;
         auto& pt = context_.defaultSchema_.getPredicateTable(predicate);
         pt->initializeChunks(); // init chunks if no rules initialized
-        if (!pt->chunkCount())continue;
-        for (idx_t i = 0; i < pt->chunkCount(); ++i) {
-            outputBuilder.outputAtoms(pt->getChunk(i), predicate);
+        if (!pt->isDistinct() || !pt->existJoinPRLHashTable(pt->getKeys(), {})) {
+            if (!pt->chunkCount())continue;
+            for (idx_t i = 0; i < pt->chunkCount(); ++i) {
+                outputBuilder.outputAtoms(pt->getChunk(i), predicate);
+            }
+        }else {
+            auto& ht = pt->getJoinPRLHashTable(pt->getKeys(), {});
+            idx_t offset = 0;
+            DataChunk result;
+            result.initialize(pt->getTypes());
+            while (offset < pt->getCount()) {
+                result.setCardinality(0);
+                ht->scan(offset, result);
+                outputBuilder.outputAtoms(result, predicate);
+                offset += STANDARD_VECTOR_SIZE;
+            }
         }
     }
 }

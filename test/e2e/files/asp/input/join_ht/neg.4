@@ -1,0 +1,8 @@
+a(2025,"alpha").
+a(2026,"beta").
+b(0..1024,"alpha").
+b(0..1024,"beta").
+b(0..1024,"gamma").
+
+c(X,S) :- b(X,S), not a(X,S).
+d(X,S) :- b(X,S), a(X,S).

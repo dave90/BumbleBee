@@ -61,6 +61,16 @@ void DataChunk::reference(DataChunk &chunk, const vector<idx_t>& cols) {
     }
 }
 
+void DataChunk::initAndReference(DataChunk &chunk, const vector<idx_t> &cols) {
+    vector<ConstantType> types;
+    for (idx_t i=0;i<cols.size();++i) {
+        BB_ASSERT(i < chunk.getTypes().size());
+        types.push_back(chunk.getTypes()[i]);
+    }
+    initializeEmpty(types);
+    reference(chunk, cols);
+}
+
 std::unique_ptr<DataChunk> DataChunk::clone() {
     data_chunk_ptr_t chunk = std::make_unique<DataChunk>();
     chunk->initializeEmpty(getTypes());

@@ -453,7 +453,12 @@ void JoinHashTable::build(idx_t bucket) {
         for (idx_t j = 0; j< dc.columnCount(); j++) {
             auto& sourceVector = dc.data_[j];
             auto& targetVector = chunkone_.data_[j];
-            VectorOperations::copy(sourceVector,targetVector,sel,size, 0, bucketOffset);
+            if (sourceVector.getVectorType() != VectorType::CONSTANT_VECTOR)
+                VectorOperations::copy(sourceVector,targetVector,sel,size, 0, bucketOffset);
+            else
+                // because is constant vector pass the zero selection vector
+                VectorOperations::copy(sourceVector,targetVector,ConstantVector::ZERO_SELECTION_VECTOR,size, 0, bucketOffset);
+
         }
         // calculate the bloom filter and add it in the directory
         accBloom |= bloomFilterBitVector(BLOOM_SIZE, hash, sel, size);

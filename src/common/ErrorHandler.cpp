@@ -41,11 +41,13 @@ void ErrorHandler::errorGeneric( const std::string& message )
 void ErrorHandler::errorGeneric( const char* message )
 {
     std::cerr << ERROR_GENERIC << ": " << message << std::endl;
+    exit( ERROR_NOT_IMPLEMENTED );
     exit( ERROR_GENERIC_CODE );
 }
 
 void ErrorHandler::errorNotImplemented(const char *message) {
     std::cerr << ERROR_NOT_IMPLEMENTED << ": " << message << std::endl;
+    BB_ASSERT(false);
     exit( ERROR_NOT_IMPLEMENTED );
 }
 
@@ -57,12 +59,14 @@ void ErrorHandler::errorNotImplemented( const std::string& message )
 void ErrorHandler::outOfMemory( const std::string& message )
 {
     std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
+    exit( ERROR_NOT_IMPLEMENTED );
     exit( ERROR_OUT_OF_MEMORY );
 }
 
 void ErrorHandler::outOfMemory( const char* message )
 {
     std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
+    exit( ERROR_NOT_IMPLEMENTED );
     exit( ERROR_OUT_OF_MEMORY );
 }
 } // bumblebee

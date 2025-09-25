@@ -80,6 +80,8 @@ public:
 	void reference(DataChunk &chunk);
 	// Set the DataChunk to reference another data chunk only on columns defined in cols
 	void reference(DataChunk &chunk, const vector<idx_t>& cols);
+	// call first the initialize and then reference the columns
+	void initAndReference(DataChunk &chunk, const vector<idx_t>& cols);
 
 	// Create a new pointer data chunk that reference to this data chunk
 	std::unique_ptr<DataChunk> clone();

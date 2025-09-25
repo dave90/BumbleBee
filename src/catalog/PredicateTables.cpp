@@ -18,6 +18,7 @@
  */
 #include "bumblebee/catalog/PredicateTables.hpp"
 
+#include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/Log.hpp"
 #include "bumblebee/parser/statement/Atom.hpp"
 #include "bumblebee/execution/JoinHashTable.hpp"
@@ -77,8 +78,33 @@ bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
     return false;
 }
 
+
+join_prl_ht_ptr_t & PredicateTables::getJoinPRLHashTable( const vector<idx_t> &keys, const vector<idx_t> &payload) {
+    BB_ASSERT(existJoinPRLHashTable(keys, payload));
+    for (auto&ht: prlHTables_)
+        if (ht->checkKeysAndPayloads(keys, payload))
+            return ht;
+
+    return prlHTables_.back();
+}
+
+void PredicateTables::createJoinPRLHashTable(BufferManager &manager, const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload ) {
+    if (existJoinPRLHashTable(keys, payload)) return;
+    auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(manager, types, keys, payload));
+    prlHTables_.push_back(std::move(ht));
+}
+
+
+bool PredicateTables::existJoinPRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) {
+    for (auto&ht: prlHTables_)
+        if (ht->checkKeysAndPayloads(keys, payload))
+            return true;
+
+    return false;
+}
+
 partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const ClientContext& context, const vector<idx_t> &groups, const vector<idx_t> &payloads,
-    const vector<AggregateFunction *> &aggregateFunctions) {
+                                                                          const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
     partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, aggregateFunctions));
     return partitionedAggHT_;
@@ -87,6 +113,20 @@ partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const 
 
 bool PredicateTables::existPartitionedAggHashTable() {
     return partitionedAggHT_ != nullptr;
+}
+
+void PredicateTables::mergeIntoDistinctHT(JoinPRLHashTable &ht) {
+    lock_guard lock(mutex_);
+    auto dht = getDistinctHT();
+    dht->combine(ht);
+    dht->setReady();
+
+    // if the types are UNKNOWN set tye types from ht
+    for (auto c: types_)
+        if (c == UNKNOWN) {
+            types_ = dht->getTypes();
+            break;
+        }
 }
 
 void PredicateTables::initializeChunks() {
@@ -98,12 +138,46 @@ void PredicateTables::initializeChunks() {
     if (!ranges_.empty()) loadRanges();
     facts_.clear();
     ranges_.clear();
+    if (isDistinct()) {
+        // is distinct predicate move the chunks in the HT
+        moveChunksToHT();
+    }
     LOG_DEBUG("Initializing PredicateTables %s completed", predicate_->toString().c_str());
 }
 
+JoinPRLHashTable * PredicateTables::getDistinctHT() const {
+    vector<idx_t> keys;
+    for (idx_t i=0;i<predicate_->getArity();++i)
+        keys.push_back(i);
+    JoinPRLHashTable* htPtr = nullptr;
+    for (auto&ht: prlHTables_)
+        if (ht->checkKeysAndPayloads(keys, {})) {
+            htPtr = ht.get();
+            break;
+        }
+    BB_ASSERT(htPtr != nullptr);
+    return htPtr;
+}
+
+void PredicateTables::moveChunksToHT(){
+    vector<idx_t> keys;
+    for (idx_t i=0;i<predicate_->getArity();++i)keys.push_back(i);
+    if (!existJoinPRLHashTable(keys, {})) {
+        LOG_WARNING("Warning, calling distinct on EDB predicates, data will not be unique");
+        return;
+    }
+    JoinPRLHashTable* htPtr = getDistinctHT();
+    for (auto& chunk:chunks_.chunks()) {
+        htPtr->addChunk(*chunk);
+    }
+}
+
 idx_t PredicateTables::getCount() const {
-    if (facts_.empty() && ranges_.empty())
-        return chunks_.getCount();
+    if (facts_.empty() && ranges_.empty()) {
+        if (!isDistinct())
+            return chunks_.getCount();
+        return getDistinctHT()->getSize();
+    }
     auto estimateCount = facts_.size();
     for (auto& atom: ranges_) {
         auto rangeSie = 1;
@@ -240,23 +314,10 @@ void PredicateTables::loadRanges() {
     // process the range atoms
     for (auto& atom: ranges_) {
         auto chunks = getChunksFromRange(atom, types_);
-        auto chunksSize = chunks.size();
 
-        // check if the last chunk is not totally full
-        if (chunks_.chunkCount() > 0  ) {
-            auto &lastChunk = chunks_.chunks().back();
-            if (lastChunk->getSize() < lastChunk->getCapacity()) {
-                // merge the last chunk created by this atom with the last chunk stored (copy needed :( )
-                chunks_.append(*chunks.back());
-                // remove the chunk appended
-                chunks.pop_back();
-                --chunksSize;
-            }
-        }
 
         for (auto& chunk: chunks) {
-            // do not copy the chunk :)
-            chunks_.append(std::move(chunk));
+            chunks_.append(*chunk);
         }
 
     }
@@ -269,7 +330,7 @@ Value PredicateTables::getValue(idx_t column, idx_t index) {
 void PredicateTables::append(data_chunk_ptr_t chunk) {
     BB_ASSERT(chunk->columnCount() == predicate_->getArity());
     lock_guard guard(mutex_);
-    if (types_.size() > 0 && types_[0] == UNKNOWN) {
+    if (!types_.empty() && types_[0] == UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk->getTypes();
     }
@@ -304,10 +365,13 @@ void PredicateTables::append(DataChunk& chunk) {
             castEntirePredicateTable(chunk.getTypes());
     }
 
-    if (types_.size() > 0 && types_[0] == UNKNOWN) {
+    if (!types_.empty() && types_[0] == UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk.getTypes();
     }
     chunks_.append(chunk);
 }
+
+
+
 }
