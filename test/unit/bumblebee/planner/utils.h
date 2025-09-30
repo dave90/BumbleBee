@@ -20,6 +20,7 @@
 
 #include <filesystem>
 
+#include "bumblebee/ClientContext.hpp"
 #include "bumblebee/output/OutputBuilder.hpp"
 #include "bumblebee/parser/ParserInputDirector.hpp"
 #include "bumblebee/parser/statement/Rule.hpp"
@@ -30,7 +31,8 @@ using namespace bumblebee;
 
 inline rules_vector_t getRulesFromFile(string testFileName) {
     path TEST_FILE_PATH = __FILE__;
-    ParserInputDirector pid(TEXT, true, false);
+    ClientContext context;
+    ParserInputDirector pid(TEXT, context);
     path dataFilePath = TEST_FILE_PATH.parent_path() / "data" / testFileName;
     pid.parse({dataFilePath.c_str()});
     auto program = std::move(pid.getBuilder()->getProgram());

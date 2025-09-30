@@ -129,10 +129,8 @@ void PhysicalPRLHashJoin::initialize() {
 PhysicalPRLHashJoin::~PhysicalPRLHashJoin() {}
 
 idx_t PhysicalPRLHashJoin::getMaxThreads() const {
-    BB_ASSERT(pt_->chunkCount() == 0); // expected data in prl hash table
     BB_ASSERT(payloads_.empty());
-    auto& prlht = pt_->getJoinPRLHashTable( keys_, payloads_);
-    return prlht->getSize() / MORSEL_SIZE + 1;
+    return pt_->getCount() / MORSEL_SIZE + 1;
 }
 
 bool PhysicalPRLHashJoin::isSource() const {

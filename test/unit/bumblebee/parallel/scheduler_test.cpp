@@ -48,8 +48,8 @@ protected:
     ThreadContext context{client_context};
 
     void SetUp() override{
-        sourcePtable = std::make_shared<PredicateTables>("a",3);
-        sinkPtable = std::make_shared<PredicateTables>("b",2);
+        sourcePtable = std::make_shared<PredicateTables>(&client_context,"a",3);
+        sinkPtable = std::make_shared<PredicateTables>(&client_context,"b",2);
     }
 
 

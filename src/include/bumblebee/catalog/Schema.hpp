@@ -34,7 +34,7 @@ public:
 
     Schema(const Schema &other) = delete;
     Schema & operator=(const Schema &other) = delete;
-    Predicate* createPredicate(const char* predicateName, unsigned arity);
+    Predicate* createPredicate(ClientContext* context, const char* predicateName, unsigned arity);
     predicate_table_ptr_t& getPredicateTable(Predicate*);
     vector<Predicate*> getPredicates();
     Predicate* getFASOPredicate();

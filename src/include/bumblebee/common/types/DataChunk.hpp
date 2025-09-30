@@ -146,6 +146,7 @@ public:
 	// cast the data chunk based on the input types
 	// this method COPY data (use it if necessary)
 	void cast(const vector<ConstantType>& types);
+	void cast(DataChunk& result);
 
 private:
 	// The amount of tuples stored in the data chunk

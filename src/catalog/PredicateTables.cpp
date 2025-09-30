@@ -25,7 +25,7 @@
 #include "bumblebee/execution/PartitionedAggHT.hpp"
 
 namespace bumblebee{
-PredicateTables::PredicateTables(const char* name, unsigned arity): predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
+PredicateTables::PredicateTables(ClientContext* context_, const char* name, unsigned arity): context_(context_), predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
 }
 
 bool operator==(const PredicateTables &lhs, const PredicateTables &rhs) {
@@ -88,9 +88,9 @@ join_prl_ht_ptr_t & PredicateTables::getJoinPRLHashTable( const vector<idx_t> &k
     return prlHTables_.back();
 }
 
-void PredicateTables::createJoinPRLHashTable(BufferManager &manager, const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload ) {
+void PredicateTables::createJoinPRLHashTable( const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload ) {
     if (existJoinPRLHashTable(keys, payload)) return;
-    auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(manager, types, keys, payload));
+    auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, keys, payload));
     prlHTables_.push_back(std::move(ht));
 }
 
@@ -103,10 +103,10 @@ bool PredicateTables::existJoinPRLHashTable(const vector<idx_t> &keys, const vec
     return false;
 }
 
-partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable(const ClientContext& context, const vector<idx_t> &groups, const vector<idx_t> &payloads,
+partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
                                                                           const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
-    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, aggregateFunctions));
+    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(*context_, groups, payloads, aggregateFunctions));
     return partitionedAggHT_;
 }
 
@@ -118,15 +118,34 @@ bool PredicateTables::existPartitionedAggHashTable() {
 void PredicateTables::mergeIntoDistinctHT(JoinPRLHashTable &ht) {
     lock_guard lock(mutex_);
     auto dht = getDistinctHT();
+    if (dht->getTypes() != ht.getTypes()) {
+        // different types, check if we need to cast the entire pt ht tables
+        // or just the ht
+        auto ctype = ht.getTypes();
+        auto type = dht->getTypes();
+        vector<ConstantType> commonTypes;
+        for (idx_t i =0;i<type.size();++i)
+            commonTypes.push_back(getCommonType(ctype[i], type[i]));
+        if (commonTypes!= dht->getTypes()) {
+            // we need to cast the pt ht
+            join_prl_ht_ptr_t newDht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, commonTypes, getKeys(), {}, dht->getSize(), true));
+            JoinPRLHashTable::cast( *dht, *newDht);
+            prlHTables_.erase(std::remove_if(prlHTables_.begin(), prlHTables_.end(),
+            [dht](const join_prl_ht_ptr_t& p){ return p && p.get() == dht;}),
+            prlHTables_.end());
+            dht = newDht.get();
+            prlHTables_.push_back(std::move(newDht));
+        }
+        if (ht.getTypes() != dht->getTypes()) {
+            JoinPRLHashTable::cast(ht, *dht);
+            types_ = dht->getTypes();
+            dht->setReady();
+            return;
+        }
+    }
     dht->combine(ht);
     dht->setReady();
-
-    // if the types are UNKNOWN set tye types from ht
-    for (auto c: types_)
-        if (c == UNKNOWN) {
-            types_ = dht->getTypes();
-            break;
-        }
+    types_ = dht->getTypes();
 }
 
 void PredicateTables::initializeChunks() {
@@ -163,8 +182,7 @@ void PredicateTables::moveChunksToHT(){
     vector<idx_t> keys;
     for (idx_t i=0;i<predicate_->getArity();++i)keys.push_back(i);
     if (!existJoinPRLHashTable(keys, {})) {
-        LOG_WARNING("Warning, calling distinct on EDB predicates, data will not be unique");
-        return;
+        createJoinPRLHashTable(getTypes(), getKeys(), {});
     }
     JoinPRLHashTable* htPtr = getDistinctHT();
     for (auto& chunk:chunks_.chunks()) {

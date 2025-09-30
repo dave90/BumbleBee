@@ -216,6 +216,24 @@ void JoinPRLHashTable::incrementBuckets(Vector& buckets, SelectionVector& notEqu
             bucketPtr[idx] = 0;
     }
 }
+
+void JoinPRLHashTable::cast(JoinPRLHashTable &h1, JoinPRLHashTable &h2) {
+    BB_ASSERT(h1.getTypes() != h2.getTypes());
+    BB_ASSERT(h1.getTypes().size() == h2.getTypes().size());
+
+    id_t offset = 0;
+    DataChunk chunk;
+    chunk.initialize(h1.getTypes());
+    DataChunk castChunk;
+    castChunk.initialize(h2.getTypes());
+    while (offset < h1.getSize()) {
+        h1.scan(offset, chunk);
+        chunk.cast(castChunk);
+        castChunk.setCardinality(chunk.getSize());
+        h2.addChunk(castChunk);
+        offset += STANDARD_VECTOR_SIZE;
+    }
+}
 }
 
 

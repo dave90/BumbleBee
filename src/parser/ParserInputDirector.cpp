@@ -29,11 +29,11 @@ static ParsingVar pv;
 
 namespace bumblebee {
 
-ParserInputDirector::ParserInputDirector(OutputType type, bool hiddenNewPredicates,bool distinctNewPredicates) : parserLine_(0),
+ParserInputDirector::ParserInputDirector(OutputType type, ClientContext& context) : parserLine_(0),
     parserFile_(nullptr),
     parserErrors_(0),
     parserStateInternal_(false),
-    builder_(std::make_shared<ParserInputBuilder>(type,hiddenNewPredicates, distinctNewPredicates)),
+    builder_(std::make_shared<ParserInputBuilder>(type,context)),
     outputType_(type),
     findError_(false){}
 

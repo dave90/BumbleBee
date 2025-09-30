@@ -23,7 +23,7 @@
 #include "bumblebee/common/Helper.hpp"
 
 namespace bumblebee{
-PartitionedAggHT::PartitionedAggHT(const ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
+PartitionedAggHT::PartitionedAggHT(ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
     const vector<AggregateFunction*>& functions, idx_t partitions)
     : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions) {
     BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2

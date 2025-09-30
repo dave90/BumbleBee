@@ -29,11 +29,38 @@ public:
         rpos_ = 0;
         lpos_ = 0;
         rchunk_ = 0;
+        cacheChunk_.setCardinality(0);
+    }
+
+
+    // Load the cache chunk and return true if end is reached
+    bool loadCache(PredicateTables* pt) {
+        if (rpos_ < cacheChunk_.getSize())
+            return false;
+
+        // cache the next right chunk
+        rpos_ = 0;
+        bool finished = false;
+        if (!pt->isDistinct()) {
+            if (rchunk_ < pt->chunkCount())
+                cacheChunk_.reference(pt->getChunk(rchunk_++));
+            else
+                finished = true;
+        }else {
+            auto& ht = pt->getJoinPRLHashTable(pt->getKeys(), {});
+            if (rchunk_ < ht->getSize()) {
+                ht->scan(rchunk_, cacheChunk_);
+                rchunk_ += cacheChunk_.getSize();
+            }else
+                finished = true;
+        }
+        return finished;
     }
 
     idx_t rpos_{0};
     idx_t rchunk_{0};
     idx_t lpos_{0};
+    DataChunk cacheChunk_;
 
     bool isInitialized_{false};
 };
@@ -91,13 +118,18 @@ AtomResultType PhysicalNestedLoop::execute(ThreadContext &context, DataChunk &in
     if (!cstate.isInitialized_) {
         pt_->initializeChunks();
         cstate.isInitialized_ = true;
+        if (!pt_->isDistinct())
+            cstate.cacheChunk_.initializeEmpty(pt_->getTypes());
+        else
+            cstate.cacheChunk_.initialize(pt_->getTypes());
+
     }
 
     auto& lchunk = input;
     auto count = 0;
     // loop until we produce output data chunk, or we complete the join
-    while (!count && cstate.rchunk_ < pt_->chunkCount()) {
-        auto& rchunk = pt_->getChunk(cstate.rchunk_);
+    while (!count && !cstate.loadCache(pt_)) {
+        auto& rchunk = cstate.cacheChunk_;
 
         SelectionVector lsel(STANDARD_VECTOR_SIZE);
         SelectionVector rsel(STANDARD_VECTOR_SIZE);
@@ -111,10 +143,6 @@ AtomResultType PhysicalNestedLoop::execute(ThreadContext &context, DataChunk &in
             chunk.slice(rSelChunk, rsel, count, dcCols_);
         }
 
-        if (cstate.rpos_ >= rchunk.getSize()) {
-            ++cstate.rchunk_;
-            cstate.rpos_ = 0;
-        }
     }
     context.profiler_.endPhysicalAtom(chunk);
 

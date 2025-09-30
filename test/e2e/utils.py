@@ -29,6 +29,13 @@ def compare_files_no_duplicates(file1: Path, file2: Path) -> bool:
         lines2 = sorted((f2.readlines()))
     return lines1 == lines2
 
+def compare_files(file1: Path, file2: Path) -> bool:
+    """Compare two files after sorting their lines."""
+    with file1.open("r", encoding="utf-8") as f1, file2.open("r", encoding="utf-8") as f2:
+        lines1 = sorted(f1.readlines())
+        lines2 = sorted(f2.readlines())
+    return lines1 == lines2
+
 # return true is containing a query
 def contains_query(input_file:str):
     f = open(input_file, "r")

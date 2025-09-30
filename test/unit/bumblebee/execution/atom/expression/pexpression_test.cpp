@@ -42,7 +42,7 @@ protected:
 
 
     void SetUp() override{
-        ptable = std::make_shared<PredicateTables>("a",5);
+        ptable = std::make_shared<PredicateTables>(&client_context, "a",5);
     }
 
     vector<ConstantType> testTypes{ConstantType::BIGINT, ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::USMALLINT,ConstantType::SMALLINT  };

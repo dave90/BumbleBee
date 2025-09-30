@@ -34,7 +34,7 @@ public:
     // public pointer to the predicate
     predicate_ptr_t predicate_;
 
-    PredicateTables(const char* name, unsigned arity);
+    PredicateTables(ClientContext* context_, const char* name, unsigned arity);
     PredicateTables(const PredicateTables &other) = delete;
     PredicateTables(PredicateTables &&other) noexcept = delete;
     ~PredicateTables() = default;
@@ -94,14 +94,14 @@ public:
 
     // Return a join PRL hash table with the same keys and payloads.
     join_prl_ht_ptr_t& getJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
-    void createJoinPRLHashTable(BufferManager &manager, const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
+    void createJoinPRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
     bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload);
 
     // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
     partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
         return partitionedAggHT_;
     }
-    partitioned_agg_ht_ptr_t& createPartitionedAggHashTable(const ClientContext& context, const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
+    partitioned_agg_ht_ptr_t& createPartitionedAggHashTable( const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
     bool existPartitionedAggHashTable();
     void mergeIntoDistinctHT(JoinPRLHashTable& ht);
 
@@ -144,6 +144,8 @@ protected:
     vector<join_prl_ht_ptr_t> prlHTables_;
     // partitioned aggregate hash table (for aggregates)
     partitioned_agg_ht_ptr_t partitionedAggHT_;
+
+    ClientContext* context_;
 };
 
 using predicate_table_ptr_t = std::unique_ptr<PredicateTables>;

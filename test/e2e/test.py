@@ -2,7 +2,7 @@ import time
 import pytest
 import os
 from pathlib import Path
-from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query
+from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files
 
 
 EXE_PATH = os.path.join("..","..","cmake-build-debug","BumbleBee")
@@ -40,6 +40,23 @@ def test_asp(input_file: Path):
     assert expected_file.exists(), f"Expected file missing: {expected_file}"
     assert output_file.exists(), f"Output file missing: {output_file}"
     assert compare_files_no_duplicates(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"
+
+@pytest.mark.parametrize("input_file", input_files, ids=_id)
+def test_distinct_asp(input_file: Path):
+    actual_folder.mkdir(exist_ok=True)
+
+    output_file = actual_folder / input_file.name
+    expected_file = expected_folder / input_file.name
+
+    args = ["-d", "-a", "-i"]
+    if contains_query(str(input_file)):
+        args = ["-d","-i"]
+
+    run_process_on_file(EXE_PATH, args, input_file, output_file)
+
+    assert expected_file.exists(), f"Expected file missing: {expected_file}"
+    assert output_file.exists(), f"Output file missing: {output_file}"
+    assert compare_files(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"
 
 
 @pytest.mark.parametrize("input_file", input_files, ids=_id)

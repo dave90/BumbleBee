@@ -138,7 +138,7 @@ pstate_ptr_t PhysicalPartitionedAggHT::getState() const {
 }
 
 gpstate_ptr_t PhysicalPartitionedAggHT::getGlobalState() const {
-    auto& paht = pt_->createPartitionedAggHashTable(context_, groupCols_, payloadCols_, aggregateFunctions_);
+    auto& paht = pt_->createPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_);
     BB_ASSERT(!paht->isReady()); // during build or collect we do not expect is ready
     return gpstate_ptr_t(new GlobalAggHTJoinAtomState(*paht));
 }

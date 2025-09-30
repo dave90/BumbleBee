@@ -285,4 +285,15 @@ void DataChunk::cast(const vector<ConstantType>& types) {
         data_[i].reference(newVec);
     }
 }
+
+void DataChunk::cast(DataChunk &result) {
+    BB_ASSERT(data_.size() == result.columnCount());
+    for (idx_t i = 0; i < columnCount(); i++) {
+        if (data_[i].getType() == result.getTypes()[i])
+            result.data_[i].reference(data_[i]);
+
+        LOG_DEBUG("Casting vector %s to %s.", ctypeToString(data_[i].getType()).c_str(), ctypeToString(result.data_[i].getType()).c_str() );
+        VectorOperations::cast(data_[i], result.data_[i], getSize());
+    }
+}
 }

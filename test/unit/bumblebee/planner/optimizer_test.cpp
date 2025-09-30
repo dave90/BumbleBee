@@ -34,7 +34,9 @@ using namespace filesystem;
 
 
 TEST(OptimizerTest, OptimizeSimpleRule) {
-    ParserInputDirector pid(TEXT, true, false);
+    ClientContext context;
+
+    ParserInputDirector pid(TEXT, context);
 
     auto program = getRulesFromFile("program1");
     EXPECT_EQ(program.size(), 1);
@@ -43,7 +45,6 @@ TEST(OptimizerTest, OptimizeSimpleRule) {
     string beforeRewriting = rule.toString();
     std::cout << beforeRewriting << std::endl;
 
-    ClientContext context;
     PhysicalOptimizer optimizer(context);
     auto prules = optimizer.optimize(rule);
     EXPECT_EQ(prules.size(), 1);
@@ -53,7 +54,9 @@ TEST(OptimizerTest, OptimizeSimpleRule) {
 }
 
 TEST(OptimizerTest, OptimizeBuiltinRule) {
-    ParserInputDirector pid(TEXT, true , false);
+    ClientContext context;
+
+    ParserInputDirector pid(TEXT, context);
 
     auto program = getRulesFromFile("program2");
     EXPECT_EQ(program.size(), 1);
@@ -64,7 +67,6 @@ TEST(OptimizerTest, OptimizeBuiltinRule) {
     string beforeRewriting = rule.toString();
     std::cout << beforeRewriting << std::endl;
 
-    ClientContext context;
     PhysicalOptimizer optimizer(context);
     auto prules = optimizer.optimize(rule);
     EXPECT_EQ(prules.size(), 1);
@@ -75,7 +77,9 @@ TEST(OptimizerTest, OptimizeBuiltinRule) {
 
 
 TEST(OptimizerTest, OptimizeCrossProductRule) {
-    ParserInputDirector pid(TEXT, true, false);
+    ClientContext context;
+
+    ParserInputDirector pid(TEXT, context);
 
     auto program = getRulesFromFile("program3");
     EXPECT_EQ(program.size(), 1);
@@ -85,7 +89,6 @@ TEST(OptimizerTest, OptimizeCrossProductRule) {
     string beforeRewriting = rule.toString();
     std::cout << beforeRewriting << std::endl;
 
-    ClientContext context;
     PhysicalOptimizer optimizer(context);
     auto prules = optimizer.optimize(rule);
     EXPECT_EQ(prules.size(), 1);

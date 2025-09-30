@@ -59,7 +59,7 @@ void BumbleBeeDB::printArgs() {
 
 void BumbleBeeDB::parseProgram(rules_vector_t &program) {
     // Parse the program
-    ParserInputDirector inputDirector(TEXT, !context_.printAll_, context_.distinct_); // DEFAULT TEXT output
+    ParserInputDirector inputDirector(TEXT, context_); // DEFAULT TEXT output
     inputDirector.parse(context_.inputFiles_);
     // Check errors during parsing
     if (inputDirector.getBuilder()->isFoundASafetyError()) {

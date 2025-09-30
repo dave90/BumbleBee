@@ -22,16 +22,19 @@
 #include "bumblebee/parser/ParserInputBuilder.hpp"
 
 #include "CLI11.hpp"
+#include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/Helper.hpp"
 #include "bumblebee/common/Log.hpp"
 
 namespace bumblebee {
 
 
-ParserInputBuilder::ParserInputBuilder(OutputType type,bool hiddenNewPredicates, bool distinctNewPredicate):
+ParserInputBuilder::ParserInputBuilder(OutputType type, ClientContext& context):
     currentSchema_(Catalog::instance().getDefaultSchema()),
-    hiddenNewPredicate(hiddenNewPredicates),
-    distinctNewPredicate_(distinctNewPredicate),
+    hiddenNewPredicate(!context.printAll_),
+    distinctNewPredicate_(context.distinct_),
+    bufferManager_(*context.bufferManager_),
+    clientContext_(context),
     output_builder_(type) {
 }
 
@@ -144,12 +147,13 @@ void ParserInputBuilder::onExistentialAtom() {
 void ParserInputBuilder::onPredicateName(char *name) {
     if(foundASafetyError_) return;
 
-    Predicate *predicate = currentSchema_.get().createPredicate(name, terms_parsered.size());
+    Predicate *predicate = currentSchema_.get().createPredicate(&clientContext_ ,name, terms_parsered.size());
     if (!hiddenNewPredicate) {
         predicate->setInternal(false);
     }
-    if (distinctNewPredicate_)
+    if (distinctNewPredicate_) {
         predicate->setDistinct();
+    }
 
     currentAtom = Atom::createClassicalAtom(predicate, std::move(terms_parsered));
     terms_parsered.clear();
@@ -488,7 +492,7 @@ void ParserInputBuilder::rewriteAggregates() {
                 terms.emplace_back(v.c_str(), true);
             bool createAuxRule = info.predName.empty();
             string newPredName = info.createAggPredicateName(newPredCounter_, terms);
-            Predicate *predicate = currentSchema_.get().createPredicate(newPredName.c_str(), info.terms.size());
+            Predicate *predicate = currentSchema_.get().createPredicate(&clientContext_, newPredName.c_str(), info.terms.size());
             if (!hiddenNewPredicate) {
                 predicate->setInternal(false);
             }

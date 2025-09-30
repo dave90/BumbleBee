@@ -26,9 +26,37 @@ public:
 
     void reset() {
         rightIdx_ = 0;
+        cacheIdx_ = 0;
+        cacheChunk_.setCardinality(0);
+    }
+
+    // Load the cache chunk and return true if end is reached
+    bool loadCache(PredicateTables* pt) {
+        if (cacheIdx_ < cacheChunk_.getSize())
+            return false;
+
+        // cache the next right chunk
+        cacheIdx_ = 0;
+        bool finished = false;
+        if (!pt->isDistinct()) {
+            if (rightIdx_ < pt->chunkCount())
+                cacheChunk_.reference(pt->getChunk(rightIdx_++));
+            else
+                finished = true;
+        }else {
+            auto& ht = pt->getJoinPRLHashTable(pt->getKeys(), {});
+            if (rightIdx_ < ht->getSize()) {
+                ht->scan(rightIdx_, cacheChunk_);
+                rightIdx_ += cacheChunk_.getSize();
+            }else
+                finished = true;
+        }
+        return finished;
     }
 
     idx_t rightIdx_{0};
+    idx_t cacheIdx_{0};
+    DataChunk cacheChunk_;
     bool isInitialized_{false};
 };
 
@@ -78,30 +106,37 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
     if (!cstate.isInitialized_) {
         pt_->initializeChunks();
         cstate.isInitialized_ = true;
+        if (!pt_->isDistinct())
+            cstate.cacheChunk_.initializeEmpty(pt_->getTypes());
+        else
+            cstate.cacheChunk_.initialize(pt_->getTypes());
+
+        cstate.cacheChunk_.setCardinality(0);
     }
-    if (cstate.rightIdx_ >= pt_->getCount()) {
+    if (cstate.loadCache(pt_)){
+
         context.profiler_.endPhysicalAtom(chunk);
         cstate.reset();
         chunk.reset();
         return AtomResultType::NEED_MORE_INPUT;
+
     }
+
     auto& leftChunk = input;
     chunk.setCardinality(leftChunk.getSize());
     for (idx_t i = 0; i < leftChunk.columnCount(); ++i) {
         chunk.data_[i].reference(leftChunk.data_[i]);
     }
+
     // find the row of right side and assign as constant
     for (idx_t i = 0; i < selectCols_.size(); ++i) {
         BB_ASSERT(pt_->predicate_->getArity() > selectCols_[i]);
         BB_ASSERT(chunk.columnCount() > dcCols_[i] );
-        auto value = pt_->getValue(selectCols_[i], cstate.rightIdx_);
+        auto value = cstate.cacheChunk_.getValue(selectCols_[i], cstate.cacheIdx_);
         chunk.data_[dcCols_[i]].reference(value);
     }
-    ++cstate.rightIdx_;
+    ++cstate.cacheIdx_;
     context.profiler_.endPhysicalAtom(chunk);
-    if (cstate.rightIdx_ < pt_->getCount())
-        return AtomResultType::HAVE_MORE_OUTPUT;
-    cstate.reset();
-    return AtomResultType::NEED_MORE_INPUT;
+    return AtomResultType::HAVE_MORE_OUTPUT;
 }
 }

@@ -41,7 +41,7 @@ protected:
     ThreadContext context{client_context};
 
     void SetUp() override{
-        ptable = std::make_shared<PredicateTables>("a",3);
+        ptable = std::make_shared<PredicateTables>(&client_context, "a",3);
     }
 
     vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};

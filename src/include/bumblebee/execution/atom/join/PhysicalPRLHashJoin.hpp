@@ -22,6 +22,10 @@
 namespace bumblebee{
 
 
+// Physical Atom for Hash Join that use PRL Hash Table. Can be used as:
+// - sink for add new data into HT
+// - source for scan the data
+// - executor for probe phase
 class PhysicalPRLHashJoin : public PhysicalAtom {
 public:
     PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys,

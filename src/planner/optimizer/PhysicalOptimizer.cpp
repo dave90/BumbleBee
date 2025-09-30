@@ -344,7 +344,7 @@ void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
         patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
         dbCols = cols; selCols = cols;
         // create prl ht table
-        pred->createJoinPRLHashTable(*context_.bufferManager_, pred->getTypes() , keys, {});
+        pred->createJoinPRLHashTable( pred->getTypes() , keys, {});
         patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , pred));
 
         prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
@@ -366,7 +366,15 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     patom_ptr_vector_t empty;
     {
         auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
-        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
+        patom_ptr_t source ;
+        if (!pred->isDistinct())
+            source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
+        else {
+            if (!pred->existJoinPRLHashTable(pred->getKeys(), {}))
+                pred->createJoinPRLHashTable(pred->getTypes(),pred->getKeys(),{});
+
+            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
+        }
         dbCols = cols; selCols = cols;
         patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, COLLECT));
         prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
@@ -554,7 +562,7 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
             headTypes.push_back(types[c]);
 
         if (!ptSink->existJoinPRLHashTable(keys, {})) {
-            ptSink->createJoinPRLHashTable(*context_.bufferManager_,headTypes,keys,{});
+            ptSink->createJoinPRLHashTable(headTypes,keys,{});
         }
         sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, headCols, ptSink.get()));
     }
@@ -581,7 +589,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
     else {
         if (!ptSource->existJoinPRLHashTable(ptSource->getKeys(), {})) {
-            ptSource->createJoinPRLHashTable(*context_.bufferManager_,ptSource->getTypes(),ptSource->getKeys(),{});
+            ptSource->createJoinPRLHashTable(ptSource->getTypes(),ptSource->getKeys(),{});
         }
         source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, cols_[0], selectedCols_[0], ptSource.get()));
     }

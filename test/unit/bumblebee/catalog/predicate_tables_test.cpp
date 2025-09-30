@@ -18,6 +18,8 @@
  */
 
 #include <gtest/gtest.h>
+
+#include "bumblebee/ClientContext.hpp"
 #include "bumblebee/catalog/PredicateTables.hpp"
 
 using namespace bumblebee;
@@ -27,8 +29,8 @@ namespace {
 // A subclass just for testing, defined only in the test
 class PredicateTablesTester : public PredicateTables {
 public:
-    PredicateTablesTester(const char* name, unsigned arity)
-        : PredicateTables(name, arity) {
+    PredicateTablesTester(ClientContext* context, const char* name, unsigned arity)
+        : PredicateTables(context, name, arity) {
         types_ = vector<ConstantType>(arity, UNKNOWN);
     }
 
@@ -45,10 +47,11 @@ public:
 class PredicateTablesTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        table = std::make_unique<PredicateTablesTester>("test", 3);
+        table = std::make_unique<PredicateTablesTester>(&context, "test", 3);
     }
 
     std::unique_ptr<PredicateTablesTester> table;
+    ClientContext context;
 };
 
 Atom generateRangeAtom(Predicate* p,const vector<IntervalTerm>& intervals) {
@@ -106,7 +109,7 @@ TEST_F(PredicateTablesTest, MixedSignednessSameSize) {
 }
 
 TEST_F(PredicateTablesTest, FloatToDoublePromotion) {
-    table = std::make_unique<PredicateTablesTester>("test", 1);
+    table = std::make_unique<PredicateTablesTester>(&context, "test", 1);
     table->callUpdateTypes({FLOAT});
     table->callUpdateTypes({DOUBLE});
     EXPECT_EQ(table->getTypes()[0], DOUBLE);

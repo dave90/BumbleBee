@@ -44,8 +44,8 @@ protected:
     ThreadContext context{client_context};
 
     void SetUp() override {
-        ptableLeft = std::make_shared<PredicateTables>("a", 3);
-        ptableRight = std::make_shared<PredicateTables>("b", 3);
+        ptableLeft = std::make_shared<PredicateTables>(&client_context, "a", 3);
+        ptableRight = std::make_shared<PredicateTables>(&client_context, "b", 3);
     }
 
     // Left:  (INTEGER, UINTEGER, BIGINT)

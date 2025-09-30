@@ -22,7 +22,16 @@
 
 namespace bumblebee{
 
-
+/*
+ * Hash table for join operations with support for incremental updates.
+ *
+ * Compared to `JoinHashTable`, this implementation is more flexible: it can be
+ * updated in place without rebuilding the entire hash table. This makes it a good
+ * fit for recursive predicates where each iteration produces new data.
+ *
+ * Trade-off: `JoinHashTable` is generally faster for static inputs.
+ * Choose `JoinPRLHashTable` when incremental maintenance is required.
+ */
 class JoinPRLHashTable: public PRLHashTable {
 
 public:
@@ -40,10 +49,12 @@ public:
     // Execute the match operation (if row exist or not)
     void match(DataChunk &lchunk, Vector& lhash,SelectionVector &matchSel, idx_t& matchCount, SelectionVector &nonMatchSel, idx_t& noMatchCount);
 
+    // Compare the keys and payload with the current JoinPRLHashTable
     bool checkKeysAndPayloads(const vector<idx_t>& keys,const vector<idx_t>& payloads);
 
     bool isReady();
     void setReady();
+
 private:
     void incrementBuckets(Vector& buckets, SelectionVector& notEqual, idx_t notEqualCount);
     void findAddresses(const SelectionVector* sel, idx_t size, Vector &buckets, Vector &lhash, SelectionVector &nonMatchSel, idx_t& noMatchCount,SelectionVector& toMatch , idx_t& toMatchCount, Vector& addresses);
@@ -60,6 +71,9 @@ private:
 
     bool ready_{false};
 
+public:
+    // scan the data chunks of h1  and cast and add into h2
+    static void cast(JoinPRLHashTable &h1, JoinPRLHashTable &h2);
 
 };
 
