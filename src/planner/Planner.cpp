@@ -28,45 +28,30 @@
 namespace bumblebee {
 
 
-PhysicalRulesBucket Planner::plan(RulesBucket &rules) {
+prule_ptr_vector_t Planner::plan(rules_vector_t &rules) {
     executeRewriters(rules);
 
-    PhysicalRulesBucket physicalRules;
+    prule_ptr_vector_t physicalRules;
     executeOptimizer(rules, physicalRules);
 
-    LOG_DEBUG("Physical exit rules: ");
-    for (auto& prule: physicalRules.exit_)
-        LOG_DEBUG("%s", prule->toString().c_str());
-    LOG_DEBUG("Physical constraints rules: ");
-    for (auto& prule: physicalRules.constraints_)
-        LOG_DEBUG("%s", prule->toString().c_str());
-    LOG_DEBUG("Physical recursive rules: ");
-    for (auto& prule: physicalRules.recursive_)
+    LOG_DEBUG("Physical rules: ");
+    for (auto& prule: physicalRules)
         LOG_DEBUG("%s", prule->toString().c_str());
 
     return physicalRules;
 }
 
-void Planner::executeOptimizer(RulesBucket & rules, PhysicalRulesBucket & prules) {
-    PhysicalOptimizer optimizer(context_);
-    for (auto& rule: rules.exit_) {
+void Planner::executeOptimizer(rules_vector_t & rules, prule_ptr_vector_t & prules) {
+    PhysicalOptimizer optimizer(context_, recursiveRules_);
+    for (auto& rule: rules) {
         for (auto& prule: optimizer.optimize(rule))
-            prules.exit_.emplace_back(prule);
+            prules.emplace_back(prule);
         optimizer.clear();
     }
-    for (auto& rule: rules.constraints_) {
-        for (auto& prule: optimizer.optimize(rule))
-            prules.constraints_.emplace_back(prule);
-        optimizer.clear();
-    }
-    for (auto& rule: rules.recursive_) {
-        for (auto& prule: optimizer.optimize(rule))
-            prules.recursive_.emplace_back(prule);
-        optimizer.clear();
-    }
+
 }
 
-void Planner::executeRewriters(RulesBucket &rules) {
+void Planner::executeRewriters(rules_vector_t &rules) {
     // logical -> logical rewrite
 
     /*TODO:
@@ -82,29 +67,13 @@ void Planner::executeRewriters(RulesBucket &rules) {
     rewriters.emplace_back(new ArithRewriter());
     rewriters.emplace_back(new FilterPushDownRewriter());
 
-    for (auto& rule: rules.exit_) {
-        for (auto& rewriter : rewriters) {
-            rewriter->rewrite(rule);
-        }
-    }
-    for (auto& rule: rules.constraints_) {
-        for (auto& rewriter : rewriters) {
-            rewriter->rewrite(rule);
-        }
-    }
-    for (auto& rule: rules.recursive_) {
+    for (auto& rule: rules) {
         for (auto& rewriter : rewriters) {
             rewriter->rewrite(rule);
         }
     }
 
-    for (auto& rule: rules.exit_) {
-        LOG_DEBUG("Rule rewrote: %s", rule.toString().c_str());
-    }
-    for (auto& rule: rules.constraints_) {
-        LOG_DEBUG("Rule rewrote: %s", rule.toString().c_str());
-    }
-    for (auto& rule: rules.recursive_) {
+    for (auto& rule: rules) {
         LOG_DEBUG("Rule rewrote: %s", rule.toString().c_str());
     }
 }

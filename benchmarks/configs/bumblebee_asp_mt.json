@@ -79,6 +79,16 @@
       "test": "Aggregates Single 3",
       "input_file": "agg.single.3",
       "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+    },
+    {
+      "test": "Reach 1",
+      "input_file": "reach.1",
+      "commands": ["../cmake-build-release/BumbleBee  -a -t 4 -i $file"]
+    },
+    {
+      "test": "Reach 2",
+      "input_file": "reach.2",
+      "commands": ["../cmake-build-release/BumbleBee  -a -t 4 -i $file"]
     }
   ]
 }

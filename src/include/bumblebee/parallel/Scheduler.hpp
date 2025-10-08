@@ -40,7 +40,7 @@ public:
 	void clearThreadContexts();
 
     // Schedule all the rules
-    void scheduleRules(PhysicalRulesBucket& bucket);
+    void scheduleRules(prule_ptr_vector_t& rules);
     // Schedule the rules for one priority
     void schedulePriorityRules(prule_ptr_vector_t& bucket);
     // Schedule a single rule, return the number of the tasks generated
@@ -54,7 +54,6 @@ public:
 	// List of thread context of all the tasks
 	// contains the execution time of the rules
 	vector<thread_context_ptr_t> tcontexts_;
-
 
 };
 

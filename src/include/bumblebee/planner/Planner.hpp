@@ -25,16 +25,17 @@ namespace bumblebee{
 
 class Planner {
 public:
-    explicit Planner(ClientContext &context): context_(context) {}
+    explicit Planner(ClientContext &context,bool recursiveRules = false ): context_(context), recursiveRules_(recursiveRules) {}
     virtual ~Planner() = default;
 
-    virtual PhysicalRulesBucket plan(RulesBucket& rules);
+    virtual prule_ptr_vector_t plan(rules_vector_t& rules);
 
 private:
-    void executeRewriters(RulesBucket& rules);
-    void executeOptimizer(RulesBucket&, PhysicalRulesBucket& );
+    void executeRewriters(rules_vector_t& rules);
+    void executeOptimizer(rules_vector_t&, prule_ptr_vector_t& );
 
     ClientContext& context_;
+    bool recursiveRules_;
 };
 
 

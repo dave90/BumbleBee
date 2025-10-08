@@ -122,6 +122,16 @@
       "test": "Aggregates Single 3",
       "input_file": "agg.single.3",
       "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Reach 1",
+      "input_file": "reach.1",
+      "commands": ["clingo --mode=gringo --text $file"]
+    },
+    {
+      "test": "Reach 2",
+      "input_file": "reach.2",
+      "commands": ["clingo --mode=gringo --text $file"]
     }
   ]
 }

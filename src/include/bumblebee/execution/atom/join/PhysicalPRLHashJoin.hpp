@@ -30,8 +30,8 @@ class PhysicalPRLHashJoin : public PhysicalAtom {
 public:
     PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys,
     vector<idx_t> lkeys,bool negative = false);
-    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, PhysicalHashType type);
-    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, PredicateTables* pt);
+    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, PhysicalHashType type, bool sinkInDelta = false);
+    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, PredicateTables* pt, bool sinkInDelta = false);
     PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt);
     ~PhysicalPRLHashJoin() override;
 
@@ -69,6 +69,8 @@ private:
     PhysicalHashType type_;
     //  negative atom
     bool negative_{false};
+    // if true sink the data in delta
+    bool sinkInDelta_{false};
 };
 
 

@@ -63,7 +63,7 @@ public:
         if (currentOffset_>=pt_->getCount())
             return false;
         start = currentOffset_;
-        end = minValue( pt_->getCount(), start + MORSEL_SIZE-1);
+        end = minValue( pt_->getCount(), start + MORSEL_SIZE) - 1;
         currentOffset_ += MORSEL_SIZE;
         return true;
     }
@@ -89,8 +89,8 @@ PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vec
 
 PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vector<ConstantType> &types,
     vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys,
-    PhysicalHashType type) : PhysicalAtom(types, dcCols,selectedCols),
-    keys_(std::move(keys)),pt_(pt), context_(context), type_(type){
+    PhysicalHashType type, bool sinkInDelta) : PhysicalAtom(types, dcCols,selectedCols),
+    keys_(std::move(keys)),pt_(pt), context_(context), type_(type), sinkInDelta_(sinkInDelta){
     initialize();
     // in build phase (source) all columns should be keys and pt is flagged as distinct
     BB_ASSERT(type_ != BUILD || payloads_.empty() );
@@ -98,7 +98,7 @@ PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vec
 }
 
 PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vector<ConstantType> &types,
-    vector<idx_t> &dcCols, PredicateTables *pt): PhysicalAtom(types), pt_(pt), context_(context),type_(COLLECT) {
+    vector<idx_t> &dcCols, PredicateTables *pt, bool sinkInDelta): PhysicalAtom(types), pt_(pt), context_(context),type_(COLLECT), sinkInDelta_(sinkInDelta) {
     dcCols_ = std::move(dcCols);
     for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
 
@@ -130,7 +130,8 @@ PhysicalPRLHashJoin::~PhysicalPRLHashJoin() {}
 
 idx_t PhysicalPRLHashJoin::getMaxThreads() const {
     BB_ASSERT(payloads_.empty());
-    return pt_->getCount() / MORSEL_SIZE + 1;
+    idx_t count = pt_->getCount();
+    return count / MORSEL_SIZE + 1;
 }
 
 bool PhysicalPRLHashJoin::isSource() const {
@@ -181,7 +182,12 @@ pstate_ptr_t PhysicalPRLHashJoin::getState() const {
         ((PRLJoinHTAtomState&)*state).htState_ = std::move(ht);
         return state;
     }
-    auto& ht = pt_->getJoinPRLHashTable( keys_, payloads_);
+    JoinPRLHashTable *ht;
+    if (pt_->isRecursive() && type_ == BUILD) {
+        // recursive source, get the ht from delta
+        ht = &pt_->getDelta();
+    }else
+        ht = pt_->getJoinPRLHashTable( keys_, payloads_).get();
     return pstate_ptr_t(new PRLJoinHTAtomState(*ht));
 }
 
@@ -255,7 +261,7 @@ AtomResultType PhysicalPRLHashJoin::execute(ThreadContext &context, DataChunk &i
 
     context.profiler_.endPhysicalAtom(chunk);
 
-    if (cstate.lpos_ > input.getSize() || payloads_.empty()) {
+    if (cstate.lpos_ >= input.getSize() || payloads_.empty()) {
         // we completed the join with current chunk, request new input
         cstate.reset();
         return AtomResultType::NEED_MORE_INPUT;
@@ -302,7 +308,6 @@ AtomResultType PhysicalPRLHashJoin::getData(ThreadContext &context, DataChunk &c
 AtomResultType PhysicalPRLHashJoin::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
     auto& cstate = (PRLJoinHTAtomState&)state;
-    auto& cgstate = (GlobalPRLJoinHTAtomState&)gstate;
 
     context.profiler_.startPhysicalAtom(this);
 
@@ -322,11 +327,17 @@ AtomResultType PhysicalPRLHashJoin::sink(ThreadContext &context, DataChunk &inpu
 
 void PhysicalPRLHashJoin::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {
     if (type_ != COLLECT) return;
-    // merge with the predicate tables ht
     auto& cstate = (GlobalPRLJoinHTAtomState&)gstate;
     context.profiler_.startPhysicalAtom(this);
-    pt_->mergeIntoDistinctHT(*cstate.htState_);
+    if (!sinkInDelta_ ) {
+        // merge with the predicate tables ht
+        pt_->mergeIntoPRLHT(*cstate.htState_);
+    }else {
+        // merge into next delta
+        pt_->mergeIntoNextDelta(*cstate.htState_);
+    }
     context.profiler_.endPhysicalAtomFinalize();
+
 }
 
 void PhysicalPRLHashJoin::combine(ThreadContext &context, PhysicalAtomState &state,

@@ -28,7 +28,7 @@ class PhysicalOptimizer {
     using cols_vector_t = vector<vector<idx_t>> ;
     using type_vector_t = vector<vector<ConstantType>>;
 public:
-    explicit PhysicalOptimizer(ClientContext &context);
+    explicit PhysicalOptimizer(ClientContext &context, bool recursiveRules = false);
 
     virtual ~PhysicalOptimizer() = default;
 
@@ -60,7 +60,7 @@ private:
 
     void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
                               prule_ptr_vector_t& prules, idx_t& priority);
-    void generatePRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
+    void generatePRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
                               prule_ptr_vector_t& prules, idx_t& priority);
 
 
@@ -80,6 +80,8 @@ private:
     std::unordered_map<std::string, ConstantType> typesMap_;
     // skip atom map, if true does not create physical atoms
     std::unordered_map<idx_t, bool> skipAtom_;
+
+    bool recursiveRules_{false};
 };
 
 

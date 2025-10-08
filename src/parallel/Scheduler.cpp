@@ -119,13 +119,11 @@ void Scheduler::scheduleFinalize(prule_ptr_t& rule) {
     queue_.q.enqueue(std::move(newTask));
 }
 
-void Scheduler::scheduleRules(PhysicalRulesBucket &bucket) {
-    auto rulesByPriorities = bucketByPriority(bucket.exit_);
+void Scheduler::scheduleRules(prule_ptr_vector_t& rules) {
+    auto rulesByPriorities = bucketByPriority(rules);
     for (auto& prules : rulesByPriorities) {
         schedulePriorityRules(prules);
     }
-
-    // TODO schedule the recursive rules
 }
 
 PhysicalAtomProfiler Scheduler::getAtomProfiler() const {
@@ -140,4 +138,5 @@ PhysicalAtomProfiler Scheduler::getAtomProfiler() const {
 void Scheduler::clearThreadContexts() {
     tcontexts_.clear();
 }
+
 }

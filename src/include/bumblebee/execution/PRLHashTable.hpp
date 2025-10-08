@@ -88,7 +88,6 @@ public:
     constexpr static float LOAD_FACTOR = 0.5;
 
 
-
     PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
     PRLHashTable(BufferManager& manager);
     virtual ~PRLHashTable() {};
@@ -102,6 +101,8 @@ public:
 
     // Add a given data to HT
     void addChunk(Vector& hash, DataChunk& chunk);
+
+    virtual void addChunk(DataChunk& chunk);
 
     // Scan the HT starting from the position until the result and group
     idx_t scan(idx_t offset, DataChunk& result, idx_t size = STANDARD_VECTOR_SIZE);

@@ -30,6 +30,7 @@ namespace bumblebee{
 
 
 class PredicateTables {
+
 public:
     // public pointer to the predicate
     predicate_ptr_t predicate_;
@@ -95,7 +96,7 @@ public:
     // Return a join PRL hash table with the same keys and payloads.
     join_prl_ht_ptr_t& getJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
     void createJoinPRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
-    bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload);
+    bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
 
     // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
     partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
@@ -103,7 +104,7 @@ public:
     }
     partitioned_agg_ht_ptr_t& createPartitionedAggHashTable( const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
     bool existPartitionedAggHashTable();
-    void mergeIntoDistinctHT(JoinPRLHashTable& ht);
+    void mergeIntoPRLHT(JoinPRLHashTable& ht);
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
@@ -111,6 +112,13 @@ public:
     friend bool operator==(const PredicateTables &lhs, const PredicateTables &rhs);
     friend bool operator!=(const PredicateTables &lhs, const PredicateTables &rhs);
 
+    void setRecursive(bool recursive);
+    bool isRecursive() const;
+    void initializeDelta(const vector<ConstantType>& types);
+    JoinPRLHashTable& getDelta();
+    void mergeIntoNextDelta(JoinPRLHashTable& delta);
+    void mergeDelta();
+    idx_t getDeltaCount() const;
 
 protected:
     // Update current types based on new types
@@ -120,6 +128,7 @@ protected:
     void castEntirePredicateTable(const vector<ConstantType> &newTypes);
     void moveChunksToHT();
     JoinPRLHashTable* getDistinctHT() const;
+    join_prl_ht_ptr_t& getDistinctUHT();
 
     // Types of the columns
     vector<ConstantType> types_;
@@ -146,6 +155,15 @@ protected:
     partitioned_agg_ht_ptr_t partitionedAggHT_;
 
     ClientContext* context_;
+
+    struct RecuriveDelta {
+        join_prl_ht_ptr_t delta_;
+        join_prl_ht_ptr_t nextDelta_;
+        idx_t deltaCount_{0};
+    };
+
+    RecuriveDelta delta_;
+    bool recursive_;
 };
 
 using predicate_table_ptr_t = std::unique_ptr<PredicateTables>;

@@ -92,10 +92,11 @@ void PredicateTables::createJoinPRLHashTable( const vector<ConstantType>& types,
     if (existJoinPRLHashTable(keys, payload)) return;
     auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, keys, payload));
     prlHTables_.push_back(std::move(ht));
+
 }
 
 
-bool PredicateTables::existJoinPRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) {
+bool PredicateTables::existJoinPRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) const{
     for (auto&ht: prlHTables_)
         if (ht->checkKeysAndPayloads(keys, payload))
             return true;
@@ -115,37 +116,21 @@ bool PredicateTables::existPartitionedAggHashTable() {
     return partitionedAggHT_ != nullptr;
 }
 
-void PredicateTables::mergeIntoDistinctHT(JoinPRLHashTable &ht) {
+void PredicateTables::mergeIntoPRLHT(JoinPRLHashTable &ht) {
     lock_guard lock(mutex_);
-    auto dht = getDistinctHT();
+    auto &dht = getJoinPRLHashTable(ht.getKeys(), ht.getPayloads());
     if (dht->getTypes() != ht.getTypes()) {
-        // different types, check if we need to cast the entire pt ht tables
-        // or just the ht
-        auto ctype = ht.getTypes();
-        auto type = dht->getTypes();
-        vector<ConstantType> commonTypes;
-        for (idx_t i =0;i<type.size();++i)
-            commonTypes.push_back(getCommonType(ctype[i], type[i]));
-        if (commonTypes!= dht->getTypes()) {
-            // we need to cast the pt ht
-            join_prl_ht_ptr_t newDht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, commonTypes, getKeys(), {}, dht->getSize(), true));
-            JoinPRLHashTable::cast( *dht, *newDht);
-            prlHTables_.erase(std::remove_if(prlHTables_.begin(), prlHTables_.end(),
-            [dht](const join_prl_ht_ptr_t& p){ return p && p.get() == dht;}),
-            prlHTables_.end());
-            dht = newDht.get();
-            prlHTables_.push_back(std::move(newDht));
-        }
-        if (ht.getTypes() != dht->getTypes()) {
-            JoinPRLHashTable::cast(ht, *dht);
+        JoinPRLHashTable::castAndCombine(*context_->bufferManager_ ,dht, ht);
+        dht->setReady();
+        if (ht.getKeys() == getKeys())
             types_ = dht->getTypes();
-            dht->setReady();
-            return;
-        }
+        return;
     }
+    if (ht.getKeys() == getKeys())
+        types_ = dht->getTypes();
     dht->combine(ht);
     dht->setReady();
-    types_ = dht->getTypes();
+
 }
 
 void PredicateTables::initializeChunks() {
@@ -178,6 +163,19 @@ JoinPRLHashTable * PredicateTables::getDistinctHT() const {
     return htPtr;
 }
 
+join_prl_ht_ptr_t & PredicateTables::getDistinctUHT() {
+    vector<idx_t> keys;
+    for (idx_t i=0;i<predicate_->getArity();++i)
+        keys.push_back(i);
+    BB_ASSERT(existJoinPRLHashTable(getKeys(), {}));
+    for (auto&ht: prlHTables_)
+        if (ht->checkKeysAndPayloads(keys, {})) {
+            return ht;
+        }
+    // fallback
+    return *prlHTables_.end();
+}
+
 void PredicateTables::moveChunksToHT(){
     vector<idx_t> keys;
     for (idx_t i=0;i<predicate_->getArity();++i)keys.push_back(i);
@@ -194,7 +192,11 @@ idx_t PredicateTables::getCount() const {
     if (facts_.empty() && ranges_.empty()) {
         if (!isDistinct())
             return chunks_.getCount();
-        return getDistinctHT()->getSize();
+        if (isRecursive() && delta_.delta_)
+            return delta_.delta_->getSize();
+        if (existJoinPRLHashTable(getKeys(), {}))
+            return getDistinctHT()->getSize();
+        return 0;
     }
     auto estimateCount = facts_.size();
     for (auto& atom: ranges_) {
@@ -391,5 +393,66 @@ void PredicateTables::append(DataChunk& chunk) {
 }
 
 
+void PredicateTables::setRecursive(bool recursive) {
+    recursive_ = recursive;
+}
 
+bool PredicateTables::isRecursive() const{
+    return recursive_;
+}
+
+void PredicateTables::initializeDelta(const vector<ConstantType>& types) {
+    BB_ASSERT(isDistinct());
+    delta_.delta_ = nullptr;
+    delta_.nextDelta_ = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, getKeys(), {}));
+    delta_.deltaCount_ = 0;
+}
+
+idx_t PredicateTables::getDeltaCount() const {
+    return delta_.deltaCount_;
+}
+
+JoinPRLHashTable& PredicateTables::getDelta() {
+    if (delta_.delta_)
+        return *delta_.delta_;
+    // delta is null so return the distinct HT
+    return *getDistinctHT();
+}
+
+void PredicateTables::mergeIntoNextDelta(JoinPRLHashTable &delta) {
+    lock_guard lock(mutex_);
+    if (delta_.nextDelta_ == nullptr) {
+        // init delta
+        initializeDelta(delta.getTypes());
+    }
+    auto& dht = delta_.nextDelta_;
+    if (dht->getTypes() != delta.getTypes()) {
+        JoinPRLHashTable::castAndCombine(*context_->bufferManager_, dht, delta);
+        return;
+    }
+    dht->combine(delta);
+}
+
+void PredicateTables::mergeDelta() {
+    // if dht and next delta are null this recursive predicate was not processed so skip the merge delta phase
+    if (!existJoinPRLHashTable(getKeys(), {}) && !delta_.nextDelta_)
+        return;
+    lock_guard lock(mutex_);
+    auto& dht = getDistinctUHT();
+    idx_t prevCounter = dht->getSize();
+    // merge next delta into distinct ht
+    if (delta_.nextDelta_) {
+        if (dht->getTypes() == delta_.nextDelta_->getTypes())
+            dht->combine(*delta_.nextDelta_);
+        else {
+            JoinPRLHashTable::castAndCombine(*context_->bufferManager_, dht, *delta_.nextDelta_);
+        }
+
+        // swap delta and next delta
+        delta_.delta_ = std::move(delta_.nextDelta_);
+        delta_.nextDelta_ = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, delta_.delta_->getTypes(), getKeys(), {}));
+    }
+    delta_.deltaCount_ = dht->getSize() - prevCounter;
+    types_ = dht->getTypes();
+}
 }

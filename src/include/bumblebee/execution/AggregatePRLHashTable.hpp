@@ -46,7 +46,7 @@ public:
 
     void addChunk(Vector& hash, DataChunk& groups, DataChunk& payload);
     // add the paylaod to the first state (in case of no groups)
-    void addChunk(DataChunk& payload);
+    void addChunk(DataChunk& payload) override;
 
     void combine(AggregatePRLHashTable& other);
 

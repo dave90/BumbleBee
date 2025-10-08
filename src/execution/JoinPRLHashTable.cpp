@@ -48,6 +48,14 @@ void JoinPRLHashTable::setReady() {
     ready_ = true;
 }
 
+vector<idx_t> JoinPRLHashTable::getKeys() {
+    return keyColumns_;
+}
+
+vector<idx_t> JoinPRLHashTable::getPayloads() {
+    return payloadColumns_;
+}
+
 void JoinPRLHashTable::addChunk(DataChunk &chunk) {
     BB_ASSERT(chunk.columnCount() == keyColumns_.size() + payloadColumns_.size());
 
@@ -72,6 +80,7 @@ void JoinPRLHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Ve
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
 
     auto hashPtr = FlatVector::getData<uint64_t>(lhash);
+
     idx_t matchCount = 0;
     while (ltuple < size && matchCount < STANDARD_VECTOR_SIZE) {
         auto hash = hashPtr[ltuple];
@@ -217,7 +226,7 @@ void JoinPRLHashTable::incrementBuckets(Vector& buckets, SelectionVector& notEqu
     }
 }
 
-void JoinPRLHashTable::cast(JoinPRLHashTable &h1, JoinPRLHashTable &h2) {
+void JoinPRLHashTable::insert(JoinPRLHashTable &h1, JoinPRLHashTable &h2) {
     BB_ASSERT(h1.getTypes() != h2.getTypes());
     BB_ASSERT(h1.getTypes().size() == h2.getTypes().size());
 
@@ -234,6 +243,30 @@ void JoinPRLHashTable::cast(JoinPRLHashTable &h1, JoinPRLHashTable &h2) {
         offset += STANDARD_VECTOR_SIZE;
     }
 }
+
+void JoinPRLHashTable::castAndCombine(BufferManager &manager, std::unique_ptr<JoinPRLHashTable> &h1, JoinPRLHashTable &h2) {
+    auto t1 = h1->getTypes();
+    auto t2 = h2.getTypes();
+    BB_ASSERT(t1.size() == t2.size());
+    vector<ConstantType> commonTypes;
+    for (idx_t i =0;i<t1.size();++i)
+        commonTypes.push_back(getCommonType(t1[i], t2[i]));
+
+    if (commonTypes!= h1->getTypes()) {
+        // we need to cast the h1
+        join_prl_ht_ptr_t newDht = join_prl_ht_ptr_t(new JoinPRLHashTable(manager, commonTypes, h1->keyColumns_, {}, h1->getCapacity(), true));
+        JoinPRLHashTable::insert( *h1, *newDht);
+        h1 = std::move(newDht);
+    }
+    if (t2 != h1->getTypes())
+        JoinPRLHashTable::insert(h2, *h1);
+    else
+        h1->combine(h2);
+
+}
+
+
+
 }
 
 

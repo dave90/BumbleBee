@@ -60,6 +60,12 @@ void PRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
     findOrCreateGroups(hash, chunk, addresses);
 }
 
+void PRLHashTable::addChunk(DataChunk &chunk) {
+    Vector hash(UBIGINT, chunk.getSize());
+    chunk.hash(hash);
+   addChunk(hash, chunk);
+}
+
 idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
     BB_ASSERT(offset < entries_);
     BB_ASSERT(result.getCapacity() >= size);
@@ -124,12 +130,9 @@ void PRLHashTable::combine(PRLHashTable &other) {
     idx_t position = 0;
     DataChunk group;
     group.initialize(other.types_);
-    Vector hash(UBIGINT);
     while (position < other.entries_) {
         other.scan(position, group);
-        group.hash(hash);
-        addChunk(hash, group);
-
+        addChunk( group);
         position += minValue<idx_t>(STANDARD_VECTOR_SIZE, other.entries_ - position);
     }
 }
@@ -242,11 +245,17 @@ vector<ConstantType> PRLHashTable::getTypes() const {
 
 void rehash(const HTEntry64* __restrict hashes, HTEntry64* __restrict newHashes, idx_t capacity, idx_t bitmask)
 {
+    idx_t newCapacity = bitmask +1;
+
     for (idx_t i = 0; i < capacity; ++i) {
         const auto& entry = hashes[i];
-        const auto bucket = entry.hash_ & bitmask;
-        // do not overwrite the page num bucket if the pageNum is 0 (empty page)
-        newHashes[bucket].pageNum_    = (entry.pageNum_)? entry.pageNum_:newHashes[bucket].pageNum_;
+        if (entry.pageNum_ == 0) continue;
+        auto bucket = entry.hash_ & bitmask;
+        while (newHashes[bucket].pageNum_ != 0) {
+            ++bucket;
+            if (bucket >= newCapacity)bucket = 0;
+        }
+        newHashes[bucket].pageNum_    = entry.pageNum_;
         newHashes[bucket].pageOffset_ = entry.pageOffset_;
         newHashes[bucket].hash_       = entry.hash_;
     }
@@ -339,7 +348,7 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
                                               SelectionVector *newGroupSel) {
 
     idx_t size = groups.getSize();
-    if (createGroups &&
+    while (createGroups &&
         (groups.getSize() + entries_ >= capacity_  || (float)(entries_ + size) / (float)capacity_ > LOAD_FACTOR  )) {
         resize(capacity_ * 2);
     }

@@ -45,6 +45,7 @@ namespace bumblebee {
 // Vector size
 #define STANDARD_VECTOR_SIZE 1024
 #define HT_INIT_CAPACITY 32768
+
 // String Heap. NOTE: Maximum string supported is 4096 bytes
 #define MINIMUM_HEAP_SIZE 4096
 

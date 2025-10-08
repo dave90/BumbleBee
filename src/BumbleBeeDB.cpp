@@ -121,36 +121,118 @@ void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) 
     }
 }
 
+void BumbleBeeDB::processExit(RulesBucket &bucket, Scheduler &scheduler) {
+    LOG_INFO("Starting planner exit rules...");
+    Planner planner(context_);
+    prule_ptr_vector_t pruleBucket = planner.plan(bucket.exit_);
+    LOG_INFO("Planner completed");
+
+
+    for (auto& rule : bucket.exit_) {
+        LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
+    }
+
+    LOG_INFO("Starting execution...");
+    scheduler.scheduleRules(pruleBucket);
+
+
+    if (context_.printProfiling_) {
+        // print the profiling result
+        auto atomProfiler = scheduler.getAtomProfiler();
+        for (auto& prule : pruleBucket) {
+            auto patoms = prule->getPhysicalAtoms();
+            LOG_INFO("Profile rule: %s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+        }
+    }
+}
+
+void BumbleBeeDB::processRecursive(RulesBucket &bucket, Scheduler &scheduler) {
+    if (bucket.recursive_.empty()) return;
+
+    for (auto& rule : bucket.recursive_) {
+        LOG_DEBUG("Recursive rule: %s", rule.toString().c_str());
+    }
+
+
+    // check that the head predicate are recursive
+    for (auto& rule : bucket.recursive_) {
+        BB_ASSERT(rule.getHead().size() == 1);
+        auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
+        BB_ASSERT(pt->isRecursive());
+        BB_ASSERT(pt->isDistinct());
+    }
+
+    LOG_INFO("Starting recursive execution...");
+    idx_t iteration = 0;
+    while (true) {
+        LOG_DEBUG("Iteration %d", iteration);
+
+        LOG_INFO("Starting planner recursive rules...");
+        Planner planner(context_, true);
+        prule_ptr_vector_t pruleBucket = planner.plan(bucket.recursive_);
+        LOG_INFO("Planner completed");
+
+        // execute the rules
+        scheduler.scheduleRules(pruleBucket);
+
+        if (context_.printProfiling_) {
+            // print the profiling result
+            auto atomProfiler = scheduler.getAtomProfiler();
+            for (auto& prule : pruleBucket) {
+                auto patoms = prule->getPhysicalAtoms();
+                LOG_INFO("Profile rule: %s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+            }
+        }
+
+        // merge delta and fetch delta count
+        idx_t deltaCount = 0;
+        for (auto& rule : bucket.recursive_) {
+            auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
+            pt->mergeDelta();
+            deltaCount += pt->getDeltaCount();
+        }
+        LOG_DEBUG("Iteration %d delta count: %d", iteration, deltaCount);
+
+        // stop recursion if deltaCount is zero as no new data was found
+        if (deltaCount == 0) break;
+        ++iteration;
+
+    }
+
+    // set recursive to false
+    for (auto& rule : bucket.recursive_) {
+        BB_ASSERT(rule.getHead().size() == 1);
+        auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
+        pt->setRecursive(false);
+    }
+
+}
+
+
 void BumbleBeeDB::processBucketRules( RulesBucket &bucket, Scheduler& scheduler) {
 
     LOG_INFO("Processing bucket of rules...");
     LOG_INFO("Exit rules : %d",bucket.exit_.size());
     LOG_INFO("Recursive rules : %d",bucket.recursive_.size());
     LOG_INFO("Constraints rules : %d",bucket.constraints_.size());
-    for (auto& rule : bucket.exit_) {
-        LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
-    }
 
-    LOG_INFO("Starting planner...");
-    Planner planner(context_);
-    auto pruleBucket = planner.plan(bucket);
-    LOG_INFO("Planner completed");
-    LOG_INFO("Starting execution...");
-    scheduler.scheduleRules(pruleBucket);
 
-    if (context_.printProfiling_) {
-        // print the profiling result
-        auto atomProfiler = scheduler.getAtomProfiler();
-        for (auto& prule : pruleBucket.exit_) {
-            auto patoms = prule->getPhysicalAtoms();
-            LOG_INFO("Profile rule: %s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+    // set the recursive predicates as recursive and distinct
+    for (auto& rule: bucket.recursive_) {
+        auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
+        pt->setRecursive(true);
+        pt->predicate_->setDistinct();
+        if (pt->getCount() > 0) {
+            // init recursive table with non empty data
+            pt->createJoinPRLHashTable(pt->getTypes(), pt->getKeys(), {});
         }
     }
+
+    processExit(bucket, scheduler);
+    processRecursive(bucket, scheduler);
+
     scheduler.clearThreadContexts();
 
-    if (!bucket.recursive_.empty()) {
-        ErrorHandler::errorNotImplemented("Recursive rule execution not implemented :(");
-    }
     if (!bucket.constraints_.empty()) {
         ErrorHandler::errorNotImplemented("Constraints rule execution not implemented :(");
     }

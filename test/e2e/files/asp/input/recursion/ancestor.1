@@ -1,0 +1,50 @@
+married(X,Y) :- husband_of(X,Y).
+married(Y,X) :- husband_of(X,Y).
+married(X,Y) :- wife_of(X,Y).
+married(Y,X) :- wife_of(X,Y).
+
+parent(X,Y) :- father_of(X,Y).
+parent(X,Y) :- mother_of(X,Y).
+parent(X,Y) :- married(X,Z), father_of(Z,Y).
+parent(X,Y) :- married(X,Z), mother_of(Z,Y).
+
+ancestor(X,Y) :- parent(X,Y).
+ancestor(X,Y) :- ancestor(X,U), ancestor(U,Y).
+
+husband_of("ciccio","lori").
+husband_of("pietro","sara").
+husband_of("luigi","nina").
+husband_of("franco","simo").
+husband_of("fabio","tina").
+husband_of("gianni","ursula").
+husband_of("salvo","perry").
+
+wife_of("sergio","sasha").
+wife_of("pablo","nina").
+wife_of("rudy","frankie").
+wife_of("bea","poppy").
+wife_of("stefan","dora").
+wife_of("rene","milo").
+
+father_of("ciccio","sergio").
+father_of("pietro","frankie").
+father_of("luigi","rudy").
+father_of("luigi","pablo").
+father_of("sasha","franco").
+father_of("nina","gianni").
+father_of("nina","fabio").
+father_of("frankie","simo").
+father_of("frankie","tina").
+father_of("poppy","ursula").
+father_of("franco","dora").
+father_of("dora","hans").
+father_of("dora","stark").
+
+mother_of("lori","nina").
+mother_of("nina","poppy").
+mother_of("rudy","salvo").
+mother_of("bea","perry").
+mother_of("tina","milo").
+mother_of("ursula","stefan").
+mother_of("perry","rene").
+mother_of("rene","elena").

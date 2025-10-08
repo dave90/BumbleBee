@@ -40,7 +40,7 @@ public:
 
 
     // Add a given data to HT
-    void addChunk(DataChunk& payload);
+    void addChunk(DataChunk& payload) override;
 
     // Probe the left chunk (classical join)
     void probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,SelectionVector &lsel, SelectionVector &rsel, DataChunk &result);
@@ -54,6 +54,9 @@ public:
 
     bool isReady();
     void setReady();
+
+    vector<idx_t> getKeys();
+    vector<idx_t> getPayloads();
 
 private:
     void incrementBuckets(Vector& buckets, SelectionVector& notEqual, idx_t notEqualCount);
@@ -73,7 +76,9 @@ private:
 
 public:
     // scan the data chunks of h1  and cast and add into h2
-    static void cast(JoinPRLHashTable &h1, JoinPRLHashTable &h2);
+    static void insert(JoinPRLHashTable &h1, JoinPRLHashTable &h2);
+    // Combine h1 with h2 using the common types. Results are in h1
+    static void castAndCombine(BufferManager &manager, std::unique_ptr<JoinPRLHashTable> &h1, JoinPRLHashTable &h2);
 
 };
 

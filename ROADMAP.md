@@ -1,13 +1,9 @@
 ## TODOLIST
-- Negative
-- Distinct
+- CSV
 
 
 ## Next
-- Distinct head (usefull also for recursion)
-- Recursion ( hash row layout + scan with delta , chunk index of iteration and use only latest)
 - Hash build: reduce build tasks
-- CSV
 - CICD
 - SQL
 - - Default minimum integer (small int or int 32 bit not tiny as now)

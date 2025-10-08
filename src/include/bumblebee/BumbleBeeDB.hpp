@@ -34,11 +34,15 @@ public:
 
     void parseProgram(rules_vector_t &program);
     void processProgram(rules_vector_t& program, Scheduler& scheduler);
+
+
     void run();
     void print();
 
 private:
     void processBucketRules( RulesBucket & bucket, Scheduler& scheduler);
+    void processExit(RulesBucket &bucket, Scheduler &scheduler);
+    void processRecursive(RulesBucket &bucket, Scheduler &scheduler);
 
     ClientContext context_;
 
