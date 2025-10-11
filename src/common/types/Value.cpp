@@ -18,6 +18,9 @@
  */
 #include "bumblebee/common/types/Value.hpp"
 
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
+
 namespace bumblebee{
 Value::Value() {}
 
@@ -98,6 +101,12 @@ bool operator!=(const Value &lhs, const Value &rhs) {
     return !(lhs == rhs);
 }
 
+bool Value::isDoubleQuotedString() const {
+    return ctype_ == STRING
+     && stringValue_.length() >= 2
+     && stringValue_[0] == '"' && stringValue_[stringValue_.length() - 1] == '"';
+}
+
 ConstantType Value::getConstantType() const{
     return ctype_;
 }
@@ -168,6 +177,25 @@ Value Value::cast(ConstantType type) const {
     }
     ErrorHandler::errorNotImplemented("Cast not implemented.");
     return {};
+}
+
+bool Value::tryCastAs(ConstantType type, Value &newValue, string *error) const {
+    newValue = cast(ctype_);
+    if (ctype_ == type) {
+        return true;
+    }
+    if (newValue.isDoubleQuotedString()) {
+        // remove the '"' before casting
+        newValue.stringValue_ = newValue.stringValue_.substr(1, newValue.stringValue_.length() - 2);
+    }
+
+    Vector input(newValue);
+    Vector result(type);
+    if (!VectorOperations::tryCast(input, result, 1, error)) {
+        return false;
+    }
+    newValue = result.getValue(0);
+    return true;
 }
 
 Value Value::cast(ConstantType type, data_ptr_t data) {

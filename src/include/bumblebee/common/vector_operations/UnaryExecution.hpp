@@ -40,7 +40,7 @@ struct UnaryLambdaWrapper {
 struct GenericUnaryWrapper {
 	template <class OP, class INPUT_TYPE, class RESULT_TYPE>
 	static inline RESULT_TYPE operation(INPUT_TYPE input, idx_t idx, void *dataptr) {
-		return OP::template Operation<INPUT_TYPE, RESULT_TYPE>(input, idx, dataptr);
+		return OP::template operation<INPUT_TYPE, RESULT_TYPE>(input, dataptr);
 	}
 };
 
@@ -50,7 +50,7 @@ struct UnaryStringOperator {
 	template <class INPUT_TYPE, class RESULT_TYPE>
 	static RESULT_TYPE operation(INPUT_TYPE input, idx_t idx, void *dataptr) {
 		auto vector = (Vector *)dataptr;
-		return OP::template Operation<INPUT_TYPE, RESULT_TYPE>(input, *vector);
+		return OP::template operation<INPUT_TYPE, RESULT_TYPE>(input, *vector);
 	}
 };
 
@@ -64,7 +64,7 @@ private:
 		for (idx_t i = 0; i < count; i++) {
 			auto idx = sel_vector->getIndex(i);
 			result_data[i] =
-			    OPWRAPPER::template Operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[idx], i, dataptr);
+			    OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[idx], i, dataptr);
 		}
 	}
 
@@ -74,7 +74,7 @@ private:
 
 			for (idx_t i = 0; i < count; i++) {
 				result_data[i] =
-				    OPWRAPPER::template Operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[i], i, dataptr);
+				    OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[i], i, dataptr);
 			}
 
 	}
@@ -87,7 +87,7 @@ private:
 			auto result_data = ConstantVector::getData<RESULT_TYPE>(result);
 			auto ldata = ConstantVector::getData<INPUT_TYPE>(input);
 
-			*result_data = OPWRAPPER::template Operation<OP, INPUT_TYPE, RESULT_TYPE>(*ldata, 0, dataptr);
+			*result_data = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(*ldata, 0, dataptr);
 			break;
 		}
 		case VectorType::FLAT_VECTOR: {

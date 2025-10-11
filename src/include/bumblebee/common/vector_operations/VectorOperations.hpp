@@ -68,6 +68,7 @@ public:
 
     // Cast
     static void cast(Vector &source, Vector &target, idx_t source_count);
+    static bool tryCast(Vector &source, Vector &target, idx_t source_count, string *errorMessage);
 
 
 };

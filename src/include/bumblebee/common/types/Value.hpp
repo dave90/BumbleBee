@@ -56,11 +56,15 @@ public:
 	friend bool operator==(const Value &lhs, const Value &rhs);
 	friend bool operator!=(const Value &lhs, const Value &rhs);
 
+	bool isDoubleQuotedString() const;
+
 	ConstantType getConstantType() const;
 	void setConstantType(ConstantType type);
 	std::string toString()const;
 	// Create a new Value casted base on type
 	Value cast(ConstantType type)const;
+
+	bool tryCastAs(ConstantType type, Value & newValue, string* error) const;
 
 	// template
 	template <class T>

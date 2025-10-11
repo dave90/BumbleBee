@@ -84,3 +84,74 @@ TEST_F(VectorOperationsCastTest, IntToFloatCast) {
         EXPECT_EQ(result.getValue(i).cast(DOUBLE).getNumericValue<double>(), ( (double) data[i]) );
     }
 }
+
+
+
+TEST_F(VectorOperationsCastTest, TryCastBigIntIntoSmall) {
+    vector<uint64_t> data = {0,10,20,30};
+    ConstantType sourceType = UBIGINT;
+    ConstantType resultType = USMALLINT;
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType);
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    for (idx_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(result1.getValue(i).cast(resultType).getNumericValue<uint16_t>(), ( (uint16_t) data[i]) );
+    }
+
+    data.push_back(65536);
+    Vector input2 = generateVector(sourceType, data);
+    Vector result2(resultType, data.size());
+    r = VectorOperations::tryCast(input2,result2,data.size(), error.get());
+    EXPECT_EQ(r, false);
+    EXPECT_GE(error->size(), 0);
+
+}
+
+
+
+TEST_F(VectorOperationsCastTest, TryCastBigIntIntoString) {
+    vector<uint64_t> data = {0,10,20,30,100000};
+    ConstantType sourceType = UBIGINT;
+    ConstantType resultType = STRING;
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType);
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    for (idx_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(result1.getValue(i).toString(), "\""+std::to_string( data[i])+"\"" );
+    }
+}
+
+
+
+TEST_F(VectorOperationsCastTest, TryCastStringIntoBigInt) {
+    vector<string> data = {"0","10","20","30","100002340"};
+    ConstantType sourceType = STRING;
+    ConstantType resultType = BIGINT;
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType);
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    for (idx_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(result1.getValue(i).cast(resultType).getNumericValue<int64_t>(), ( atoi(data[i].c_str())) );
+    }
+
+    data.push_back("12a3");
+    Vector input2 = generateVector(sourceType, data);
+    Vector result2(resultType, data.size());
+    error = std::make_unique<string>();
+    r = VectorOperations::tryCast(input2,result2,data.size(), error.get());
+    EXPECT_EQ(r, false);
+    EXPECT_GE(error->size(), 0);
+
+}

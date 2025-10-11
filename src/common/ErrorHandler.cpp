@@ -30,6 +30,7 @@ void ErrorHandler::errorParsing( const std::string& message )
 void ErrorHandler::errorParsing( const char* message )
 {
     std::cerr << ERROR_PARSING << ": " << message << std::endl;
+    BB_ASSERT(false);
     exit( ERROR_PARSING_CODE );
 }
 
@@ -41,7 +42,7 @@ void ErrorHandler::errorGeneric( const std::string& message )
 void ErrorHandler::errorGeneric( const char* message )
 {
     std::cerr << ERROR_GENERIC << ": " << message << std::endl;
-    exit( ERROR_NOT_IMPLEMENTED );
+    BB_ASSERT(false);
     exit( ERROR_GENERIC_CODE );
 }
 

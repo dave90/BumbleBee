@@ -19,6 +19,8 @@
 #pragma once
 #include "TypeDefs.hpp"
 #include "Vector.hpp"
+#include "types/BumbleString.hpp"
+#include "types/Vector.hpp"
 
 namespace bumblebee{
 
@@ -31,7 +33,9 @@ public:
     static bool contains(const string &input, const string &split);
     static bool glob(const char *string, idx_t slen, const char *pattern, idx_t plen);
     static bool glob(const string& str,const string& pattern);
-
+    static bool characterIsSpace(char c);
+    static bool characterIsDigit(char c);
+    static bool characterIsNewline(char c);
 };
 
 

@@ -20,94 +20,195 @@
 #include "bumblebee/common/operator/CastOperators.hpp"
 #include "bumblebee/common/vector_operations/UnaryExecution.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
-
+#include "bumblebee/common/types/NullValue.hpp"
 
 namespace bumblebee {
 
 
+struct VectorTryCastData {
+    VectorTryCastData(Vector &result_p, string *error_message_p)
+        : result(result_p), error_message(error_message_p) {
+    }
+
+    Vector &result;
+    string *error_message;
+    bool all_converted = true;
+};
+
+
+struct HandleVectorCastError {
+    template <class RESULT_TYPE>
+    static RESULT_TYPE operation(string error_message, string *error_message_ptr,
+                                 bool &all_converted) {
+        if (error_message_ptr) {
+            *error_message_ptr = error_message;
+        }
+        all_converted = false;
+        return NullValue<RESULT_TYPE>();
+    }
+};
+
+template <class OP>
+struct VectorTryCastOperator {
+    template <class INPUT_TYPE, class RESULT_TYPE>
+    static RESULT_TYPE operation(INPUT_TYPE& input, void *dataptr) {
+        RESULT_TYPE output;
+        if ( OP::template operation<INPUT_TYPE, RESULT_TYPE>(input, output) ){
+            return output;
+        }
+        auto data = (VectorTryCastData *)dataptr;
+        // TODO better error messsage
+        return HandleVectorCastError::operation<RESULT_TYPE>("Error during conversion!", data->error_message, data->all_converted);
+    }
+};
+
+template <class OP>
+struct VectorStringCastOperator {
+    template <class INPUT_TYPE, class RESULT_TYPE>
+    static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
+        auto result = (VectorTryCastData *)dataptr;
+        return OP::template operation<INPUT_TYPE>(input, result->result);
+    }
+};
+
+
 template <class SRC, class DST, class OP>
-void vectorCastLoop(Vector &source, Vector &result, idx_t count) {
-    UnaryExecution::execute<SRC, DST, OP>(source, result, count);
+bool vectorCastLoop(Vector &source, Vector &result, idx_t count, string *errorMessage) {
+    VectorTryCastData input(result, errorMessage);
+    UnaryExecution::genericExecute<SRC, DST, VectorTryCastOperator<OP>>(source, result, count, &input);
+    return input.all_converted;
+}
+
+template <class SRC, class DST, class OP>
+bool vectorStringCastLoop(Vector &source, Vector &result, idx_t count, string *errorMessage) {
+    VectorTryCastData input(result, errorMessage);
+    UnaryExecution::genericExecute<SRC, DST, VectorStringCastOperator<OP>>(source, result, count, &input);
+    return input.all_converted;
 }
 
 
 template <class SRC>
-void numericCastSwitch(Vector &source, Vector &result, idx_t count) {
+bool numericCastSwitch(Vector &source, Vector &result, idx_t count, string *errorMessage) {
 
     switch (result.getType()) {
         case ConstantType::TINYINT:
-            vectorCastLoop<SRC, int8_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, int8_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::SMALLINT:
-            vectorCastLoop<SRC, int16_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, int16_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::INTEGER:
-            vectorCastLoop<SRC, int32_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, int32_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::UTINYINT:
-            vectorCastLoop<SRC, uint8_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, uint8_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::USMALLINT:
-            vectorCastLoop<SRC, uint16_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, uint16_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::UINTEGER:
-            vectorCastLoop<SRC, uint32_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, uint32_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::UBIGINT:
-            vectorCastLoop<SRC, uint64_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, uint64_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::BIGINT:
-            vectorCastLoop<SRC, int64_t, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, int64_t, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::FLOAT:
-            vectorCastLoop<SRC, float, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, float, NumericTryCast>(source, result, count, errorMessage);
+
         case ConstantType::DOUBLE:
-            vectorCastLoop<SRC, double, Cast>(source, result, count);
-            break;
+            return vectorCastLoop<SRC, double, NumericTryCast>(source, result, count, errorMessage);
+
+        case ConstantType::STRING:
+            return vectorStringCastLoop<SRC, string_t, StringCast>(source, result, count, errorMessage);
+
+
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
+
+        return false;
     }
 }
 
 
+
+bool stringCastSwitch(Vector &source, Vector &result, idx_t count, string *errorMessage) {
+
+    switch (result.getType()) {
+        case ConstantType::TINYINT:
+            return vectorCastLoop<string_t, int8_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::SMALLINT:
+            return vectorCastLoop<string_t, int16_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::INTEGER:
+            return vectorCastLoop<string_t, int32_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::UTINYINT:
+            return vectorCastLoop<string_t, uint8_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::USMALLINT:
+            return vectorCastLoop<string_t, uint16_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::UINTEGER:
+            return vectorCastLoop<string_t, uint32_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::UBIGINT:
+            return vectorCastLoop<string_t, uint64_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::BIGINT:
+            return vectorCastLoop<string_t, int64_t, TryIntegerCast>(source, result, count, errorMessage);
+
+        case ConstantType::FLOAT:
+            return vectorCastLoop<string_t, float, TryDoubleCast>(source, result, count, errorMessage);
+
+        case ConstantType::DOUBLE:
+            return vectorCastLoop<string_t, double, TryDoubleCast>(source, result, count, errorMessage);
+
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
+    }
+    return false;
+}
+
+
 void VectorOperations::cast(Vector &source, Vector &result, idx_t count) {
+    tryCast(source, result, count, nullptr);
+}
+
+bool VectorOperations::tryCast(Vector &source, Vector &result, idx_t count, string *errorMessage) {
     BB_ASSERT(source.getType() != result.getType());
 
     switch (source.getType()) {
         case ConstantType::TINYINT:
-            numericCastSwitch<int8_t>(source, result, count);
-            break;
+            return numericCastSwitch<int8_t>(source, result, count, errorMessage);
         case ConstantType::SMALLINT:
-            numericCastSwitch<int16_t>(source, result, count);
-            break;
+            return numericCastSwitch<int16_t>(source, result, count, errorMessage);
         case ConstantType::INTEGER:
-            numericCastSwitch<int32_t>(source, result, count);
-            break;
+            return numericCastSwitch<int32_t>(source, result, count, errorMessage);
         case ConstantType::UTINYINT:
-            numericCastSwitch<uint8_t>(source, result, count);
-            break;
+            return numericCastSwitch<uint8_t>(source, result, count, errorMessage);
         case ConstantType::USMALLINT:
-            numericCastSwitch<uint16_t>(source, result, count);
-            break;
+            return numericCastSwitch<uint16_t>(source, result, count, errorMessage);
         case ConstantType::UINTEGER:
-            numericCastSwitch<uint32_t>(source, result, count);
-            break;
+            return numericCastSwitch<uint32_t>(source, result, count, errorMessage);
         case ConstantType::UBIGINT:
-            numericCastSwitch<uint64_t>(source, result, count);
-            break;
+            return numericCastSwitch<uint64_t>(source, result, count, errorMessage);
         case ConstantType::BIGINT:
-            numericCastSwitch<int64_t>(source, result, count);
-            break;
+            return numericCastSwitch<int64_t>(source, result, count, errorMessage);
         case ConstantType::FLOAT:
-            numericCastSwitch<float>(source, result, count);
-            break;
+            return numericCastSwitch<float>(source, result, count, errorMessage);
         case ConstantType::DOUBLE:
-            numericCastSwitch<double>(source, result, count);
-            break;
+            return numericCastSwitch<double>(source, result, count, errorMessage);
+        case ConstantType::STRING:
+            return stringCastSwitch(source, result, count, errorMessage);
+
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for cast operation!");
     }
+    return false;
 }
 
 
