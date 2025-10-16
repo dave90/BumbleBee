@@ -18,56 +18,60 @@
  */
 #include "bumblebee/common/ErrorHandler.hpp"
 
+#include "bumblebee/common/Log.hpp"
 #include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee {
 
-void ErrorHandler::errorParsing( const std::string& message )
-{
-    errorParsing( message.c_str() );
+static void log_error(const char* error, const std::string& message) {
+    std::string e = error +std::string(": ")+message;
+    LOG_ERROR( e.c_str() );
 }
 
-void ErrorHandler::errorParsing( const char* message )
+void ErrorHandler::errorParsing( const std::string& message )
 {
-    std::cerr << ERROR_PARSING << ": " << message << std::endl;
+    log_error(ERROR_PARSING, message);
     BB_ASSERT(false);
     exit( ERROR_PARSING_CODE );
 }
 
-void ErrorHandler::errorGeneric( const std::string& message )
+void ErrorHandler::errorParsing( const char* message )
 {
-    errorGeneric( message.c_str() );
+    errorParsing( std::string(message) );
 }
 
-void ErrorHandler::errorGeneric( const char* message )
+void ErrorHandler::errorGeneric( const std::string& message )
 {
-    std::cerr << ERROR_GENERIC << ": " << message << std::endl;
+    log_error(ERROR_GENERIC, message);
     BB_ASSERT(false);
     exit( ERROR_GENERIC_CODE );
 }
 
+void ErrorHandler::errorGeneric( const char* message )
+{
+    errorGeneric(std::string(message));
+}
+
 void ErrorHandler::errorNotImplemented(const char *message) {
-    std::cerr << ERROR_NOT_IMPLEMENTED << ": " << message << std::endl;
-    BB_ASSERT(false);
-    exit( ERROR_NOT_IMPLEMENTED );
+    errorNotImplemented(std::string(message));
 }
 
 void ErrorHandler::errorNotImplemented( const std::string& message )
 {
-    errorNotImplemented( message.c_str() );
+    log_error(ERROR_NOT_IMPLEMENTED, message);
+    BB_ASSERT(false);
+    exit( ERROR_NOT_IMPLEMENTED_CODE );
 }
 
 void ErrorHandler::outOfMemory( const std::string& message )
 {
-    std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
-    exit( ERROR_NOT_IMPLEMENTED );
-    exit( ERROR_OUT_OF_MEMORY );
+    log_error(ERROR_OUT_OF_MEMORY, message);
+    BB_ASSERT(false);
+    exit( ERROR_OUT_OF_MEMORY_CODE );
 }
 
 void ErrorHandler::outOfMemory( const char* message )
 {
-    std::cerr << ERROR_OUT_OF_MEMORY << ": " << message << std::endl;
-    exit( ERROR_NOT_IMPLEMENTED );
-    exit( ERROR_OUT_OF_MEMORY );
+    outOfMemory(std::string(message));
 }
 } // bumblebee

@@ -28,14 +28,14 @@ class FunctionRegister {
 private:
     // Hash functor for vector<ConstantType>
 
-    using arguments_func_map = std::unordered_map<vector<ConstantType>, function_ptr, VectorConstHash>;
+    using arguments_func_map = std::unordered_map<vector<ConstantType>, function_ptr_t, VectorConstHash>;
 
 public:
     FunctionRegister() = default;
 
-    void registerFunction(function_ptr function);
+    void registerFunction(function_ptr_t function);
     // if the function is not present return nullptr
-    function_ptr getFunction(const string& name,const vector<ConstantType>& arguments);
+    function_ptr_t getFunction(const string& name,const vector<ConstantType>& arguments);
 private:
 
     std::unordered_map<string, arguments_func_map> funcmap_;

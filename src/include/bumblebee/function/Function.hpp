@@ -18,12 +18,38 @@
  */
 
 #pragma once
+#include "bumblebee/common/ErrorHandler.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
 
 #include "bumblebee/common/Hash.hpp"
 
 namespace bumblebee{
 
+struct FunctionData {
+    virtual ~FunctionData() {
+    }
+
+    virtual std::unique_ptr<FunctionData> copy() {
+        ErrorHandler::errorNotImplemented("Unimplemented copy for FunctionData");
+        return nullptr;
+    };
+
+    virtual bool equals(FunctionData &other) {
+        return true;
+    }
+
+    static bool equals(FunctionData *left, FunctionData *right) {
+        if (left == right) {
+            return true;
+        }
+        if (!left || !right) {
+            return false;
+        }
+        return left->equals(*right);
+    }
+};
+
+using function_data_ptr_t = std::unique_ptr<FunctionData>;
 
 // General function that can be used during the execution
 // TODO: Make this pluggable: allow loading function implementations at runtime
@@ -32,6 +58,8 @@ class Function {
 
 public:
     Function(const string &name, const vector<ConstantType> &arguments, ConstantType result);
+
+    Function(const string &name, const vector<ConstantType> &arguments);
 
     Function(const Function &other);
 
@@ -50,6 +78,6 @@ public:
     ConstantType result_;
 };
 
-using function_ptr = std::shared_ptr<Function>;
+using function_ptr_t = std::shared_ptr<Function>;
 
 }

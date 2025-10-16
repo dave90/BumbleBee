@@ -77,6 +77,8 @@ static FileType getFileTypeInternal(int fd) { // LCOV_EXCL_START
 	}
 } // LCOV_EXCL_STOP
 
+
+
 LocalFileSystem::~LocalFileSystem() {}
 
 
@@ -446,6 +448,28 @@ static void globFiles(FileSystem &fs, const string &path, const string &glob, bo
 	});
 }
 
+
+// Recursively collect all subdirectories under `path`.
+// Does NOT include files; only directories.
+static void collectDirectoriesRecursive(FileSystem &fs, const string &path, vector<string> &out) {
+	fs.listFiles(path, [&](const string &fname, bool is_directory) {
+		if (!is_directory) {
+			return;
+		}
+		string full = fs.joinPath(path, fname);
+		out.push_back(full);
+		collectDirectoriesRecursive(fs, full, out);
+	});
+}
+
+// Collect `path` itself (optional) and all its descendant directories.
+static void collectAllDirectories(FileSystem &fs, const string &start, vector<string> &out, bool include_start) {
+	if (include_start) {
+		out.push_back(start);
+	}
+	collectDirectoriesRecursive(fs, start, out);
+}
+
 vector<string> LocalFileSystem::glob(const string &path) {
 	if (path.empty()) {
 		return vector<string>();
@@ -502,6 +526,28 @@ vector<string> LocalFileSystem::glob(const string &path) {
 	for (idx_t i = absolute_path ? 1 : 0; i < splits.size(); i++) {
 		bool is_last_chunk = i + 1 == splits.size();
 		bool has_glob = hasGlob(splits[i]);
+
+		// Special case: "**" means "this directory and all subdirectories (recursively)"
+		if (splits[i] == "**") {
+			vector<string> result_dirs;
+
+			if (previous_directories.empty()) {
+				// Start from current directory when there is no base directory yet
+				collectAllDirectories(*this, ".", result_dirs, true);
+			} else {
+				for (auto &base : previous_directories) {
+					collectAllDirectories(*this, base, result_dirs, true);
+				}
+			}
+
+			// If "**" is the last chunk, return all directories found (globstar typically matches dirs)
+			if (is_last_chunk || result_dirs.empty()) {
+				return result_dirs;
+			}
+			previous_directories = std::move(result_dirs);
+			continue; // proceed with next path segment
+		}
+
 		// if it's the last chunk we need to find files, otherwise we find directories
 		// not the last chunk: gather a list of all directories that match the glob pattern
 		vector<string> result;

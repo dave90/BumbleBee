@@ -1,5 +1,10 @@
 ## TODOLIST
-- CSV
+- CSV Writer
+- Partitions
+- Export one signle CSV
+- Check export csv same file multiple atoms
+- Overwrite
+- SQL translation
 
 
 ## Next

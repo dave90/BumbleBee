@@ -25,11 +25,13 @@ namespace bumblebee {
 // Error messages
 #define ERROR_PARSING "\nError during parsing"
 #define ERROR_GENERIC "\nGeneric error"
+#define ERROR_NOT_IMPLEMENTED "\nError not implemented"
+#define ERROR_OUT_OF_MEMORY "\nError out of memory"
 #define ERROR_DB "\nDatabase error"
 #define ERROR_PARSING_CODE 100
 #define ERROR_GENERIC_CODE 110
-#define ERROR_NOT_IMPLEMENTED 120
-#define ERROR_OUT_OF_MEMORY 130
+#define ERROR_NOT_IMPLEMENTED_CODE 120
+#define ERROR_OUT_OF_MEMORY_CODE 130
 
 // Logs
 #define DEFAULT_LOG_FILE "bbdb.log"

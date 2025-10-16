@@ -31,6 +31,7 @@
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
+#include "bumblebee/execution/atom/scan/PhysicalPredScan.hpp"
 
 namespace bumblebee {
 PhysicalOptimizer::PhysicalOptimizer(ClientContext& context, bool recursiveRules)
@@ -48,6 +49,8 @@ bool PhysicalOptimizer::canBeSkipped(Rule &rule) {
     // skip rules with classical literal with no data
     for (auto&atom : rule.getBody()) {
         switch (atom.getType()) {
+            case EXTERNAL:
+                continue;
             case CLASSICAL: {
                 auto& pt = context_.defaultSchema_.getPredicateTable(atom.getPredicate());
                 if (!atom.isNegative() && pt->getCount() == 0) return true;
@@ -212,9 +215,45 @@ void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
     cols_.push_back(std::move(atomCols));
 }
 
+void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
+    BB_ASSERT(atom.getType() == EXTERNAL);
+    vector<idx_t> atomCols;
+    vector<idx_t> prjCols;
+    BB_ASSERT(!externalBindData_.contains(index));
+    auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesCType()).get();
+    auto inputTypes = atom.getInputValuesCType();
+    vector<ConstantType> returnTypes;
+    vector<string> names;
+    for (auto& term:atom.getTerms()) {
+        BB_ASSERT(term.getType() == VARIABLE);
+        names.push_back(term.getVariable());
+    }
+    vector<Expression> filters;
+
+    auto bind = func->bindFunction_(context_, atom.getInputValues(), inputTypes, atom.getNamedParamters(), returnTypes, names,filters );
+    externalBindData_[index] = std::move(bind);
+
+    for (idx_t i=0;i<names.size();++i) {
+        auto& var = names[i];
+        // expected variable
+        if (!colsMap_.contains(var)) {
+            // first time we see this variable, will be a new column in data chunk
+            // find the data types in the predicate tables
+            BB_ASSERT(returnTypes.size() > i);
+            typesMap_[var] = returnTypes[i];
+            colsMap_[var] = colsMap_.size();
+        }
+        atomCols.push_back(colsMap_[var]);
+        prjCols.push_back(i);
+    }
+    selectedCols_.push_back(std::move(prjCols));
+    cols_.push_back(std::move(atomCols));
+}
+
 
 void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
     // maps of variable and cols in the data chunk
+    idx_t i = 0;
     for (auto& atom:rule.getBody()) {
         if (atom.getType() == CLASSICAL)
             findColsAndTypesClassicalAtom(atom);
@@ -222,8 +261,11 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
             findColsAndTypesBuiltin(atom);
         else if (atom.getType() == AGGREGATE)
             findColsAndTypesAggregateAtom(atom);
+        else if (atom.getType() == EXTERNAL)
+            findColsAndTypesExternalAtom(atom, i);
         else
-            ErrorHandler::errorNotImplemented("Optimizer: find columns implemented only for CLASSICAL and BUILTIN atoms");
+            ErrorHandler::errorNotImplemented("Optimizer: find columns implemented only for CLASSICAL, BUILTIN, AGGREGATION and EXTERNAL atoms");
+        ++i;
     }
     // create the types for all the columns
     types_.clear();
@@ -610,16 +652,22 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
 
     BB_ASSERT(rule.getBody().size() > 0);
     auto& firstAtom = rule.getBody()[0];
-    firstAtom.getVariables(vars);
-    auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
-    auto types = types_;
-    if (!ptSource->isDistinct())
-        source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
-    else {
-        if (!ptSource->existJoinPRLHashTable(ptSource->getKeys(), {})) {
-            ptSource->createJoinPRLHashTable(ptSource->getTypes(),ptSource->getKeys(),{});
+    if (firstAtom.getType() == CLASSICAL) {
+        firstAtom.getVariables(vars);
+        auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
+        auto types = types_;
+        if (!ptSource->isDistinct())
+            source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
+        else {
+            if (!ptSource->existJoinPRLHashTable(ptSource->getKeys(), {})) {
+                ptSource->createJoinPRLHashTable(ptSource->getTypes(),ptSource->getKeys(),{});
+            }
+            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, cols_[0], selectedCols_[0], ptSource.get()));
         }
-        source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, cols_[0], selectedCols_[0], ptSource.get()));
+    }else if (firstAtom.getType() == EXTERNAL) {
+        // get the function and bind it
+        PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesCType() ).get();
+        source = patom_ptr_t(new PhysicalPredScan(context_, types_,cols_[0],  selectedCols_[0], (PredFunction*) func, externalBindData_[0]));
     }
 
     for (idx_t i=1;i<rule.getBody().size();++i) {
@@ -636,6 +684,9 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
             case AGGREGATE:
                 generatePhysicalAgg(atom, cols_[i], patoms);
                 break;
+            case EXTERNAL:
+                // TODO handle external atoms in the body
+                ErrorHandler::errorNotImplemented("External atoms in the rule body are not yet supported. Please place the external atom as the first atom in the rule, or move it to a separate rule where it serves as the source.");
         }
         atom.getVariables(vars);
     }

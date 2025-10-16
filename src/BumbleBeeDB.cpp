@@ -60,13 +60,17 @@ void BumbleBeeDB::printArgs() {
 void BumbleBeeDB::parseProgram(rules_vector_t &program) {
     // Parse the program
     ParserInputDirector inputDirector(TEXT, context_); // DEFAULT TEXT output
-    inputDirector.parse(context_.inputFiles_);
+    auto res = inputDirector.parse(context_.inputFiles_);
     // Check errors during parsing
-    if (inputDirector.getBuilder()->isFoundASafetyError()) {
-        // found a rule unsafe
-        std::string error = inputDirector.getBuilder()->getSafetyErrorMessage();
-        LOG_ERROR("Error: %s ",error.c_str());
-        ErrorHandler::errorParsing("Error, found unsafe rule.");
+    if (inputDirector.getBuilder()->isFoundASafetyError() || res != 0) {
+        if (inputDirector.getBuilder()->isFoundASafetyError()) {
+            // found a rule unsafe
+            std::string error = inputDirector.getBuilder()->getSafetyErrorMessage();
+            LOG_ERROR("Error: %s ",error.c_str());
+            ErrorHandler::errorParsing("aborting due to unsafe rule.");
+        }else {
+            ErrorHandler::errorParsing("aborting due to parser errors.");
+        }
     }
     program = std::move(inputDirector.getBuilder()->getProgram());
     LOG_INFO("Program size: %u", program.size());

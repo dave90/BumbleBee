@@ -21,12 +21,8 @@
 #include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee{
-void FunctionRegister::registerFunction(function_ptr function) {
-    // check if the function name contains "_", it is not supported as in the internal predicates
-    // we use "_" character with function names
-    if (function->name_.find('_') != std::string::npos) {
-        ErrorHandler::errorNotImplemented("Functions with '_' are not supported.");
-    }
+void FunctionRegister::registerFunction(function_ptr_t function) {
+
     // check if it is already present
     if (funcmap_.contains( function->name_) && funcmap_[function->name_].contains(function->arguments_))
         return;
@@ -34,7 +30,7 @@ void FunctionRegister::registerFunction(function_ptr function) {
     funcmap_[function->name_][function->arguments_] = function;
 }
 
-function_ptr FunctionRegister::getFunction(const string& name, const vector<ConstantType>& arguments) {
+function_ptr_t FunctionRegister::getFunction(const string& name, const vector<ConstantType>& arguments) {
     if (!funcmap_.contains(name) )
         return nullptr;
     if (!funcmap_[name].contains(arguments))

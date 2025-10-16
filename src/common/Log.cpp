@@ -35,7 +35,7 @@ namespace bumblebee {
         return (log_file != nullptr) ? 0 : -1;
     }
 
-    void log_message(const char* format, ...) {
+    void log_message(const char* level, const char* format, ...) {
         if (!log_file) return;
 
         time_t now = time(nullptr);
@@ -46,11 +46,13 @@ namespace bumblebee {
         va_list args;
         va_start(args, format);
         fprintf(log_file, "[%s] ", time_buf);
+        fprintf(log_file, " - %s - ", level);
         vfprintf(log_file, format, args);
         fprintf(log_file, "\n");
         fflush(log_file);
         if(print){
             printf( "[%s] ", time_buf);
+            printf(" - %s - ", level);
             vprintf(format, args);
             printf( "\n");
         }

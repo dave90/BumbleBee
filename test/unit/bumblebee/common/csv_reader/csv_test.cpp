@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "bumblebee/common/TypeDefs.hpp"
-#include "../../../../../../src/include/bumblebee/common/BufferedCSVReader.hpp"
+#include "bumblebee/common/BufferedCSVReader.hpp"
 
 
 using namespace bumblebee;
@@ -68,6 +68,8 @@ TEST_F(CSVSCanTest, SimpleCSVScanTest) {
     BufferedCSVReader reader(context, options);
     vector<ConstantType> expectedTypes = {STRING, INTEGER, STRING, STRING};
     EXPECT_EQ(reader.types_, expectedTypes);
+    EXPECT_GE(reader.avgBytesInChunk_, 170);
+    EXPECT_LE(reader.avgBytesInChunk_, 190);
     DataChunk chunk;
     chunk.initialize(reader.types_);
     reader.parseCSV(chunk);
@@ -136,9 +138,26 @@ TEST_F(CSVSCanTest, MultiScanCSVTest) {
     options.header_ = true;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {STRING, INTEGER, STRING, STRING};
+    EXPECT_GE(reader.avgBytesInChunk_, 170000); // more or less 180KB
+    EXPECT_LE(reader.avgBytesInChunk_, 190000);
+    vector<string> colNamesExpected = {
+        "INDEX",
+       "CUSTOMER_ID",
+       "FIRST_NAME",
+       "LAST_NAME",
+       "COMPANY",
+       "CITY",
+       "COUNTRY",
+       "PHONE_1",
+       "PHONE_2",
+       "EMAIL",
+       "SUBSCRIPTION_DATE",
+       "WEBSITE"
+    };
+    EXPECT_EQ(reader.colNames_, colNamesExpected);
     EXPECT_EQ(reader.types_.size(), 12);
     EXPECT_EQ(reader.types_[0], INTEGER);
+    EXPECT_GT(reader.bytesInChunk_, 0);
     DataChunk chunk;
     chunk.initialize(reader.types_);
     idx_t lines = 0;
@@ -150,6 +169,35 @@ TEST_F(CSVSCanTest, MultiScanCSVTest) {
     EXPECT_EQ(lines, 10000);
 }
 
+
+
+TEST_F(CSVSCanTest, MultiScanNotAutodetectCSVTest) {
+    string file = "customers-10000.csv";
+    string filepath = getCsvFilePath(file);
+    std::cout << filepath << std::endl;
+    BufferedCSVReaderOptions options;
+    options.filePath_ = filepath;
+    options.autoDetect_ = false;
+    options.hasDelimiter_ = true;
+    options.delimiter_ = ",";
+    options.compression_ = "none";
+    options.hasHeader_ = true;
+    options.header_ = true;
+    options.allVarchar_ = true;
+    std::cout << options.toString() << std::endl;
+    vector<ConstantType> types(12, STRING);
+    BufferedCSVReader reader(context, options, types);
+    EXPECT_GT(reader.bytesInChunk_, 0);
+    DataChunk chunk;
+    chunk.initialize(reader.types_);
+    idx_t lines = 0;
+    do {
+        chunk.setCardinality(0);
+        reader.parseCSV(chunk);
+        lines += chunk.getSize();
+    }while (chunk.getSize() != 0);
+    EXPECT_EQ(lines, 10000);
+}
 
 
 TEST_F(CSVSCanTest, MultiScanSkipRowsCSVTest) {
@@ -177,4 +225,28 @@ TEST_F(CSVSCanTest, MultiScanSkipRowsCSVTest) {
         lines += chunk.getSize();
     }while (chunk.getSize() != 0);
     EXPECT_EQ(lines, 95000);
+}
+
+
+
+TEST_F(CSVSCanTest, SkipAllRowsCSVTest) {
+    string file = "customers-10000.csv";
+    string filepath = getCsvFilePath(file);
+    std::cout << filepath << std::endl;
+    BufferedCSVReaderOptions options;
+    options.filePath_ = filepath;
+    options.numCols_ = 4;
+    options.hasDelimiter_ = true;
+    options.delimiter_ = ",";
+    options.compression_ = "none";
+    options.hasHeader_ = true;
+    options.header_ = true;
+    options.skipRows_ = 10100;
+    std::cout << options.toString() << std::endl;
+    BufferedCSVReader reader(context, options);
+    DataChunk chunk;
+    chunk.initialize(reader.types_);
+    chunk.setCardinality(0);
+    reader.parseCSV(chunk);
+    EXPECT_EQ(chunk.getSize(), 0);
 }

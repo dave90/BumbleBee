@@ -155,6 +155,23 @@ string ctypeToString(ConstantType type) {
     }
 }
 
+ConstantType ctypeFromString(const string& typeStr) {
+    if (typeStr == "TINYINT")    return TINYINT;
+    if (typeStr == "SMALLINT")   return SMALLINT;
+    if (typeStr == "INTEGER")    return INTEGER;
+    if (typeStr == "BIGINT")     return BIGINT;
+    if (typeStr == "UTINYINT")   return UTINYINT;
+    if (typeStr == "USMALLINT")  return USMALLINT;
+    if (typeStr == "UINTEGER")   return UINTEGER;
+    if (typeStr == "UBIGINT")    return UBIGINT;
+    if (typeStr == "FLOAT")      return FLOAT;
+    if (typeStr == "DOUBLE")     return DOUBLE;
+    if (typeStr == "STRING")     return STRING;
+    if (typeStr == "UNKNOWN")    return UNKNOWN;
+
+    return UNKNOWN; // default case
+}
+
 Binop getFlippedBinop(Binop op) {
     switch (op) {
         case EQUAL:         return EQUAL;

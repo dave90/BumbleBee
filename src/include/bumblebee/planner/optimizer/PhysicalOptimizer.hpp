@@ -46,6 +46,8 @@ private:
     void findColsAndTypesClassicalAtom(Atom& atom);
     void findColsAndTypesAggregateAtom(Atom& atom);
     void findColsAndTypesBuiltin(Atom& atom);
+    void findColsAndTypesExternalAtom(Atom &atom, idx_t index);
+
     // return true if the rule can be not evaluated
     bool canBeSkipped(Rule& rule);
 
@@ -80,6 +82,9 @@ private:
     std::unordered_map<std::string, ConstantType> typesMap_;
     // skip atom map, if true does not create physical atoms
     std::unordered_map<idx_t, bool> skipAtom_;
+    // bind data for the external atoms
+    std::unordered_map<idx_t, function_data_ptr_t> externalBindData_;
+
 
     bool recursiveRules_{false};
 };

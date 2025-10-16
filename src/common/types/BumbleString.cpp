@@ -24,6 +24,10 @@
 #include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee {
+BumbleString::BumbleString(uint32_t len) {
+    value_.length = len;
+}
+
 BumbleString::BumbleString(const char *data): BumbleString(data, strlen(data)) {}
 
 BumbleString::BumbleString(const char *data, uint32_t len) {

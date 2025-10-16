@@ -554,7 +554,7 @@ string_t StringVector::emptyString(Vector &vector, idx_t len) {
     BB_ASSERT(vector.getType() == ConstantType::STRING && "Add string on non string vector");
     if (string_t::isInlined(len)) {
         // string is inline no need to store in a heap
-        return string_t();
+        return string_t(len);
     }
     if (!vector.auxDataMngr_)
         // init string heap

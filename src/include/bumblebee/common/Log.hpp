@@ -21,25 +21,25 @@
 namespace bumblebee {
 
 #if LOG_LEVEL <= LOG_LVL_DEBUG
-#define LOG_DEBUG(...) log_message(__VA_ARGS__)
+#define LOG_DEBUG(...) log_message("DEBUG",__VA_ARGS__)
 #else
 #define LOG_DEBUG(...) ((void)0)
 #endif
 
 #if LOG_LEVEL <= LOG_LVL_INFO
-#define LOG_INFO(...) log_message(__VA_ARGS__)
+#define LOG_INFO(...) log_message("INFO",__VA_ARGS__)
 #else
 #define LOG_INFO(...) ((void)0)
 #endif
 
 #if LOG_LEVEL <= LOG_LVL_WARNING
-#define LOG_WARNING(...) log_message(__VA_ARGS__)
+#define LOG_WARNING(...) log_message("WARNING",__VA_ARGS__)
 #else
 #define LOG_WARNING(...) ((void)0)
 #endif
 
 #if LOG_LEVEL <= LOG_LVL_ERROR
-#define LOG_ERROR(...) log_message(__VA_ARGS__)
+#define LOG_ERROR(...) log_message("ERROR",__VA_ARGS__)
 #else
 #define LOG_ERROR(...) ((void)0)
 #endif
@@ -49,7 +49,7 @@ namespace bumblebee {
 int init_logger(const char* filename, int print);
 
 // Writes a message to the log file
-void log_message(const char* format, ...);
+void log_message(const char* level, const char* format, ...);
 
 // Closes the log file
 void close_logger();

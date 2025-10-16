@@ -71,6 +71,53 @@ static string trimWhitespace(const string &col_name) {
 	return col_name.substr(begin, end - begin);
 }
 
+
+
+static string normalizeColumnName(const string &col_name) {
+	// normalize UTF8 characters to NFKD
+	auto nfkd = utf8proc_NFKD((const utf8proc_uint8_t *)col_name.c_str(), col_name.size());
+	const string col_name_nfkd = string((const char *)nfkd, strlen((const char *)nfkd));
+	free(nfkd);
+
+	// only keep ASCII characters 0-9 a-z A-Z and replace spaces with regular whitespace
+	string col_name_ascii = "";
+	for (idx_t i = 0; i < col_name_nfkd.size(); i++) {
+		if (col_name_nfkd[i] == '_' || (col_name_nfkd[i] >= '0' && col_name_nfkd[i] <= '9') ||
+			(col_name_nfkd[i] >= 'A' && col_name_nfkd[i] <= 'Z') ||
+			(col_name_nfkd[i] >= 'a' && col_name_nfkd[i] <= 'z')) {
+			col_name_ascii += col_name_nfkd[i];
+			} else if (StringUtils::characterIsSpace(col_name_nfkd[i])) {
+				col_name_ascii += " ";
+			}
+	}
+
+	// trim whitespace and replace remaining whitespace by _
+	string col_name_trimmed = trimWhitespace(col_name_ascii);
+	string col_name_cleaned = "";
+	bool in_whitespace = false;
+	for (idx_t i = 0; i < col_name_trimmed.size(); i++) {
+		if (col_name_trimmed[i] == ' ') {
+			if (!in_whitespace) {
+				col_name_cleaned += "_";
+				in_whitespace = true;
+			}
+		} else {
+			col_name_cleaned += col_name_trimmed[i];
+			in_whitespace = false;
+		}
+	}
+
+	// don't leave string empty; if not empty, make lowercase
+	if (col_name_cleaned.empty()) {
+		col_name_cleaned = "_";
+	}
+	// make upper case
+	col_name_cleaned = StringUtils::upper(col_name_cleaned);
+
+	return col_name_cleaned;
+}
+
+
 TextSearchShiftArray::TextSearchShiftArray() : length_(0){
 }
 
@@ -103,9 +150,12 @@ TextSearchShiftArray::TextSearchShiftArray(string search_term) : length_(search_
 }
 
 BufferedCSVReader::BufferedCSVReader(ClientContext &context, BufferedCSVReaderOptions options,
-    const vector<ConstantType> &requested_types): fs_(*context.fileSystem_), options_(options), bufferSize_(0), position_(0) {
-    fileHandle_ = openCSV(options_);
-    initialize(requested_types);
+    const vector<ConstantType> &requested_types): BufferedCSVReader(*context.fileSystem_, options, requested_types){}
+
+BufferedCSVReader::BufferedCSVReader(FileSystem &fs, BufferedCSVReaderOptions options,
+const vector<ConstantType> &requested_types) : fs_(fs), options_(options), bufferSize_(0), position_(0) {
+	fileHandle_ = openCSV(options_);
+	initialize(requested_types);
 }
 
 void BufferedCSVReader::parseCSV(DataChunk &insertChunk) {
@@ -158,6 +208,7 @@ void BufferedCSVReader::initParseChunk(idx_t num_cols) {
 		vector<ConstantType> varchar_types(num_cols, ConstantType::STRING);
 		parseChunk_.initialize(varchar_types);
 	}
+
 }
 
 void BufferedCSVReader::prepareComplexParser() {
@@ -243,6 +294,9 @@ bool BufferedCSVReader::tryCastValue(const Value &value, const ConstantType &sql
 }
 
 bool BufferedCSVReader::tryCastVector(Vector &parse_chunk_col, idx_t size, const ConstantType &sql_type) {
+	if (parse_chunk_col.getType() == sql_type) {
+		return true;
+	}
 	// try vector-cast from string to sql_type
 	Vector dummy_result(sql_type);
 
@@ -271,6 +325,7 @@ void BufferedCSVReader::jumpToBeginning(idx_t skip_rows, bool skip_header) {
 	resetStream();
 	skipRowsAndReadHeader(skip_rows, skip_header);
 	sampleChunkIdx_ = 0;
+	avgBytesInChunk_ = (avgBytesInChunk_ +bytesInChunk_)/2;
 	bytesInChunk_ = 0;
 	endOfFileReached_ = false;
 	bomChecked_ = false;
@@ -555,7 +610,7 @@ final_state:
 
 bool BufferedCSVReader::tryParseComplexCSV(DataChunk &insert_chunk, string &error_message) {
 	// TODO Implement complex csv reader
-	ErrorHandler::errorNotImplemented("Complex CSV reader not implemented!");
+	ErrorHandler::errorNotImplemented("Complex CSV reader not implemented! Please use CSV with one byte delimiter and escape.");
 	return false;
 }
 
@@ -682,8 +737,12 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 			insert_chunk.data_[col_idx].reference(parseChunk_.data_[col_idx]);
 		} else {
 			string error_message;
-			bool success = VectorOperations::tryCast(parseChunk_.data_[col_idx], insert_chunk.data_[col_idx],
-			                                    parseChunk_.getSize(), &error_message);
+			bool success = true;
+			if (parseChunk_.data_[col_idx].getType() != insert_chunk.data_[col_idx].getType())
+				success = VectorOperations::tryCast(parseChunk_.data_[col_idx], insert_chunk.data_[col_idx],
+				                                    parseChunk_.getSize(), &error_message);
+			else
+				insert_chunk.data_[col_idx].reference(parseChunk_.data_[col_idx]);
 
 			if (!success) {
 				string col_name = std::to_string(col_idx);
@@ -692,7 +751,6 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 				}
 
 				ErrorHandler::errorParsing("Error: "+error_message+ "; in column "+col_name+" between line "+std::to_string(linenr_ - parseChunk_.getSize() + 1) + " and "+std::to_string(linenr_));
-
 			}
 		}
 	}
@@ -979,8 +1037,8 @@ void BufferedCSVReader::detectHeader(const vector<vector<ConstantType>> &best_sq
 				col_name = generateColumnName(options_.numCols_, col);
 			}
 
-
-			col_name = trimWhitespace(col_name);
+			col_name = normalizeColumnName(col_name);
+			// col_name = trimWhitespace(col_name);
 
 			// avoid duplicate header names
 			const string col_name_raw = col_name;

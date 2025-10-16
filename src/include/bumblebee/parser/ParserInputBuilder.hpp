@@ -87,6 +87,13 @@ public:
 	virtual void onAggregateNafLiteral();
 	virtual void onAggregateElement();
 	virtual void onAggregate( bool naf = false );
+
+	virtual void onExtAtom(bool naf = false);
+	virtual void onSemicolon();
+	virtual void onExternalPredicateName(char * name);
+	virtual void onNamedParameter();
+
+
 	virtual void onEnd();
 
 
@@ -126,6 +133,11 @@ protected:
 	bool distinctNewPredicate_;
 	BufferManager &bufferManager_;
 	ClientContext &clientContext_;
+
+	idx_t externalSemicolumnCount_{0};
+	std::unordered_map<string, Value> namedParameters_;
+	vector<Value> inputValues_;
+	string externalFunctionName_;
 };
 
 }

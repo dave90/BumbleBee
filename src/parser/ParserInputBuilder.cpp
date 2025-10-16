@@ -562,4 +562,59 @@ const std::string & ParserInputBuilder::getSafetyErrorMessage() {
     return safetyErrorMessage;
 }
 
+
+void ParserInputBuilder::onExtAtom(bool naf) {
+    currentAtom = Atom::createExternalAtom(namedParameters_, inputValues_, externalFunctionName_, std::move(terms_parsered));
+    // check if the external pred exist
+    if (!clientContext_.functionRegister_.getFunction(currentAtom.getExternalFunctionName(), currentAtom.getInputValuesCType())) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Error, external function "+currentAtom.getExternalFunctionName()+" with parameters [ ";
+        for (auto t: currentAtom.getInputValuesCType())
+            safetyErrorMessage += ctypeToString(t)+" ";
+        safetyErrorMessage += "] does not exist.";
+        return;
+    }
+
+    namedParameters_.clear();
+    inputValues_.clear();
+    externalFunctionName_.clear();
+    terms_parsered.clear();
+    externalSemicolumnCount_ = 0;
+}
+
+void ParserInputBuilder::onSemicolon() {
+    BB_ASSERT(externalSemicolumnCount_ < 3);
+    switch (externalSemicolumnCount_) {
+        case 0: {
+            // input values
+            for (auto& t: terms_parsered) {
+                auto& val = t.getValue();
+                inputValues_.push_back(std::move(val));
+            }
+            terms_parsered.clear();
+        }case 1: {
+            // named paramters
+            for (idx_t i=0;i<terms_parsered.size();i=i+2) {
+                auto& key = terms_parsered[i].getValue();
+                auto& value = terms_parsered[i+1].getValue();
+                if (key.getConstantType() != STRING) {
+                    safetyErrorMessage = "Error, key named parameter should be a string, received: "+key.toString();
+                    foundASafetyError_ = true;
+                    return;
+                }
+                namedParameters_.insert({key.toString(), std::move(value)});
+            }
+            terms_parsered.clear();
+        }
+    }
+    externalSemicolumnCount_++;
+}
+
+void ParserInputBuilder::onExternalPredicateName(char* name) {
+    externalFunctionName_ = name;
+    externalFunctionName_ = "&"+externalFunctionName_;
+}
+
+void ParserInputBuilder::onNamedParameter() {
+}
 }

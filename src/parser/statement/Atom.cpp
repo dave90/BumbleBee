@@ -31,6 +31,14 @@ Atom::Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type): terms_(
 Atom::Atom(AtomType type, bool negative): type_(type), negative_(negative), ground_(true) {
 }
 
+Atom::Atom(std::unordered_map<string, Value> &namedParams, vector<Value> &inputValues, string &externalFunctionName, terms_vector_t&& terms, bool negative):
+    externalFunctionName_(std::move(externalFunctionName)),
+    namedParameters_(std::move(namedParams)),
+    inputValues_(std::move(inputValues)),
+    terms_(std::move(terms)),
+    type_(EXTERNAL),  predicate_(nullptr), negative_(negative){
+}
+
 Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
                                    predicate_(other.predicate_),
                                    type_(other.type_),
@@ -39,7 +47,10 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
                                    secondBinop_(other.secondBinop_),
                                    aggregate_(other.aggregate_),
                                    aggAtoms_(std::move(other.aggAtoms_)),
-                                   aggTerms_(std::move(other.aggTerms_)){
+                                   aggTerms_(std::move(other.aggTerms_)),
+                                    externalFunctionName_(std::move(other.externalFunctionName_)),
+                                    namedParameters_(std::move(other.namedParameters_)),
+                                    inputValues_(std::move(other.inputValues_)){
     calculateIsGround();
 }
 
@@ -190,6 +201,25 @@ string Atom::getAggregateFunctionName() {
     return Atom::getAggFunction(aggregate_);
 }
 
+string Atom::getExternalFunctionName() {
+    return externalFunctionName_;
+}
+
+std::unordered_map<string, Value> & Atom::getNamedParamters() {
+    return namedParameters_;
+}
+
+vector<Value> & Atom::getInputValues() {
+    return inputValues_;
+}
+
+vector<ConstantType> Atom::getInputValuesCType() {
+    vector<ConstantType> types;
+    for (auto& v:inputValues_)
+        types.push_back(v.getConstantType());
+    return types;
+}
+
 Atom & Atom::operator=(Atom &&other) noexcept {
     if (this == &other)
         return *this;
@@ -203,6 +233,9 @@ Atom & Atom::operator=(Atom &&other) noexcept {
     secondBinop_ = other.secondBinop_;
     aggAtoms_ = std::move(other.aggAtoms_);
     aggTerms_ = std::move(other.aggTerms_);
+    namedParameters_ = std::move(other.namedParameters_);
+    inputValues_ = std::move(other.inputValues_);
+    externalFunctionName_ = std::move(other.externalFunctionName_);
     return *this;
 }
 
@@ -295,6 +328,25 @@ std::string Atom::toString() const {
 
         return s;
     }
+    if (type_ == EXTERNAL) {
+        std::string s = negative_ ? "not " : "";
+        s += externalFunctionName_ + "(";
+        for (auto& v: inputValues_) {
+            s += v.toString() + ",";
+        }
+        if (!inputValues_.empty())s.pop_back(); // remove last ,
+        s += ";";
+        for (auto& [k,v]:namedParameters_) {
+             s += k + "="+v.toString() + ",";
+        }
+        if (!namedParameters_.empty())s.pop_back(); // remove last ,
+        s += ";";
+        if (!terms_.empty()) s += terms_[0].toString();
+        for (unsigned i = 1; i < terms_.size(); ++i) {
+            s += ","+terms_[i].toString();
+        }
+        return s+")";
+    }
     ErrorHandler::errorNotImplemented("Atom type not implemented");
     return "";
 }
@@ -335,6 +387,17 @@ Atom Atom::clone() {
         }case CLASSICAL: {
             return createClassicalAtom(predicate_, std::move(terms));
         }
+        case EXTERNAL: {
+            std::unordered_map<string, Value> namedParameters;
+            for (auto& param : namedParameters_)
+                namedParameters.insert(std::make_pair(param.first, param.second.cast(param.second.getConstantType())));
+            vector<Value> inputValues;
+            for (auto& val: inputValues_)
+                inputValues.emplace_back(std::move(val.cast(val.getConstantType())))
+            ;
+            auto externalFunctionName = externalFunctionName_;
+            return createExternalAtom(namedParameters, inputValues, externalFunctionName, std::move(terms));
+        }
     }
     return {};
 }
@@ -351,6 +414,12 @@ Atom Atom::createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBin
     Term &upperGuard, terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms) {
     return Atom(aggFunction, firstBinop, secondBinop, lowerGuard, upperGuard, std::move(aggTerms), std::move(aggAtoms));
 }
+
+Atom Atom::createExternalAtom(std::unordered_map<string, Value> &namedParams, vector<Value> &inputValues,
+    string &externalFunctionName, terms_vector_t&& terms) {
+    return Atom(namedParams, inputValues, externalFunctionName, std::move(terms));
+}
+
 
 string Atom::getAggFunction(AggregateFunctionType agg) {
     switch (agg) {

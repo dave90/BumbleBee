@@ -37,7 +37,8 @@ enum AggregateFunctionType : uint8_t {
 enum AtomType {
     CLASSICAL = 0,
     BUILTIN = 1,
-    AGGREGATE = 2
+    AGGREGATE = 2,
+    EXTERNAL = 3
 };
 
 using terms_vector_t = vector<Term>;
@@ -50,6 +51,8 @@ public:
     Atom(terms_vector_t &&terms, Binop binop);
     Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms);
     Atom(AtomType type, bool negative);
+    Atom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& terms, bool negative = false);
+
     Atom(const Atom &other) = delete;
     Atom(Atom &&other) noexcept;
     ~Atom() = default;
@@ -96,6 +99,11 @@ public:
     void replaceVariable(const string& var, const string& newVar);
     string getAggregateFunctionName();
 
+    string getExternalFunctionName();
+    std::unordered_map<string, Value>& getNamedParamters();
+    vector<Value>& getInputValues();
+    vector<ConstantType> getInputValuesCType();
+
     inline const Value& getValue(idx_t idx) const {
         return terms_[idx].getValue();
     }
@@ -123,6 +131,11 @@ private:
     // Aggregation terms
     terms_vector_t aggTerms_;
 
+    // External atoms
+    std::unordered_map<string, Value> namedParameters_;
+    vector<Value> inputValues_;
+    string externalFunctionName_;
+
 public:
     // static functions
     static Atom createClassicalAtom(Predicate* p, terms_vector_t&& t);
@@ -130,6 +143,8 @@ public:
     static Atom createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms );
     static string getAggFunction(AggregateFunctionType agg);
     static AggregateFunctionType getAggFunction(const char* agg);
+    static Atom createExternalAtom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& t);
+
 };
 
 }

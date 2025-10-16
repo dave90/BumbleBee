@@ -113,6 +113,7 @@ ConstantType getCommonType(ConstantType t1, ConstantType t2);
 char getOperatorChar(Operator op);
 string getBinopStr(Binop binop);
 string ctypeToString(ConstantType type);
+ConstantType ctypeFromString(const string& typeStr);
 Binop getFlippedBinop(Binop op);
 idx_t nextPowerOfTwo(idx_t n);
 bool typeIsConstantSize(ConstantType type);

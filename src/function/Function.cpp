@@ -25,6 +25,9 @@ Function::Function(const string &name, const vector<ConstantType> &arguments, Co
     result_(result) {
 }
 
+Function::Function(const string &name, const vector<ConstantType> &arguments) : Function(name, arguments, UNKNOWN) {
+}
+
 Function::Function(const Function &other): name_(other.name_),
                                            arguments_(other.arguments_),
                                            result_(other.result_) {

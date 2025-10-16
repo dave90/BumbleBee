@@ -65,48 +65,48 @@ struct AvgOperation {
 class AvgFunc {
 public:
     // get the function from the type
-    static function_ptr getFunction(ConstantType type) {
+    static function_ptr_t getFunction(ConstantType type) {
         string name = "#avg";
         switch (type) {
             case ConstantType::TINYINT: {
                 auto func = AggregateFunction::unaryAggregate<AvgState,int8_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::SMALLINT:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,int16_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::INTEGER:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,int32_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::BIGINT:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,int64_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::UTINYINT:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,uint8_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::USMALLINT:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,uint16_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::UINTEGER:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,uint32_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::UBIGINT:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,uint64_t,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::FLOAT:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,float,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::DOUBLE:{
                 auto func = AggregateFunction::unaryAggregate<AvgState,double,double,AvgOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::STRING:	{
                 ErrorHandler::errorNotImplemented("Aggregate string sum not supported");

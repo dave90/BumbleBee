@@ -20,7 +20,7 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
     along with the validator.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "bumblebee/parser/ParserInputDirector.h"
+#include "bumblebee/parser/ParserInputDirector.hpp"
 #include <iostream>
 
 bool queryFound=false;
@@ -277,6 +277,14 @@ naf_literal
         {
             director.getBuilder()->onNafLiteral();
         }
+    | extAtom
+    	{
+    		director.getBuilder()->onExtAtom();
+    	}
+	| NAF extAtom
+		{
+			director.getBuilder()->onExtAtom(true);
+		}
     ;
 
 naf_literal_aggregate
@@ -320,6 +328,32 @@ atom
         }
     ;
 
+
+extAtom
+    : AMPERSAND identifier PARAM_OPEN terms extSemicol namedParameters extSemicol terms PARAM_CLOSE
+        {
+            director.getBuilder()->onExternalPredicateName($2);
+            delete[] $2;
+        }
+    ;
+
+extSemicol
+	: SEMICOLON
+	    {
+	     	director.getBuilder()->onSemicolon();
+        }
+
+namedParameters
+    : namedParameter
+    | namedParameters COMMA namedParameter
+    ;
+
+namedParameter
+    : term EQUAL term
+    {
+        director.getBuilder()->onNamedParameter();
+    }
+    ;
 
 terms
     : term { $$ = 1; }

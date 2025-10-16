@@ -75,6 +75,7 @@ public:
 		if (sign) {
 			*--endptr = '-';
 		}
+		dataptr[length] = '\0';
 		return result;
 	}
 };

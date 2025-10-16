@@ -36,6 +36,8 @@ public:
     static bool characterIsSpace(char c);
     static bool characterIsDigit(char c);
     static bool characterIsNewline(char c);
+    static string upper(const string &str);
+    static string lower(const string &str);
 };
 
 

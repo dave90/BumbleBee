@@ -64,52 +64,52 @@ struct MinOperation {
 class MinFunc {
 public:
     // get the function from the type
-    static function_ptr getFunction(ConstantType type) {
+    static function_ptr_t getFunction(ConstantType type) {
         string name = "#min";
         switch (type) {
             case ConstantType::TINYINT: {
                 auto func = AggregateFunction::unaryAggregate<MinState,int8_t,int64_t,MinOperation>(name, {type}, BIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::SMALLINT:{
                 auto func = AggregateFunction::unaryAggregate<MinState,int16_t,int64_t,MinOperation>(name, {type}, BIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::INTEGER:{
                 auto func = AggregateFunction::unaryAggregate<MinState,int32_t,int64_t,MinOperation>(name, {type}, BIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::BIGINT:{
                 auto func = AggregateFunction::unaryAggregate<MinState,int64_t,int64_t,MinOperation>(name, {type}, BIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::UTINYINT:{
                 auto func = AggregateFunction::unaryAggregate<MinState,uint8_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::USMALLINT:{
                 auto func = AggregateFunction::unaryAggregate<MinState,uint16_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::UINTEGER:{
                 auto func = AggregateFunction::unaryAggregate<MinState,uint32_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::UBIGINT:{
                 auto func = AggregateFunction::unaryAggregate<MinState,uint64_t,uint64_t,MinOperation>(name, {type}, UBIGINT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::FLOAT:{
                 auto func = AggregateFunction::unaryAggregate<MinState,float,float,MinOperation>(name, {type}, FLOAT);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::DOUBLE:{
                 auto func = AggregateFunction::unaryAggregate<MinState,double,double,MinOperation>(name, {type}, DOUBLE);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
             case ConstantType::STRING:	{
                 auto func = AggregateFunction::unaryAggregate<MinState,string_t,string_t,MinOperation>(name, {type}, STRING);
-                return function_ptr(new AggregateFunction(func));
+                return function_ptr_t(new AggregateFunction(func));
             }
 
             default:

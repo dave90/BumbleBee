@@ -24,6 +24,7 @@
 #include "bumblebee/function/aggregate/Min.hpp"
 #include "bumblebee/function/aggregate/Max.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
+#include "bumblebee/function/predicate/ReadCsv.hpp"
 #include "bumblebee/storage/InMemoryBlockManager.hpp"
 
 namespace bumblebee{
@@ -45,10 +46,14 @@ ClientContext::ClientContext():
 }
 
 void ClientContext::registerFunctions() {
+    // aggregate functions
     SumFunc::registerFunction(functionRegister_);
     MinFunc::registerFunction(functionRegister_);
     MaxFunc::registerFunction(functionRegister_);
     AvgFunc::registerFunction(functionRegister_);
+
+    // predicates functions
+    ReadCsvFunc::registerFunction(functionRegister_);
 }
 
 void ClientContext::initFileSystem() {

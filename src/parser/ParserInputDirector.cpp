@@ -21,6 +21,7 @@
 #include "bumblebee/common/ErrorHandler.hpp"
 #include "aspcore2_lexer.hpp"
 #include "aspcore2_parser.hpp"
+#include "bumblebee/common/Log.hpp"
 
 /*
  * local variable for parsing file
@@ -75,7 +76,6 @@ int ParserInputDirector::parse(const char *filename, FILE *file) {
     yyparse(*this);
 
     if( parserErrors_ > 0 ) {
-        std::cerr << "Aborting due to parser errors." << std::endl;
         return -1;
     }
     return 0;
@@ -102,18 +102,20 @@ int ParserInputDirector::onError(const char *msg) {
 
     parserErrors_++;
 
+    string error;
     if( !parserStateInternal_ )
     {
-        if(parserFile_ && strlen(parserFile_) > 0 )
-            std::cerr << parserFile_ << ": ";
-        std::cerr << "line " << parserLine_;
-
-        std::cerr << ": ";
+        if(parserFile_ && strlen(parserFile_) > 0 ) {
+            error = parserFile_;
+            error += ": ";
+        }
+        error += "line " + std::to_string(parserLine_) + " : ";
     }
     else
-        std::cerr << "Internal parser invocation: ";
+        error = "Internal parser invocation: ";
 
-    std::cerr << msg << "." << std::endl;
+    LOG_ERROR(error.c_str());
+    LOG_ERROR(msg);
 
     return 0;
 }

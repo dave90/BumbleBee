@@ -1,0 +1,113 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "bumblebee/execution/atom/scan/PhysicalPredScan.hpp"
+
+namespace bumblebee{
+
+
+class GlobalPredScanState : public  GlobalPhysicalAtomState {
+
+};
+
+class PredScanState : public  PhysicalAtomState {
+public:
+    explicit PredScanState(function_op_data_ptr_t& function_op_data)
+        : functionOpData_(std::move(function_op_data)) {
+    }
+    bool isInitialized_;
+    DataChunk cachedChunk_;
+    function_op_data_ptr_t functionOpData_;
+};
+
+PhysicalPredScan::PhysicalPredScan(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    vector<idx_t> &selectedCols, PredFunction *pred_function,
+    function_data_ptr_t &bind_data): PhysicalAtom(types, dcCols, selectedCols),
+                                           context_(context),
+                                           predFunction_(pred_function),
+                                           bindData_(std::move(bind_data)) {
+}
+
+PhysicalPredScan::~PhysicalPredScan() {
+}
+
+idx_t PhysicalPredScan::getMaxThreads() const {
+    return predFunction_->maxThreadFunction_(context_, bindData_.get());
+}
+
+bool PhysicalPredScan::isSource() const {
+    return true;
+}
+
+string PhysicalPredScan::getName() const {
+    return "PHYSICAL_PRED_SCAN";
+}
+
+string PhysicalPredScan::toString() const {
+    auto result = getName();
+    result += " (" + predFunction_->name_+"; ";
+    for (auto c : dcCols_) {
+        result += std::to_string(c) + ", ";
+    }
+    result += "; ";
+    for (auto c : selectCols_) {
+        result += std::to_string(c) + ", ";
+    }
+    result += "; ";
+    for (auto c : dcColsType_) {
+        result += ctypeToString(c) + ", ";
+    }
+    return result + ")";
+}
+
+pstate_ptr_t PhysicalPredScan::getState() const {
+    auto funcOpData = predFunction_->initFunction_(context_, bindData_.get());
+    return pstate_ptr_t(new PredScanState(funcOpData));
+}
+
+gpstate_ptr_t PhysicalPredScan::getGlobalState() const {
+    return gpstate_ptr_t(new GlobalPredScanState());
+}
+
+AtomResultType PhysicalPredScan::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+    auto& cstate = (PredScanState&)state;
+
+    if (!cstate.isInitialized_) {
+        // state is not initialized, so fetch the chunks from global state
+        predFunction_->initFunction_(context_, bindData_.get());
+        // calculate the types of the chunk
+        vector<ConstantType> types;
+        for (auto col:selectCols_)
+            types.push_back(types_[col]);
+        cstate.cachedChunk_.initialize(types);
+        cstate.isInitialized_ = true;
+    }
+    cstate.cachedChunk_.setCardinality(0);
+    predFunction_->function_(context_, bindData_.get(), cstate.functionOpData_.get(),nullptr, cstate.cachedChunk_);
+    if (cstate.cachedChunk_.getSize()) {
+        chunk.reference(cstate.cachedChunk_, selectCols_);
+        context.profiler_.endPhysicalAtom(chunk);
+        return AtomResultType::HAVE_MORE_OUTPUT;
+    }
+    chunk.setCardinality(0);
+    context.profiler_.endPhysicalAtom(chunk);
+    return AtomResultType::FINISHED;
+}
+}

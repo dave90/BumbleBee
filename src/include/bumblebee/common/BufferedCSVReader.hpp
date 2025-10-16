@@ -45,7 +45,7 @@ struct BufferedCSVReaderOptions {
 	string filePath_;
 	// Whether file is compressed or not, and if so which compression type
 	// ("infer" (default; infer from file extention), "gzip", "none")
-	string compression_ = "infer";
+	string compression_ = "none";
 	// Whether or not to automatically detect dialect and datatypes
 	bool autoDetect_ = false;
 	// Whether or not a delimiter was defined by the user
@@ -101,6 +101,8 @@ class BufferedCSVReader {
 public:
 	BufferedCSVReader(ClientContext &context, BufferedCSVReaderOptions options,
 	                  const vector<ConstantType> &requested_types = vector<ConstantType>());
+	BufferedCSVReader(FileSystem &fs, BufferedCSVReaderOptions options,
+					  const vector<ConstantType> &requested_types = vector<ConstantType>());
 
 	FileSystem &fs_;
 	BufferedCSVReaderOptions options_;
@@ -127,6 +129,7 @@ public:
 	bool bomChecked_ = false;
 
 	idx_t bytesInChunk_ = 0;
+	idx_t avgBytesInChunk_ = 0;
 	double bytesPerLineAvg_ = 0;
 
 	vector<std::unique_ptr<char[]>> cachedBuffers_;
@@ -204,5 +207,5 @@ private:
 	                                        vector<vector<ConstantType>> &best_sql_types_candidates);
 };
 
-
+using buffered_csv_reader_ptr_t = std::unique_ptr<BufferedCSVReader>;
 }

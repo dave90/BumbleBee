@@ -208,4 +208,16 @@ bool StringUtils::characterIsDigit(char c) {
 bool StringUtils::characterIsNewline(char c) {
 	return c == '\n' || c == '\r';
 }
+
+string StringUtils::upper(const string &str) {
+	string copy(str);
+	transform(copy.begin(), copy.end(), copy.begin(), [](unsigned char c) { return std::toupper(c); });
+	return (copy);
+}
+
+string StringUtils::lower(const string &str) {
+	string copy(str);
+	transform(copy.begin(), copy.end(), copy.begin(), [](unsigned char c) { return std::tolower(c); });
+	return (copy);
+}
 }

@@ -46,6 +46,7 @@ public:
     static constexpr idx_t PREFIX_LENGTH = 11;
 
     BumbleString() = default;
+    BumbleString(uint32_t len);
     BumbleString(const char* data);
     BumbleString(const char* data, uint32_t len);
     BumbleString(const BumbleString& other);
