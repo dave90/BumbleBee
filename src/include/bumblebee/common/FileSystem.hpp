@@ -163,6 +163,9 @@ public:
 	// Whether or not the FS handles plain files on disk. This is relevant for certain optimizations, as random reads
 	// in a file on-disk are much cheaper than e.g. random reads in a file over the network
 	virtual bool onDiskFile(FileHandle &handle);
+	// Return the file separator string
+	virtual string getFileSeparator();
+
 
 protected:
 	// Return the name of the filesytem.

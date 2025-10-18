@@ -25,7 +25,7 @@ namespace bumblebee{
 
 string_t StringHeap::addBlob(const char *data, idx_t len) {
     BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
-    auto newString = addEmptyString(len+1);
+    auto newString = addEmptyString(len);
     memcpy(newString.getDataWriteable(), data, len);
     newString.getDataWriteable()[len] = '\0';
     return newString;
@@ -34,7 +34,7 @@ string_t StringHeap::addBlob(const char *data, idx_t len) {
 
 string_t StringHeap::addEmptyString(idx_t len) {
     BB_ASSERT(len <= MINIMUM_HEAP_SIZE && "String too large for chunk");
-    if (!chunk_ || chunk_->current_position_ + len >= chunk_->maximum_size_) {
+    if (!chunk_ || chunk_->current_position_ + len +1 >= chunk_->maximum_size_) {
         // create a new chunk
         // NOTE: Max string len supported is MINIMUM_HEAP_SIZE
         auto newChunk = std::make_unique<StringChunk>(MINIMUM_HEAP_SIZE);
@@ -43,7 +43,7 @@ string_t StringHeap::addEmptyString(idx_t len) {
     }
     // create a new string
     char * dataPtr = chunk_->data_.get() + chunk_->current_position_;
-    chunk_->current_position_ += len;
+    chunk_->current_position_ += len +1;// +1 for null termination
     //add null termination
     dataPtr[0] = '\0';
     return string_t(dataPtr, len);

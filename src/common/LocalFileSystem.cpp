@@ -404,6 +404,14 @@ bool LocalFileSystem::onDiskFile(FileHandle &handle) {
 	return true;
 }
 
+string LocalFileSystem::getFileSeparator() {
+#ifdef _WIN32
+	return "\\";  // Windows
+#else
+	return "/";   // Linux, macOS, etc.
+#endif
+}
+
 void LocalFileSystem::seek(FileHandle &handle, idx_t location) {
 	if (!canSeek()) {
 		ErrorHandler::errorNotImplemented("Cannot seek in files of this type");

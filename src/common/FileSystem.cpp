@@ -229,6 +229,12 @@ bool FileSystem::canSeek() {
     return false;
 }
 
+string FileSystem::getFileSeparator() {
+    string error = "GetFileSeparator is not implemented in filesystem: " + getName();
+    ErrorHandler::errorNotImplemented(error.c_str());
+    return "";
+}
+
 bool FileSystem::onDiskFile(FileHandle &handle) {
     string error = "OnDiskFile is not implemented in filesystem: " + getName();
     ErrorHandler::errorNotImplemented(error.c_str());

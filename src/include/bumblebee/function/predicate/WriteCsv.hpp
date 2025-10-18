@@ -63,6 +63,11 @@ struct WriteCSVData : public FunctionData {
     std::unordered_map<string, std::unique_ptr<std::mutex>> lockFiles_;
     // file handle
     std::unordered_map<string, file_handler_ptr_t> filesHandler_;
+    // if the output is in one single file
+    bool isSingleFile_ = false;
+    // single file path without extension
+    string singleFile_;
+
 
     FileSystem &fs;
 
@@ -74,9 +79,9 @@ struct WriteCSVData : public FunctionData {
     string newline_ = "\n";
 
     // return file to write for each thread
-    string getFileToWrite();
+    string getFileToWrite(const vector<string>& partitionValues = {});
 
-    void writeDataToFile(string& filename, const_data_ptr_t data, idx_t size);
+    void writeDataToFile(const string& filename, const_data_ptr_t data, idx_t size);
 
     string getHeader();
 };
@@ -87,9 +92,11 @@ struct WriteCSVOperatorData : public FunctionOperatorData {
     string file_;
     // The thread-local buffer to write data into
     BufferedSerializer serializer_;
+    // The thread-local buffer to write data into for each partition
+    std::unordered_map<string,BufferedSerializer > partitionSerializers_;
+
     // A chunk with VARCHAR columns to cast intermediates into
     DataChunk chunk_;
-
 
     // The size of the CSV file (in bytes) that we buffer before we flush it to disk
     idx_t flushSize_ = 4096 * 8;

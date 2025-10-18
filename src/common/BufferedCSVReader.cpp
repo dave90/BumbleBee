@@ -660,7 +660,7 @@ void BufferedCSVReader::addValue(char *str_val, idx_t length, idx_t &column, vec
 		escape_positions.clear();
 		parse_data[row_entry] = StringVector::addString(v,  string_t(new_val.c_str()));
 	} else {
-		parse_data[row_entry] = StringVector::addString(v,  string_t(str_val));
+		parse_data[row_entry] = StringVector::addString(v,  str_val);
 	}
 
 	// move to the next column

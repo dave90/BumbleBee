@@ -137,3 +137,35 @@ TEST_F(ReadCSVSCanTest, MultiFilesCSVScanTest) {
     idx_t expectedLines = 99 + 4875 +1882 +3007 + 36;
     EXPECT_EQ(totalLines, expectedLines);
 }
+
+
+
+TEST_F(ReadCSVSCanTest, MultiFilesCSVDirScanTest) {
+    vector<Value> input;
+    input.emplace_back(getCsvFilePath("customers"));
+    vector<ConstantType> inputTypes = {STRING};
+    vector<Expression> filters;
+    auto functionPtr = ReadCsvFunc::getFunction();
+    PredFunction& predFunction = (PredFunction&) *functionPtr;
+    std::unordered_map<string, Value> params;
+    params.emplace("auto_detect", 1 );
+    params.emplace("header", 1 );
+    vector<ConstantType> returnTypes;
+    vector<string> names = {"*"};
+    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+    auto threads = predFunction.maxThreadFunction_(context, bind.get());
+    EXPECT_GT(threads, 1);
+    idx_t totalLines = 0;
+    for (idx_t i=0;i<threads;i++) {
+        auto fopd = predFunction.initFunction_(context, bind.get());
+        DataChunk chunk;
+        chunk.initialize(returnTypes);
+        do {
+            chunk.setCardinality(0);
+            predFunction.function_(context, bind.get(), fopd.get(), nullptr, chunk);
+            totalLines += chunk.getSize();
+        }while(chunk.getSize());
+    }
+    idx_t expectedLines = 99 + 4875 +1882 +3007 + 36;
+    EXPECT_EQ(totalLines, expectedLines);
+}

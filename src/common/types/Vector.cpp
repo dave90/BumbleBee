@@ -535,7 +535,7 @@ string_t StringVector::addString(Vector &vector, const char *data, idx_t len) {
         vector.auxDataMngr_ = vector_data_mngr_ptr_t(new StringDataMngr());
     BB_ASSERT(vector.auxDataMngr_->getType() == VectorDataMngrType::STRING_BUFFER);
     auto stringDataMngr = (StringDataMngr*)vector.auxDataMngr_.get();
-    return stringDataMngr->addString(data);
+    return stringDataMngr->addString(data, len);
 }
 
 string_t StringVector::addString(Vector &vector, const char *data) {

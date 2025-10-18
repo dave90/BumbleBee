@@ -52,6 +52,8 @@ struct ReadCSVData : public FunctionData {
     // mutext of the read csv
     mutex mutex_;
 
+    string extension_ = ".csv";
+
 
     //Return the max thread to read the csv
     idx_t getMaxThread();

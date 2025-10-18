@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #include "bumblebee/function/predicate/ReadCsv.hpp"
+#include <filesystem>
 #include <sstream>
 
 #include "bumblebee/common/Limits.hpp"
@@ -61,7 +62,19 @@ void parseColumns(string& columns,vector<string>& colNames,vector<ConstantType>&
 	}
 }
 
-
+static bool hasGlob(const string &str) {
+	for (idx_t i = 0; i < str.size(); i++) {
+		switch (str[i]) {
+			case '*':
+			case '?':
+			case '[':
+				return true;
+			default:
+				break;
+		}
+	}
+	return false;
+}
 
 idx_t ReadCSVData::getMaxThread() {
     if (maxThreads_)
@@ -151,12 +164,25 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 	BB_ASSERT(inputs.size() == 1);
 	BB_ASSERT(returnTypes.empty());
 	BB_ASSERT(!names.empty());
-	string filePattern = inputs[0].toString();
-
+	string folder = inputs[0].toString();
+	string path = folder;
 	auto &fs = *context.fileSystem_;
-	result->files_ = fs.glob(filePattern);
+	if (!hasGlob(folder)) {
+		auto fileExist = fs.fileExists(folder);
+		// is not a glob, check if is a directory
+		if (!fileExist && !fs.directoryExists(folder))
+			ErrorHandler::errorParsing("No files found in the folder: " + path);
+
+		if (!fileExist) {
+			// is a directory add the *.csv to the file pattern
+			auto separator = context.fileSystem_->getFileSeparator();
+			path = folder + separator + "**" + separator + "*.csv";
+		}
+	}
+
+	result->files_ = fs.glob(path);
 	if (result->files_.empty()) {
-		ErrorHandler::errorParsing("No files found that match the pattern: " + filePattern);
+		ErrorHandler::errorParsing("No files found that match the pattern: " + path);
 	}
 	vector<string> colNames;
 	vector<ConstantType> colTypes;

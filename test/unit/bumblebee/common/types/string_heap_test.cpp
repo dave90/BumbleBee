@@ -80,13 +80,13 @@ TEST_F(StringHeapTest, SingleChunkAllocation) {
     auto s4 = heap.addEmptyString(chunkSize - 700);
     // All of them should be in the same chunk (no overflow)
     auto base = s1.c_str();
-    EXPECT_EQ(s2.c_str(), base + 100);
-    EXPECT_EQ(s3.c_str(), base + 100 + 200);
-    EXPECT_EQ(s4.c_str(), base + 100 + 200 + 300);
+    EXPECT_EQ(s2.c_str(), base + 101); // +1 for null termination allocation
+    EXPECT_EQ(s3.c_str(), base + 101 + 201);
+    EXPECT_EQ(s4.c_str(), base + 101 + 201 + 301);
 
     // This one causes overflow and allocates a new chunk
     auto s5 = heap.addEmptyString(101);
-    EXPECT_NE( s5.c_str(), base + 100 + 200 + 300+(chunkSize - 700) );
+    EXPECT_NE( s5.c_str(), base + 101 + 201 + 301+(chunkSize - 700 +1) );
     // check s1 first chunk still exist
     EXPECT_EQ(s1.c_str()[0], 'A');
     heap.destroy();

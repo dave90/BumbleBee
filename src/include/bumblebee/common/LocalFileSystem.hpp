@@ -71,6 +71,7 @@ public:
 
     bool onDiskFile(FileHandle &handle) override;
 
+    string getFileSeparator() override;
 
 protected:
     string getName() const override;

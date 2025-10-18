@@ -132,18 +132,33 @@ string WriteCSVData::getHeader() {
 	return header;
 }
 
-string WriteCSVData::getFileToWrite() {
-	constexpr auto separator = std::filesystem::path::preferred_separator;
+string WriteCSVData::getFileToWrite(const vector<string>& partitionValues) {
+	auto separator = fs.getFileSeparator();
 
 	// return a new file based on thread id
 	auto id = std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 	lock_guard lock(mutex_);
-	if (threadFiles_.contains(id))
-		return threadFiles_[id];
-
 
 	string filename = getUUID() + "_" + id + tmpExtension_;
 	auto file = folder_ + separator + filename;
+	if (isSingleFile_) {
+		// single file change the id and the file pointing to the same file
+		id = singleFile_;
+		file = singleFile_ + tmpExtension_;
+	}
+	if (!partitions_.empty()) {
+		file = folder_ + separator;
+		for (idx_t i =0;i < partitionValues.size();i++) {
+			file +=  colNames_[partitions_[i]] + "=" + partitionValues[i] + separator;
+			if (!fs.directoryExists(file))
+				fs.createDirectory(file);
+		}
+		file += filename;
+		id = file;
+	}
+	if (threadFiles_.contains(id))
+		return threadFiles_[id];
+
 	threadFiles_[id] = file;
 
 	// if the file exist delete it
@@ -166,14 +181,16 @@ string WriteCSVData::getFileToWrite() {
 	return file;
 }
 
-void WriteCSVData::writeDataToFile(string &file, const_data_ptr_t data, idx_t size) {
+
+
+void WriteCSVData::writeDataToFile(const string &file, const_data_ptr_t data, idx_t size) {
 	BB_ASSERT(lockFiles_.contains(file));
 	BB_ASSERT(filesHandler_.contains(file));
 	BB_ASSERT(lockFiles_[file]);
 	BB_ASSERT(filesHandler_[file]);
-	lock_guard flock(*lockFiles_[file]);
+	lock_guard flock(*(lockFiles_[file]));
 
-	fs.write(*filesHandler_[file], (void *)data, size);
+	fs.write(*(filesHandler_[file]), (void *)data, size);
 }
 
 static function_data_ptr_t writeCSVBind(ClientContext &context,
@@ -191,9 +208,6 @@ static function_data_ptr_t writeCSVBind(ClientContext &context,
 	string filePattern = inputs[0].toString();
 
 	result->folder_ = filePattern;
-
-	if (!context.fileSystem_->directoryExists(result->folder_))
-		context.fileSystem_->createDirectory(result->folder_);
 
 	vector<string> partitions;
 	for (auto &kv : parameters) {
@@ -223,8 +237,22 @@ static function_data_ptr_t writeCSVBind(ClientContext &context,
 			parseColumns(kv.second.toString(), partitions);
 		} else if (kv.first == "columns") {
 			parseColumns(kv.second.toString(), result->colNames_);
+		}else if (kv.first == "single_file") {
+			result->isSingleFile_ = kv.second.getValueUnsafe<uint8_t>();
+			result->singleFile_ = filePattern;
+			// if ends with the extension remove the extensions as we will add it
+			if (result->singleFile_.ends_with(result->extension_))
+				result->singleFile_.erase(result->singleFile_.size() - result->extension_.size());
 		}
 	}
+
+	if (result->isSingleFile_ && !result->partitions_.empty())
+		ErrorHandler::errorParsing("Error, you cannot set single file and partitions :( .");
+
+
+	if (!result->isSingleFile_ && !context.fileSystem_->directoryExists(result->folder_))
+		context.fileSystem_->createDirectory(result->folder_);
+
 
 	if (result->colNames_.empty())
 		//set the col names the variables
@@ -253,7 +281,6 @@ static function_data_ptr_t writeCSVBind(ClientContext &context,
 
 
 static function_op_data_ptr_t writeCSVInit(ClientContext &context, const FunctionData *bind_data_p) {
-	constexpr auto separator = std::filesystem::path::preferred_separator;
 
 	auto &bind_data = (WriteCSVData &)*bind_data_p;
 
@@ -268,9 +295,65 @@ static function_op_data_ptr_t writeCSVInit(ClientContext &context, const Functio
 	return std::move(result);
 }
 
+static void writeChunk(WriteCSVData &bind_data, WriteCSVOperatorData &data) {
+	auto& writer = data.serializer_;
+	// now loop over the vectors and output the values
+	for (idx_t row_idx = 0; row_idx < data.chunk_.getSize(); row_idx++) {
+		for (idx_t col_idx = 0; col_idx < data.chunk_.columnCount(); col_idx++) {
+			if (col_idx != 0) {
+				writer.writeBufferData(bind_data.delimiter_);
+			}
+
+			// non-null value, fetch the string value from the cast chunk
+			auto str_data = FlatVector::getData<string_t>(data.chunk_.data_[col_idx]);
+			auto& str_value = str_data[row_idx];
+			writeQuotedString(writer, bind_data, str_value.getDataUnsafe(), str_value.size());
+		}
+		writer.writeBufferData(bind_data.newline_);
+	}
+	// check if we should flush what we have currently written
+	if (writer.blob_.size_ >= data.flushSize_) {
+		bind_data.writeDataToFile(data.file_, writer.blob_.data_.get(), writer.blob_.size_);
+		writer.reset();
+	}
+}
+
+static void writeChunkWithPartitions(WriteCSVData &bind_data, WriteCSVOperatorData &data) {
+	// now loop over the vectors and output the values
+	for (idx_t row_idx = 0; row_idx < data.chunk_.getSize(); row_idx++) {
+		// first calculate the partition
+		vector<string> partitionValues;
+		for (idx_t p_idx = 0; p_idx < bind_data.partitions_.size(); p_idx++) {
+			auto col_idx = bind_data.partitions_[p_idx];
+			auto str_data = FlatVector::getData<string_t>(data.chunk_.data_[col_idx]);
+			auto& str_value = str_data[row_idx];
+			partitionValues.emplace_back(str_value.getDataUnsafe());
+		}
+
+		auto file = bind_data.getFileToWrite(partitionValues);
+		auto& writer = data.partitionSerializers_[file];
+		for (idx_t col_idx = 0; col_idx < data.chunk_.columnCount(); col_idx++) {
+			if (col_idx != 0) {
+				writer.writeBufferData(bind_data.delimiter_);
+			}
+
+			// non-null value, fetch the string value from the cast chunk
+			auto str_data = FlatVector::getData<string_t>(data.chunk_.data_[col_idx]);
+			auto& str_value = str_data[row_idx];
+			writeQuotedString(writer, bind_data, str_value.getDataUnsafe(), str_value.size());
+		}
+		writer.writeBufferData(bind_data.newline_);
+		if (writer.blob_.size_ >= data.flushSize_) {
+			bind_data.writeDataToFile(data.file_, writer.blob_.data_.get(), writer.blob_.size_);
+			writer.reset();
+		}
+	}
+
+}
+
 
 static void writeCSVFunction(ClientContext &context, const FunctionData *bind_data_p,
-										 FunctionOperatorData *operator_state, DataChunk *input, DataChunk &output) {
+                             FunctionOperatorData *operator_state, DataChunk *input, DataChunk &output) {
 	auto &bind_data = (WriteCSVData &)*bind_data_p;
 	auto &data = (WriteCSVOperatorData &)*operator_state;
 
@@ -286,26 +369,10 @@ static void writeCSVFunction(ClientContext &context, const FunctionData *bind_da
 		}
 	}
 	data.chunk_.normalify();
-	auto& writer = data.serializer_;
-	// now loop over the vectors and output the values
-	for (idx_t row_idx = 0; row_idx < data.chunk_.getSize(); row_idx++) {
-		for (idx_t col_idx = 0; col_idx < data.chunk_.columnCount(); col_idx++) {
-			if (col_idx != 0) {
-				writer.writeBufferData(bind_data.delimiter_);
-			}
-
-			// non-null value, fetch the string value from the cast chunk
-			auto str_data = FlatVector::getData<string_t>(data.chunk_.data_[col_idx]);
-			auto str_value = str_data[row_idx];
-			writeQuotedString(writer, bind_data, str_value.getDataUnsafe(), str_value.size());
-		}
-		writer.writeBufferData(bind_data.newline_);
-	}
-	// check if we should flush what we have currently written
-	if (writer.blob_.size_ >= data.flushSize_) {
-		bind_data.writeDataToFile(data.file_, writer.blob_.data_.get(), writer.blob_.size_);
-		writer.reset();
-	}
+	if (bind_data.partitions_.empty())
+		writeChunk(bind_data, data);
+	else
+		writeChunkWithPartitions(bind_data, data);
 
 }
 
@@ -317,22 +384,37 @@ void writeCSVCombine(ClientContext &context, const FunctionData *bind_data_p, Fu
 
 	// write data in the buffer
 	// check if we should flush what we have currently written
-	if (writer.blob_.size_ > 0) {
+
+	if (bind_data.partitions_.empty() && writer.blob_.size_ > 0) {
 		bind_data.writeDataToFile(data.file_, writer.blob_.data_.get(), writer.blob_.size_);
 		writer.reset();
+		return;
 	}
+	// check the partitions buffer
+	for (auto& [file, w]: data.partitionSerializers_)
+		if (w.blob_.size_ > 0) {
+			bind_data.writeDataToFile(file, w.blob_.data_.get(), w.blob_.size_);
+			w.reset();
+		}
 }
 
 void writeCSVFinalize(ClientContext &context, const FunctionData *bind_data_p) {
 	auto &bind_data = (WriteCSVData &)*bind_data_p;
 	auto& fs = bind_data.fs;
-	constexpr auto separator = std::filesystem::path::preferred_separator;
+	auto separator = bind_data.fs.getFileSeparator();
 
 	if (bind_data.overwrite_) {
 		// find and remove all the csv files before writing the new one
-		vector<string> oldFiles = bind_data.fs.glob(bind_data.folder_ + separator +"**"+ separator+"*"+bind_data.extension_);
+		vector<string> oldFiles;
+		if (!bind_data.isSingleFile_)
+			oldFiles = bind_data.fs.glob(bind_data.folder_ + separator +"**"+ separator+"*"+bind_data.extension_);
+		else
+			oldFiles.push_back(bind_data.singleFile_+bind_data.extension_);
+
 		for (auto& file : oldFiles)
-			bind_data.fs.removeFile(file);
+			if (bind_data.fs.fileExists(file))
+				bind_data.fs.removeFile(file);
+
 		// move the tmp data to the final extension
 		for (auto& [key, _]: bind_data.filesHandler_) {
 			string target(key.c_str(), key.size() - bind_data.tmpExtension_.size());
@@ -351,12 +433,25 @@ void writeCSVFinalize(ClientContext &context, const FunctionData *bind_data_p) {
 			fs.moveFile(key, target);
 			continue;
 		}
-		auto targetFh = fs.openFile(target, FileFlags::FILE_FLAGS_APPEND,
+		auto targetFh = fs.openFile(target, FileFlags::FILE_FLAGS_APPEND | FileFlags::FILE_FLAGS_WRITE,
 							 FileLockType::WRITE_LOCK, FileSystem::DEFAULT_COMPRESSION);
 
 		auto buffer = std::unique_ptr<char[]>(new char[bind_data.initial_buff_size]);
+		// open the file as read
+		auto readFh = fs.openFile(key, FileFlags::FILE_FLAGS_READ,
+							 FileLockType::READ_LOCK, FileSystem::DEFAULT_COMPRESSION);
+		if (bind_data.header_) {
+			// we need to skip the first line
+			idx_t read_count = readFh->read(buffer.get(), bind_data.initial_buff_size);
+			if (read_count > 0) {
+				auto pos = std::find(buffer.get(), buffer.get()+read_count, bind_data.newline_.c_str()[0]);
+				BB_ASSERT(pos);
+				idx_t index = pos - buffer.get() + 1;
+				targetFh->write(buffer.get() + index  , read_count - index);
+			}
+		}
 		while (true) {
-			idx_t read_count = fh->read(buffer.get(), bind_data.initial_buff_size);
+			idx_t read_count = readFh->read(buffer.get(), bind_data.initial_buff_size);
 			if (read_count == 0) break;
 			targetFh->write(buffer.get(), read_count);
 		}
@@ -373,6 +468,7 @@ static void writeCSVAddNamedParameters(PredFunction &table_function) {
 	table_function.namedParameters_["columns"] = ConstantType::STRING;
 	table_function.namedParameters_["header"] = ConstantType::UTINYINT;
 	table_function.namedParameters_["partitions"] = ConstantType::STRING;
+	table_function.namedParameters_["single_file"] = ConstantType::UTINYINT;
 }
 
 
