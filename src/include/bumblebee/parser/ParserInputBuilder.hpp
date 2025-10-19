@@ -138,6 +138,7 @@ protected:
 	std::unordered_map<string, Value> namedParameters_;
 	vector<Value> inputValues_;
 	string externalFunctionName_;
+	idx_t extAtomCounter_{0};
 };
 
 }

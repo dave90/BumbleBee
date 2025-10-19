@@ -293,7 +293,7 @@ rules_bucket_vector_t StatementDependency::orderRules() {
     std::unordered_map<idx_t, int> constraintsCounter;
     for (unsigned i=0; i<program_.size(); ++i) {
         Rule& rule = program_[i];
-        // check if it is a contraint
+        // check if it is a constratint
         if (!rule.getHead().empty()) continue;
         predicates_ptr_set_t preds;
         for (auto& ba: rule.getBody()) ba.getPredicates(preds);

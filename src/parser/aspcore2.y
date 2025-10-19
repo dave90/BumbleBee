@@ -173,6 +173,11 @@ disjunction
         {
             director.getBuilder()->onHeadAtom();
         }
+    | extAtom
+        {
+            director.getBuilder()->onExtAtom();
+            director.getBuilder()->onHeadAtom();
+        }
     | disjunction HEAD_SEPARATOR classic_literal
         {
             director.getBuilder()->onHeadAtom();

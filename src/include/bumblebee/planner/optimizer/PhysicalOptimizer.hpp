@@ -48,6 +48,8 @@ private:
     void findColsAndTypesBuiltin(Atom& atom);
     void findColsAndTypesExternalAtom(Atom &atom, idx_t index);
 
+    void bindExternalAtom(idx_t index, Atom& atom, vector<ConstantType>& returnTypes, vector<string>& names);
+
     // return true if the rule can be not evaluated
     bool canBeSkipped(Rule& rule);
 

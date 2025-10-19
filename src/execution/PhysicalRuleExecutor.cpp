@@ -24,6 +24,10 @@ PhysicalRuleExecutor::PhysicalRuleExecutor(prule_ptr_t prule, ThreadContext* con
 
     states_.reserve(prule_->patoms_.size());
     chunks_.reserve(prule_->patoms_.size());
+
+}
+
+void PhysicalRuleExecutor::initialize() {
     initializeStates();
     initializeChunks();
 }

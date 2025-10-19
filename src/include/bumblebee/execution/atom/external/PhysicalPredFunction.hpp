@@ -23,15 +23,21 @@
 namespace bumblebee{
 
 
-class PhysicalPredScan : public PhysicalAtom {
+class PhysicalPredFunction : public PhysicalAtom {
 public:
-    PhysicalPredScan(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols, vector<idx_t> &selectedCols,
+    PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols, vector<idx_t> &selectedCols,
          PredFunction *pred_function, function_data_ptr_t &bind_data);
 
-    ~PhysicalPredScan() override;
+    PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types,vector<idx_t> &dcCols,
+        PredFunction *pred_function, function_data_ptr_t &bind_data);
+
+    ~PhysicalPredFunction() override;
 
     idx_t getMaxThreads() const override;
     bool isSource() const override;
+    bool isSink() const override;
+
+
     string getName() const override;
     string toString() const override;
     pstate_ptr_t getState() const override;
@@ -39,6 +45,14 @@ public:
 
     AtomResultType getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
                             GlobalPhysicalAtomState &gstate) const override;
+
+    AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const override;
+
+    void finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const override;
+
+    void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+
 
 private:
     ClientContext& context_;

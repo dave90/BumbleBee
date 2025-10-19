@@ -48,10 +48,13 @@ public:
     void fetchFromSource(DataChunk& input);
     // Call the finalize on the sink and source patoms, It is called only once per pipeline
     void finalize();
+    // init function to call before the execute
+    void initialize();
 
+private:
     void initializeStates();
     void initializeChunks();
-private:
+
     ThreadContext* tcontext_;
     // The physical rule to be executed
     prule_ptr_t prule_;

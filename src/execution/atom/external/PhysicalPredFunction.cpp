@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
-#include "bumblebee/execution/atom/scan/PhysicalPredScan.hpp"
+#include "bumblebee/execution/atom/external/PhysicalPredFunction.hpp"
 
 namespace bumblebee{
 
@@ -35,7 +35,7 @@ public:
     function_op_data_ptr_t functionOpData_;
 };
 
-PhysicalPredScan::PhysicalPredScan(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredFunction *pred_function,
     function_data_ptr_t &bind_data): PhysicalAtom(types, dcCols, selectedCols),
                                            context_(context),
@@ -43,22 +43,36 @@ PhysicalPredScan::PhysicalPredScan(ClientContext &context, const vector<Constant
                                            bindData_(std::move(bind_data)) {
 }
 
-PhysicalPredScan::~PhysicalPredScan() {
+PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types,
+vector<idx_t> &dcCols, PredFunction *pred_function, function_data_ptr_t &bind_data):
+                                        PhysicalAtom(types),
+                                       context_(context),
+                                       predFunction_(pred_function),
+                                       bindData_(std::move(bind_data)) {
+    dcCols_ = std::move(dcCols);
+    for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
 }
 
-idx_t PhysicalPredScan::getMaxThreads() const {
+PhysicalPredFunction::~PhysicalPredFunction() {
+}
+
+idx_t PhysicalPredFunction::getMaxThreads() const {
     return predFunction_->maxThreadFunction_(context_, bindData_.get());
 }
 
-bool PhysicalPredScan::isSource() const {
+bool PhysicalPredFunction::isSource() const {
     return true;
 }
 
-string PhysicalPredScan::getName() const {
+bool PhysicalPredFunction::isSink() const {
+    return true;
+}
+
+string PhysicalPredFunction::getName() const {
     return "PHYSICAL_PRED_SCAN";
 }
 
-string PhysicalPredScan::toString() const {
+string PhysicalPredFunction::toString() const {
     auto result = getName();
     result += " (" + predFunction_->name_+"; ";
     for (auto c : dcCols_) {
@@ -75,23 +89,23 @@ string PhysicalPredScan::toString() const {
     return result + ")";
 }
 
-pstate_ptr_t PhysicalPredScan::getState() const {
+pstate_ptr_t PhysicalPredFunction::getState() const {
     auto funcOpData = predFunction_->initFunction_(context_, bindData_.get());
     return pstate_ptr_t(new PredScanState(funcOpData));
 }
 
-gpstate_ptr_t PhysicalPredScan::getGlobalState() const {
+gpstate_ptr_t PhysicalPredFunction::getGlobalState() const {
     return gpstate_ptr_t(new GlobalPredScanState());
 }
 
-AtomResultType PhysicalPredScan::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+AtomResultType PhysicalPredFunction::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
     context.profiler_.startPhysicalAtom(this);
     auto& cstate = (PredScanState&)state;
 
     if (!cstate.isInitialized_) {
         // state is not initialized, so fetch the chunks from global state
-        predFunction_->initFunction_(context_, bindData_.get());
+        // predFunction_->initFunction_(context_, bindData_.get());
         // calculate the types of the chunk
         vector<ConstantType> types;
         for (auto col:selectCols_)
@@ -109,5 +123,39 @@ AtomResultType PhysicalPredScan::getData(ThreadContext &context, DataChunk &chun
     chunk.setCardinality(0);
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::FINISHED;
+}
+
+
+AtomResultType PhysicalPredFunction::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+    auto& cstate = (PredScanState&)state;
+    if (input.getSize() == 0) {
+        context.profiler_.endPhysicalAtom(input);
+        return AtomResultType::FINISHED;
+    }
+
+    DataChunk pinput = projectColumns(input);
+
+    predFunction_->function_(context_, bindData_.get(), cstate.functionOpData_.get(),nullptr, pinput);
+
+    context.profiler_.endPhysicalAtom(input);
+    return AtomResultType::NEED_MORE_INPUT;
+}
+
+void PhysicalPredFunction::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+
+    predFunction_->finalize_function_(context_, bindData_.get());
+
+    context.profiler_.endPhysicalAtomFinalize();
+}
+
+void PhysicalPredFunction::combine(ThreadContext &context, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+
+    auto& cstate = (PredScanState&)state;
+    predFunction_->combine_function_(context_, bindData_.get(), cstate.functionOpData_.get());
+
 }
 }

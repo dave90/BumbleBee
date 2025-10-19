@@ -35,6 +35,7 @@ public:
     }
 
     virtual void execute() {
+        rule_->initialize();
         rule_->execute();
     }
 

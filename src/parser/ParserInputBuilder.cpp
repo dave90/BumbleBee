@@ -117,7 +117,15 @@ void ParserInputBuilder::onQuery() {
 
 void ParserInputBuilder::onHeadAtom() {
     if(foundASafetyError_) return;
-    if (currentAtom.containsAnonymous())currentRuleIsUnsafe_=true;
+    if (currentAtom.containsAnonymous() || currentAtom.getType() == AGGREGATE || currentAtom.getType() == BUILTIN)
+        currentRuleIsUnsafe_=true;
+    if (currentAtom.getType() == EXTERNAL) {
+        // create a predicate to get processed by statement dependency
+        string name =  currentAtom.getExternalFunctionName() + "_" + std::to_string(extAtomCounter_++);
+        Predicate *predicate = currentSchema_.get().createPredicate(&clientContext_ ,name.c_str(), terms_parsered.size());
+        predicate->setInternal(true);
+        currentAtom.setPredicte(predicate);
+    }
     currentRule.addAtomInHead(std::move(currentAtom));
 }
 

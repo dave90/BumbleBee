@@ -92,6 +92,8 @@ void Atom::getPredicates(predicates_ptr_set_t &predicates) {
     }else if (type_ == AGGREGATE) {
         for (auto& atom : aggAtoms_)
             atom.getPredicates(predicates);
+    } else if (type_ == EXTERNAL && predicate_) {
+        predicates.insert(predicate_);
     }
 }
 
@@ -284,6 +286,11 @@ void Atom::getAggSharedVariables(const set_term_variable_t &globalVariables, set
     set_term_variable_t internals;
     getAggAtomsVariables(internals);
     Term::intersetVariables(internals, globalVariables, sharedVariables);
+}
+
+void Atom::setPredicte(Predicate *predicate) {
+    BB_ASSERT(type_ == EXTERNAL); // only external atoms can set predicate after the creation
+    predicate_ = predicate;
 }
 
 bool Atom::isGround() {

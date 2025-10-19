@@ -103,6 +103,7 @@ public:
     std::unordered_map<string, Value>& getNamedParamters();
     vector<Value>& getInputValues();
     vector<ConstantType> getInputValuesCType();
+    void setPredicte(Predicate* predicate);
 
     inline const Value& getValue(idx_t idx) const {
         return terms_[idx].getValue();
