@@ -46,6 +46,7 @@ bool queryFound=false;
 %token <string> SYMBOLIC_CONSTANT NUMBER VARIABLE STRING DIRECTIVE_NAME DIRECTIVE_VALUE
 %token <string> AGGR_COUNT AGGR_MAX AGGR_MIN AGGR_SUM AGGR_AVG
 
+
 %token ERROR NEWLINE
 
 %token DOT DDOT SEMICOLON COLON CONS QUERY_MARK
@@ -64,6 +65,14 @@ bool queryFound=false;
 
 %token VEL EXISTS
 
+
+/* --- SQL tokens --- */
+%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR
+%token SQL_SUM SQL_MIN SQL_MAX SQL_AVG
+%left SQL_OR
+%left SQL_AND
+%token <string> SQL_DIALECT
+
 %left PLUS DASH
 %left TIMES SLASH
 
@@ -74,6 +83,7 @@ HEAD_SEPARATOR  : VEL;
 
 program
     :
+    SQL_DIALECT sql { director.getBuilder()->onEnd();}
     | rules { director.getBuilder()->onEnd();}
     | error { yyerror(director,"Generic error"); }
     ;
@@ -735,3 +745,244 @@ aggregate_function
         }
     ;
 
+
+
+
+
+/* =========================
+   SQL  DIALECT
+   ========================= */
+
+sql
+    : sql_select select from opt_where opt_groupby
+    ;
+
+sql_select
+    : SQL_SELECT
+    {
+        director.getBuilder()->onSQLStart();
+    }
+    ;
+
+select
+    : select_list
+    {
+        director.getBuilder()->onSQLSelect();
+    }
+    ;
+
+
+/* SELECT list */
+select_list
+    : TIMES
+    | select_items
+    ;
+
+select_items
+    : select_item
+    | select_items COMMA select_item
+    ;
+
+select_item
+    : value_expr opt_alias
+    {
+        director.getBuilder()->onSQLSelectItem();
+    }
+    ;
+
+/* FROM clause */
+from
+    :
+    SQL_FROM from_list
+    {
+        director.getBuilder()->onSQLFrom();
+    }
+    ;
+
+
+from_list
+    :
+    from_item
+    | from_list COMMA from_item
+    ;
+
+from_item
+    : table_ref opt_alias
+    {
+        director.getBuilder()->onSQLFromItem();
+    }
+    | PARAM_OPEN sql PARAM_CLOSE opt_alias     /* subquery in FROM */
+    {
+        director.getBuilder()->onSQLSubQuery();
+    }
+    ;
+
+table_ref
+    : SYMBOLIC_CONSTANT
+    {
+        director.getBuilder()->onSQLTableRef($1);
+        delete[] $1;
+    }
+    | VARIABLE
+    {
+        director.getBuilder()->onSQLTableRef($1);
+        delete[] $1;
+    }
+    ;
+
+/* Optional aliasing: AS ident | ident | "string" variants */
+opt_alias
+    : /* empty */
+    | SQL_AS alias_name
+    ;
+
+alias_name
+    : SYMBOLIC_CONSTANT
+    {
+        director.getBuilder()->onSQLAlias($1);
+        delete[] $1;
+    }
+    | VARIABLE
+     {
+         director.getBuilder()->onSQLAlias($1);
+         delete[] $1;
+     }
+    ;
+
+/* WHERE clause */
+opt_where
+    : /* empty */
+    | SQL_WHERE search_condition
+    {
+        director.getBuilder()->onSQLWhere();
+    }
+    ;
+
+search_condition
+    : predicate
+    {
+        director.getBuilder()->onSQLPredicate();
+    }
+    | search_condition SQL_AND search_condition
+    {
+        director.getBuilder()->onSQLOperatorCondition("AND");
+    }
+    | search_condition SQL_OR  search_condition
+    {
+        director.getBuilder()->onSQLOperatorCondition("OR");
+    }
+    ;
+
+/* A simple predicate: expression <binop> expression (reuses your binop) */
+predicate
+    : predicate_value_expr binop value_expr
+    {
+        director.getBuilder()->onSQLPredicateValueExprOp();
+    }
+    ;
+
+predicate_value_expr
+    : value_expr
+    {
+        director.getBuilder()->onSQLPredicateValueExpr();
+    }
+    ;
+
+/* GROUP BY */
+opt_groupby
+    : /* empty */
+    | SQL_GROUP SQL_BY group_list
+    ;
+
+group_list
+    : value_expr
+    | group_list COMMA value_expr
+    ;
+
+/* Expressions (simple arithmetic; reuse PLUS/DASH/TIMES/SLASH/BACK_SLASH) */
+value_expr
+    : value_term
+    | value_expr PLUS value_term
+    {
+        director.getBuilder()->onSQLValueTerm('+');
+    }
+    | value_expr DASH value_term
+    {
+        director.getBuilder()->onSQLValueTerm('-');
+    }
+    | value_expr TIMES value_term
+    {
+        director.getBuilder()->onSQLValueTerm('*');
+    }
+    | value_expr SLASH value_term
+    {
+        director.getBuilder()->onSQLValueTerm('/');
+    }
+    ;
+
+value_term
+    : value_primary
+    ;
+
+/* Primary values (numbers, strings, identifiers, qualified names, aggregates, parens) */
+value_primary
+    : NUMBER
+    {
+        director.getBuilder()->onSQLValue($1);
+        delete[] $1;
+    }
+    | STRING
+    {
+        director.getBuilder()->onSQLValue($1);
+        delete[] $1;
+    }
+    | qualified_name
+    | PARAM_OPEN value_expr PARAM_CLOSE
+    | aggregate_func PARAM_OPEN value_expr PARAM_CLOSE
+    ;
+
+qualified_name
+    : SYMBOLIC_CONSTANT
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+    | VARIABLE
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+    | SYMBOLIC_CONSTANT DOT SYMBOLIC_CONSTANT
+    {
+         director.getBuilder()->onSQLQualifiedName($1, $3);
+         delete[] $1;
+         delete[] $3;
+    }
+    | VARIABLE DOT SYMBOLIC_CONSTANT
+    {
+         director.getBuilder()->onSQLQualifiedName($1, $3);
+         delete[] $1;
+         delete[] $3;
+    }
+    | VARIABLE DOT VARIABLE
+    {
+         director.getBuilder()->onSQLQualifiedName($1, $3);
+         delete[] $1;
+         delete[] $3;
+    }
+    | SYMBOLIC_CONSTANT DOT VARIABLE
+    {
+         director.getBuilder()->onSQLQualifiedName($1, $3);
+         delete[] $1;
+         delete[] $3;
+    }
+
+    ;
+
+/* Aggregates (SQL variants separate from your #sum/#min/#max/#avg) */
+aggregate_func
+    : SQL_SUM
+    | SQL_MIN
+    | SQL_MAX
+    | SQL_AVG
+    ;

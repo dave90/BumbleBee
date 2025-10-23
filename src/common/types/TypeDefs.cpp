@@ -44,6 +44,24 @@ char getOperatorChar(Operator op) {
     return ' ';
 }
 
+Operator getCharOperator(char op) {
+    switch (op) {
+        case '+':
+            return PLUS;
+        case '-':
+            return MINUS;
+        case '/':
+            return DIV;
+        case '*':
+            return TIMES;
+        case '%':
+            return MODULO;
+        default:
+            ;
+    }
+    ErrorHandler::errorNotImplemented("Invalid operator conversion from Operator");
+    return PLUS;
+}
 
 std::string getBinopStr(Binop binop) {
     switch (binop) {

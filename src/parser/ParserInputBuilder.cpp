@@ -521,6 +521,7 @@ void ParserInputBuilder::rewriteAggregates() {
 
 void ParserInputBuilder::onEnd() {
     rewriteAggregates();
+
 }
 
 rules_vector_t & ParserInputBuilder::getProgram() {
@@ -624,5 +625,162 @@ void ParserInputBuilder::onExternalPredicateName(char* name) {
 }
 
 void ParserInputBuilder::onNamedParameter() {
+
 }
+
+
+/* ------------------------------------------------------------------------
+* SQL PARSER
+*------------------------------------------------------------------------
+*/
+
+void ParserInputBuilder::onSQLValue(char *value) {
+    if(foundASafetyError_) return;
+
+    if( value[0] >= 'A' && value[0] <='Z' ) // Column name
+    {
+        std::string s(value);
+        Value v(std::move(s));
+        sqlValuePrimary_.emplace_back(v);
+        return;
+    }
+    if( (value[0] == '\"' && value[strlen(value)-1] == '\"') ||
+            (value[0] >= 'a' && value[0] <='z') )   // String constant
+    {
+        std::string s(value);
+        if (value[0] == '\"')
+            // remove the quote
+            s = s.substr(1, s.size() - 2);
+        Value v(std::move(s));
+        sqlValuePrimary_.emplace_back(v);
+        return;
+    }
+    // Numeric constant
+    long long num = atoll(value);
+    if (num >= 0) {
+        // Positive number
+        unsigned long long unum = strtoull(value, nullptr, 10);
+        Value v(unum);
+        sqlValuePrimary_.emplace_back(v);
+        return;
+    }
+    Value v(num);
+    sqlValuePrimary_.emplace_back(v);
+
 }
+
+void ParserInputBuilder::onSQLQualifiedName(char *name, char *table) {
+    sql::QualifiedName qName{.name_ = name};
+    if (table)
+        qName.table_ = table;
+
+    sqlValuePrimary_.emplace_back(qName);
+}
+
+void ParserInputBuilder::onSQLValueTerm(char op) {
+    if (valueExpr_.getOperators().empty()) {
+        // pop 2 items as is the first time
+        auto vp1 = std::move(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+        auto vp2 = std::move(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+        valueExpr_.addValuePrimary(vp2);
+        valueExpr_.addValuePrimary(vp1);
+        valueExpr_.addOperator(getCharOperator(op));
+        return;
+    }
+    valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+    sqlValuePrimary_.pop_back();
+    valueExpr_.addOperator(getCharOperator(op));
+}
+
+void ParserInputBuilder::onSQLSelectItem() {
+
+    if (!alias_.empty())
+        valueExpr_.setAlias(alias_);
+    if (!sqlValuePrimary_.empty()) {
+        BB_ASSERT(sqlValuePrimary_.size() == 1);
+        valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+    }
+    alias_.clear();
+    sqlStatements_.back().getSelect().addItem(valueExpr_);
+    valueExpr_.clear();
+}
+
+void ParserInputBuilder::onSQLAlias(char *alias) {
+    alias_ = alias;
+}
+
+void ParserInputBuilder::onSQLTableRef(char *table) {
+    fromItems_.emplace_back(table);
+}
+
+void ParserInputBuilder::onSQLFromItem() {
+    if (!alias_.empty())
+        fromItems_.back().setAlias(alias_);
+    alias_.clear();
+    for (auto& fi: fromItems_)
+        sqlStatements_.back().getFrom().addItem(fi);
+    fromItems_.clear();
+}
+
+void ParserInputBuilder::onSQLPredicateValueExpr() {
+    if (valueExpr_.getValues().empty()) {
+        BB_ASSERT(!sqlValuePrimary_.empty());
+        // no operations take from sqlValuePrimary_
+        valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+    }
+    sqlPredicate_.setValue1(valueExpr_);
+    valueExpr_.clear();
+}
+
+void ParserInputBuilder::onSQLPredicateValueExprOp() {
+    if (valueExpr_.getValues().empty()) {
+        BB_ASSERT(!sqlValuePrimary_.empty());
+
+        // no operations take from sqlValuePrimary_
+        valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+    }
+    sqlPredicate_.setValue2(valueExpr_);
+    valueExpr_.clear();
+    sqlPredicate_.setOp(binop_);
+}
+
+void ParserInputBuilder::onSQLOperatorCondition(const char * op) {
+    string sop = op;
+    sqlStatements_.back().getWhere().addOperator(sql::Where::getOp(sop));
+}
+
+void ParserInputBuilder::onSQLPredicate() {
+    sqlStatements_.back().getWhere().addItem(sqlPredicate_);
+}
+
+void ParserInputBuilder::onSQLWhere() {
+
+}
+
+void ParserInputBuilder::onSQLFrom() {
+
+}
+
+void ParserInputBuilder::onSQLSelect() {
+
+}
+
+void ParserInputBuilder::onSQLStart() {
+    sqlStatements_.emplace_back();
+}
+
+void ParserInputBuilder::onSQLSubQuery() {
+    BB_ASSERT(sqlStatements_.size() > 1);
+    auto& last = sqlStatements_.back();
+    sqlStatements_[0].getFrom().addSubqueries(last, alias_);
+    alias_.clear();
+    sqlStatements_.pop_back();
+}
+
+}
+

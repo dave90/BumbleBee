@@ -82,7 +82,20 @@
      WCONS = 298,
      AMPERSAND = 299,
      VEL = 300,
-     EXISTS = 301
+     EXISTS = 301,
+     SQL_SELECT = 302,
+     SQL_FROM = 303,
+     SQL_WHERE = 304,
+     SQL_GROUP = 305,
+     SQL_BY = 306,
+     SQL_AS = 307,
+     SQL_AND = 308,
+     SQL_OR = 309,
+     SQL_SUM = 310,
+     SQL_MIN = 311,
+     SQL_MAX = 312,
+     SQL_AVG = 313,
+     SQL_DIALECT = 314
    };
 #endif
 /* Tokens.  */
@@ -130,6 +143,19 @@
 #define AMPERSAND 299
 #define VEL 300
 #define EXISTS 301
+#define SQL_SELECT 302
+#define SQL_FROM 303
+#define SQL_WHERE 304
+#define SQL_GROUP 305
+#define SQL_BY 306
+#define SQL_AS 307
+#define SQL_AND 308
+#define SQL_OR 309
+#define SQL_SUM 310
+#define SQL_MIN 311
+#define SQL_MAX 312
+#define SQL_AVG 313
+#define SQL_DIALECT 314
 
 
 
@@ -143,7 +169,7 @@ typedef union YYSTYPE
     int integer;
 }
 /* Line 1529 of yacc.c.  */
-#line 147 "src/parser/aspcore2_parser.h"
+#line 173 "src/parser/aspcore2_parser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

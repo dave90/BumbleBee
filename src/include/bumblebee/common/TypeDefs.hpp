@@ -111,6 +111,7 @@ ConstantType getSignedBumpedType(ConstantType type);
 // adjusting for signedness differences, and returning the type with the larger size.
 ConstantType getCommonType(ConstantType t1, ConstantType t2);
 char getOperatorChar(Operator op);
+Operator getCharOperator(char op);
 string getBinopStr(Binop binop);
 string ctypeToString(ConstantType type);
 ConstantType ctypeFromString(const string& typeStr);

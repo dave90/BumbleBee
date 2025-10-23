@@ -26,6 +26,7 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
 
 #define OPT_PARSER 1
 
+
 #ifndef OPT_PARSER
 #define YY_INPUT(buf,result,max_size)  {\
     result = GetNextChar(buf, max_size); \
@@ -42,6 +43,8 @@ BLANK               ([ \t]+)
 NEWLINE             \15?\n
 DOT 				\.
 
+SQL_DIALECT         \%@sql
+
 COMMENT_EMPTY       \%\n
 COMMENT             \%[^@\n].*
 
@@ -52,6 +55,7 @@ AGGR_SUM            #sum
 AGGR_AVG            #avg
 DIRECTIVE_NAME      #([A-Za-z_]*)
 DIRECTIVE_VALUE     .*
+
 
 SYMBOLIC_CONSTANT   ([a-z][A-Za-z_0-9]*)
 VARIABLE            ([A-Z][A-Za-z_0-9]*)
@@ -70,6 +74,9 @@ NUMBER              ([0-9]+)
                       // Only in state WANT_NEWLINE a newline
                       // token for the parser is generated, while
                       // normally newlines are simply skipped.
+
+%s SQL
+
 %%
         // Newline is normally skipped, except when explicitly
         // requested with WANT_NEWLINE. (e.g. by a construct that is
@@ -168,6 +175,27 @@ NUMBER              ([0-9]+)
                             strcpy(yylval.string,yytext);
                             return DIRECTIVE_VALUE;
                         }
+
+{SQL_DIALECT} {
+                        BEGIN(SQL);
+                        return SQL_DIALECT;
+}
+
+
+<SQL>[Ss][Ee][Ll][Ee][Cc][Tt]           { return SQL_SELECT; }
+<SQL>[Ff][Rr][Oo][Mm]                   { return SQL_FROM; }
+<SQL>[Ww][Hh][Ee][Rr][Ee]               { return SQL_WHERE; }
+<SQL>[Gg][Rr][Oo][Uu][Pp]               { return SQL_GROUP; }
+<SQL>[Bb][Yy]                           { return SQL_BY; }
+<SQL>[Aa][Ss]                           { return SQL_AS; }
+<SQL>[Aa][Nn][Dd]                       { return SQL_AND; }
+<SQL>[Oo][Rr]                           { return SQL_OR; }
+
+<SQL>[Ss][Uu][Mm]                       { return SQL_SUM; }
+<SQL>[Mm][Ii][Nn]                       { return SQL_MIN; }
+<SQL>[Mm][Aa][Xx]                       { return SQL_MAX; }
+<SQL>[Aa][Vv][Gg]                       { return SQL_AVG; }
+
 
 {SYMBOLIC_CONSTANT}     {
                             yylval.string=new char[strlen(yytext)+1];

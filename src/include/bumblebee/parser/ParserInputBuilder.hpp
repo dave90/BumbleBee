@@ -26,9 +26,13 @@
 #include "bumblebee/parser/statement/Term.hpp"
 #include "statement/Atom.hpp"
 #include "statement/Rule.hpp"
+#include "statement/sql/SQLStatement.hpp"
+#include "statement/sql/ValueExpr.hpp"
 
 namespace bumblebee {
-	class Term;
+
+
+class Term;
 
 class ParserInputBuilder {
 public:
@@ -103,6 +107,25 @@ public:
 	rules_vector_t& getProgram();
 	void rewriteAggregates();
 
+
+	void onSQLValue(char*);
+	void onSQLQualifiedName(char* name, char* table = nullptr);
+	void onSQLValueTerm(char );
+	void onSQLSelectItem();
+	void onSQLAlias(char*);
+	void onSQLTableRef(char*);
+	void onSQLFromItem();
+	void onSQLPredicate();
+	void onSQLPredicateValueExpr();
+	void onSQLPredicateValueExprOp();
+	void onSQLOperatorCondition(const char *);
+
+	void onSQLWhere();
+	void onSQLFrom();
+	void onSQLSelect();
+	void onSQLSubQuery();
+	void onSQLStart();
+
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};
 	std::reference_wrapper<Schema> currentSchema_;
@@ -139,6 +162,18 @@ protected:
 	vector<Value> inputValues_;
 	string externalFunctionName_;
 	idx_t extAtomCounter_{0};
+
+
+	// SQL parser
+	bool isSql_{false};
+	vector<sql::ValuePrimary> sqlValuePrimary_;
+	string alias_;
+	sql::ValueExpr valueExpr_;
+	sql::from_items_t fromItems_;
+	vector<sql::Predicate> predicates_;
+	sql::Predicate sqlPredicate_;
+	vector<sql::SQLStatement> sqlStatements_;
+
 };
 
 }
