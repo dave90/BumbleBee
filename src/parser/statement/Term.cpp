@@ -88,6 +88,9 @@ Term::Term(Term &&t1,Term &&t2, Operator op): negative_(false), type_(ARITH)  {
     operators_.push_back(op);
 }
 
+Term::Term(Value &v): value_(std::move(v)), type_(CONSTANT), negative_(false) {
+}
+
 bool Term::isNegative() {return negative_;}
 
 void Term::setNegative(bool n) {

@@ -55,13 +55,29 @@ ValuePrimary & ValuePrimary::operator=(ValuePrimary &&other) noexcept {
     return *this;
 }
 
+Value & ValuePrimary::getValue() {
+    return value_;
+}
+
+bool & ValuePrimary::isIsConstant() {
+    return isConstant_;
+}
+
+QualifiedName & ValuePrimary::getQualifier() {
+    return qualifier_;
+}
+
+void ValuePrimary::setQualifier(QualifiedName &qualifier) {
+    qualifier_ = qualifier;
+}
+
 string ValuePrimary::toString() const {
     if (isConstant_) {
         return value_.toString();
     }
     if (qualifier_.table_.empty())
         return qualifier_.name_ ;
-    return qualifier_.name_ +"."+qualifier_.table_;
+    return qualifier_.table_+"."+qualifier_.name_;
 }
 
 ValueExpr::ValueExpr(const ValueExpr &other): values_(other.values_),
@@ -112,11 +128,11 @@ string ValueExpr::toString() const {
     return result;
 }
 
-vector<ValuePrimary> ValueExpr::getValues() const {
+vector<ValuePrimary>& ValueExpr::getValues() {
     return values_;
 }
 
-vector<Operator> ValueExpr::getOperators() const {
+vector<Operator>& ValueExpr::getOperators() {
     return operators_;
 }
 

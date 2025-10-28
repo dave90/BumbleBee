@@ -72,6 +72,7 @@ public:
 	Term(string&& c, bool isVariable);
 	Term(IntervalTerm interval_);
 	Term(Term&& t1,Term&& t2, Operator op);
+	Term(Value& v);
 
 	Term(const Term &other)
 		: negative_(other.negative_),

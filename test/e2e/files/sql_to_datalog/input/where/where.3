@@ -1,0 +1,4 @@
+%@sql
+SELECT p.LAST_NAME, p.FIRST_NAME
+FROM &read_csv("/Users/davidefusca/git/BumbleBee/test/e2e/files/csv/username.csv";separator=",",auto_detect=1,header=1) as p
+WHERE p.LAST_NAME > p.FIRST_NAME AND p.IDENTIFIER > 100 OR p.USERNAME > "CIAO"

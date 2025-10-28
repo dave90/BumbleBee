@@ -1,0 +1,4 @@
+%@sql
+SELECT c1.LAST_NAME, c1.FIRST_NAME
+FROM &read_csv("./files/csv/username.csv";auto_detect=1,header=1) as c1
+WHERE c1.IDENTIFIER > 100

@@ -36,6 +36,8 @@ public:
     void addItem(ValueExpr& item);
     void clear();
 
+    value_expr_vector_t & getItems();
+
     string toString() const;
 
 private:

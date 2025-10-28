@@ -21,15 +21,24 @@
 
 namespace bumblebee{
 namespace sql {
-FromItem::FromItem(const string &table_name): tableName_(table_name) {
+FromItem::FromItem(const string &table_name): tableName_(table_name), type_(TABLE) {
 }
 
-FromItem::FromItem(std::unique_ptr<SQLStatement> &statement): statement_(std::move(statement)) {
+FromItem::FromItem(std::unique_ptr<SQLStatement> &statement): statement_(std::move(statement)), type_(SUBQUERY) {
+}
+
+FromItem::FromItem(vector<Value> &input_values, string &ext_table_name,
+    std::unordered_map<string, Value> &named_parameters): inputValues_(std::move(input_values)),
+                                                                extTableName_(ext_table_name),
+                                                                namedParameters_(std::move(named_parameters)), type_(EXTERNAL) {
 }
 
 FromItem::FromItem(FromItem &&other) noexcept: statement_(std::move(other.statement_)),
-                                                tableName_(std::move(other.tableName_)),
-                                                alias_(std::move(other.alias_)) {
+                                               tableName_(std::move(other.tableName_)),
+                                               alias_(std::move(other.alias_)), type_(other.type_),
+                                            extTableName_(std::move(other.extTableName_)),
+                                            inputValues_(std::move(other.inputValues_)),
+                                            namedParameters_(std::move(other.namedParameters_)){
 }
 
 FromItem &FromItem::operator=(FromItem &&other) noexcept {
@@ -38,25 +47,73 @@ FromItem &FromItem::operator=(FromItem &&other) noexcept {
     statement_ = std::move(other.statement_);
     tableName_ = std::move(other.tableName_);
     alias_ = std::move(other.alias_);
+    type_ = other.type_;
+    extTableName_ = std::move(other.extTableName_);
+    inputValues_ = std::move(other.inputValues_);
+    namedParameters_ = std::move(other.namedParameters_);
     return *this;
+}
+
+vector<Value> & FromItem::getInputValues() {
+    return inputValues_;
+}
+
+string & FromItem::getExtTableName() {
+    return extTableName_;
+}
+
+std::unordered_map<string, Value> & FromItem::getNamedParameters() {
+    return namedParameters_;
 }
 
 
 string FromItem::toString() const{
     string result = "";
-    if (statement_) {
-        result = "( " + statement_->toString() + ")";
-    } else {
-        result = tableName_;
-        if (!alias_.empty())
-            result += " AS " + alias_;
+    switch (type_) {
+        case TABLE: {
+            result = tableName_;
+            break;
+        }
+        case SUBQUERY: {
+            result += "( " + statement_->toString() + ")";
+            break;
+        }
+        case EXTERNAL: {
+            result += extTableName_ + "(";
+            idx_t i = 0;
+            for (auto& iv: inputValues_) {
+                if (i > 0)result += ", ";
+                result += iv.toString();
+                ++i;
+            }
+            result += " ; ";
+            i = 0;
+            for (auto& [key, value]: namedParameters_) {
+                if (i > 0)result += ", ";
+                result += key + " = " + value.toString();
+                ++i;
+            }
+
+            result += ")";
+        }
     }
+    if (!alias_.empty())
+        result += " AS " + alias_;
 
     return result;
 }
 
+FromItemType FromItem::getType() const {
+    return type_;
+}
+
 void FromItem::setAlias(string& alias) {
     alias_ = alias;
+}
+
+
+string FromItem::getAlias() const {
+    return alias_;
 }
 
 
@@ -75,6 +132,14 @@ From & From::operator=(From &&other) noexcept {
 
 void From::addItem(FromItem &item) {
     items_.push_back(std::move(item));
+}
+
+from_items_t & From::getItems() {
+    return items_;
+}
+
+vector<SQLStatement> & From::getSubQueries() {
+    return subQueries_;
 }
 
 string From::toString() const {

@@ -60,5 +60,9 @@ string Select::toString() const{
 void Select::clear() {
     items_.clear();
 }
+
+value_expr_vector_t & Select::getItems() {
+    return items_;
+}
 }
 }

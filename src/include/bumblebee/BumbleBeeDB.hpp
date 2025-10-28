@@ -38,6 +38,7 @@ public:
 
     void run();
     void print();
+    void printProgram(rules_vector_t& program);
 
 private:
     void processBucketRules( RulesBucket & bucket, Scheduler& scheduler);

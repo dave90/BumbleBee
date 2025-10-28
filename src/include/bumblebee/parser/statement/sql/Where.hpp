@@ -41,6 +41,12 @@ public:
     void setValue1(ValueExpr &value1);
     void setValue2(ValueExpr &value2);
 
+    Binop & getOp();
+
+    ValueExpr & getValue1();
+
+    ValueExpr & getValue2();
+
     string toString() const;
 
 
@@ -63,6 +69,10 @@ public:
 
     void addItem(Predicate& condition);
     void addOperator(SQLOperator op);
+
+    predicate_vector_t & getItems();
+
+    vector<SQLOperator> & getOps();
 
     string toString()const;
 

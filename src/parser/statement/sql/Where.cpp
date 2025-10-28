@@ -62,6 +62,18 @@ void Predicate::setValue2(ValueExpr &value2) {
     value2_ = std::move(value2);
 }
 
+Binop & Predicate::getOp() {
+    return op_;
+}
+
+ValueExpr & Predicate::getValue1() {
+    return value1_;
+}
+
+ValueExpr & Predicate::getValue2() {
+    return value2_;
+}
+
 
 string Predicate::toString() const {
     return value1_.toString() + " " + getBinopStr(op_) +" "+ value2_.toString();
@@ -98,6 +110,14 @@ void Where::addItem(Predicate &condition) {
 
 void Where::addOperator(SQLOperator op) {
     ops_.push_back(op);
+}
+
+predicate_vector_t & Where::getItems() {
+    return items_;
+}
+
+vector<SQLOperator> & Where::getOps() {
+    return ops_;
 }
 
 SQLOperator Where::getOp(string &op) {

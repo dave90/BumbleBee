@@ -46,6 +46,7 @@ public:
     string tempDirectory_;
     idx_t maxMemory_;
     block_manager_ptr_t blockManager_;
+    bool printProgram_;
 
     ClientContext();
 

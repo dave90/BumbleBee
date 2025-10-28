@@ -1,0 +1,4 @@
+%@sql
+SELECT c1.LAST_NAME, c1.FIRST_NAME, c2.FIRST_NAME, c2.USERNAME
+FROM &read_csv("./files/csv/username.csv";auto_detect=1,header=1) as c1, &read_csv("./files/csv/username.csv";auto_detect=1,header=1) as c2
+WHERE c1.LAST_NAME > c2.LAST_NAME AND c2.FIRST_NAME > c1.FIRST_NAME

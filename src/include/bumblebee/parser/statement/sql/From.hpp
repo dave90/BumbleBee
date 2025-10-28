@@ -18,30 +18,58 @@
  */
 #pragma once
 #include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/types/Value.hpp"
 
 namespace bumblebee {
 namespace sql {
 
 class SQLStatement;
 
+enum FromItemType {
+    TABLE,
+    SUBQUERY,
+    EXTERNAL
+};
+
 class FromItem {
 public:
     FromItem(const string &table_name);
     explicit FromItem(std::unique_ptr<SQLStatement> &statement);
+    FromItem(vector<Value> &input_values, string &ext_table_name,
+        std::unordered_map<string, Value> &named_parameters);
+
     FromItem(const FromItem &other) = delete;
     FromItem(FromItem &&other) noexcept;
 
     FromItem & operator=(const FromItem &other) = delete;
     FromItem & operator=(FromItem &&other) noexcept;
 
+
+    vector<Value> & getInputValues();
+
+    string & getExtTableName();
+
+    std::unordered_map<string, Value> & getNamedParameters();
+
+    string getAlias() const;
+
     void setAlias(string&);
 
     string toString() const;
 
+    FromItemType getType() const;
+
 private:
     std::unique_ptr<SQLStatement> statement_;
+
     string tableName_;
+
+    vector<Value> inputValues_;
+    string extTableName_;
+    std::unordered_map<string, Value> namedParameters_;
+
     string alias_;
+    FromItemType type_;
 };
 
 using from_items_t = vector<FromItem>;
@@ -57,6 +85,10 @@ public:
     From & operator=(From &&other) noexcept;
 
     void addItem(FromItem &item);
+
+    from_items_t & getItems();
+
+    vector<SQLStatement> & getSubQueries();
 
     string toString() const;
 

@@ -25,6 +25,7 @@
 #include "bumblebee/common/ErrorHandler.hpp"
 #include "bumblebee/parallel/TaskExecutor.hpp"
 #include "bumblebee/parser/ParserInputDirector.hpp"
+#include "bumblebee/parser/statement/sql/SqlToDatalog.hpp"
 #include "bumblebee/planner/Planner.hpp"
 #include "bumblebee/planner/StatementDependency.hpp"
 
@@ -34,6 +35,7 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
 
     app.add_option("-l,--log-file", context_.logFilename_, "Log file")->default_val(DEFAULT_LOG_FILE);
     app.add_flag("-p,--print-log", context_.printLog_, "Print log")->default_val(0);
+    app.add_flag("--print-program", context_.printProgram_, "Print only the datalog program")->default_val(0);
     // app.add_flag("-s,--single-shot", context_.singleShot_, "Single shot run")->default_val(1);
     app.add_option("-i,--input-files", context_.inputFiles_, "Single shot run")->expected(1, -1);
     app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(1);
@@ -72,7 +74,20 @@ void BumbleBeeDB::parseProgram(rules_vector_t &program) {
             ErrorHandler::errorParsing("aborting due to parser errors.");
         }
     }
-    program = std::move(inputDirector.getBuilder()->getProgram());
+    if (inputDirector.getBuilder()->isSQL()) {
+        // we need to rewrite sql into datalog
+        sql::SQLStatement sqlStatement = std::move(inputDirector.getBuilder()->getSqlStatement());
+        LOG_INFO("SQL: %s", sqlStatement.toString().c_str());
+        SqlToDatalog rewriter(context_);
+        bool foundError=false;
+        string error;
+        program = rewriter.sqlToDatalog(sqlStatement, foundError, error);
+        if (foundError) {
+            LOG_ERROR("Error: %s ",error.c_str());
+            ErrorHandler::errorParsing("aborting due to incorrect sql.");
+        }
+    }else
+        program = std::move(inputDirector.getBuilder()->getProgram());
     LOG_INFO("Program size: %u", program.size());
     for (auto& rule : program) {
         LOG_DEBUG("Rule: %s", rule.toString().c_str());
@@ -86,13 +101,19 @@ void BumbleBeeDB::run() {
         LOG_ERROR("Error, only single shot mode is avaliable.");
         ErrorHandler::errorGeneric("Error, only single shot mode is avaliable.");
     }
+
+    rules_vector_t program;
+    parseProgram(program);
+    if (context_.printProgram_) {
+        // print the program and exist
+        printProgram(program);
+        return;
+    }
+
     LOG_DEBUG("Starting scheduler and executors");
     Scheduler scheduler(context_);
     TaskExecutor executor(scheduler.queue_, context_.threads_);
     executor.startThreads();
-
-    rules_vector_t program;
-    parseProgram(program);
 
     processProgram(program, scheduler);
     executor.stopThreadsAndJoin();
@@ -270,6 +291,12 @@ void BumbleBeeDB::print() {
                 offset += STANDARD_VECTOR_SIZE;
             }
         }
+    }
+}
+
+void BumbleBeeDB::printProgram(rules_vector_t &program) {
+    for (auto& rule : program) {
+        std::cout << rule.toString() << std::endl;
     }
 }
 

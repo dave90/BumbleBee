@@ -146,7 +146,8 @@ AtomResultType PhysicalPredFunction::sink(ThreadContext &context, DataChunk &inp
 void PhysicalPredFunction::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {
     context.profiler_.startPhysicalAtom(this);
 
-    predFunction_->finalize_function_(context_, bindData_.get());
+    if (predFunction_->finalize_function_)
+        predFunction_->finalize_function_(context_, bindData_.get());
 
     context.profiler_.endPhysicalAtomFinalize();
 }

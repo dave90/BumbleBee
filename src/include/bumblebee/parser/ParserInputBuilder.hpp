@@ -107,7 +107,7 @@ public:
 	rules_vector_t& getProgram();
 	void rewriteAggregates();
 
-
+	bool isSQL();
 	void onSQLValue(char*);
 	void onSQLQualifiedName(char* name, char* table = nullptr);
 	void onSQLValueTerm(char );
@@ -125,6 +125,9 @@ public:
 	void onSQLSelect();
 	void onSQLSubQuery();
 	void onSQLStart();
+	void onSQLExtTable();
+	void onSQLExtTableName(char*);
+	sql::SQLStatement& getSqlStatement();
 
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};

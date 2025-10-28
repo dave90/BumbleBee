@@ -775,6 +775,14 @@ select
 /* SELECT list */
 select_list
     : TIMES
+    {
+        char * c = new char[2];
+        c[0] = '*';
+        c[1] = '\0';
+        director.getBuilder()->onSQLQualifiedName(c);
+        delete[] c;
+        director.getBuilder()->onSQLSelectItem();
+    }
     | select_items
     ;
 
@@ -807,7 +815,11 @@ from_list
     ;
 
 from_item
-    : table_ref opt_alias
+    : external_table opt_alias
+    {
+        director.getBuilder()->onSQLExtTable();
+    }
+    | table_ref opt_alias
     {
         director.getBuilder()->onSQLFromItem();
     }
@@ -816,6 +828,13 @@ from_item
         director.getBuilder()->onSQLSubQuery();
     }
     ;
+
+external_table
+    : AMPERSAND identifier PARAM_OPEN terms extSemicol namedParameters PARAM_CLOSE
+    {
+        director.getBuilder()->onSQLExtTableName($2);
+        delete[] $2;
+    }
 
 table_ref
     : SYMBOLIC_CONSTANT
@@ -954,25 +973,25 @@ qualified_name
     }
     | SYMBOLIC_CONSTANT DOT SYMBOLIC_CONSTANT
     {
-         director.getBuilder()->onSQLQualifiedName($1, $3);
+         director.getBuilder()->onSQLQualifiedName($3, $1);
          delete[] $1;
          delete[] $3;
     }
     | VARIABLE DOT SYMBOLIC_CONSTANT
     {
-         director.getBuilder()->onSQLQualifiedName($1, $3);
+         director.getBuilder()->onSQLQualifiedName($3, $1);
          delete[] $1;
          delete[] $3;
     }
     | VARIABLE DOT VARIABLE
     {
-         director.getBuilder()->onSQLQualifiedName($1, $3);
+         director.getBuilder()->onSQLQualifiedName($3, $1);
          delete[] $1;
          delete[] $3;
     }
     | SYMBOLIC_CONSTANT DOT VARIABLE
     {
-         director.getBuilder()->onSQLQualifiedName($1, $3);
+         director.getBuilder()->onSQLQualifiedName($3, $1);
          delete[] $1;
          delete[] $3;
     }

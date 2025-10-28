@@ -634,6 +634,15 @@ void ParserInputBuilder::onNamedParameter() {
 *------------------------------------------------------------------------
 */
 
+sql::SQLStatement& ParserInputBuilder::getSqlStatement() {
+    BB_ASSERT(!sqlStatements_.empty());
+    return sqlStatements_[0];
+}
+
+bool ParserInputBuilder::isSQL() {
+    return isSql_;
+}
+
 void ParserInputBuilder::onSQLValue(char *value) {
     if(foundASafetyError_) return;
 
@@ -771,6 +780,7 @@ void ParserInputBuilder::onSQLSelect() {
 }
 
 void ParserInputBuilder::onSQLStart() {
+    isSql_ = true;
     sqlStatements_.emplace_back();
 }
 
@@ -782,5 +792,35 @@ void ParserInputBuilder::onSQLSubQuery() {
     sqlStatements_.pop_back();
 }
 
+void ParserInputBuilder::onSQLExtTableName(char* name) {
+    externalFunctionName_ = name;
+    externalFunctionName_ = "&"+externalFunctionName_;
+    // parse the named paramters
+    for (idx_t i=0;i<terms_parsered.size();i=i+2) {
+        auto& key = terms_parsered[i].getValue();
+        auto& value = terms_parsered[i+1].getValue();
+        if (key.getConstantType() != STRING) {
+            safetyErrorMessage = "Error, key named parameter should be a string, received: "+key.toString();
+            foundASafetyError_ = true;
+            return;
+        }
+        namedParameters_.insert({key.toString(), std::move(value)});
+    }
+    terms_parsered.clear();
+    fromItems_.emplace_back(inputValues_, externalFunctionName_, namedParameters_);
+    inputValues_.clear();
+    externalFunctionName_.clear();
+    namedParameters_.clear();
+    externalSemicolumnCount_ = 0;
+}
+
+void ParserInputBuilder::onSQLExtTable() {
+    if (!alias_.empty())
+        fromItems_.back().setAlias(alias_);
+    alias_.clear();
+    for (auto& fi: fromItems_)
+        sqlStatements_.back().getFrom().addItem(fi);
+    fromItems_.clear();
+}
 }
 

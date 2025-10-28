@@ -1,0 +1,4 @@
+%@sql
+SELECT *
+FROM ( SELECT FIRST_NAME, LAST_NAME
+FROM &read_csv("./files/csv/customers-1.csv";separator=",",auto_detect=1,header=1) )

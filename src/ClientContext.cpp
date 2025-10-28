@@ -39,6 +39,7 @@ ClientContext::ClientContext():
     maxMemory_((idx_t)-1),
     tempDirectory_(DEFAULT_TMP_DIR),
     distinct_(false),
+    printProgram_(false),
     blockManager_(new InMemoryBlockManager()){
 
     bufferManager_ = buffer_mngr_ptr_ptr_t(new BufferManager(*this,tempDirectory_,maxMemory_));

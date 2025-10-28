@@ -37,6 +37,11 @@ public:
     ValuePrimary & operator=(const ValuePrimary &other);
     ValuePrimary & operator=(ValuePrimary &&other) noexcept;
 
+    Value & getValue();
+    bool & isIsConstant();
+    QualifiedName & getQualifier();
+    void setQualifier(QualifiedName &qualifier);
+
     string toString() const;
 
 private:
@@ -63,8 +68,8 @@ public:
 
     string toString() const;
 
-    vector<ValuePrimary> getValues() const;
-    vector<Operator> getOperators() const;
+    vector<ValuePrimary>& getValues();
+    vector<Operator>& getOperators();
     string getAlias() const;
 
     void clear();
