@@ -67,8 +67,8 @@ bool queryFound=false;
 
 
 /* --- SQL tokens --- */
-%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR
-%token SQL_SUM SQL_MIN SQL_MAX SQL_AVG
+%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR SQL_COPY SQL_TO
+%token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG
 %left SQL_OR
 %left SQL_AND
 %token <string> SQL_DIALECT
@@ -749,12 +749,32 @@ aggregate_function
 
 
 
-/* =========================
+/* ===========================================================================
    SQL  DIALECT
-   ========================= */
+   =========================================================================== */
 
 sql
+    : sql_query
+    | SQL_COPY PARAM_OPEN sql_query PARAM_CLOSE sql_copy_to sql_copy_params
+    {
+         director.getBuilder()->onSQLCopy();
+    }
+    ;
+
+sql_query
     : sql_select select from opt_where opt_groupby
+    ;
+
+sql_copy_to
+    : SQL_TO STRING
+    {
+         director.getBuilder()->onSQLCopyTo($2);
+         delete [] $2;
+    }
+    ;
+
+sql_copy_params
+    :  PARAM_OPEN namedParameters PARAM_CLOSE
     ;
 
 sql_select
@@ -915,7 +935,13 @@ opt_groupby
 
 group_list
     : value_expr
+    {
+        director.getBuilder()->onSQLGroupByItem();
+    }
     | group_list COMMA value_expr
+    {
+        director.getBuilder()->onSQLGroupByItem();
+    }
     ;
 
 /* Expressions (simple arithmetic; reuse PLUS/DASH/TIMES/SLASH/BACK_SLASH) */
@@ -1001,7 +1027,23 @@ qualified_name
 /* Aggregates (SQL variants separate from your #sum/#min/#max/#avg) */
 aggregate_func
     : SQL_SUM
+    {
+        director.getBuilder()->onSQLAggregateFunction($1);
+        delete[] $1;
+    }
     | SQL_MIN
+    {
+        director.getBuilder()->onSQLAggregateFunction($1);
+        delete[] $1;
+    }
     | SQL_MAX
+    {
+        director.getBuilder()->onSQLAggregateFunction($1);
+        delete[] $1;
+    }
     | SQL_AVG
+    {
+        director.getBuilder()->onSQLAggregateFunction($1);
+        delete[] $1;
+    }
     ;

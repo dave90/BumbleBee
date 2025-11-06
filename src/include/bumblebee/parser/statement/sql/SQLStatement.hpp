@@ -18,6 +18,7 @@
  */
 #pragma once
 #include "From.hpp"
+#include "Groupby.hpp"
 #include "Select.hpp"
 #include "bumblebee/parser/statement/sql/Where.hpp"
 
@@ -35,12 +36,23 @@ public:
     void setWhere(Where &where);
     void setSelect(Select &select);
     void setFrom(From &from);
+    void setGroupby(Groupby groupby);
+
+    void setExportPath(string& exportPath);
+
+    void setExportNamedParameters(std::unordered_map<string, Value> & exportNamedParameters);
+
+    bool containsAggregations();
+
     void setAlias(string &alias);
     string getAlias() const;
 
     Select& getSelect() ;
     From& getFrom() ;
     Where& getWhere() ;
+    Groupby& getGroupby() ;
+    string & getExportPath();
+    std::unordered_map<string, Value> & getExportNamedParameters();
 
     string toString() const;
 
@@ -50,8 +62,12 @@ private:
     Select select_;
     From from_;
     Where where_;
+    Groupby groupby_ ;
 
     string alias_;
+    string exportPath_;
+    std::unordered_map<string, Value> exportNamedParameters_;
+
 };
 }
 }

@@ -190,11 +190,29 @@ NUMBER              ([0-9]+)
 <SQL>[Aa][Ss]                           { return SQL_AS; }
 <SQL>[Aa][Nn][Dd]                       { return SQL_AND; }
 <SQL>[Oo][Rr]                           { return SQL_OR; }
+<SQL>[Cc][Oo][Po][Yy]                   { return SQL_COPY; }
+<SQL>[Tt][Oo]                           { return SQL_TO; }
 
-<SQL>[Ss][Uu][Mm]                       { return SQL_SUM; }
-<SQL>[Mm][Ii][Nn]                       { return SQL_MIN; }
-<SQL>[Mm][Aa][Xx]                       { return SQL_MAX; }
-<SQL>[Aa][Vv][Gg]                       { return SQL_AVG; }
+<SQL>[Ss][Uu][Mm]                       {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_SUM;
+                                        }
+<SQL>[Mm][Ii][Nn]                       {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_MIN;
+                                        }
+<SQL>[Mm][Aa][Xx]                       {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_MAX;
+                                        }
+<SQL>[Aa][Vv][Gg]                       {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_AVG;
+                                        }
 
 
 {SYMBOLIC_CONSTANT}     {

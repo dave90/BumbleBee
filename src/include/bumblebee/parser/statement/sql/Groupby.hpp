@@ -18,39 +18,30 @@
  */
 #pragma once
 #include "ValueExpr.hpp"
-#include "bumblebee/common/TypeDefs.hpp"
-#include "bumblebee/parser/statement/Atom.hpp"
-#include "bumblebee/parser/statement/Term.hpp"
 
-namespace bumblebee {
-namespace sql{
+namespace bumblebee{
+namespace sql {
 
+class Groupby {
 
-
-class Select {
 public:
-    Select() = default;
-    Select(const Select &other);
-    Select(Select &&other) noexcept;
+    Groupby() = default;
+    Groupby(const Groupby &other) = delete;
+    Groupby(Groupby &&other) noexcept;
 
-    Select & operator=(const Select &other);
-    Select & operator=(Select &&other) noexcept;
+    Groupby & operator=(const Groupby &other) = delete;
+    Groupby & operator=(Groupby &&other) noexcept;
 
-    void addItem(ValueExpr& item);
-    void addAggFunction(AggregateFunctionType agg);
-    void clear();
+    bool isEmpty();
 
     value_expr_vector_t & getItems();
-
-    vector<AggregateFunctionType> & getAggFunctions();
-    bool containsAggregations();
+    vector<QualifiedName> getQualifiedNames();
+    void addItem(ValueExpr& item);
 
     string toString() const;
 
 private:
     value_expr_vector_t items_;
-    vector<AggregateFunctionType> aggFunctions_;
-
 };
 
 }

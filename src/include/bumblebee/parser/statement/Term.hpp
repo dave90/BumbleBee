@@ -88,7 +88,8 @@ public:
 	~Term() = default;
 
 	Term& operator=(Term&&) = default;
-	Term& operator=(Term& term) = delete;
+	Term& operator=(const Term& other);
+
 
 	friend bool operator==(const Term &lhs, const Term &rhs);
 	friend bool operator!=(const Term &lhs, const Term &rhs);
@@ -167,6 +168,7 @@ private:
 public:
 	// static functions
 	static Term createVariable(std::string&& value);
+	static Term createVariable(const char* value);
 	static Operator getOperator(char sop);
 	static Term createRange(int from, int to);
 	static Term createArith(Term&& t1,Term&& t2, char op );

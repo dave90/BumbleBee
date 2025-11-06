@@ -128,6 +128,10 @@ public:
 	void onSQLExtTable();
 	void onSQLExtTableName(char*);
 	sql::SQLStatement& getSqlStatement();
+	void onSQLAggregateFunction(char*);
+	void onSQLGroupByItem();
+	void onSQLCopyTo(char*);
+	void onSQLCopy();
 
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};
@@ -176,6 +180,8 @@ protected:
 	vector<sql::Predicate> predicates_;
 	sql::Predicate sqlPredicate_;
 	vector<sql::SQLStatement> sqlStatements_;
+
+	string sqlExportFilePath_;
 
 };
 

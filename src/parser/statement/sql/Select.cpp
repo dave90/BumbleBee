@@ -22,16 +22,17 @@ namespace bumblebee{
 namespace sql {
 
 
-Select::Select(const Select &other): items_(other.items_) {
+Select::Select(const Select &other): items_(other.items_), aggFunctions_(other.aggFunctions_) {
 }
 
-Select::Select(Select &&other) noexcept: items_(std::move(other.items_)) {
+Select::Select(Select &&other) noexcept: items_(std::move(other.items_)), aggFunctions_(std::move(other.aggFunctions_)) {
 }
 
 Select & Select::operator=(const Select &other) {
     if (this == &other)
         return *this;
     items_ = other.items_;
+    aggFunctions_ = other.aggFunctions_;
     return *this;
 }
 
@@ -39,11 +40,17 @@ Select & Select::operator=(Select &&other) noexcept {
     if (this == &other)
         return *this;
     items_ = std::move(other.items_);
+    aggFunctions_ = std::move(other.aggFunctions_);
     return *this;
 }
 
 void Select::addItem(ValueExpr &item) {
     items_.push_back(std::move(item));
+    if (items_.size() > aggFunctions_.size()) aggFunctions_.push_back(NONE);
+}
+
+void Select::addAggFunction(AggregateFunctionType agg) {
+    aggFunctions_.push_back(agg);
 }
 
 string Select::toString() const{
@@ -51,7 +58,13 @@ string Select::toString() const{
     idx_t idx = 0;
     for (auto& item : items_) {
         if(idx > 0)result += ", ";
+        if (aggFunctions_[idx] != NONE) {
+            result += Atom::getAggFunction(aggFunctions_[idx]) + "( ";
+        }
         result += item.toString();
+        if (aggFunctions_[idx] != NONE) {
+            result += " )";
+        }
         idx++;
     }
     return result;
@@ -63,6 +76,18 @@ void Select::clear() {
 
 value_expr_vector_t & Select::getItems() {
     return items_;
+}
+
+
+vector<AggregateFunctionType> & Select::getAggFunctions() {
+    return aggFunctions_;
+}
+
+bool Select::containsAggregations() {
+    for (auto& item : aggFunctions_)
+        if (item != NONE) return true;
+    return false;
+
 }
 }
 }

@@ -25,6 +25,7 @@
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/Helper.hpp"
 #include "bumblebee/common/Log.hpp"
+#include "bumblebee/common/StringUtils.hpp"
 
 namespace bumblebee {
 
@@ -404,119 +405,119 @@ void ParserInputBuilder::rewriteAggregates() {
     //   1. the same groups,
     //   2. the same body atoms,
     //   3. the same aggregation terms (group variables + variables defined inside the aggregate).
-
-    if (rulesWithAggregates_.size() == 0)return;
-    // information to create an aggregate table
-    struct AggInfo {
-        AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t  &terms)
-            : atoms(atoms), groups(groups), terms(std::move(terms)) {
-        }
-        string createAggPredicateName(idx_t& suffixCounter, const vector<Term>& terms) {
-            if (predName.size() > 0)return predName;
-            vector<idx_t> groups, payloads;
-            vector<string> aggFunctions;
-            for (idx_t i=0;i<terms.size();++i) {
-                auto& t = terms[i];
-                BB_ASSERT(t.getType() == VARIABLE);
-                if (this->groups.contains(t.getVariable()))
-                    groups.push_back(i);
-                if (this->payloadMap.contains(t.getVariable())) {
-                    for (auto& fun:payloadMap[t.getVariable()]) {
-                        payloads.push_back(i);
-                        aggFunctions.push_back(fun);
-                    }
-                }
-            }
-            predName = Predicate::buildAggregateInternalPredicate(suffixCounter++, groups, payloads, aggFunctions);
-            return predName;
-        }
-        // atoms in the body of the aggregate
-        vector<Atom>& atoms;
-        // aggregation terms (group variables + distinct aggregation variable)
-        set_term_variable_t terms;
-        // group variable in terms
-        set_term_variable_t groups;
-        // map of payload variable and agg function
-        std::unordered_map<string, std::unordered_set<string>> payloadMap;
-        // name of the predicate
-        string predName;
-
-    };
-
-    vector<AggInfo> aggInfos;
-    // index of aggInfos to use for the ith aggregates
-    vector<idx_t> aggInfosIndex;
-    for (idx_t i=0;i<rulesWithAggregates_.size();i++) {
-        auto& rule = program_[rulesWithAggregates_[i]];
-        set_term_variable_t ruleVariables;
-        rule.getVariables(ruleVariables);
-        for (auto& a: rule.getBody()) {
-            if (a.getType() != AGGREGATE)continue;
-            // calculate the groups
-            set_term_variable_t groupVars;
-            a.getAggSharedVariables(ruleVariables, groupVars);
-            // now join the aggregate terms + the shared variables and the set of vars would be vars in head of new predicate
-            set_term_variable_t sterms = groupVars;
-            for (auto&t: a.getAggTerms()) sterms.insert((t.getVariable()));
-            auto& payload = a.getAggTerms()[0]; // payload is the first term
-
-            // now check if is present in the aggInfos ( avoiding creating duplicates aggregates tables)
-            bool found = false;
-            for (idx_t j=0;j<aggInfos.size() && !found;j++) {
-                auto& info = aggInfos[j];
-                if (compareVectorsNoSort(info.atoms, a.getAggsAtoms())
-                    && info.groups == groupVars
-                    && info.terms == sterms) {
-                    // we can reuse this aggregate
-                    aggInfosIndex.push_back(j);
-                    found = true;
-                    info.payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
-                }
-            }
-            if (found) continue;
-            // we need to create a new aggregate tables
-            aggInfosIndex.push_back(aggInfos.size());
-            aggInfos.emplace_back(a.getAggsAtoms(), groupVars, sterms);
-            // add the information of function and payload
-            aggInfos.back().payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
-        }
-    }
-
-    // now for each aggregate we have the index to the aggregate table specs (aggInfosIndex)
-    // and we can replace the aggregate atoms with the single atom
-    idx_t counter = 0;
-    for (idx_t i=0;i<rulesWithAggregates_.size();i++) {
-        // because of the push back do not create rule variable
-        auto ruleIndex = rulesWithAggregates_[i];
-        set_term_variable_t ruleVariables;
-        program_[ruleIndex].getVariables(ruleVariables);
-        for (idx_t j=0;j<program_[ruleIndex].getBody().size();j++) {
-            auto& a = program_[ruleIndex].getBody()[j];
-            if (a.getType() != AGGREGATE)continue;
-            BB_ASSERT(aggInfosIndex[counter] < aggInfos.size());
-            auto &info = aggInfos[aggInfosIndex[counter++]];
-            vector<Term> terms;
-            for (auto& v: info.terms)
-                terms.emplace_back(v.c_str(), true);
-            bool createAuxRule = info.predName.empty();
-            string newPredName = info.createAggPredicateName(newPredCounter_, terms);
-            Predicate *predicate = currentSchema_.get().createPredicate(&clientContext_, newPredName.c_str(), info.terms.size());
-            if (!hiddenNewPredicate) {
-                predicate->setInternal(false);
-            }
-            if (createAuxRule) {
-                Atom head = Atom::createClassicalAtom(predicate, std::move(vector(terms)));
-                Rule newRule;
-                newRule.addAtomInHead(std::move(head));
-                newRule.setBody(a.getAggsAtoms());
-                checkRuleSafety(newRule);
-                program_.push_back(std::move(newRule));
-            }
-            auto newAtom =  Atom::createClassicalAtom(predicate, std::move(vector(terms)));
-            a.getAggsAtoms().clear();
-            a.getAggsAtoms().push_back(std::move(newAtom));
-        }
-    }
+    //
+    // if (rulesWithAggregates_.size() == 0)return;
+    // // information to create an aggregate table
+    // struct AggInfo {
+    //     AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t  &terms)
+    //         : atoms(atoms), groups(groups), terms(std::move(terms)) {
+    //     }
+    //     string createAggPredicateName(idx_t& suffixCounter, const vector<Term>& terms) {
+    //         if (predName.size() > 0)return predName;
+    //         vector<idx_t> groups, payloads;
+    //         vector<string> aggFunctions;
+    //         for (idx_t i=0;i<terms.size();++i) {
+    //             auto& t = terms[i];
+    //             BB_ASSERT(t.getType() == VARIABLE);
+    //             if (this->groups.contains(t.getVariable()))
+    //                 groups.push_back(i);
+    //             if (this->payloadMap.contains(t.getVariable())) {
+    //                 for (auto& fun:payloadMap[t.getVariable()]) {
+    //                     payloads.push_back(i);
+    //                     aggFunctions.push_back(fun);
+    //                 }
+    //             }
+    //         }
+    //         predName = Predicate::buildAggregateInternalPredicate(suffixCounter++, groups, payloads, aggFunctions);
+    //         return predName;
+    //     }
+    //     // atoms in the body of the aggregate
+    //     vector<Atom>& atoms;
+    //     // aggregation terms (group variables + distinct aggregation variable)
+    //     set_term_variable_t terms;
+    //     // group variable in terms
+    //     set_term_variable_t groups;
+    //     // map of payload variable and agg function
+    //     std::unordered_map<string, std::unordered_set<string>> payloadMap;
+    //     // name of the predicate
+    //     string predName;
+    //
+    // };
+    //
+    // vector<AggInfo> aggInfos;
+    // // index of aggInfos to use for the ith aggregates
+    // vector<idx_t> aggInfosIndex;
+    // for (idx_t i=0;i<rulesWithAggregates_.size();i++) {
+    //     auto& rule = program_[rulesWithAggregates_[i]];
+    //     set_term_variable_t ruleVariables;
+    //     rule.getVariables(ruleVariables);
+    //     for (auto& a: rule.getBody()) {
+    //         if (a.getType() != AGGREGATE)continue;
+    //         // calculate the groups
+    //         set_term_variable_t groupVars;
+    //         a.getAggSharedVariables(ruleVariables, groupVars);
+    //         // now join the aggregate terms + the shared variables and the set of vars would be vars in head of new predicate
+    //         set_term_variable_t sterms = groupVars;
+    //         for (auto&t: a.getAggTerms()) sterms.insert((t.getVariable()));
+    //         auto& payload = a.getAggTerms()[0]; // payload is the first term
+    //
+    //         // now check if is present in the aggInfos ( avoiding creating duplicates aggregates tables)
+    //         bool found = false;
+    //         for (idx_t j=0;j<aggInfos.size() && !found;j++) {
+    //             auto& info = aggInfos[j];
+    //             if (compareVectorsNoSort(info.atoms, a.getAggsAtoms())
+    //                 && info.groups == groupVars
+    //                 && info.terms == sterms) {
+    //                 // we can reuse this aggregate
+    //                 aggInfosIndex.push_back(j);
+    //                 found = true;
+    //                 info.payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
+    //             }
+    //         }
+    //         if (found) continue;
+    //         // we need to create a new aggregate tables
+    //         aggInfosIndex.push_back(aggInfos.size());
+    //         aggInfos.emplace_back(a.getAggsAtoms(), groupVars, sterms);
+    //         // add the information of function and payload
+    //         aggInfos.back().payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
+    //     }
+    // }
+    //
+    // // now for each aggregate we have the index to the aggregate table specs (aggInfosIndex)
+    // // and we can replace the aggregate atoms with the single atom
+    // idx_t counter = 0;
+    // for (idx_t i=0;i<rulesWithAggregates_.size();i++) {
+    //     // because of the push back do not create rule variable
+    //     auto ruleIndex = rulesWithAggregates_[i];
+    //     set_term_variable_t ruleVariables;
+    //     program_[ruleIndex].getVariables(ruleVariables);
+    //     for (idx_t j=0;j<program_[ruleIndex].getBody().size();j++) {
+    //         auto& a = program_[ruleIndex].getBody()[j];
+    //         if (a.getType() != AGGREGATE)continue;
+    //         BB_ASSERT(aggInfosIndex[counter] < aggInfos.size());
+    //         auto &info = aggInfos[aggInfosIndex[counter++]];
+    //         vector<Term> terms;
+    //         for (auto& v: info.terms)
+    //             terms.emplace_back(v.c_str(), true);
+    //         bool createAuxRule = info.predName.empty();
+    //         string newPredName = info.createAggPredicateName(newPredCounter_, terms);
+    //         Predicate *predicate = currentSchema_.get().createPredicate(&clientContext_, newPredName.c_str(), info.terms.size());
+    //         if (!hiddenNewPredicate) {
+    //             predicate->setInternal(false);
+    //         }
+    //         if (createAuxRule) {
+    //             Atom head = Atom::createClassicalAtom(predicate, std::move(vector(terms)));
+    //             Rule newRule;
+    //             newRule.addAtomInHead(std::move(head));
+    //             newRule.setBody(a.getAggsAtoms());
+    //             checkRuleSafety(newRule);
+    //             program_.push_back(std::move(newRule));
+    //         }
+    //         auto newAtom =  Atom::createClassicalAtom(predicate, std::move(vector(terms)));
+    //         a.getAggsAtoms().clear();
+    //         a.getAggsAtoms().push_back(std::move(newAtom));
+    //     }
+    // }
 }
 
 void ParserInputBuilder::onEnd() {
@@ -821,6 +822,52 @@ void ParserInputBuilder::onSQLExtTable() {
     for (auto& fi: fromItems_)
         sqlStatements_.back().getFrom().addItem(fi);
     fromItems_.clear();
+}
+
+void ParserInputBuilder::onSQLAggregateFunction(char *str) {
+    string lower = StringUtils::lower(str);
+    auto agg = Atom::getAggFunction(lower.c_str());
+    sqlStatements_.back().getSelect().addAggFunction(agg);
+}
+
+void ParserInputBuilder::onSQLGroupByItem() {
+    if (!sqlValuePrimary_.empty()) {
+        BB_ASSERT(sqlValuePrimary_.size() == 1);
+        valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+    }
+    alias_.clear();
+    sqlStatements_.back().getGroupby().addItem(valueExpr_);
+    valueExpr_.clear();
+}
+
+void ParserInputBuilder::onSQLCopyTo(char *path) {
+    // remove first and last char as contains double quote
+    sqlExportFilePath_ = path;
+    if (sqlExportFilePath_.back() == '"')
+        sqlExportFilePath_.pop_back();
+    if (sqlExportFilePath_.front() == '"')
+        sqlExportFilePath_.erase(0,1);
+}
+
+
+
+void ParserInputBuilder::onSQLCopy() {
+    for (idx_t i=0;i<terms_parsered.size();i=i+2) {
+        auto& key = terms_parsered[i].getValue();
+        auto& value = terms_parsered[i+1].getValue();
+        if (key.getConstantType() != STRING) {
+            safetyErrorMessage = "Error, key named parameter should be a string, received: "+key.toString();
+            foundASafetyError_ = true;
+            return;
+        }
+        namedParameters_.insert({key.toString(), std::move(value)});
+    }
+    terms_parsered.clear();
+
+    sqlStatements_.back().setExportPath(sqlExportFilePath_);
+    sqlStatements_.back().setExportNamedParameters(namedParameters_);
+    string x = "";
 }
 }
 

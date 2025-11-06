@@ -91,6 +91,17 @@ Term::Term(Term &&t1,Term &&t2, Operator op): negative_(false), type_(ARITH)  {
 Term::Term(Value &v): value_(std::move(v)), type_(CONSTANT), negative_(false) {
 }
 
+Term & Term::operator=(const Term &other) {
+    negative_ = other.negative_;
+    interval_ = other.interval_;
+    type_ = other.type_;
+    anonymous_ = other.anonymous_;
+    terms_ = other.terms_;
+    operators_ = other.operators_ ;
+    value_ = other.value_.cast(other.value_.ctype_);
+    return *this;
+}
+
 bool Term::isNegative() {return negative_;}
 
 void Term::setNegative(bool n) {
@@ -209,6 +220,11 @@ void Term::addInArithTerm(Term&& term, char sop) {
 
 Term Term::createVariable(std::string &&value) {
     return Term(std::move(value), true);
+}
+
+Term Term::createVariable(const char *value) {
+    string s = value;
+    return createVariable(std::move(s));
 }
 
 bool Term::containsAnonymous() const {

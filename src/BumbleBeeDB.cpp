@@ -28,6 +28,7 @@
 #include "bumblebee/parser/statement/sql/SqlToDatalog.hpp"
 #include "bumblebee/planner/Planner.hpp"
 #include "bumblebee/planner/StatementDependency.hpp"
+#include "bumblebee/planner/rewriter/AggregatesRewriter.hpp"
 
 namespace bumblebee {
 int BumbleBeeDB::parseArgs(int argc, char **argv) {
@@ -122,6 +123,10 @@ void BumbleBeeDB::run() {
 }
 
 void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) {
+    // rewrite the aggregates
+    AggregatesRewriter rewriter(context_);
+    rewriter.rewrite(program);
+
     // Order the rules
     StatementDependency sd(std::move(program));
     auto orderedBucketRules = sd.orderRules();

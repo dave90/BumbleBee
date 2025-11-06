@@ -33,13 +33,18 @@ public:
 
     void replaceStar(sql::SQLStatement & statement);
 
+    void generateExportRule(sql::SQLStatement & statement, rules_vector_t & rules);
+
     rules_vector_t sqlToDatalog(sql::SQLStatement& statement, bool& foundAnError, string& errorMessage);
 
 private:
     // visit the from tables setting the alias (if not) and gather the columns of the table
     void visitFrom(sql::SQLStatement& statement);
+    void visitGroup(sql::SQLStatement& statement);
 
     void generateRuleForExtAtom(sql::FromItem & fi, rules_vector_t & rules);
+
+    void generateAggRules(sql::SQLStatement & statement,  Predicate* headPred, rules_vector_t & rules);
 
     void genRuleFromSql(sql::SQLStatement& statement, rules_vector_t& program);
     Atom getAtomFromTable(string& table);

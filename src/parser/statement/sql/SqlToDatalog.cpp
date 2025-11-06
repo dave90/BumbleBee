@@ -18,6 +18,7 @@
  */
 #include "bumblebee/parser/statement/sql/SqlToDatalog.hpp"
 
+#include "bumblebee/common/StringUtils.hpp"
 #include "bumblebee/function/PredFunction.hpp"
 
 namespace bumblebee{
@@ -27,12 +28,8 @@ SqlToDatalog::SqlToDatalog(ClientContext &context): context_(context) {
 rules_vector_t SqlToDatalog::sqlToDatalog(sql::SQLStatement &statement, bool& foundAnError, string& errorMessage) {
     rules_vector_t program;
     visitFrom(statement);
-    if (!errorMessage_.empty()) {
-        foundAnError = true;
-        errorMessage = errorMessage_;
-        return program;
-    }
     replaceStar(statement);
+    visitGroup(statement);
     if (!errorMessage_.empty()) {
         foundAnError = true;
         errorMessage = errorMessage_;
@@ -44,14 +41,74 @@ rules_vector_t SqlToDatalog::sqlToDatalog(sql::SQLStatement &statement, bool& fo
         errorMessage = errorMessage_;
     }
     // The last rule contains the answer so set the predicate as non internal
-    if (!program.empty()) {
+    if (!statement.getExportPath().empty()) {
+        generateExportRule(statement, program);
+    }else if (!program.empty()) {
         BB_ASSERT(program.back().getHead().size() == 1);
         program.back().getHead()[0].getPredicate()->setInternal(false);
     }
 
+    errorMessage = errorMessage_;
+
     return program;
 }
 
+
+bool isCSVFile(const string& path) {
+    // Check if path length is at least 4 characters (".csv")
+    if (path.length() < 4) return false;
+
+    // Convert to lowercase for case-insensitive comparison
+    string lowerPath = StringUtils::lower(path);
+
+    // Check if it ends with ".csv"
+    return lowerPath.compare(lowerPath.length() - 4, 4, ".csv") == 0;
+}
+
+string getExternalFunction(const string& sqlExportFilePath, string& errorMessage) {
+    if (isCSVFile(sqlExportFilePath)) {
+        return "&write_csv";
+    }
+    errorMessage = "Unsupported file format: " + sqlExportFilePath+ ". The export path must end with '.csv'.";
+    return "";
+}
+
+void SqlToDatalog::generateExportRule(sql::SQLStatement &statement, rules_vector_t &rules) {
+    if (rules.empty()) return;
+
+    auto sqlExportFilePath = statement.getExportPath();
+    auto externalFunction = getExternalFunction(sqlExportFilePath,errorMessage_);
+    if (!isCSVFile(sqlExportFilePath)) {
+        errorMessage_ = "Unsupported file format: " + sqlExportFilePath+ ". The export path must end with '.csv'.";
+        return;
+    }
+    // take the head predicate of the last rule as contains the answer of the query
+    auto headPredLastRule = rules.back().getHead()[0].getPredicate();
+    auto newPredName = generatePredicateName();
+    auto newPred = context_.defaultSchema_.createPredicate(&context_, newPredName.c_str(), headPredLastRule->getArity());
+
+    auto& params = statement.getExportNamedParameters();
+    vector<Value> values;
+    values.push_back(sqlExportFilePath);
+    vector<Term> t1;
+    for (idx_t i = 0; i < headPredLastRule->getArity(); ++i) {
+        auto t = Term::createVariable("V"+std::to_string(i));
+        t1.push_back(std::move(t));
+    }
+    auto t2 = t1;
+    // create a predicate to get execute by statement dependency
+    auto head = Atom::createExternalAtom(params, values, externalFunction, std::move(t1));
+    string name =  head.getExternalFunctionName() + "_" + generatePredicateName();
+    Predicate *predicate = context_.defaultSchema_.createPredicate(&context_ ,name.c_str(), headPredLastRule->getArity());
+    predicate->setInternal(true);
+    head.setPredicte(predicate);
+
+    auto body = Atom::createClassicalAtom(headPredLastRule, std::move(t2));
+    Rule rule;
+    rule.addAtomInBody(std::move(body));
+    rule.addAtomInHead(std::move(head));
+    rules.push_back(std::move(rule));
+}
 
 void SqlToDatalog::replaceStar(sql::SQLStatement &statement) {
     // replace * from the sql with the cols of the tables
@@ -161,6 +218,54 @@ void SqlToDatalog::visitFrom(sql::SQLStatement &statement) {
     }
 }
 
+void SqlToDatalog::visitGroup(sql::SQLStatement &statement) {
+    if (!errorMessage_.empty()) return;
+    if (statement.getGroupby().isEmpty())return;
+    for (auto& sq: statement.getFrom().getSubQueries()) {
+        visitGroup(sq);
+    }
+    std::unordered_set<string> groups;
+    for (auto q: statement.getGroupby().getQualifiedNames()) {
+        if (q.table_.empty()) {
+            if (!columnTableMap_.contains(q.name_)) {
+                errorMessage_ = "Column " + q.name_ + " does not exist or is in conflict with other tables.";
+                return;
+            }
+            q.table_ = columnTableMap_[q.name_];
+        }
+        groups.insert(q.table_+"."+q.name_);
+    }
+    for (idx_t i=0;i<statement.getSelect().getAggFunctions().size();++i) {
+        if (statement.getSelect().getAggFunctions()[i] != NONE) continue;
+        // not aggregate column, check if exist in the groups
+        auto &ve = statement.getSelect().getItems()[i];
+        if (ve.getAlias().empty()) {
+            auto newVar = generateVarName();
+            ve.setAlias(newVar);
+        }
+        if (ve.getValues().size() > 1) {
+            errorMessage_ = "Group by with expression not supported: " + ve.toString();
+            return;
+        }
+        auto& vp = ve.getValues()[0];
+        if (vp.isIsConstant())continue;
+        auto& q= vp.getQualifier();
+        if (q.table_.empty()) {
+            if (!columnTableMap_.contains(q.name_)) {
+                errorMessage_ = "Column " + q.name_ + " does not exist or is in conflict with other tables.";
+                return;
+            }
+            q.table_ = columnTableMap_[q.name_];
+        }
+        if (!groups.contains(q.table_+"."+q.name_)) {
+            errorMessage_ = "Column " + q.name_ + " does not belong in groups column.";
+            return;
+        }
+    }
+}
+
+
+
 void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &program) {
     auto& defaultSchema = context_.defaultSchema_;
     vector<Atom> body;
@@ -199,13 +304,24 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
 
 
     // generate head atom from the select
-    vector<Term> terms;
+    vector<Term> headTerms;
+    std::unordered_set<string> headVars;
     for (auto& si:statement.getSelect().getItems()) {
         auto t = getTermFromValueExpr( si, statement.getAlias());
-
         if (!errorMessage_.empty())
             return;
-        terms.push_back(std::move(t));
+        if(t.getType() == VARIABLE) {
+            headVars.insert(t.getVariable());
+        }
+        headTerms.push_back(std::move(t));
+    }
+    // add the group by cols in head terms
+    for (auto& q: statement.getGroupby().getQualifiedNames()) {
+        auto var = getVariableName(q.table_, q.name_);
+        if (headVars.contains(var)) continue;
+        auto t = Term::createVariable(std::move(var));
+        headVars.insert(t.getVariable());
+        headTerms.push_back(std::move(t));
     }
 
 
@@ -227,9 +343,82 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
         ++i;
     }
 
-    auto pred = defaultSchema.createPredicate(&context_, alias.c_str(), terms.size());
-    auto head = Atom::createClassicalAtom(pred, std::move(terms));
+    auto pred = defaultSchema.createPredicate(&context_, alias.c_str(), headTerms.size());
+    auto head = Atom::createClassicalAtom(pred, std::move(headTerms));
     generateRules(head, body, binopAtoms, program);
+    if (statement.getSelect().containsAggregations()) {
+        generateAggRules(statement, pred, program);
+    }
+}
+
+void SqlToDatalog::generateAggRules(sql::SQLStatement &statement, Predicate* headPred, rules_vector_t &rules) {
+    auto& select = statement.getSelect();
+    std::unordered_set<string> headVars;
+    // grups vars for external atom and agg atoms
+    vector<Term> atomGroupVars;
+    // group vars for internal aggregates
+    vector<Term> groupTerms;
+    vector<idx_t> aggTermsIndex;
+    vector<Term> headTerms;
+
+    for (idx_t i=0;i<select.getItems().size();++i) {
+        string var;
+        Term t = getTermFromValueExpr(select.getItems()[i], statement.getAlias());
+        if (select.getAggFunctions()[i] != NONE || t.getType() != VARIABLE) {
+            if (select.getAggFunctions()[i] != NONE) {
+                aggTermsIndex.push_back(i);
+                t = Term::createVariable(select.getItems()[i].getAlias());
+            }
+            var = Term::anonymous_variable;
+        }else {
+            var = t.getVariable();
+            Term vTerm = Term::createVariable(var.c_str());
+            groupTerms.push_back(std::move(vTerm));
+        }
+        headTerms.push_back(std::move(t));
+        headVars.insert(var);
+        Term vTerm = Term::createVariable(std::move(var));
+        atomGroupVars.push_back(std::move(vTerm));
+    }
+    // add the group by cols in head terms
+    for (auto& q: statement.getGroupby().getQualifiedNames()) {
+        auto var = getVariableName(q.table_, q.name_);
+        if (headVars.contains(var)) continue;
+        headVars.insert(var);
+        auto t = Term::createVariable(var.c_str());
+        atomGroupVars.push_back(std::move(t));
+        t = Term::createVariable(std::move(var));
+        groupTerms.push_back(std::move(t));
+
+    }
+    BB_ASSERT(headPred->getArity() == atomGroupVars.size());
+    vector<Atom> body;
+    // first add the group atom
+    auto terms = atomGroupVars;
+    Atom groupAtom = Atom::createClassicalAtom(headPred, std::move(terms));
+    body.push_back(std::move(groupAtom));
+    // generate agg atoms for each aggregation
+    for (auto idx : aggTermsIndex) {
+        Term lt,ut;
+        lt = Term::createVariable(select.getItems()[idx].getAlias());
+        Term aggVar = Term::createVariable(generateVarName());
+        auto aggTerms = groupTerms;
+        aggTerms.insert(aggTerms.begin(), aggVar);
+        auto aggAtomTerms = atomGroupVars;
+        aggAtomTerms[idx] = std::move(aggVar);
+        auto aggInternalAtom = Atom::createClassicalAtom(headPred, std::move(aggAtomTerms));
+        vector<Atom> aggBodyAtoms;
+        aggBodyAtoms.push_back(std::move(aggInternalAtom));
+        Atom aggregateAtom = Atom::createAggregateAtom(select.getAggFunctions()[idx],ASSIGNMENT, NONE_OP,lt,ut, std::move(aggTerms), std::move(aggBodyAtoms) );
+        body.push_back(std::move(aggregateAtom));
+    }
+    string alias = generatePredicateName();
+    auto newPred = context_.defaultSchema_.createPredicate(&context_, alias.c_str(), headTerms.size());
+    Atom head = Atom::createClassicalAtom(newPred, std::move(headTerms));
+    Rule rule;
+    rule.addAtomInHead(std::move(head));
+    rule.setBody(body);
+    rules.push_back(std::move(rule));
 }
 
 void SqlToDatalog::generateRules( Atom& head, vector<Atom>& body, vector<vector<Atom>>& conditions, rules_vector_t& program ) {
