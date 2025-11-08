@@ -2,7 +2,7 @@ import time
 import pytest
 import os
 from pathlib import Path
-from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files, create_tmp_input_file
+from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files, create_tmp_input_file, compare_csv
 
 
 EXE_PATH = os.path.join("..","..","cmake-build-debug","BumbleBee")
@@ -126,6 +126,8 @@ def test_sql(input_file: Path):
     if os.path.exists(str(output_file)+".csv"):
         os.rename(str(output_file)+".csv", str(output_file))
 
-    # assert expected_file.exists(), f"Expected file missing: {expected_file}"
-    # assert output_file.exists(), f"Output file missing: {output_file}"
-    # assert compare_files_no_duplicates(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"
+    assert expected_file.exists(), f"Expected file missing: {expected_file}"
+    assert output_file.exists(), f"Output file missing: {output_file}"
+    assert compare_csv(str(output_file), str(expected_file)), f"Files do not match: {output_file} vs {expected_file}"
+    # remove the tmp file as the test succeed
+    os.remove(input_file)

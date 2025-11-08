@@ -1,3 +1,0 @@
-%@sql
-COPY (SELECT FIRST_NAME, PHONE_1
-FROM &read_csv("./files/csv/customers-1.csv";separator=",",auto_detect=1,header=1)) TO "files/sql/actual/select.1.csv" (single_file=1)

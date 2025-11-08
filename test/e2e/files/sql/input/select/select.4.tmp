@@ -1,3 +1,0 @@
-%@sql
-COPY (SELECT c1.LAST_NAME as X1, c1.FIRST_NAME as X2, c2.FIRST_NAME as X3, c2.USERNAME as X4
-FROM &read_csv("./files/csv/username.csv";auto_detect=1,header=1) as c1, &read_csv("./files/csv/username.csv";auto_detect=1,header=1) as c2) TO "files/sql/actual/select.4.csv" (single_file=1)
