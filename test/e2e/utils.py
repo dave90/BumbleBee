@@ -4,17 +4,18 @@ from pathlib import Path
 import filecmp
 from typing import List
 import os
+import tempfile
 
 # Utility function to run the exe process
-def run_process_on_file(exe_path: str, args:List[str], input_file: Path, output_file: Path) -> None:
+def run_process_on_file(exe_path: str, args:List[str], input_file: Path, output_file: Path = None) -> None:
     """Run the executable with the input file and write the output to output_file."""
     # delete output file if exist
-    if output_file.exists():
+    if output_file and output_file.exists():
         output_file.unlink()
 
     result = subprocess.run(
         [exe_path]+ args + [str(input_file)],
-        stdout=output_file.open("wb"),
+        stdout=output_file.open("wb") if output_file else None,
         stderr=subprocess.PIPE,
         check=True
     )
@@ -44,3 +45,21 @@ def contains_query(input_file:str):
         if "?" in line:
             return True
     return False
+
+def create_tmp_input_file(input_file:Path, prefix:str, suffix:str, skip_lines=1) -> Path:
+    temp_path = str(input_file) + ".tmp"
+    print(temp_path)
+
+    fi = open(input_file, "r")
+    fo = open(temp_path, "w")
+
+    idx = 0
+    for line in fi.readlines():
+        if idx == skip_lines:
+            fo.write(prefix)
+        fo.write(line)
+        idx += 1
+
+    fo.write(suffix)
+    fo.close()
+    return Path(temp_path)

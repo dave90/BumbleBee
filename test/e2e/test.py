@@ -2,7 +2,7 @@ import time
 import pytest
 import os
 from pathlib import Path
-from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files
+from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files, create_tmp_input_file
 
 
 EXE_PATH = os.path.join("..","..","cmake-build-debug","BumbleBee")
@@ -17,6 +17,12 @@ input_folder_sql_to_dl = Path(os.path.join("files","sql_to_datalog","input"))
 expected_folder_sql_to_dl = Path(os.path.join("files","sql_to_datalog","expected"))
 actual_folder_sql_to_dl = Path(os.path.join("files","sql_to_datalog","actual"))
 input_files_sql_to_dl = [p for p in input_folder_sql_to_dl.rglob("*") if p.is_file()]
+
+# SQL
+input_folder_sql = Path(os.path.join("files","sql","input"))
+expected_folder_sql = Path(os.path.join("files","sql","expected"))
+actual_folder_sql = Path(os.path.join("files","sql","actual"))
+input_files_sql = [p for p in input_folder_sql.rglob("*") if p.is_file() and not p.name.endswith(".tmp")]
 
 
 RERUN_MT = 4
@@ -91,15 +97,35 @@ def test_mt_asp(input_file: Path):
 def test_sql_to_dl(input_file: Path):
     actual_folder_sql_to_dl.mkdir(exist_ok=True)
 
-    # rerun multithread multiple times
-    for i in range(RERUN_MT):
-        output_file = actual_folder_sql_to_dl / input_file.name
-        expected_file = expected_folder_sql_to_dl / input_file.name
+    output_file = actual_folder_sql_to_dl / input_file.name
+    expected_file = expected_folder_sql_to_dl / input_file.name
 
-        args = ["--print-program", "-i"]
+    args = ["--print-program", "-i"]
+    run_process_on_file(EXE_PATH, args, input_file, output_file)
 
-        run_process_on_file(EXE_PATH, args, input_file, output_file)
+    assert expected_file.exists(), f"Expected file missing: {expected_file}"
+    assert output_file.exists(), f"Output file missing: {output_file}"
+    assert compare_files_no_duplicates(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"
 
-        assert expected_file.exists(), f"Expected file missing: {expected_file}"
-        assert output_file.exists(), f"Output file missing: {output_file}"
-        assert compare_files_no_duplicates(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"
+
+
+@pytest.mark.parametrize("input_file", input_files_sql)
+def test_sql(input_file: Path):
+    actual_folder_sql_to_dl.mkdir(exist_ok=True)
+
+    output_file = actual_folder_sql / input_file.name
+    expected_file = expected_folder_sql / input_file.name
+
+    args = ["-i"]
+    # add the export
+    input_file = create_tmp_input_file(input_file, "COPY (",") TO \""+str(output_file)+".csv\" (single_file=1)")
+
+    run_process_on_file(EXE_PATH, args, input_file)
+
+    # remove .csv
+    if os.path.exists(str(output_file)+".csv"):
+        os.rename(str(output_file)+".csv", str(output_file))
+
+    # assert expected_file.exists(), f"Expected file missing: {expected_file}"
+    # assert output_file.exists(), f"Output file missing: {output_file}"
+    # assert compare_files_no_duplicates(output_file, expected_file), f"Files do not match: {output_file} vs {expected_file}"

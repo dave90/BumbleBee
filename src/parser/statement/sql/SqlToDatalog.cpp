@@ -47,26 +47,18 @@ rules_vector_t SqlToDatalog::sqlToDatalog(sql::SQLStatement &statement, bool& fo
         BB_ASSERT(program.back().getHead().size() == 1);
         program.back().getHead()[0].getPredicate()->setInternal(false);
     }
-
-    errorMessage = errorMessage_;
+    if (!errorMessage_.empty()) {
+        foundAnError = true;
+        errorMessage = errorMessage_;
+    }
 
     return program;
 }
 
 
-bool isCSVFile(const string& path) {
-    // Check if path length is at least 4 characters (".csv")
-    if (path.length() < 4) return false;
-
-    // Convert to lowercase for case-insensitive comparison
-    string lowerPath = StringUtils::lower(path);
-
-    // Check if it ends with ".csv"
-    return lowerPath.compare(lowerPath.length() - 4, 4, ".csv") == 0;
-}
 
 string getExternalFunction(const string& sqlExportFilePath, string& errorMessage) {
-    if (isCSVFile(sqlExportFilePath)) {
+    if (FileSystem::isCSVFile(sqlExportFilePath)) {
         return "&write_csv";
     }
     errorMessage = "Unsupported file format: " + sqlExportFilePath+ ". The export path must end with '.csv'.";
@@ -78,12 +70,14 @@ void SqlToDatalog::generateExportRule(sql::SQLStatement &statement, rules_vector
 
     auto sqlExportFilePath = statement.getExportPath();
     auto externalFunction = getExternalFunction(sqlExportFilePath,errorMessage_);
-    if (!isCSVFile(sqlExportFilePath)) {
-        errorMessage_ = "Unsupported file format: " + sqlExportFilePath+ ". The export path must end with '.csv'.";
+    if (!errorMessage_.empty()) {
         return;
     }
     // take the head predicate of the last rule as contains the answer of the query
+    BB_ASSERT(rules.back().getHead().size() == 1);
+    auto & si = statement.getSelect().getItems();
     auto headPredLastRule = rules.back().getHead()[0].getPredicate();
+    BB_ASSERT(headPredLastRule->getArity() == si.size()); //
     auto newPredName = generatePredicateName();
     auto newPred = context_.defaultSchema_.createPredicate(&context_, newPredName.c_str(), headPredLastRule->getArity());
 
@@ -92,7 +86,12 @@ void SqlToDatalog::generateExportRule(sql::SQLStatement &statement, rules_vector
     values.push_back(sqlExportFilePath);
     vector<Term> t1;
     for (idx_t i = 0; i < headPredLastRule->getArity(); ++i) {
-        auto t = Term::createVariable("V"+std::to_string(i));
+        string var = si[i].getAlias();
+        if (var.empty()) {
+            var = si[i].toString();
+        }
+        auto t = Term::createVariable(std::move(var));
+        BB_ASSERT(t.getType() == VARIABLE);
         t1.push_back(std::move(t));
     }
     auto t2 = t1;
@@ -208,10 +207,21 @@ void SqlToDatalog::visitFrom(sql::SQLStatement &statement) {
         auto alias = generatePredicateName();
         statement.setAlias(alias);
     }
-    // regist the select columns
+    // record the select columns
     for (auto& ve: statement.getSelect().getItems()) {
         if (ve.getAlias().empty()) {
             auto alias = generateVarName();
+            if (ve.getValues().size() == 1) {
+                // take as alias the name of the variable if is not contrant
+                auto& vp = ve.getValues()[0];
+                if (!vp.isIsConstant()) {
+                    if (columnTableMap_.contains(vp.getQualifier().name_))
+                        alias = vp.getQualifier().name_;
+                    else
+                        alias = getVariableName(vp.getQualifier().table_,vp.getQualifier().name_);
+                }
+
+            }
             ve.setAlias(alias);
         }
         tableColumnsMap_[statement.getAlias()].insert(ve.getAlias());

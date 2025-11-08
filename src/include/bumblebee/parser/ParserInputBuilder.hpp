@@ -127,6 +127,7 @@ public:
 	void onSQLStart();
 	void onSQLExtTable();
 	void onSQLExtTableName(char*);
+	void onSQLExtTableNameString(char*);
 	sql::SQLStatement& getSqlStatement();
 	void onSQLAggregateFunction(char*);
 	void onSQLGroupByItem();

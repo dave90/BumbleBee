@@ -242,6 +242,7 @@ TEST_F(CSVSCanTest, SkipAllRowsCSVTest) {
     options.hasHeader_ = true;
     options.header_ = true;
     options.skipRows_ = 10100;
+    options.autoDetect_ = false;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
     DataChunk chunk;

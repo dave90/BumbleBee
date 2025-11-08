@@ -25,7 +25,7 @@ using namespace bumblebee;
 TEST(BumbleStringTest, InlineConstructorShortString) {
     const char* str = "short";  // length = 5
     BumbleString s(str);
-    string expected = "\"short\"";
+    string expected = "short";
 
     EXPECT_EQ(s.length(), 5);
     EXPECT_TRUE(s.isInlined());
@@ -38,7 +38,7 @@ TEST(BumbleStringTest, InlineConstructorShortString) {
 TEST(BumbleStringTest, NonInlineConstructorLongString) {
     const char* str = "this_is_a_longer_string"; // > 11
     BumbleString s(str);
-    string exp = "\"this_is_a_longer_string\""; // > 11
+    string exp = "this_is_a_longer_string"; // > 11
 
     EXPECT_EQ(s.length(), strlen(str));
     EXPECT_FALSE(s.isInlined());
@@ -52,7 +52,7 @@ TEST(BumbleStringTest, NonInlineConstructorLongString) {
 
 TEST(BumbleStringTest, ConstructorWithExplicitLength) {
     const char* str = "123456789012345"; // len = 15
-    string exp = "\"123456789012345\""; // len = 15
+    string exp = "123456789012345"; // len = 15
     BumbleString s(str, 15);
 
     EXPECT_EQ(s.length(), 15);

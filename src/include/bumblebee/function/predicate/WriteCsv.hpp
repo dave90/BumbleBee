@@ -54,7 +54,7 @@ struct WriteCSVData : public FunctionData {
     // Partitions columns
     vector<idx_t> partitions_;
     // If we need to clear before writing
-    bool overwrite_ = false;
+    bool overwrite_ = true;
     // global mutex
     mutex mutex_;
     // For each thread return a csv file to write

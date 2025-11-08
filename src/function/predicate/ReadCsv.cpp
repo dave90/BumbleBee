@@ -191,6 +191,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 		if (kv.first == "auto_detect") {
 			options.autoDetect_ = kv.second.getValueUnsafe<uint8_t>();
 		} else if (kv.first == "sep" || kv.first == "delim") {
+			options.autoDetect_ = false;
 			options.delimiter_ = kv.second.toString();
 			options.hasDelimiter_ = true;
 		} else if (kv.first == "header") {

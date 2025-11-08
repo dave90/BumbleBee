@@ -1,0 +1,3 @@
+%@sql
+COPY (SELECT *
+FROM &read_csv("./files/csv/username.csv";auto_detect=1,header=1)) TO "files/sql/actual/select.3.csv" (single_file=1)

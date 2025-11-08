@@ -220,18 +220,7 @@ void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
     vector<idx_t> atomCols;
     vector<idx_t> prjCols;
     BB_ASSERT(!externalBindData_.contains(index));
-    // auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesCType()).get();
-    // auto inputTypes = atom.getInputValuesCType();
-    // vector<ConstantType> returnTypes;
-    // vector<string> names;
-    // for (auto& term:atom.getTerms()) {
-    //     BB_ASSERT(term.getType() == VARIABLE);
-    //     names.push_back(term.getVariable());
-    // }
-    // vector<Expression> filters;
-    //
-    // auto bind = func->bindFunction_(context_, atom.getInputValues(), inputTypes, atom.getNamedParamters(), returnTypes, names,filters );
-    // externalBindData_[index] = std::move(bind);
+
     vector<ConstantType> returnTypes;
     vector<string> names;
     bindExternalAtom(index, atom, returnTypes, names);
@@ -743,5 +732,7 @@ void PhysicalOptimizer::clear() {
     typesMap_.clear();
     selectedCols_.clear();
     skipAtom_.clear();
+    externalBindData_.clear();
+
 }
 }

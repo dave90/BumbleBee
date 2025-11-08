@@ -125,7 +125,7 @@ TEST_F(VectorOperationsCastTest, TryCastBigIntIntoString) {
     EXPECT_EQ(r, true);
     EXPECT_EQ(error->size(), 0);
     for (idx_t i = 0; i < data.size(); i++) {
-        EXPECT_EQ(result1.getValue(i).toString(), "\""+std::to_string( data[i])+"\"" );
+        EXPECT_EQ(result1.getValue(i).toString(), std::to_string( data[i]) );
     }
 }
 

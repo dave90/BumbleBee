@@ -1,0 +1,3 @@
+%@sql
+SELECT FIRST_NAME, PHONE_1
+FROM &read_csv("./files/csv/customers-1.csv";separator=",",auto_detect=1,header=1)

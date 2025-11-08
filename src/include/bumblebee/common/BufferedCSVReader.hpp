@@ -47,7 +47,7 @@ struct BufferedCSVReaderOptions {
 	// ("infer" (default; infer from file extention), "gzip", "none")
 	string compression_ = "none";
 	// Whether or not to automatically detect dialect and datatypes
-	bool autoDetect_ = false;
+	bool autoDetect_ = true;
 	// Whether or not a delimiter was defined by the user
 	bool hasDelimiter_ = false;
 	// Delimiter to separate columns within each line

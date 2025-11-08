@@ -815,6 +815,29 @@ void ParserInputBuilder::onSQLExtTableName(char* name) {
     externalSemicolumnCount_ = 0;
 }
 
+
+
+void ParserInputBuilder::onSQLExtTableNameString(char* name) {
+    string table = name;
+    StringUtils::removeQuote(table);
+    if (FileSystem::isCSVFile(table)) {
+        externalFunctionName_ = "&read_csv";
+    } else {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Error, external table: "+table+" not supported. Please specify a supported table type.";
+        return;
+    }
+    inputValues_.emplace_back(table);
+
+    terms_parsered.clear();
+    namedParameters_.clear();
+    fromItems_.emplace_back(inputValues_, externalFunctionName_, namedParameters_);
+    inputValues_.clear();
+    externalFunctionName_.clear();
+    namedParameters_.clear();
+    externalSemicolumnCount_ = 0;
+}
+
 void ParserInputBuilder::onSQLExtTable() {
     if (!alias_.empty())
         fromItems_.back().setAlias(alias_);
@@ -844,10 +867,7 @@ void ParserInputBuilder::onSQLGroupByItem() {
 void ParserInputBuilder::onSQLCopyTo(char *path) {
     // remove first and last char as contains double quote
     sqlExportFilePath_ = path;
-    if (sqlExportFilePath_.back() == '"')
-        sqlExportFilePath_.pop_back();
-    if (sqlExportFilePath_.front() == '"')
-        sqlExportFilePath_.erase(0,1);
+    StringUtils::removeQuote(sqlExportFilePath_);
 }
 
 

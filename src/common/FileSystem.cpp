@@ -301,6 +301,16 @@ string FileSystem::extractBaseName(const string &path) {
     return vec[0];
 }
 
+bool FileSystem::isCSVFile(const string& path) {
+    // Check if path length is at least 4 characters (".csv")
+    if (path.length() < 4) return false;
+
+    // Convert to lowercase for case-insensitive comparison
+    string lowerPath = StringUtils::lower(path);
+
+    // Check if it ends with ".csv"
+    return lowerPath.compare(lowerPath.length() - 4, 4, ".csv") == 0;
+}
 
 void FileSystem::setWorkingDirectory(const string &path) {
     if (chdir(path.c_str()) != 0) {

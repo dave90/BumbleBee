@@ -220,4 +220,11 @@ string StringUtils::lower(const string &str) {
 	transform(copy.begin(), copy.end(), copy.begin(), [](unsigned char c) { return std::tolower(c); });
 	return (copy);
 }
+
+void StringUtils::removeQuote(string &str) {
+	if (str.back() == '"')
+		str.pop_back();
+	if (str.front() == '"')
+		str.erase(0,1);
+}
 }

@@ -188,6 +188,9 @@ public:
 	static string convertSeparators(const string &path);
 	// Extract the base name of a file (e.g. if the input is lib/example.dll the base name is example)
 	static string extractBaseName(const string &path);
+	// Return true if is a csv file
+	static bool isCSVFile(const string& path);
+
 
 };
 

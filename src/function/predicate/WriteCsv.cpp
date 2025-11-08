@@ -21,6 +21,8 @@
 #include <uuid/uuid.h>
 
 #include "bumblebee/function/predicate/WriteCsv.hpp"
+
+#include "bumblebee/common/Log.hpp"
 #include "bumblebee/common/StringUtils.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
@@ -233,6 +235,11 @@ static function_data_ptr_t writeCSVBind(ClientContext &context,
 		} else if (kv.first == "mode") {
 			if (StringUtils::lower( kv.second.toString()) == "overwrite")
 				result->overwrite_ = true;
+			else if (StringUtils::lower( kv.second.toString()) == "append")
+				result->overwrite_ = false;
+			else
+				LOG_WARNING("Warning value: %s is not a valid mode. Available mode: [overwrite, append]", kv.second.toString().c_str());
+
 		} else if (kv.first == "partitions") {
 			parseColumns(kv.second.toString(), partitions);
 		} else if (kv.first == "columns") {

@@ -855,6 +855,11 @@ external_table
         director.getBuilder()->onSQLExtTableName($2);
         delete[] $2;
     }
+    | STRING
+    {
+        director.getBuilder()->onSQLExtTableNameString($1);
+        delete[] $1;
+    }
 
 table_ref
     : SYMBOLIC_CONSTANT

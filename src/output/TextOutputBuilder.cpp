@@ -21,6 +21,16 @@
 
 namespace bumblebee {
 
+void printVal(const Value& val, string& line) {
+    if (val.getConstantType() != STRING)
+        line.append(val.toString());
+    else {
+        // quote the string
+        line.append("\"");
+        line.append(val.toString());
+        line.append("\"");
+    }
+}
 
 void TextOutputBuilder::outputAtoms(const DataChunk &chunk, Predicate *predicate) {
     auto arity = predicate->getArity();
@@ -31,11 +41,15 @@ void TextOutputBuilder::outputAtoms(const DataChunk &chunk, Predicate *predicate
         line.clear();
         line.append(predicate->getName());
         line.push_back('(');
-        line.append(chunk.getValue(0, row).toString());
+        auto firstVal = chunk.getValue(0, row);
+        printVal(firstVal, line);
+
 
         for (idx_t col = 1; col < arity; ++col) {
             line.push_back(',');
-            line.append(chunk.getValue(col, row).toString());
+            auto val = chunk.getValue(col, row);
+            printVal(val, line);
+
         }
         line.append(").\n");
         std::cout.write(line.data(), static_cast<std::streamsize>(line.size()));
