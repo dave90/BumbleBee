@@ -1,28 +1,23 @@
 ## TODOLIST
-- CSV Writer
-- Partitions
-- Export one signle CSV
-- Check export csv same file multiple atoms
-- Overwrite
 - SQL translation
 
 
 ## Next
 - Hash build: reduce build tasks
 - CICD
-- SQL
 - - Default minimum integer (small int or int 32 bit not tiny as now)
 - Test: TPC-H, ClickBench https://github.com/electrum/tpch-dbgen
 - Test vs duck
   - Combine ?
   - My hash table vs duck
-  - 
+  -
 
 ## Next of Next
  
 
 - Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner with statistics better optimizer and rule ordering
+- Rules with OR body and compaction of the rules
 - functions
 - DATE / TIMESTAMP
 - Specific table types

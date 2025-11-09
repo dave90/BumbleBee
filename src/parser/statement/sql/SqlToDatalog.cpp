@@ -198,7 +198,11 @@ void SqlToDatalog::visitFrom(sql::SQLStatement &statement) {
         }
         for (auto& col: columns) {
             tableColumnsMap_[fi.getAlias()].insert(col);
-            if (columnTableMap_.contains(col)) continue;
+            if (columnTableMap_.contains(col)) {
+                // remove as exist duplicates
+                columnTableMap_.erase(col);
+                continue;
+            };
             columnTableMap_[col] = fi.getAlias();
         }
     }
@@ -218,7 +222,7 @@ void SqlToDatalog::visitFrom(sql::SQLStatement &statement) {
                     if (columnTableMap_.contains(vp.getQualifier().name_))
                         alias = vp.getQualifier().name_;
                     else
-                        alias = getVariableName(vp.getQualifier().table_,vp.getQualifier().name_);
+                        alias = vp.toString();
                 }
 
             }
@@ -311,7 +315,6 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
     }
 
     string alias = statement.getAlias();
-
 
     // generate head atom from the select
     vector<Term> headTerms;
@@ -445,7 +448,8 @@ void SqlToDatalog::generateRules( Atom& head, vector<Atom>& body, vector<vector<
         return;
     }
 
-
+    // set the predicate as distinct because we will generate multiple rules
+    head.getPredicate()->setDistinct();
     // for each condition let's generate a rule
     for (auto& condition: conditions) {
         Rule r;

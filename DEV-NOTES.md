@@ -269,6 +269,12 @@ ctest -j
 
 ## End to End (E2E) Test
 
+### Pre Requisites
+- Duckdb
+- clingo
+
+
+
 Run:
 ```bash
 cd test/e2e
