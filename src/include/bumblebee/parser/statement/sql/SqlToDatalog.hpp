@@ -44,7 +44,7 @@ private:
 
     void generateRuleForExtAtom(sql::FromItem & fi, rules_vector_t & rules);
 
-    void generateAggRules(sql::SQLStatement & statement,  Predicate* headPred, rules_vector_t & rules);
+    void generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars, sql::SQLStatement & statement, rules_vector_t & rules);
 
     void genRuleFromSql(sql::SQLStatement& statement, rules_vector_t& program);
     Atom getAtomFromTable(string& table);

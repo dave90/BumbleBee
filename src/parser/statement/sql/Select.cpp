@@ -61,10 +61,12 @@ string Select::toString() const{
         if (aggFunctions_[idx] != NONE) {
             result += Atom::getAggFunction(aggFunctions_[idx]) + "( ";
         }
-        result += item.toString();
+        result += item.toString(false);
         if (aggFunctions_[idx] != NONE) {
             result += " )";
         }
+        if (!item.getAlias().empty())
+            result += " AS " + item.getAlias();
         idx++;
     }
     return result;

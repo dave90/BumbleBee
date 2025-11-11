@@ -97,7 +97,8 @@
      SQL_MIN = 313,
      SQL_MAX = 314,
      SQL_AVG = 315,
-     SQL_DIALECT = 316
+     SQL_COUNT = 316,
+     SQL_DIALECT = 317
    };
 #endif
 /* Tokens.  */
@@ -159,7 +160,8 @@
 #define SQL_MIN 313
 #define SQL_MAX 314
 #define SQL_AVG 315
-#define SQL_DIALECT 316
+#define SQL_COUNT 316
+#define SQL_DIALECT 317
 
 
 
@@ -173,7 +175,7 @@ typedef union YYSTYPE
     int integer;
 }
 /* Line 1529 of yacc.c.  */
-#line 177 "src/parser/aspcore2_parser.h"
+#line 179 "src/parser/aspcore2_parser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

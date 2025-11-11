@@ -52,6 +52,12 @@ vector<QualifiedName> Groupby::getQualifiedNames() {
     return result;
 }
 
+void Groupby::setQualifiedNames(QualifiedName &q, idx_t index) {
+    BB_ASSERT(index < items_.size());
+    BB_ASSERT(items_[index].getValues().size() == 1);
+    items_[index].getValues()[0].setQualifier(q);
+}
+
 void Groupby::addItem(ValueExpr &item) {
     items_.push_back(std::move(item));
 }

@@ -1,0 +1,3 @@
+SELECT "Last Name", "First Name", COUNT(*) as COUNT, MAX(Identifier) as id
+FROM "./files/csv/username.csv"
+GROUP BY "Last Name", "First Name"

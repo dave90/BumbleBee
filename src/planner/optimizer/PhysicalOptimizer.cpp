@@ -62,8 +62,7 @@ bool PhysicalOptimizer::canBeSkipped(Rule &rule) {
                 BB_ASSERT(atom.getAggsAtoms().size() == 1);
                 auto& apt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
                 // if agg tables size are 0
-                BB_ASSERT(apt->existPartitionedAggHashTable());
-                if (apt->getPartitionedAggHashTable()->getSize() == 0) return true;
+                if ( !apt->existPartitionedAggHashTable() || apt->getPartitionedAggHashTable()->getSize() == 0) return true;
                 break;
             }
         }

@@ -21,6 +21,7 @@
 #include "bumblebee/catalog/Catalog.hpp"
 #include "bumblebee/common/LocalFileSystem.hpp"
 #include "bumblebee/function/aggregate/Avg.hpp"
+#include "bumblebee/function/aggregate/Count.hpp"
 #include "bumblebee/function/aggregate/Min.hpp"
 #include "bumblebee/function/aggregate/Max.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
@@ -53,6 +54,7 @@ void ClientContext::registerFunctions() {
     MinFunc::registerFunction(functionRegister_);
     MaxFunc::registerFunction(functionRegister_);
     AvgFunc::registerFunction(functionRegister_);
+    CountFunc::registerFunction(functionRegister_);
 
     // predicates functions
     ReadCsvFunc::registerFunction(functionRegister_);

@@ -56,7 +56,7 @@ char * BumbleString::getDataWriteable() const {
 string BumbleString::getString() const {
     const char* data = getDataUnsafe();
 
-    string result = data;
+    string result(data, size());
     return result;
 }
 

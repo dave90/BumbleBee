@@ -116,14 +116,14 @@ void ValueExpr::addOperator(Operator op) {
     operators_.push_back(op);
 }
 
-string ValueExpr::toString() const {
+string ValueExpr::toString(bool alias) const {
     if (values_.empty())return "";
     string result = values_[0].toString();
     for (idx_t i =0;i<operators_.size();i++) {
         string op{getOperatorChar(operators_[i])};
         result += " "+op + " "+ values_[i+1].toString();
     }
-    if (!alias_.empty())
+    if (!alias_.empty() && alias)
         result += " AS " + alias_;
     return result;
 }

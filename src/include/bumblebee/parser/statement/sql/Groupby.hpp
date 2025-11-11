@@ -36,6 +36,7 @@ public:
 
     value_expr_vector_t & getItems();
     vector<QualifiedName> getQualifiedNames();
+    void setQualifiedNames(QualifiedName& q, idx_t index);
     void addItem(ValueExpr& item);
 
     string toString() const;

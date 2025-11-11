@@ -647,7 +647,7 @@ bool ParserInputBuilder::isSQL() {
 void ParserInputBuilder::onSQLValue(char *value) {
     if(foundASafetyError_) return;
 
-    if( value[0] >= 'A' && value[0] <='Z' ) // Column name
+    if(strcmp(value, "*") == 0 || (value[0] >= 'A' && value[0] <='Z') ) // Column name
     {
         std::string s(value);
         Value v(std::move(s));

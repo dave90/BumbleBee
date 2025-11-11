@@ -213,6 +213,11 @@ NUMBER              ([0-9]+)
                                             strcpy(yylval.string,yytext);
                                             return SQL_AVG;
                                         }
+<SQL>[Cc][Oo][Uu][Nn][Tt]               {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_COUNT;
+                                        }
 
 
 {SYMBOLIC_CONSTANT}     {

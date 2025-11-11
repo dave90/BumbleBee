@@ -1,0 +1,3 @@
+SELECT "First Name", COUNT(*) as COUNT, SUM(Index) as sum, MAX("Last Name") as l
+FROM "./files/csv/customers-1.csv"
+GROUP BY "First Name"

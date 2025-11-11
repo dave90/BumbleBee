@@ -1,0 +1,4 @@
+%@sql
+SELECT FIRST_NAME, COUNT(*) as COUNT, SUM(INDEX) as sum, MAX(LAST_NAME) as l
+FROM "./files/csv/customers-1.csv"
+GROUP BY FIRST_NAME

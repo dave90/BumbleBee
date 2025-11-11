@@ -79,11 +79,10 @@ void SqlToDatalog::generateExportRule(sql::SQLStatement &statement, rules_vector
     auto headPredLastRule = rules.back().getHead()[0].getPredicate();
     BB_ASSERT(headPredLastRule->getArity() == si.size()); //
     auto newPredName = generatePredicateName();
-    auto newPred = context_.defaultSchema_.createPredicate(&context_, newPredName.c_str(), headPredLastRule->getArity());
 
     auto& params = statement.getExportNamedParameters();
     vector<Value> values;
-    values.push_back(sqlExportFilePath);
+    values.emplace_back(sqlExportFilePath);
     vector<Term> t1;
     for (idx_t i = 0; i < headPredLastRule->getArity(); ++i) {
         string var = si[i].getAlias();
@@ -107,6 +106,25 @@ void SqlToDatalog::generateExportRule(sql::SQLStatement &statement, rules_vector
     rule.addAtomInBody(std::move(body));
     rule.addAtomInHead(std::move(head));
     rules.push_back(std::move(rule));
+}
+
+vector<sql::QualifiedName> getAllQualifiedNames(sql::SQLStatement& statement, std::unordered_map<string, std::unordered_set<string>> tableColumnsMap) {
+    std::unordered_set<string> aliasNames;
+    for (auto& f: statement.getFrom().getSubQueries())
+        aliasNames.insert(f.getAlias());
+    for (auto& f: statement.getFrom().getItems())
+        aliasNames.insert(f.getAlias());
+
+    vector<sql::QualifiedName> result;
+    for (auto& alias: aliasNames) {
+        BB_ASSERT(!alias.empty());
+        if (!tableColumnsMap.contains(alias)) continue;
+        for (auto&col : tableColumnsMap[alias]) {
+            sql::QualifiedName qualified = {.name_ = col, .table_ = alias};
+            result.push_back(std::move(qualified));
+        }
+    }
+    return result;
 }
 
 void SqlToDatalog::replaceStar(sql::SQLStatement &statement) {
@@ -133,26 +151,19 @@ void SqlToDatalog::replaceStar(sql::SQLStatement &statement) {
     if (!star)
         return;
     // we found a star, find all the cols of the tables/subqueries and add as select items
-    std::unordered_set<string> aliasNames;
-    for (auto& f: statement.getFrom().getSubQueries())
-        aliasNames.insert(f.getAlias());
-    for (auto& f: statement.getFrom().getItems())
-        aliasNames.insert(f.getAlias());
-
     statement.getSelect().getItems().clear();
-    for (auto& alias: aliasNames) {
-        BB_ASSERT(!alias.empty());
-        if (!tableColumnsMap_.contains(alias)) continue;
-        for (auto&col : tableColumnsMap_[alias]) {
-            sql::QualifiedName qualified = {.name_ = col, .table_ = alias};
-            sql::ValuePrimary vp(qualified);
-            sql::ValueExpr ve;
-            ve.addValuePrimary(vp);
-            statement.getSelect().getItems().push_back(std::move(ve));
-        }
+    auto qualifiedNames = getAllQualifiedNames(statement, tableColumnsMap_);
+    for (auto& qualified: qualifiedNames) {
+        sql::ValuePrimary vp(qualified);
+        sql::ValueExpr ve;
+        ve.addValuePrimary(vp);
+        statement.getSelect().getItems().push_back(std::move(ve));
+        statement.getSelect().addAggFunction(NONE);
+
     }
 
 }
+
 
 
 
@@ -239,15 +250,18 @@ void SqlToDatalog::visitGroup(sql::SQLStatement &statement) {
         visitGroup(sq);
     }
     std::unordered_set<string> groups;
-    for (auto q: statement.getGroupby().getQualifiedNames()) {
+    idx_t i = 0;
+    for (auto& q: statement.getGroupby().getQualifiedNames()) {
         if (q.table_.empty()) {
             if (!columnTableMap_.contains(q.name_)) {
                 errorMessage_ = "Column " + q.name_ + " does not exist or is in conflict with other tables.";
                 return;
             }
             q.table_ = columnTableMap_[q.name_];
+            statement.getGroupby().setQualifiedNames(q, i);
         }
         groups.insert(q.table_+"."+q.name_);
+        ++i;
     }
     for (idx_t i=0;i<statement.getSelect().getAggFunctions().size();++i) {
         if (statement.getSelect().getAggFunctions()[i] != NONE) continue;
@@ -317,20 +331,44 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
     string alias = statement.getAlias();
 
     // generate head atom from the select
-    vector<Term> headTerms;
-    std::unordered_set<string> headVars;
-    for (auto& si:statement.getSelect().getItems()) {
-        auto t = getTermFromValueExpr( si, statement.getAlias());
-        if (!errorMessage_.empty())
-            return;
-        if(t.getType() == VARIABLE) {
-            headVars.insert(t.getVariable());
+    vector<Term> headTerms; // head terms
+    std::unordered_set<string> headVars; // variables in head
+    std::unordered_set<string> groupVars; // variables in group by
+    // for each agg function index the aggregation vars. note: is possible to aggregate on multiple columns (count(*)) .
+    std::unordered_map<idx_t, vector<string>> aggVars;
+    for ( i = 0;i< statement.getSelect().getItems().size();++i) {
+        auto si = statement.getSelect().getItems()[i];
+        if (si.toString(false) == "*" && statement.getSelect().getAggFunctions()[i] == COUNT) {
+            // handle count(*), we need to include all the variables
+            auto qNames = getAllQualifiedNames(statement, tableColumnsMap_);
+            for (auto &q: qNames) {
+                auto var = getVariableName(q.table_, q.name_);
+                Term t = Term::createVariable(std::move(var));
+                aggVars[i].push_back(t.getVariable());
+                if (headVars.contains(t.getVariable())) continue;
+                headVars.insert(t.getVariable());
+                headTerms.push_back(std::move(t));
+            }
+            continue;
         }
+        auto t = getTermFromValueExpr( si, statement.getAlias());
+        if (statement.getSelect().getAggFunctions()[i] != NONE) {
+            // aggregation
+            if (si.getValues().size() >1) {
+                // error, supported only aggregation on one columns
+                errorMessage_ = "Error: aggregation is supported on only one column. Received: " + si.toString();
+                return;
+            }
+            aggVars[i].push_back(t.getVariable());
+        }
+        if (headVars.contains(t.getVariable())) continue;
+        headVars.insert(t.getVariable());
         headTerms.push_back(std::move(t));
     }
     // add the group by cols in head terms
     for (auto& q: statement.getGroupby().getQualifiedNames()) {
         auto var = getVariableName(q.table_, q.name_);
+        groupVars.insert(var);
         if (headVars.contains(var)) continue;
         auto t = Term::createVariable(std::move(var));
         headVars.insert(t.getVariable());
@@ -360,71 +398,93 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
     auto head = Atom::createClassicalAtom(pred, std::move(headTerms));
     generateRules(head, body, binopAtoms, program);
     if (statement.getSelect().containsAggregations()) {
-        generateAggRules(statement, pred, program);
+        generateAggRules(groupVars, aggVars, statement, program);
     }
 }
 
-void SqlToDatalog::generateAggRules(sql::SQLStatement &statement, Predicate* headPred, rules_vector_t &rules) {
+void SqlToDatalog::generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars,  sql::SQLStatement &statement, rules_vector_t &rules) {
     auto& select = statement.getSelect();
-    std::unordered_set<string> headVars;
-    // grups vars for external atom and agg atoms
-    vector<Term> atomGroupVars;
-    // group vars for internal aggregates
-    vector<Term> groupTerms;
-    vector<idx_t> aggTermsIndex;
-    vector<Term> headTerms;
-
-    for (idx_t i=0;i<select.getItems().size();++i) {
-        string var;
-        Term t = getTermFromValueExpr(select.getItems()[i], statement.getAlias());
-        if (select.getAggFunctions()[i] != NONE || t.getType() != VARIABLE) {
-            if (select.getAggFunctions()[i] != NONE) {
-                aggTermsIndex.push_back(i);
-                t = Term::createVariable(select.getItems()[i].getAlias());
-            }
-            var = Term::anonymous_variable;
-        }else {
-            var = t.getVariable();
-            Term vTerm = Term::createVariable(var.c_str());
-            groupTerms.push_back(std::move(vTerm));
-        }
-        headTerms.push_back(std::move(t));
-        headVars.insert(var);
-        Term vTerm = Term::createVariable(std::move(var));
-        atomGroupVars.push_back(std::move(vTerm));
-    }
-    // add the group by cols in head terms
-    for (auto& q: statement.getGroupby().getQualifiedNames()) {
-        auto var = getVariableName(q.table_, q.name_);
-        if (headVars.contains(var)) continue;
-        headVars.insert(var);
-        auto t = Term::createVariable(var.c_str());
-        atomGroupVars.push_back(std::move(t));
-        t = Term::createVariable(std::move(var));
-        groupTerms.push_back(std::move(t));
-
-    }
-    BB_ASSERT(headPred->getArity() == atomGroupVars.size());
     vector<Atom> body;
-    // first add the group atom
-    auto terms = atomGroupVars;
-    Atom groupAtom = Atom::createClassicalAtom(headPred, std::move(terms));
-    body.push_back(std::move(groupAtom));
-    // generate agg atoms for each aggregation
-    for (auto idx : aggTermsIndex) {
+    BB_ASSERT(rules[rules.size()-1].getHead().size() == 1);
+    // head atom of the last rule that contains the aggregation predicate
+    auto& headLastRule =  rules[rules.size()-1].getHead()[0];
+
+    if (!groupVars.empty()) {
+        // generate aggregation rule
+        auto terms = headLastRule.getTerms();
+        vector<Term> headGroupTerms;
+        for (idx_t i=0;i<terms.size();++i) {
+            if ( groupVars.contains( terms[i].getVariable())) {
+                headGroupTerms.push_back(terms[i]);
+                continue;
+            }
+            // is not a group var so set as anonymous
+            auto t = Term::createVariable(Term::anonymous_variable);
+            terms[i] = std::move(t);
+        }
+        Atom groupAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
+        auto newPredName = generatePredicateName();
+        auto newPred = context_.defaultSchema_.createPredicate(&context_, newPredName.c_str(), headGroupTerms.size());
+        newPred->setDistinct(); // set distinct to decrease the scan
+        Atom head = Atom::createClassicalAtom(newPred, std::move(headGroupTerms));
+        Rule rule;
+        rule.addAtomInHead(std::move(head.clone()));
+        rule.addAtomInBody(std::move(groupAtom));
+        rules.push_back(std::move(rule));
+        body.push_back(std::move(head));
+    }
+    // now generate the aggregation atoms
+    for (auto& [agg, vars]:aggVars) {
+        auto terms = headLastRule.getTerms();
+        vector<Term> aggTerms;
+        std::unordered_set<string> aggTermVars;
+        // first add in agg terms the aggregation column (must be the first term)
+        auto firstTerm = Term::createVariable(vars[0].c_str());
+        aggTerms.push_back(std::move(firstTerm));
+        aggTermVars.insert(vars[0].c_str());
+
+        // keep the groups var and aggregation var
+        // and store the aggregation terms
+        std::unordered_set setVars(vars.begin(), vars.end());
+        for (idx_t i=0;i<terms.size();++i) {
+            if ( groupVars.contains( terms[i].getVariable()) || setVars.contains( terms[i].getVariable())  ) {
+                if (!aggTermVars.contains(terms[i].getVariable())) {
+                    aggTerms.push_back(terms[i]);
+                    aggTermVars.insert(terms[i].getVariable());
+                }
+                continue;
+            };
+            // is not a group or agg var so set as anonymous
+            auto t = Term::createVariable(Term::anonymous_variable);
+            terms[i] = std::move(t);
+        }
         Term lt,ut;
-        lt = Term::createVariable(select.getItems()[idx].getAlias());
-        Term aggVar = Term::createVariable(generateVarName());
-        auto aggTerms = groupTerms;
-        aggTerms.insert(aggTerms.begin(), aggVar);
-        auto aggAtomTerms = atomGroupVars;
-        aggAtomTerms[idx] = std::move(aggVar);
-        auto aggInternalAtom = Atom::createClassicalAtom(headPred, std::move(aggAtomTerms));
+        lt = Term::createVariable(select.getItems()[agg].getAlias());
+        auto aggInternalAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
         vector<Atom> aggBodyAtoms;
         aggBodyAtoms.push_back(std::move(aggInternalAtom));
-        Atom aggregateAtom = Atom::createAggregateAtom(select.getAggFunctions()[idx],ASSIGNMENT, NONE_OP,lt,ut, std::move(aggTerms), std::move(aggBodyAtoms) );
+        Atom aggregateAtom = Atom::createAggregateAtom(select.getAggFunctions()[agg],ASSIGNMENT, NONE_OP,lt,ut, std::move(aggTerms), std::move(aggBodyAtoms) );
         body.push_back(std::move(aggregateAtom));
     }
+
+    vector<Term> headTerms;
+    idx_t i = 0;
+    for (auto& ve: statement.getSelect().getItems()) {
+        if (statement.getSelect().getAggFunctions()[i] != NONE) {
+            // insert the alias for aggregations
+            auto var = ve.getAlias();
+            BB_ASSERT(!var.empty());
+            auto t = Term::createVariable(std::move(var));
+            headTerms.push_back(std::move(t));
+        }else {
+            // create the term from value
+            auto t = getTermFromValueExpr(ve);
+            headTerms.push_back(std::move(t));
+        }
+        ++i;
+    }
+
+
     string alias = generatePredicateName();
     auto newPred = context_.defaultSchema_.createPredicate(&context_, alias.c_str(), headTerms.size());
     Atom head = Atom::createClassicalAtom(newPred, std::move(headTerms));
@@ -432,6 +492,7 @@ void SqlToDatalog::generateAggRules(sql::SQLStatement &statement, Predicate* hea
     rule.addAtomInHead(std::move(head));
     rule.setBody(body);
     rules.push_back(std::move(rule));
+
 }
 
 void SqlToDatalog::generateRules( Atom& head, vector<Atom>& body, vector<vector<Atom>>& conditions, rules_vector_t& program ) {

@@ -66,7 +66,7 @@ public:
 
     void setAlias(string& alias);
 
-    string toString() const;
+    string toString(bool alias = true) const;
 
     vector<ValuePrimary>& getValues();
     vector<Operator>& getOperators();

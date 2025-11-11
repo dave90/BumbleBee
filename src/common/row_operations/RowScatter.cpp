@@ -100,7 +100,6 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 				continue;
 			}
 
-			auto &vec = columns.data_[col_no];
 			auto &col = col_data[col_no];
 			switch (types[col_no]) {
 			case STRING:

@@ -68,7 +68,7 @@ bool queryFound=false;
 
 /* --- SQL tokens --- */
 %token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR SQL_COPY SQL_TO
-%token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG
+%token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG SQL_COUNT
 %left SQL_OR
 %left SQL_AND
 %token <string> SQL_DIALECT
@@ -891,6 +891,31 @@ alias_name
          director.getBuilder()->onSQLAlias($1);
          delete[] $1;
      }
+     | SQL_COUNT
+      {
+          director.getBuilder()->onSQLAlias($1);
+          delete[] $1;
+      }
+     | SQL_AVG
+      {
+          director.getBuilder()->onSQLAlias($1);
+          delete[] $1;
+      }
+     | SQL_MAX
+      {
+          director.getBuilder()->onSQLAlias($1);
+          delete[] $1;
+      }
+     | SQL_MIN
+      {
+          director.getBuilder()->onSQLAlias($1);
+          delete[] $1;
+      }
+     | SQL_SUM
+      {
+          director.getBuilder()->onSQLAlias($1);
+          delete[] $1;
+      }
     ;
 
 /* WHERE clause */
@@ -988,7 +1013,21 @@ value_primary
     }
     | qualified_name
     | PARAM_OPEN value_expr PARAM_CLOSE
-    | aggregate_func PARAM_OPEN value_expr PARAM_CLOSE
+    | aggregate_func PARAM_OPEN aggregate_arg PARAM_CLOSE
+    ;
+
+aggregate_arg
+    : STRING
+    {
+        director.getBuilder()->onSQLValue($1);
+        delete[] $1;
+    }
+    | qualified_name
+    | TIMES        /* for * */
+    {
+        char c[] = "*";
+        director.getBuilder()->onSQLValue(c);
+    }
     ;
 
 qualified_name
@@ -1047,6 +1086,11 @@ aggregate_func
         delete[] $1;
     }
     | SQL_AVG
+    {
+        director.getBuilder()->onSQLAggregateFunction($1);
+        delete[] $1;
+    }
+    | SQL_COUNT
     {
         director.getBuilder()->onSQLAggregateFunction($1);
         delete[] $1;
