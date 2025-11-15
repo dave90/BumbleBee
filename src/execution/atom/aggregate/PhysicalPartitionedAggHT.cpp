@@ -204,7 +204,7 @@ void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState
     auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
     auto& cstate = (PartitionedAggHTJoinAtomState&)state;
 
-    if (cstate.ht_->getSize() == 0) {
+    if (!cstate.ht_ || cstate.ht_->getSize() == 0) {
         context.profiler_.endPhysicalAtom(input);
         return;
     }

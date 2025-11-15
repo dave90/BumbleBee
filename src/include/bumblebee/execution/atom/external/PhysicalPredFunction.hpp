@@ -49,6 +49,9 @@ public:
     AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const override;
 
+    AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
+        PhysicalAtomState &state) const override;
+
     void finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const override;
 
     void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;

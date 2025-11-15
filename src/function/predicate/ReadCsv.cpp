@@ -76,79 +76,12 @@ static bool hasGlob(const string &str) {
 	return false;
 }
 
-idx_t ReadCSVData::getMaxThread() {
-    if (maxThreads_)
-        return maxThreads_;
-
-    BB_ASSERT(initialReader_);
-    BB_ASSERT(initialReader_->avgBytesInChunk_);
-    idx_t bytesPerLineAvg = initialReader_->avgBytesInChunk_ / STANDARD_VECTOR_SIZE;
-
-    // calculate the total size
-    idx_t totalSize = 0;
-    for (auto fp : files_) {
-        auto result = initialReader_->fs_.openFile(fp.c_str(), FileFlags::FILE_FLAGS_READ, FileLockType::NO_LOCK, initialReader_->compression_);
-        filesSize_[fp] = result->getFileSize();
-        totalSize += result->getFileSize();
-    }
-
-    auto bytesMorsel = bytesPerLineAvg * MORSEL_SIZE;
-
-    maxThreads_ =  totalSize / bytesMorsel + 1;
-    return maxThreads_;
+idx_t ReadCSVData::getMaxThread() const{
+	return files_.size();
 }
 
-vector<ReadCSVDataChunk> ReadCSVData::getNextChunksToRead() {
-    BB_ASSERT(initialReader_->avgBytesInChunk_);
-	idx_t bytesPerLineAvg = initialReader_->avgBytesInChunk_ / STANDARD_VECTOR_SIZE;
-
-    lock_guard lock(mutex_);
-
-    idx_t currentFile = 0;
-    idx_t currentOffset = 0;
-    if (chunks_.size() > 0) {
-        // check if the last files was completed
-        auto& last = chunks_.back().back();
-        idx_t totalEstimatedLines = filesSize_[files_[last.file_]] / bytesPerLineAvg;
-        if (last.end_ >= totalEstimatedLines) {
-            // file completed read the next file
-            currentFile = last.file_ +1 ;
-        }else {
-            currentFile = last.file_;
-            currentOffset = last.end_ +1;
-        }
-    }
-	// all data was assigned to other threads, return empty chunks
-	if (currentFile >= files_.size()) {
-		return {};
-	}
-    // insert the chunks for this thread
-    chunks_.emplace_back();
-    idx_t currentLines = 0;
-    while (currentLines < MORSEL_SIZE) {
-        if (currentFile >= files_.size()) {
-            // all files completed
-            break;
-        }
-        idx_t totalEstimatedLines = filesSize_[files_[currentFile]] / bytesPerLineAvg;
-        idx_t start = currentOffset;
-        idx_t end = start + minValue<idx_t>(MORSEL_SIZE, totalEstimatedLines - start) - 1;
-        currentLines = end - start + 1;
-    	chunks_.back().emplace_back();
-        auto& last = chunks_.back().back();
-        last.file_ = currentFile;
-        last.start_ = start;
-        if (end >= totalEstimatedLines - 1) {
-            // set end to large integer to ensure that the thread read all the file content
-            end = NumericLimits<uint64_t>::maximum();
-            // go to the next file
-            currentFile += 1;
-            currentOffset = 0;
-        }
-        last.end_ = end;
-    }
-
-    return chunks_.back();
+idx_t ReadCSVData::getNextFileToRead() {
+	return nextFileToProcess_.fetch_add(1);
 }
 
 
@@ -283,7 +216,7 @@ static function_op_data_ptr_t readCSVInit(ClientContext &context, const Function
 
 	auto result = std::make_unique<ReadCSVOperatorData>();
 
-	result->chunks_ = bind_data.getNextChunksToRead();
+	result->fileIndex_ = bind_data.getNextFileToRead();
 
 	result->readChunk_.initialize(bind_data.types_);
 
@@ -301,31 +234,24 @@ static void readCSVFunction(ClientContext &context, const FunctionData *bind_dat
 	auto &bind_data = (ReadCSVData &)*bind_data_p;
 	auto &data = (ReadCSVOperatorData &)*operator_state;
 
+	if (data.finished_) return;
 
-	while (data.chunkIndex_ < data.chunks_.size()) {
-		auto& chunk = data.chunks_[data.chunkIndex_];
-
-		if (!data.csvReader_) {
-			auto option = bind_data.options_;
-			option.filePath_ = bind_data.files_[chunk.file_];
-			option.skipRows_ = chunk.start_;
-			data.csvReader_ = std::make_unique<BufferedCSVReader>(*context.fileSystem_, option, bind_data.types_);
-		}
-		if (chunk.start_ < chunk.end_) {
-			data.readChunk_.setCardinality(0);
-			data.csvReader_->parseCSV(data.readChunk_);
-			// select the interested cols
-			output.reference(data.readChunk_, bind_data.cols_);
-			chunk.start_ += data.readChunk_.getSize();
-		}
-
-		if (output.getSize() == 0 || chunk.start_ >= chunk.end_) {
-			// exhausted this file, but we have more files we can read
-			data.chunkIndex_++;
-			data.csvReader_ = nullptr;
-		} else
-			break;
+	if (!data.csvReader_) {
+		auto option = bind_data.options_;
+		option.filePath_ = bind_data.files_[data.fileIndex_];
+		data.csvReader_ = std::make_unique<BufferedCSVReader>(*context.fileSystem_, option, bind_data.types_);
 	}
+	data.csvReader_->parseCSV(data.readChunk_);
+	output.reference(data.readChunk_, bind_data.cols_);
+
+	if (output.getSize() == 0 ) {
+		// exhausted this file
+		data.finished_ = true;
+		data.csvReader_ = nullptr;
+	}else {
+		data.readChunk_.reset();
+	}
+
 
 }
 

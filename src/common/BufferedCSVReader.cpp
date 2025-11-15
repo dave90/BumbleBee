@@ -679,7 +679,7 @@ bool BufferedCSVReader::addRow(DataChunk &insert_chunk, idx_t &column) {
 	}
 
 	if (column < types_.size() && mode_ != ParserMode::SNIFFING_DIALECT) {
-		ErrorHandler::errorParsing("Error on line"+ getLineNumberStr(linenr_, linenrEstimated_) + " : expected" + std::to_string(types_.size()) +" values per row, but got more.");
+		ErrorHandler::errorParsing("Error on line "+ getLineNumberStr(linenr_, linenrEstimated_) + " : expected " + std::to_string(types_.size()) +" values per row, but got more.");
 	}
 
 	if (mode_ == ParserMode::SNIFFING_DIALECT) {

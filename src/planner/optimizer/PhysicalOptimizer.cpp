@@ -465,6 +465,18 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     if (priority <= 1)priority = 2;
 }
 
+void PhysicalOptimizer::generatePhysicalExternal(const set_term_variable_t& vars, idx_t index, Rule& rule, patom_ptr_vector_t &patoms) {
+    auto& dcCols = cols_[index];
+    auto& selCols = selectedCols_[index];
+    auto& types = types_;
+    auto& atom = rule.getBody()[index];
+
+    PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesCType() ).get();
+    BB_ASSERT(externalBindData_.contains(index));
+    auto ext = patom_ptr_t(new PhysicalPredFunction(context_, types, dcCols, selCols, func, externalBindData_[index]));
+    patoms.push_back(std::move(ext));
+}
+
 void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
                                              idx_t i, Rule& rule, patom_ptr_vector_t &patoms,
                                              prule_ptr_vector_t& prules, idx_t& priority) {
@@ -710,8 +722,8 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
                 generatePhysicalAgg(atom, cols_[i], patoms);
                 break;
             case EXTERNAL:
-                // TODO handle external atoms in the body
-                ErrorHandler::errorNotImplemented("External atoms in the rule body are not yet supported. Please place the external atom as the first atom in the rule, or move it to a separate rule where it serves as the source.");
+                generatePhysicalExternal(vars, i,rule,  patoms);
+                break;
         }
         atom.getVariables(vars);
     }

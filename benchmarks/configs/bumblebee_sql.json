@@ -1,0 +1,38 @@
+{
+  "output_folder": "files/sql/actual",
+  "expected_folder": "files/sql/expected",
+  "input_folder": "files/sql/input",
+  "comparison_config": "duckdb_sql.json",
+  "compare_csv": true,
+  "previous_comparison": true,
+  "tests": [
+    {
+      "test": "Q00",
+      "input_file": "q00.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    },
+    {
+      "test": "Q01",
+      "input_file": "q01.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    },
+    {
+      "test": "Q02",
+      "input_file": "q02.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    },
+    {
+      "test": "Q03",
+      "input_file": "q03.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+    }
+  ]
+}

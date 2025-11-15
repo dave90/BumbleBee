@@ -91,7 +91,7 @@ TEST_F(ReadCSVSCanTest, MultiCSVScanTest) {
     vector<string> names = {"*"};
     auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
-    EXPECT_GT(threads, 1);
+    EXPECT_EQ(threads, 1);
     idx_t totalLines = 0;
     for (idx_t i=0;i<threads;i++) {
         auto fopd = predFunction.initFunction_(context, bind.get());

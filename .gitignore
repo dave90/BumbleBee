@@ -37,5 +37,6 @@ __pycache__/
 test.1
 benchmarks/files/asp/actual/
 benchmarks/files/asp/expected/
+benchmarks/downloads/
 test/e2e/files/asp/actual/
 test/unit/bumblebee/function/data/output

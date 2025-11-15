@@ -25,12 +25,12 @@ class GlobalPredScanState : public  GlobalPhysicalAtomState {
 
 };
 
-class PredScanState : public  PhysicalAtomState {
+class PredFuncState : public  PhysicalAtomState {
 public:
-    explicit PredScanState(function_op_data_ptr_t& function_op_data)
+    explicit PredFuncState(function_op_data_ptr_t& function_op_data)
         : functionOpData_(std::move(function_op_data)) {
     }
-    bool isInitialized_;
+    bool isInitialized_{false};
     DataChunk cachedChunk_;
     function_op_data_ptr_t functionOpData_;
 };
@@ -91,7 +91,7 @@ string PhysicalPredFunction::toString() const {
 
 pstate_ptr_t PhysicalPredFunction::getState() const {
     auto funcOpData = predFunction_->initFunction_(context_, bindData_.get());
-    return pstate_ptr_t(new PredScanState(funcOpData));
+    return pstate_ptr_t(new PredFuncState(funcOpData));
 }
 
 gpstate_ptr_t PhysicalPredFunction::getGlobalState() const {
@@ -101,11 +101,9 @@ gpstate_ptr_t PhysicalPredFunction::getGlobalState() const {
 AtomResultType PhysicalPredFunction::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
     context.profiler_.startPhysicalAtom(this);
-    auto& cstate = (PredScanState&)state;
+    auto& cstate = (PredFuncState&)state;
 
     if (!cstate.isInitialized_) {
-        // state is not initialized, so fetch the chunks from global state
-        // predFunction_->initFunction_(context_, bindData_.get());
         // calculate the types of the chunk
         vector<ConstantType> types;
         for (auto col:selectCols_)
@@ -129,7 +127,7 @@ AtomResultType PhysicalPredFunction::getData(ThreadContext &context, DataChunk &
 AtomResultType PhysicalPredFunction::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
     context.profiler_.startPhysicalAtom(this);
-    auto& cstate = (PredScanState&)state;
+    auto& cstate = (PredFuncState&)state;
     if (input.getSize() == 0) {
         context.profiler_.endPhysicalAtom(input);
         return AtomResultType::FINISHED;
@@ -140,6 +138,31 @@ AtomResultType PhysicalPredFunction::sink(ThreadContext &context, DataChunk &inp
     predFunction_->function_(context_, bindData_.get(), cstate.functionOpData_.get(),nullptr, pinput);
 
     context.profiler_.endPhysicalAtom(input);
+    return AtomResultType::NEED_MORE_INPUT;
+}
+
+AtomResultType PhysicalPredFunction::execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
+    PhysicalAtomState &state) const {
+    auto& cstate = (PredFuncState&)state;
+    context.profiler_.startPhysicalAtom(this);
+    // select input cols
+    DataChunk pinput = selectColumns(input);
+
+    // create output chunk
+    DataChunk output;
+    output.initializeEmpty(dcColsType_);
+
+    predFunction_->function_(context_, bindData_.get(), cstate.functionOpData_.get(),&pinput, output);
+
+    if (output.getSize() > 0) {
+        // set the cols to chunk output
+        chunk.reference(input);
+        for (idx_t i=0;i<dcCols_.size();++i)
+            chunk.data_[dcCols_[i]].reference(output.data_[i]);
+        chunk.setCardinality(output.getSize());
+    }
+
+    context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
 }
 
@@ -155,7 +178,7 @@ void PhysicalPredFunction::finalize(ThreadContext &context, GlobalPhysicalAtomSt
 void PhysicalPredFunction::combine(ThreadContext &context, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
 
-    auto& cstate = (PredScanState&)state;
+    auto& cstate = (PredFuncState&)state;
     predFunction_->combine_function_(context_, bindData_.get(), cstate.functionOpData_.get());
 
 }

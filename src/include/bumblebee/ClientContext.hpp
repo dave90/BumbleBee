@@ -47,6 +47,7 @@ public:
     idx_t maxMemory_;
     block_manager_ptr_t blockManager_;
     bool printProgram_;
+    atomic<unsigned long long> counter_;
 
     ClientContext();
 

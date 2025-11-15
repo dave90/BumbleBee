@@ -183,7 +183,7 @@ disjunction
         {
             director.getBuilder()->onHeadAtom();
         }
-    | extAtom
+    | ext_atom
         {
             director.getBuilder()->onExtAtom();
             director.getBuilder()->onHeadAtom();
@@ -292,11 +292,11 @@ naf_literal
         {
             director.getBuilder()->onNafLiteral();
         }
-    | extAtom
+    | ext_atom
     	{
     		director.getBuilder()->onExtAtom();
     	}
-	| NAF extAtom
+	| NAF ext_atom
 		{
 			director.getBuilder()->onExtAtom(true);
 		}
@@ -344,23 +344,29 @@ atom
     ;
 
 
-extAtom
-    : AMPERSAND identifier PARAM_OPEN terms extSemicol namedParameters extSemicol terms PARAM_CLOSE
+ext_atom
+    : AMPERSAND identifier PARAM_OPEN terms ext_semicol named_parameters ext_semicol terms PARAM_CLOSE
         {
             director.getBuilder()->onExternalPredicateName($2);
             delete[] $2;
         }
+    | AMPERSAND identifier PARAM_OPEN ext_semicol named_parameters ext_semicol terms PARAM_CLOSE
+      {
+          director.getBuilder()->onExternalPredicateName($2);
+          delete[] $2;
+      }
     ;
 
-extSemicol
+ext_semicol
 	: SEMICOLON
 	    {
 	     	director.getBuilder()->onSemicolon();
         }
 
-namedParameters
-    : namedParameter
-    | namedParameters COMMA namedParameter
+named_parameters
+    : /* empty */
+    | namedParameter
+    | named_parameters COMMA namedParameter
     ;
 
 namedParameter
@@ -774,7 +780,7 @@ sql_copy_to
     ;
 
 sql_copy_params
-    :  PARAM_OPEN namedParameters PARAM_CLOSE
+    :  PARAM_OPEN named_parameters PARAM_CLOSE
     ;
 
 sql_select
@@ -850,7 +856,7 @@ from_item
     ;
 
 external_table
-    : AMPERSAND identifier PARAM_OPEN terms extSemicol namedParameters PARAM_CLOSE
+    : AMPERSAND identifier PARAM_OPEN terms ext_semicol named_parameters PARAM_CLOSE
     {
         director.getBuilder()->onSQLExtTableName($2);
         delete[] $2;

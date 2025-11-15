@@ -26,8 +26,6 @@ namespace bumblebee{
 struct ReadCSVDataChunk {
     // file index to parse
     idx_t file_{0};
-    idx_t start_{0};
-    idx_t end_{0};
 };
 
 struct ReadCSVData : public FunctionData {
@@ -43,33 +41,25 @@ struct ReadCSVData : public FunctionData {
     // The initial reader (if any): this is used when automatic detection is used during binding.
     buffered_csv_reader_ptr_t initialReader_;
 
-    // Max threads to parse the csv
-    idx_t maxThreads_{0};
-    // partitions of data to read for each thread
-    vector<vector<ReadCSVDataChunk>> chunks_;
-    // Size in bytes for each csv file to parse
-    std::unordered_map<string, idx_t> filesSize_;
-    // mutext of the read csv
-    mutex mutex_;
+    // file to be processed
+    atomic<idx_t> nextFileToProcess_{0};
 
     string extension_ = ".csv";
 
-
     //Return the max thread to read the csv
-    idx_t getMaxThread();
+    idx_t getMaxThread() const;
     // return the chunk to read for a thread
-    vector<ReadCSVDataChunk> getNextChunksToRead();
+    idx_t getNextFileToRead();
 };
 
 struct ReadCSVOperatorData : public FunctionOperatorData {
     // The CSV reader
     buffered_csv_reader_ptr_t csvReader_;
-    // The csv to read
-    vector<ReadCSVDataChunk> chunks_;
     // cached chunk to read the data and avoid reinitialization of chunks
     DataChunk readChunk_;
 
-    idx_t chunkIndex_{0};
+    idx_t fileIndex_{0};
+    bool finished_{false};
 };
 
 

@@ -82,10 +82,11 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
 
     auto readPtr = payloadPtrs_[chunkIdx++];
     for (idx_t i = 0; i < toScan; i++) {
+        BB_ASSERT(readPtr);
         addrsPtr[i] = readPtr + chunkOffset;
         chunkOffset += tupleSize_;
         if (chunkOffset >= tuplesPerBlock_ * tupleSize_) {
-            readPtr = payloadPtrs_[chunkIdx++];
+            readPtr = (chunkIdx < payloadPtrs_.size())? payloadPtrs_[chunkIdx++]: nullptr;
             chunkOffset = 0;
         }
     }

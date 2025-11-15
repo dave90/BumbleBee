@@ -6,17 +6,31 @@ import csv
 import argparse
 import re
 from datetime import datetime
+from imghdr import tests
 from statistics import mean
 from pathlib import Path
 from glob import glob
 import tempfile
 import shutil
+import hashlib
+import urllib.request
+import urllib.parse
+import email
+import contextlib
+import sys
+
+# add test utilities
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)  # put project root *first* in sys.path
 
 NUM_TRIES = 3
 RESULTS_FOLDER = Path("results")
 TIMEOUT = 120
 
-def run_command(command, output_path):
+DOWNLOAD_DIR = Path("./downloads")
+DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+def run_command(command, output_path, timeout=TIMEOUT):
     with open(output_path, 'w') as out_file:
         start = time.perf_counter()
         try:
@@ -25,7 +39,7 @@ def run_command(command, output_path):
                 shell=True,
                 stdout=out_file,
                 stderr=subprocess.STDOUT,
-                timeout=TIMEOUT  # Kill process if it runs longer than 2 minutes
+                timeout=timeout  # Kill process if it runs longer than 2 minutes
             )
             end = time.perf_counter()
             return end - start
@@ -45,6 +59,11 @@ def normalize_output(file_path):
 def compare_outputs(file1, file2):
     return normalize_output(file1) == normalize_output(file2)
 
+def compare_csv_outputs(file1, file2):
+    if not os.path.exists(file1) or not os.path.exists(file2):
+        return False
+    from test.e2e.utils import compare_csv
+    return compare_csv(str(file1), str(file2))
 
 def extract_query_predicates(input_file_path):
     query_predicates = set()
@@ -60,6 +79,22 @@ def extract_query_predicates(input_file_path):
                 filtered_lines.append(line)
     return query_predicates, filtered_lines
 
+
+def create_export_query(input_file_path, output_file_path):
+    export_query = ""
+    with open(input_file_path, 'r') as f:
+        lines = f.readlines()
+        contains_directive = sum([1 for l in lines if "%@sql" in l]+[0])
+        if contains_directive:
+            assert "%@sql" in lines[0]
+            # keep first line as it contains %@sql
+            query = "\n".join(lines[1:])
+            export_query = lines[0] + "\n" + "COPY (\n"+query+"\n) TO \"" + str(output_file_path) + "\" (single_file=1)"
+        else:
+            query = "\n".join(lines)
+            export_query = "COPY (\n"+query+"\n) TO \"" + str(output_file_path) + "\""
+
+    return export_query
 
 def filter_output_by_predicates(output_file_path, predicates):
     if not os.path.exists(output_file_path):
@@ -86,26 +121,135 @@ def get_latest_results(config_name):
         return {row['test']: float(row['avg']) for row in reader}
 
 
-def run_test_multiple_times(command, output_path):
+def run_test_multiple_times(command, output_path, num_tries=None, timeout=None):
     times = []
     print(f"Running: {command}")
-    for i in range(NUM_TRIES):
-        print(f"  Try {i+1}/{NUM_TRIES}...")
+    if num_tries is None:
+        num_tries = NUM_TRIES
+    if timeout is None:
+        timeout = TIMEOUT
+    for i in range(num_tries):
+        print(f"  Try {i+1}/{num_tries}...")
         temp_output = output_path.with_name(f"{output_path.stem}_try{i}{output_path.suffix}")
-        elapsed = run_command(command, temp_output)
+        elapsed = run_command(command, temp_output, timeout)
         times.append(elapsed)
-        if i == NUM_TRIES - 1:
+        if i == num_tries - 1:
             temp_output.rename(output_path)
         else:
             os.remove(temp_output)
     return times
 
 
+def filename_from_headers(hdrs, fallback):
+    # Try Content-Disposition
+    cd = hdrs.get("Content-Disposition")
+    if cd:
+        # Parse minimal Content-Disposition for filename / filename*
+        # Example: attachment; filename="hits.csv.gz"
+        msg = email.message.Message()
+        msg.add_header("Content-Disposition", cd)
+        params = dict(msg.get_params(header="content-disposition", failobj=[]))
+        name = params.get("filename") or params.get("filename*")
+        if name:
+            return Path(name).name
+
+    # Fallback to URL path
+    if fallback:
+        return Path(fallback).name
+
+    # Final fallback: deterministic name from URL hash
+    return f"download-{hashlib.sha256(fallback.encode('utf-8')).hexdigest()[:16]}"
+
+def choose_filename(url, hdrs):
+    parsed = urllib.parse.urlparse(url)
+    url_basename = Path(urllib.parse.unquote(parsed.path)).name
+    return filename_from_headers(hdrs, url_basename)
+
+def filename_from_url(url: str) -> str:
+    # Use ONLY the URL path to decide the filename (ignore headers).
+    # Strip query/fragment, decode % escapes.
+    parsed = urllib.parse.urlsplit(url)
+    name = Path(urllib.parse.unquote(parsed.path)).name
+    if not name:
+        # Fallback to deterministic hash if URL has no terminal path segment
+        name = f"download-{hashlib.sha256(url.encode('utf-8')).hexdigest()[:16]}"
+    return name
+
+def download_files(urls):
+    """
+    Download each URL into ./downloads unless it already exists there.
+    Returns a list of local file paths for the requested downloads.
+    """
+    saved_paths = []
+
+    for url in urls:
+        # Basic sanity check
+        if not isinstance(url, str) or not url.strip():
+            print(f"[WARN] Skipping invalid URL entry: {url!r}")
+            continue
+
+        filename = filename_from_url(url)
+        dest_path = DOWNLOAD_DIR / filename
+        #  Skip BEFORE attempting any network request
+        if dest_path.exists():
+            print(f"[SKIP] {filename} already exists in {DOWNLOAD_DIR}/")
+            saved_paths.append(str(dest_path))
+            continue
+
+        last_err = None
+        for attempt in range(1, NUM_TRIES + 1):
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (compatible; benchmark-downloader/1.0)"
+                    },
+                    method="GET",
+                )
+                start = time.perf_counter()
+                with contextlib.closing(urllib.request.urlopen(req, timeout=TIMEOUT)) as resp:
+                    # Decide filename
+                    filename = choose_filename(url, resp.headers)
+                    dest_path = DOWNLOAD_DIR / filename
+
+                    # If already present, skip
+                    if dest_path.exists():
+                        print(f"[SKIP] {filename} already exists in {DOWNLOAD_DIR}/")
+                        saved_paths.append(str(dest_path))
+                        break
+
+                    # Stream to a temp file then move atomically
+                    with tempfile.NamedTemporaryFile(dir=str(DOWNLOAD_DIR), delete=False) as tmp:
+                        while True:
+                            chunk = resp.read(1024 * 1024)  # 1 MB chunks
+                            if not chunk:
+                                break
+                            tmp.write(chunk)
+                        tmp_path = Path(tmp.name)
+
+                    tmp_path.replace(dest_path)
+                    elapsed = time.perf_counter() - start
+                    size_bytes = dest_path.stat().st_size
+                    print(f"[OK] Downloaded {filename} ({size_bytes} bytes) in {elapsed:.2f}s")
+                    saved_paths.append(str(dest_path))
+                    break  # success; stop retrying
+            except Exception as e:
+                last_err = e
+                if attempt < NUM_TRIES:
+                    backoff = min(2 ** attempt, 8)
+                    print(f"[RETRY] Failed to download {url} (attempt {attempt}/{NUM_TRIES}): {e}. Retrying in {backoff}s...")
+                    time.sleep(backoff)
+                else:
+                    print(f"[ERROR] Could not download {url} after {NUM_TRIES} attempts: {e}")
+
+    return saved_paths
+
 def process_test(test, config, config_name, comparison_results, previous_results):
     test_name = test["test"]
     input_file = test["input_file"]
     input_path = Path(config["input_folder"]) / input_file
     output_folder = Path(config["output_folder"])
+    compare_csv = config.get("compare_csv", False)
     output_folder.mkdir(parents=True, exist_ok=True)
     expected_folder = None
     if "expected_folder" in config:
@@ -122,20 +266,36 @@ def process_test(test, config, config_name, comparison_results, previous_results
         actual_input_path = str(input_path)
         query_preds = set()
 
+    sql_export_csv = test.get("sql_export_csv", False)
+    output_csv_file = None
+    if sql_export_csv:
+        output_csv_file = output_folder / f"{test_name.replace(' ', '_')}.csv"
+        export_query = create_export_query(input_path, output_csv_file)
+        with tempfile.NamedTemporaryFile('w', delete=False, suffix=".lp") as tmp_input:
+            tmp_input.writelines(export_query)
+            actual_input_path = tmp_input.name
+
     command_results = []
     for cmd in test["commands"]:
         resolved_cmd = cmd.replace("$file", actual_input_path)
         output_path = output_folder / f"{test_name.replace(' ', '_')}.txt"
-        times = run_test_multiple_times(resolved_cmd, output_path)
+        num_tries = test["num_tries"] if "num_tries" in test else None
+        timeout = test["timeout"] if "timeout" in test else None
+        times = run_test_multiple_times(resolved_cmd, output_path, num_tries=num_tries, timeout=timeout)
 
         if clean_predicates and query_preds:
             filter_output_by_predicates(output_path, query_preds)
 
-        if expected_folder:
+
+        if expected_folder and not compare_csv:
             expected_path = expected_folder / f"{test_name.replace(' ', '_')}.txt"
             output_match = "match" if compare_outputs(output_path, expected_path) else "mismatch"
+        elif expected_folder and compare_csv:
+            assert output_csv_file
+            expected_path = expected_folder / f"{test_name.replace(' ', '_')}.csv"
+            output_match = "match" if compare_csv_outputs(output_csv_file, expected_path) else "mismatch"
         else:
-            output_match = ""
+                output_match = ""
 
         avg_time = mean(times)
         min_time = min(times)
@@ -211,8 +371,14 @@ def main():
     # Recreate the folder
     os.makedirs(output_folder)
 
+    if "downloads" in config:
+        # download the required files if not exist
+        download_files(config["downloads"])
+
     all_results = []
     for test in config["tests"]:
+        if "skip" in test and test["skip"]:
+            continue
         results = process_test(test, config, config_name, comparison_results, previous_results)
         all_results.extend(results)
 
