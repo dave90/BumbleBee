@@ -1,5 +1,6 @@
 ## TODOLIST
 - SQL translation
+- ORDER BY LIMIT (one scan)
 
 
 ## Next
