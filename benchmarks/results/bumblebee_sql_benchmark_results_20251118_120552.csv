@@ -1,0 +1,5 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_prev,output_match
+Q00,q00.sql,1.6849,1.5816,1.8498,0.7950,0.1295,mismatch
+Q01,q01.sql,2.1894,1.7977,2.9052,1.3065,0.8557,mismatch
+Q02,q02.sql,2.0578,1.7895,2.4845,1.1784,0.5237,mismatch
+Q03,q03.sql,2.0249,1.8438,2.3649,1.1347,0.5089,mismatch

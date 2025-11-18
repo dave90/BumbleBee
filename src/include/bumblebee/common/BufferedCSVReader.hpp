@@ -71,7 +71,7 @@ struct BufferedCSVReaderOptions {
 	// Size of sample chunk used for dialect and type detection
 	idx_t sampleChunkSize_ = STANDARD_VECTOR_SIZE;
 	// Number of sample chunks used for type detection
-	idx_t sampleChunks_ = 10;
+	idx_t sampleChunks_ = 75;
 	// Number of samples to buffer
 	idx_t bufferSize_ = STANDARD_VECTOR_SIZE * 100;
 	// Consider all columns to be of type varchar
@@ -139,6 +139,9 @@ public:
 	DataChunk parseChunk_;
 
 	std::queue<data_chunk_ptr_t> cached_chunks;
+	idx_t chunkByteSizes_; // bytes in a data chunk
+	idx_t bytesToRead_ = 0; // limit the bytes to read (0 is no limits)
+	idx_t bytesRead_ = 0; // amount of bytes read
 
 public:
 	// Extract a single DataChunk from the CSV file and stores it in insert_chunk

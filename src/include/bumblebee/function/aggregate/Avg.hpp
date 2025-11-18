@@ -58,7 +58,7 @@ struct AvgOperation {
     }
 
     static void finalize(AvgState<RESULT_TYPE> *state, RESULT_TYPE *result) {
-        *result = state->value / (RESULT_TYPE)(state->count);
+        *result = (RESULT_TYPE)((RESULT_TYPE)state->value / (RESULT_TYPE)(state->count));
     }
 };
 

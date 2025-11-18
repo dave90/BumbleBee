@@ -1,0 +1,6 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_prev,output_match
+Create Mini Hits,mini_hits.sql,37.0697,37.0697,37.0697,-,-,
+Q00,q00.sql,0.2949,0.2944,0.2955,-,-,
+Q01,q01.sql,0.2894,0.2844,0.2962,-,-,
+Q02,q02.sql,0.2944,0.2940,0.2949,-,-,
+Q03,q03.sql,0.2896,0.2830,0.2937,-,-,

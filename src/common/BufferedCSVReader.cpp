@@ -160,6 +160,7 @@ const vector<ConstantType> &requested_types) : fs_(fs), options_(options), buffe
 
 void BufferedCSVReader::parseCSV(DataChunk &insertChunk) {
 	// if no auto-detect or auto-detect with jumping samples, we have nothing cached and start from the beginning
+	chunkByteSizes_ = 0;
 	if (cached_chunks.empty()) {
 		cachedBuffers_.clear();
 	} else {
@@ -522,7 +523,7 @@ in_quotes:
 		}
 	} while (readBuffer(start_));
 	// still in quoted state at the end of the file, error:
-	error_message = "Error in file"+options_.filePath_+ " on line" + getLineNumberStr(linenr_, linenrEstimated_) +" : unterminated quotes. ";
+	error_message = "Error in file"+options_.filePath_+ " on line " + getLineNumberStr(linenr_, linenrEstimated_) +" : unterminated quotes. ";
 	return false;
 
 unquote:
@@ -548,7 +549,7 @@ unquote:
 		offset = 1;
 		goto add_row;
 	} else {
-		error_message = "Error in file"+options_.filePath_+ " on line" +
+		error_message = "Error in file"+options_.filePath_+ " on line " +
 			getLineNumberStr(linenr_, linenrEstimated_) +" quote should be followed by end of value, end of "
 		    "row or another quote.";
 		return false;
@@ -558,13 +559,13 @@ handle_escape:
 	// escape should be followed by a quote or another escape character
 	position_++;
 	if (position_ >= bufferSize_ && !readBuffer(start_)) {
-		error_message = "Error in file"+options_.filePath_+ " on line" +
+		error_message = "Error in file"+options_.filePath_+ " on line " +
 			getLineNumberStr(linenr_, linenrEstimated_) +
 				": neither QUOTE nor ESCAPE is proceeded by ESCAPE.";
 		return false;
 	}
 	if (buffer_[position_] != options_.quote_[0] && buffer_[position_] != options_.escape_[0]) {
-		error_message = "Error in file"+options_.filePath_+ " on line" +
+		error_message = "Error in file"+options_.filePath_+ " on line " +
 						getLineNumberStr(linenr_, linenrEstimated_) +
 						" neither QUOTE nor ESCAPE is proceeded by ESCAPE.";
 		return false;
@@ -630,13 +631,16 @@ void BufferedCSVReader::addValue(char *str_val, idx_t length, idx_t &column, vec
 		return;
 	}
 	if (column >= types_.size()) {
-		ErrorHandler::errorParsing("Error on line"+ getLineNumberStr(linenr_, linenrEstimated_) + " : expected" + std::to_string(types_.size()) +" values per row, but got more.");
+		ErrorHandler::errorParsing("Error on line "+ getLineNumberStr(linenr_, linenrEstimated_) + " : expected" + std::to_string(types_.size()) +" values per row, but got more.");
 	}
 
 	// insert the line number into the chunk
 	idx_t row_entry = parseChunk_.getSize();
 
 	str_val[length] = '\0';
+	if (mode_ == ParserMode::PARSING)
+		chunkByteSizes_ += length+ ((column > 0)?options_.delimiter_.size():0);
+
 
 
 	auto &v = parseChunk_.data_[column];
@@ -699,7 +703,6 @@ bool BufferedCSVReader::addRow(DataChunk &insert_chunk, idx_t &column) {
 	if (mode_ == ParserMode::SNIFFING_DATATYPES && parseChunk_.getSize() == options_.sampleChunkSize_) {
 		return true;
 	}
-
 	if (mode_ == ParserMode::PARSING && parseChunk_.getSize() == STANDARD_VECTOR_SIZE) {
 		flush(insert_chunk);
 		return true;
@@ -749,7 +752,6 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 				if (col_idx < colNames_.size()) {
 					col_name = "\"" + colNames_[col_idx] + "\"";
 				}
-
 				ErrorHandler::errorParsing("Error: "+error_message+ "; in column "+col_name+" between line "+std::to_string(linenr_ - parseChunk_.getSize() + 1) + " and "+std::to_string(linenr_));
 			}
 		}
@@ -758,6 +760,9 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 }
 
 bool BufferedCSVReader::readBuffer(idx_t &start) {
+	if (bytesToRead_ && bytesRead_ >= bytesToRead_)
+		return false;
+
 	auto old_buffer = std::move(buffer_);
 
 	// the remaining part of the last buffer
@@ -776,6 +781,12 @@ bool BufferedCSVReader::readBuffer(idx_t &start) {
 		memcpy(buffer_.get(), old_buffer.get() + start, remaining);
 	}
 	idx_t read_count = fileHandle_->read(buffer_.get() + remaining, buffer_read_size);
+	bytesRead_ += read_count;
+	if (bytesToRead_ && bytesRead_ > bytesToRead_) {
+		// we need to remove the extra bytes
+		read_count -= bytesRead_ - bytesToRead_ - 1;
+		bytesRead_ = bytesToRead_;
+	}
 
 	bytesInChunk_ += read_count;
 	bufferSize_ = remaining + read_count;
@@ -791,6 +802,7 @@ bool BufferedCSVReader::readBuffer(idx_t &start) {
 			position_ += 3;
 		}
 	}
+	// std::cout << buffer_.get() << std::endl;
 
 	return read_count > 0;
 }

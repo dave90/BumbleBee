@@ -51,6 +51,12 @@ public:
             initPredicateTable();
         }
         chunks_.append(std::move(chunk));
+        // check if the previous chunk was not full
+        idx_t size = chunks_.chunkCount();
+        if (size > 1 && chunks_.getChunk(size - 2).getSize() != chunks_.getChunk(size - 2).getCapacity()) {
+            // the second last is not full so swap with the last
+            chunks_.swapChunks(size -1 , size - 2);
+        }
     }
 
 private:
@@ -217,12 +223,6 @@ void PhysicalChunkOutput::finalize(ThreadContext& context, GlobalPhysicalAtomSta
     // send the chunks from the global state to predicate table
     auto& gcstate = (GlobalChunkOutputState&)gstate;
     for (auto& chunk: gcstate.chunks_.chunks()) {
-
-        if (chunk->getSize() == chunk->getCapacity()) {
-            data_chunk_ptr_t cptr = chunk->clone();
-            pt_->append(std::move(cptr));
-            continue;
-        }
         pt_->append(*chunk);
     }
     context.profiler_.endPhysicalAtomFinalize();

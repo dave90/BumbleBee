@@ -114,7 +114,7 @@ SELECT *
         epoch_ms(EventTime * 1000) AS EventTime,
         epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
         epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
-FROM 'downloads/hits.parquet' USING SAMPLE 10000;
+FROM 'downloads/hits.parquet' USING SAMPLE 0.25%;
 
 COPY
 (

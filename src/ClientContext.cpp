@@ -25,6 +25,7 @@
 #include "bumblebee/function/aggregate/Min.hpp"
 #include "bumblebee/function/aggregate/Max.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
+#include "bumblebee/function/predicate/GenId.hpp"
 #include "bumblebee/function/predicate/ReadCsv.hpp"
 #include "bumblebee/function/predicate/WriteCsv.hpp"
 #include "bumblebee/storage/InMemoryBlockManager.hpp"
@@ -59,6 +60,7 @@ void ClientContext::registerFunctions() {
     // predicates functions
     ReadCsvFunc::registerFunction(functionRegister_);
     WriteCsvFunc::registerFunction(functionRegister_);
+    GenIdFunc::registerFunction(functionRegister_);
 }
 
 void ClientContext::initFileSystem() {

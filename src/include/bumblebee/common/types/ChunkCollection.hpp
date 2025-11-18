@@ -57,6 +57,9 @@ public:
 	// Fuse adds new columns to the right of the collection
 	void fuse(ChunkCollection &other);
 
+	// Swap the chunks
+	void swapChunks(idx_t index1, idx_t index2);
+
 	void verify();
 
 	// Gets the value of the column at the specified index

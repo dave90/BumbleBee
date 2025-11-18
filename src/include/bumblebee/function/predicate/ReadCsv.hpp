@@ -24,8 +24,17 @@
 namespace bumblebee{
 
 struct ReadCSVDataChunk {
+    ReadCSVDataChunk():ReadCSVDataChunk(0,0,0){}
+    ReadCSVDataChunk(idx_t file, idx_t byteStart, idx_t byteEnd)
+        : file_(file),
+          byteStart_(byteStart),
+          byteEnd_(byteEnd) {
+    }
+
     // file index to parse
     idx_t file_{0};
+    idx_t byteStart_{0};
+    idx_t byteEnd_{0};
 };
 
 struct ReadCSVData : public FunctionData {
@@ -43,13 +52,14 @@ struct ReadCSVData : public FunctionData {
 
     // file to be processed
     atomic<idx_t> nextFileToProcess_{0};
+    vector<ReadCSVDataChunk> filesToProcess_;
 
     string extension_ = ".csv";
 
     //Return the max thread to read the csv
-    idx_t getMaxThread() const;
+    idx_t getMaxThread();
     // return the chunk to read for a thread
-    idx_t getNextFileToRead();
+    ReadCSVDataChunk getNextFileToRead();
 };
 
 struct ReadCSVOperatorData : public FunctionOperatorData {
@@ -58,7 +68,8 @@ struct ReadCSVOperatorData : public FunctionOperatorData {
     // cached chunk to read the data and avoid reinitialization of chunks
     DataChunk readChunk_;
 
-    idx_t fileIndex_{0};
+    ReadCSVDataChunk filesToProcess_;
+
     bool finished_{false};
 };
 

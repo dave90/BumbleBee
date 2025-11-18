@@ -15,28 +15,28 @@
       "test": "Q00",
       "input_file": "q00.sql",
       "sql_export_csv": true,
-      "commands": ["duckdb -c \"SET threads=4; $(cat $file)\""]
+      "commands": ["duckdb -c \" $(cat $file)\""]
     }
   ,
     {
       "test": "Q01",
       "input_file": "q01.sql",
       "sql_export_csv": true,
-      "commands": ["duckdb -c \"SET threads=4; $(cat $file)\""]
+      "commands": ["duckdb -c \" $(cat $file)\""]
     }
   ,
     {
       "test": "Q02",
       "input_file": "q02.sql",
       "sql_export_csv": true,
-      "commands": ["duckdb -c \"SET threads=4; $(cat $file)\""]
+      "commands": ["duckdb -c \" $(cat $file)\""]
     }
   ,
     {
       "test": "Q03",
       "input_file": "q03.sql",
       "sql_export_csv": true,
-      "commands": ["duckdb -c \"SET threads=4; $(cat $file)\""]
+      "commands": ["duckdb -c \" $(cat $file)\""]
     }
   ]
 }

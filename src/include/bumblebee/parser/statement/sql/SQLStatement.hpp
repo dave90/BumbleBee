@@ -43,6 +43,7 @@ public:
     void setExportNamedParameters(std::unordered_map<string, Value> & exportNamedParameters);
 
     bool containsAggregations();
+    idx_t getNumAggregations();
 
     void setAlias(string &alias);
     string getAlias() const;

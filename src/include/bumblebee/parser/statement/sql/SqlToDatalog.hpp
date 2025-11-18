@@ -28,6 +28,7 @@ class SqlToDatalog {
 public:
     static constexpr char PRED_PREFIX[] = "#p";
     static constexpr char VAR_PREFIX[] = "V";
+    static constexpr char ID_VAR[] = "#ID";
 
     explicit SqlToDatalog(ClientContext &context);
 

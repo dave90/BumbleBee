@@ -76,6 +76,14 @@ bool SQLStatement::containsAggregations() {
     return false;
 }
 
+idx_t SQLStatement::getNumAggregations() {
+    idx_t result = 0;
+    for (auto& agg: select_.getAggFunctions())
+        if (agg != NONE)
+            result++;
+    return result;
+}
+
 void SQLStatement::setAlias(string &alias) {
     alias_ = std::move(alias);
 }

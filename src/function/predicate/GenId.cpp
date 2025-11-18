@@ -63,7 +63,7 @@ static void genIdFunction(ClientContext &context, const FunctionData *bind_data_
 	}
 	BB_ASSERT(output.getCapacity() >= size);
 	auto start = bind_data.getNextId(size);
-	Vector v(UBIGINT, size);
+	Vector v(UBIGINT);
 	VectorOperations::generateSequence(v, size, start, 1);
 	output.data_[0].reference(v);
 	output.setCardinality(size);

@@ -138,6 +138,12 @@ void ChunkCollection::fuse(ChunkCollection &other) {
 
 }
 
+void ChunkCollection::swapChunks(idx_t index1, idx_t index2) {
+    auto tmp = std::move(chunks_[index1]);
+    chunks_[index1] = std::move(chunks_[index2]);
+    chunks_[index2] = std::move(tmp);
+}
+
 void ChunkCollection::verify() {
     //TODO
 }

@@ -234,7 +234,8 @@ struct TryIntegerCast {
 	static inline bool operation(string_t& val, T &result) {
 		const char *buf = val.getDataUnsafe();
 		idx_t len = val.length();
-		return TryIntegerCast::operation<string_t, T, IS_SIGNED, ALLOW_EXPONENT, OP, ZERO_INITIALIZE>(buf, len, result);
+		auto res = TryIntegerCast::operation<string_t, T, IS_SIGNED, ALLOW_EXPONENT, OP, ZERO_INITIALIZE>(buf, len, result);
+		return res;
 	}
 
     // Define the INPUT_TYPE parameter so it can be reused in the cast loop (cast functions usually take two parameters)

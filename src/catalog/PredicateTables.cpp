@@ -347,15 +347,6 @@ Value PredicateTables::getValue(idx_t column, idx_t index) {
     return chunks_.getValue(column, index);
 }
 
-void PredicateTables::append(data_chunk_ptr_t chunk) {
-    BB_ASSERT(chunk->columnCount() == predicate_->getArity());
-    lock_guard guard(mutex_);
-    if (!types_.empty() && types_[0] == UNKNOWN) {
-        // set the types as the chunk types
-        types_ = chunk->getTypes();
-    }
-    chunks_.append(std::move(chunk));
-}
 
 void PredicateTables::castEntirePredicateTable(const vector<ConstantType> &newTypes) {
     LOG_WARNING("Casting predicate tables of type %s. For better optimization, set the table types explicitly using directives.", predicate_->getName());
@@ -389,7 +380,22 @@ void PredicateTables::append(DataChunk& chunk) {
         // set the types as the chunk types
         types_ = chunk.getTypes();
     }
-    chunks_.append(chunk);
+    if (chunk.getSize() < STANDARD_VECTOR_SIZE) {
+        chunks_.append(chunk);
+        return;
+    }
+    // chunk is full so we can just push the pointer
+    data_chunk_ptr_t cptr = chunk.clone();
+    chunks_.append(std::move(cptr));
+
+    // but check if the second last is full otherwise we need to swap it
+    idx_t size = chunks_.chunkCount();
+    if (size > 1 && chunks_.getChunk(size - 2).getCapacity() != STANDARD_VECTOR_SIZE) {
+        // the second last is not full so swap with the last
+        // we want to keep the not full chunks at the end
+        chunks_.swapChunks(size - 1 , size - 2);
+    }
+
 }
 
 

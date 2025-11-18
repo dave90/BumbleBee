@@ -40,3 +40,4 @@ benchmarks/files/asp/expected/
 benchmarks/downloads/
 test/e2e/files/asp/actual/
 test/unit/bumblebee/function/data/output
+test/e2e/files/csv/mini_hits.csv

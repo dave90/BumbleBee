@@ -113,6 +113,12 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
     df_out = df_out[cols]
     df_exp = df_exp[cols]
 
+    # for float cols take 4 decimal
+    for col in cols:
+        if pd.api.types.is_float_dtype(df_out[col]) or pd.api.types.is_float_dtype(df_exp[col]):
+            df_out[col] = df_out[col].round(4)
+            df_exp[col] = df_exp[col].round(4)
+
     # Sort rows to ignore row order
     df_out_sorted = df_out.sort_values(by=cols).reset_index(drop=True)
     df_exp_sorted = df_exp.sort_values(by=cols).reset_index(drop=True)

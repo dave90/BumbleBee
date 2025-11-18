@@ -332,6 +332,19 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
 
     // generate head atom from the select
     vector<Term> headTerms; // head terms
+    if (statement.containsAggregations()) {
+        // if contains aggregation add gen id atom
+        vector<Term> idTerms;
+        auto t = Term::createVariable(ID_VAR);
+        idTerms.push_back(t);
+        string func = "&gen_id";
+        std::unordered_map<string, Value> namedParams;
+        vector<Value> inputValues;
+        auto atom = Atom::createExternalAtom(namedParams, inputValues, func, std::move(idTerms));
+        body.push_back(std::move(atom));
+        headTerms.push_back(std::move(t));
+    }
+
     std::unordered_set<string> headVars; // variables in head
     std::unordered_set<string> groupVars; // variables in group by
     // for each agg function index the aggregation vars. note: is possible to aggregate on multiple columns (count(*)) .
@@ -339,15 +352,21 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
     for ( i = 0;i< statement.getSelect().getItems().size();++i) {
         auto si = statement.getSelect().getItems()[i];
         if (si.toString(false) == "*" && statement.getSelect().getAggFunctions()[i] == COUNT) {
-            // handle count(*), we need to include all the variables
-            auto qNames = getAllQualifiedNames(statement, tableColumnsMap_);
-            for (auto &q: qNames) {
-                auto var = getVariableName(q.table_, q.name_);
-                Term t = Term::createVariable(std::move(var));
-                aggVars[i].push_back(t.getVariable());
-                if (headVars.contains(t.getVariable())) continue;
-                headVars.insert(t.getVariable());
-                headTerms.push_back(std::move(t));
+            // handle count(*), add the ID as counter and another column if only count is present
+            auto t = Term::createVariable(ID_VAR);
+            aggVars[i].push_back(t.getVariable());
+            if (statement.getNumAggregations() == 1) {
+                // add another var as aggregation because we have only count(*) as aggregation
+                // otherwise optimizer we will keep only the ID in the body
+                auto qNames = getAllQualifiedNames(statement, tableColumnsMap_);
+                BB_ASSERT(!qNames.empty());
+                auto var = getVariableName(qNames[0].table_, qNames[0].name_);
+                aggVars[i].push_back(var);
+                if (!headVars.contains(var)) {
+                    headVars.insert(var);
+                    t = Term::createVariable(var.c_str());
+                    headTerms.push_back(std::move(t));
+                }
             }
             continue;
         }
@@ -360,6 +379,8 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
                 return;
             }
             aggVars[i].push_back(t.getVariable());
+            // put also ID var for duplciates values
+            aggVars[i].emplace_back(ID_VAR);
         }
         if (headVars.contains(t.getVariable())) continue;
         headVars.insert(t.getVariable());
@@ -433,6 +454,12 @@ void SqlToDatalog::generateAggRules(const std::unordered_set<string>& groupVars,
         rules.push_back(std::move(rule));
         body.push_back(std::move(head));
     }
+    // collect all the aggregation variables
+    std::unordered_set<string> allAggVars;
+    for (auto& [_, vars]:aggVars) {
+        allAggVars.insert(vars.begin(), vars.end());
+    }
+
     // now generate the aggregation atoms
     for (auto& [agg, vars]:aggVars) {
         auto terms = headLastRule.getTerms();
@@ -443,17 +470,15 @@ void SqlToDatalog::generateAggRules(const std::unordered_set<string>& groupVars,
         aggTerms.push_back(std::move(firstTerm));
         aggTermVars.insert(vars[0].c_str());
 
-        // keep the groups var and aggregation var
-        // and store the aggregation terms
-        std::unordered_set setVars(vars.begin(), vars.end());
+        // let's insert all the agg vars to optimize the aggregation aux
         for (idx_t i=0;i<terms.size();++i) {
-            if ( groupVars.contains( terms[i].getVariable()) || setVars.contains( terms[i].getVariable())  ) {
+            if ( groupVars.contains( terms[i].getVariable()) || allAggVars.contains( terms[i].getVariable())  ) {
                 if (!aggTermVars.contains(terms[i].getVariable())) {
                     aggTerms.push_back(terms[i]);
                     aggTermVars.insert(terms[i].getVariable());
                 }
                 continue;
-            };
+            }
             // is not a group or agg var so set as anonymous
             auto t = Term::createVariable(Term::anonymous_variable);
             terms[i] = std::move(t);

@@ -83,7 +83,6 @@ public:
     Value getValue(idx_t column, idx_t index);
 
     // Append a data chunk
-    void append(data_chunk_ptr_t chunk);
     void append(DataChunk& chunk);
 
     // Return the Constat types for each column

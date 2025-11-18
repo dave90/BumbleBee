@@ -6,7 +6,6 @@ import csv
 import argparse
 import re
 from datetime import datetime
-from imghdr import tests
 from statistics import mean
 from pathlib import Path
 from glob import glob

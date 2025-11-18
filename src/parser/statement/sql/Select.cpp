@@ -85,6 +85,7 @@ vector<AggregateFunctionType> & Select::getAggFunctions() {
     return aggFunctions_;
 }
 
+
 bool Select::containsAggregations() {
     for (auto& item : aggFunctions_)
         if (item != NONE) return true;

@@ -18,6 +18,7 @@
  */
 #include "bumblebee/function/predicate/ReadCsv.hpp"
 #include <filesystem>
+#include <numeric>
 #include <sstream>
 
 #include "bumblebee/common/Limits.hpp"
@@ -76,12 +77,64 @@ static bool hasGlob(const string &str) {
 	return false;
 }
 
-idx_t ReadCSVData::getMaxThread() const{
-	return files_.size();
+idx_t ReadCSVData::getMaxThread() {
+	// if we have multi files each thread read a file
+
+	if (files_.size() > 1) {
+		for (idx_t i = 0; i < files_.size(); i++)
+			filesToProcess_.emplace_back(i,0,0);
+
+		return files_.size();
+	}
+	// we have only one file to read
+	BB_ASSERT(initialReader_);
+	auto fileSizeBytes = initialReader_->fileSize_;
+	if (fileSizeBytes < CSV_MULTITHREAD_THRESHOLD_BYTES) {
+		// for small files let's use only one thread
+		filesToProcess_.emplace_back(0,0,0);
+		return 1;
+	}
+
+	auto fh = initialReader_->fileHandle_.get();
+	BB_ASSERT(fh);
+	if (!fh->canSeek()) {
+		// we cannot jump in the middle of the file
+		// so only one thread is allowed
+		filesToProcess_.emplace_back(0,0,0);
+		return 1;
+	}
+	// calculate the bytes in STANDARD_VECTOR_SIZE rows
+	auto line = fh->readLine(); // read first line (in case of header)
+	idx_t bytesInChunk = 0;
+	for (idx_t i = 0; i < STANDARD_VECTOR_SIZE; i++) {
+		line = fh->readLine();
+		bytesInChunk += line.size();
+	}
+	// idea is to read for each task 4 (MORSE_ / VECTOR SIZE) data chunks
+	auto morselBytesSize = bytesInChunk * MORSEL_SIZE/STANDARD_VECTOR_SIZE;
+	auto tasks = fileSizeBytes/morselBytesSize;
+	idx_t start = 0;
+	for (idx_t i=0; i< tasks; i++) {
+		auto end = start+morselBytesSize;
+		if (i == tasks - 1) {
+			// read until end
+			end = 0;
+		}else {
+			// we need to read until the end of the line
+			fh->seek(end);
+			auto string = fh->readLine();
+			end += string.size();
+		}
+
+		filesToProcess_.emplace_back(0,start,end);
+		start = end + 2;
+	}
+	return tasks;
 }
 
-idx_t ReadCSVData::getNextFileToRead() {
-	return nextFileToProcess_.fetch_add(1);
+ReadCSVDataChunk ReadCSVData::getNextFileToRead() {
+	auto index = nextFileToProcess_.fetch_add(1);
+	return filesToProcess_[index];
 }
 
 
@@ -216,7 +269,7 @@ static function_op_data_ptr_t readCSVInit(ClientContext &context, const Function
 
 	auto result = std::make_unique<ReadCSVOperatorData>();
 
-	result->fileIndex_ = bind_data.getNextFileToRead();
+	result->filesToProcess_ = bind_data.getNextFileToRead();
 
 	result->readChunk_.initialize(bind_data.types_);
 
@@ -237,12 +290,29 @@ static void readCSVFunction(ClientContext &context, const FunctionData *bind_dat
 	if (data.finished_) return;
 
 	if (!data.csvReader_) {
-		auto option = bind_data.options_;
-		option.filePath_ = bind_data.files_[data.fileIndex_];
+		auto option = (bind_data.initialReader_) ? bind_data.initialReader_->options_ : bind_data.options_;
+		option.filePath_ = bind_data.files_[data.filesToProcess_.file_];
+		option.autoDetect_ = false;
+		if (data.filesToProcess_.byteStart_ > 0)
+			// disable header if this task read in the middle of file
+			option.header_ = false;
 		data.csvReader_ = std::make_unique<BufferedCSVReader>(*context.fileSystem_, option, bind_data.types_);
+		if (data.filesToProcess_.byteStart_ > 0)
+			data.csvReader_->fileHandle_->seek(data.filesToProcess_.byteStart_);
+		if (data.filesToProcess_.byteEnd_)
+			data.csvReader_->bytesToRead_ = data.filesToProcess_.byteEnd_ - data.filesToProcess_.byteStart_;
+	}
+	if ( data.filesToProcess_.byteEnd_ > 0 && data.filesToProcess_.byteStart_ >= data.filesToProcess_.byteEnd_) {
+		// we complete to read our data (if byteEnd_ == 0 we need to read until the end)
+		data.finished_ = true;
+		data.csvReader_ = nullptr;
+		return;
 	}
 	data.csvReader_->parseCSV(data.readChunk_);
 	output.reference(data.readChunk_, bind_data.cols_);
+	auto& rb = data.csvReader_->chunkByteSizes_;
+	auto bytesInChunk = data.csvReader_->chunkByteSizes_;
+	data.filesToProcess_.byteStart_ += bytesInChunk;
 
 	if (output.getSize() == 0 ) {
 		// exhausted this file

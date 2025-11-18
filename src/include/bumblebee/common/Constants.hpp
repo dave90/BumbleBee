@@ -48,6 +48,9 @@ namespace bumblebee {
 #define STANDARD_VECTOR_SIZE 1024
 #define HT_INIT_CAPACITY 32768
 
+// CSV Read
+#define CSV_MULTITHREAD_THRESHOLD_BYTES (1024*1024*100)
+
 // String Heap. NOTE: Maximum string supported is 4096 bytes
 #define MINIMUM_HEAP_SIZE 4096
 
