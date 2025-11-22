@@ -20,6 +20,7 @@
 #include "bumblebee/common/Constants.hpp"
 #include <gtest/gtest.h>
 
+#include "../../../BumbleBaseTest.hpp"
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/catalog/PredicateTables.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
@@ -29,7 +30,7 @@ using namespace bumblebee;
 
 
 
-class ProbeRLHTTest : public ::testing::Test {
+class ProbeRLHTTest : public BumbleBaseTest {
     // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
     // For each of the count rows, it populates the columns with incrementing values:
     // Column 0 (INTEGER): sequential int32_t values starting from 0.
@@ -40,47 +41,6 @@ class ProbeRLHTTest : public ::testing::Test {
 protected:
 
     vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
-    ClientContext clientContext;
-
-
-    Vector generateVector(ConstantType type, vector<Value>& values ) {
-        Vector v1(type,values.size());
-        for (idx_t i = 0; i < values.size(); i++) {
-            v1.setValue(i, values[i].cast(v1.getType()));
-        }
-        return v1;
-    }
-
-    DataChunk generateDataChunk(vector<ConstantType>& types, vector<vector<Value>>& data) {
-        BB_ASSERT(types.size() == data.size());
-        DataChunk chunk;
-        chunk.initializeEmpty(types);
-        idx_t idx = 0;
-        for (auto& data_col : data) {
-            Vector vec = generateVector(types[idx], data_col);
-            chunk.data_[idx++].reference(vec);
-        }
-        chunk.setCapacity(data[0].size());
-        chunk.setCardinality(data[0].size());
-        return chunk;
-    }
-
-    template <class T>
-    void addData(vector<vector<Value>>& table, vector<T> data) {
-        vector<Value> col_data;
-        for (auto& d : data) {
-            col_data.push_back(d);
-        }
-        table.push_back(std::move(col_data));
-    }
-
-    vector<int> geenrateSequence(int start, int end, int step=1) {
-        vector<int> result;
-        for (int i = start; i <= end; i += step) {
-            result.push_back(i);
-        }
-        return result;
-    }
 
     void addChunkToHT(std::unique_ptr<PRLHashTable>& ht, DataChunk &chunk,
             idx_t capacity = STANDARD_VECTOR_SIZE, bool resize = false) {
@@ -101,24 +61,6 @@ protected:
         ht->scan(offset, group);
 
         return group;
-    }
-
-    void compareChunks(DataChunk &chunk1, DataChunk &chunk2) {
-        EXPECT_EQ(chunk1.columnCount(), chunk2.columnCount());
-        EXPECT_EQ(chunk1.getSize(), chunk2.getSize());
-        std::unordered_set<string> chunk1Str, chunk2Str;
-        // compare the chunks
-        for (idx_t i = 0; i < chunk1.getSize(); i++) {
-            string row1, row2;
-            for (idx_t j = 0; j < chunk1.columnCount(); j++) {
-                row1 += chunk1.getValue(j, i).toString() + " ; ";
-                row2 += chunk2.getValue(j, i).toString()+ " ; ";;
-            }
-            chunk1Str.insert(row1);
-            chunk2Str.insert(row2);
-        }
-        EXPECT_EQ(chunk1Str.size(), chunk2Str.size());
-        EXPECT_EQ(chunk1Str, chunk2Str);
     }
 
 };

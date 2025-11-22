@@ -227,4 +227,11 @@ void StringUtils::removeQuote(string &str) {
 	if (str.front() == '"')
 		str.erase(0,1);
 }
+
+bool StringUtils::startsWith(string str, string prefix) {
+	if (prefix.size() > str.size()) {
+		return false;
+	}
+	return equal(prefix.begin(), prefix.end(), str.begin());
+}
 }

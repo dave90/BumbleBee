@@ -124,5 +124,4 @@ TEST(VectorOperationsHashConstantTest, HashNumericDifferentType) {
         auto hash_val = *ConstantVector::getData<hash_t>(hashResult);
         EXPECT_EQ(expected_hash_val, hash_val);
     }
-
 }

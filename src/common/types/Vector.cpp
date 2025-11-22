@@ -214,7 +214,8 @@ void Vector::normalify(idx_t count) {
         return;
     }
     if (vtype_ == VectorType::DICTIONARY_VECTOR) {
-        Vector normVec(getType());
+        idx_t newSize = (count < STANDARD_VECTOR_SIZE)? STANDARD_VECTOR_SIZE : count;
+        Vector normVec(getType(), newSize);
         VectorOperations::copy(*this, normVec, count ,0, 0);
         reference(normVec);
         return;

@@ -4,6 +4,8 @@ from pathlib import Path
 import filecmp
 from typing import List
 import pandas as pd
+import os
+import zipfile
 
 # Utility function to run the exe process
 def run_process_on_file(exe_path: str, args:List[str], input_file: Path, output_file: Path = None) -> None:

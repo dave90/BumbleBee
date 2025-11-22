@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include "../../BumbleBaseTest.hpp"
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/row_operations/RowOperations.hpp"
 #include "bumblebee/common/types/RowDataCollection.hpp"
@@ -27,52 +28,20 @@
 
 using namespace bumblebee;
 
-class RowOperationsTest : public ::testing::Test {
+class RowOperationsTest : public BumbleBaseTest {
 
 public:
-    RowOperationsTest():row_collection(*cc.bufferManager_, (idx_t)Storage::BLOCK_SIZE, 1, true) {}
+    RowOperationsTest():row_collection(*clientContext.bufferManager_, (idx_t)Storage::BLOCK_SIZE, 1, true) {}
 
 protected:
-    ClientContext cc;
     RowDataCollection row_collection;
     vector<buffer_handle_ptr_t> payload_hds;
     vector<data_ptr_t> payload_hds_ptrs;
     idx_t payload_page_offset;
 
 
-    Vector generateVector(ConstantType type, vector<Value>& values ) {
-        Vector v1(type,values.size());
-        for (idx_t i = 0; i < values.size(); i++) {
-            v1.setValue(i, values[i].cast(v1.getType()));
-        }
-        return v1;
-    }
-
-    DataChunk generateDataChunk(vector<ConstantType>& types, vector<vector<Value>>& data) {
-        BB_ASSERT(types.size() == data.size());
-        DataChunk chunk;
-        chunk.initializeEmpty(types);
-        idx_t idx = 0;
-        for (auto& data_col : data) {
-            Vector vec = generateVector(types[idx], data_col);
-            chunk.data_[idx++].reference(vec);
-        }
-        chunk.setCapacity(data[0].size());
-        chunk.setCardinality(data[0].size());
-        return chunk;
-    }
-
-    template <class T>
-    void addData(vector<vector<Value>>& table, vector<T> data) {
-        vector<Value> col_data;
-        for (auto& d : data) {
-            col_data.push_back(d);
-        }
-        table.push_back(std::move(col_data));
-    }
-
     void newBlock() {
-        auto pin = cc.bufferManager_->allocate(Storage::BLOCK_SIZE);
+        auto pin = clientContext.bufferManager_->allocate(Storage::BLOCK_SIZE);
         payload_hds.push_back(std::move(pin));
         payload_hds_ptrs.push_back(payload_hds.back()->ptr());
         payload_page_offset = 0;

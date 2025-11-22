@@ -39,6 +39,7 @@ public:
     static string upper(const string &str);
     static string lower(const string &str);
     static void removeQuote(string& str);
+    static bool startsWith(string str, string prefix);
 };
 
 

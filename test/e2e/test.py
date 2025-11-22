@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files, create_tmp_input_file, compare_csv
 
-
 EXE_PATH = os.path.join("..","..","cmake-build-debug","BumbleBee")
 # ASP
 input_folder_asp = Path(os.path.join("files","asp","input"))
@@ -17,7 +16,6 @@ input_folder_sql = Path(os.path.join("files","sql","input"))
 expected_folder_sql = Path(os.path.join("files","sql","expected"))
 actual_folder_sql = Path(os.path.join("files","sql","actual"))
 input_files_sql = [p for p in input_folder_sql.rglob("*") if p.is_file() and not p.name.endswith(".tmp")]
-
 
 RERUN_MT = 4
 THREAD = 4

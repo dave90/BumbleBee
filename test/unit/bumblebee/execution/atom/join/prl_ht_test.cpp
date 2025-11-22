@@ -24,6 +24,7 @@
 #include "bumblebee/catalog/PredicateTables.hpp"
 #include <gtest/gtest.h>
 
+#include "../../../BumbleBaseTest.hpp"
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 #include "bumblebee/parallel/ThreadContext.hpp"
@@ -32,61 +33,11 @@
 using namespace bumblebee;
 
 
-class JoinRLHTTest : public ::testing::Test {
+class JoinRLHTTest : public BumbleBaseTest {
 
     protected:
 
     ClientContext clientContext;
-
-    Vector generateVector(ConstantType type, vector<Value>& values ) {
-        Vector v1(type,values.size());
-        for (idx_t i = 0; i < values.size(); i++) {
-            v1.setValue(i, values[i].cast(v1.getType()));
-        }
-        return v1;
-    }
-
-    DataChunk generateDataChunk(vector<ConstantType>& types, vector<vector<Value>>& data) {
-        BB_ASSERT(types.size() == data.size());
-        DataChunk chunk;
-        chunk.initializeEmpty(types);
-        idx_t idx = 0;
-        for (auto& data_col : data) {
-            Vector vec = generateVector(types[idx], data_col);
-            chunk.data_[idx++].reference(vec);
-        }
-        chunk.setCapacity(data[0].size());
-        chunk.setCardinality(data[0].size());
-        return chunk;
-    }
-
-    template <class T>
-    void addData(vector<vector<Value>>& table, vector<T> data) {
-        vector<Value> col_data;
-        for (auto& d : data) {
-            col_data.push_back(d);
-        }
-        table.push_back(std::move(col_data));
-    }
-
-    vector<int> geenrateSequence(int start, int end, int step=1) {
-        vector<int> result;
-        for (int i = start; i <= end; i += step) {
-            result.push_back(i);
-        }
-        return result;
-    }
-
-    vector<int> geenrateSequence(int start, int end,int elements,  int step) {
-        vector<int> result;
-        auto t = start;
-        for (int i = 0; i < elements; i++) {
-            result.push_back(t);
-            t += step;
-            if (t > end) t = start;
-        }
-        return result;
-    }
 
 
     DataChunk scanHT(std::unique_ptr<JoinPRLHashTable>& ht, idx_t offset) {
@@ -98,24 +49,6 @@ class JoinRLHTTest : public ::testing::Test {
         return group;
     }
 
-
-    void compareChunks(DataChunk &chunk1, DataChunk &chunk2) {
-        EXPECT_EQ(chunk1.columnCount(), chunk2.columnCount());
-        EXPECT_EQ(chunk1.getSize(), chunk2.getSize());
-        std::unordered_set<string> chunk1Str, chunk2Str;
-        // compare the chunks
-        for (idx_t i = 0; i < chunk1.getSize(); i++) {
-            string row1, row2;
-            for (idx_t j = 0; j < chunk1.columnCount(); j++) {
-                row1 += chunk1.getValue(j, i).toString() + " ; ";
-                row2 += chunk2.getValue(j, i).toString()+ " ; ";;
-            }
-            chunk1Str.insert(row1);
-            chunk2Str.insert(row2);
-        }
-        EXPECT_EQ(chunk1Str.size(), chunk2Str.size());
-        EXPECT_EQ(chunk1Str, chunk2Str);
-    }
 
 };
 

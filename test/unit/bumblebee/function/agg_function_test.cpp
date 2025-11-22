@@ -22,13 +22,14 @@
 #include "bumblebee/function/AggregateFunction.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
 #include "vector"
+#include "../BumbleBaseTest.hpp"
 
 template <class T>
 using unique_ptr = std::unique_ptr<T>;
 
 namespace bumblebee {
 
-class AggFuncTest : public ::testing::Test {
+class AggFuncTest : public BumbleBaseTest {
 public:
     unique_ptr<data_t[]> generateStates(idx_t size) {
         unique_ptr<data_t[]> states = unique_ptr<data_t[]>(new data_t[size]);
@@ -36,13 +37,7 @@ public:
         return states;
     }
 
-    Vector generateVector(idx_t size, ConstantType type) {
-        Vector result(type);
-        for (idx_t i = 0; i < size; i++)
-            result.setValue(i, Value((uint64_t)i).cast(type) );
 
-        return result;
-    }
 
     unique_ptr<data_t[]> generateStates(RowLayout& layout, Vector& addresses,  idx_t size) {
         unique_ptr<data_t[]> rowdata = unique_ptr<data_t[]>(new data_t[layout.getRowWidth() * size]);

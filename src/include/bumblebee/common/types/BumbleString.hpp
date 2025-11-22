@@ -87,7 +87,7 @@ private:
         char *ptr;
     } value_;
 };
-    using string_t = BumbleString;
+using string_t = BumbleString;
 
 
 }

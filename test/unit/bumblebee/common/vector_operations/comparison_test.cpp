@@ -19,28 +19,16 @@
 
 #include <gtest/gtest.h>
 
+#include "../../BumbleBaseTest.hpp"
 #include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/types/Vector.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 using namespace bumblebee;
 
-class VectorOperationsComparisonTest : public ::testing::Test {
+class VectorOperationsComparisonTest : public BumbleBaseTest {
 protected:
 
-    template <class T>
-    void setValuesVector(Vector &v, vector<T> values ) {
-        for (idx_t i = 0; i < values.size(); i++) {
-            v.setValue(i, values[i]);
-        }
-    }
-
-    template <class T>
-    Vector generateVector(ConstantType type, vector<T> values ) {
-        Vector v1(type,values.size());
-        setValuesVector<T>(v1,values);
-        return v1;
-    }
 
 };
 

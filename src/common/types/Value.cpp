@@ -101,6 +101,51 @@ bool operator!=(const Value &lhs, const Value &rhs) {
     return !(lhs == rhs);
 }
 
+bool Value::operator<(const Value &rhs) const {
+    BB_ASSERT(ctype_ == rhs.ctype_);
+    switch (ctype_) {
+        case ConstantType::TINYINT:
+            return value_.utinyint < rhs.value_.utinyint;
+        case ConstantType::SMALLINT:
+            return value_.smallint < rhs.value_.smallint;
+        case ConstantType::INTEGER:
+            return value_.integer < rhs.value_.integer;
+        case ConstantType::BIGINT:
+            return value_.bigint < rhs.value_.bigint;
+        case ConstantType::UTINYINT:
+            return value_.utinyint < rhs.value_.utinyint;
+        case ConstantType::USMALLINT:
+            return value_.usmallint < rhs.value_.usmallint;
+        case ConstantType::UINTEGER:
+            return value_.uinteger < rhs.value_.uinteger;
+        case ConstantType::UBIGINT:
+            return value_.ubigint < rhs.value_.ubigint;
+        case ConstantType::FLOAT:
+            return value_.float_ < rhs.value_.float_;
+        case ConstantType::DOUBLE:
+            return value_.double_ < rhs.value_.double_;
+        case ConstantType::STRING:
+            return stringValue_ < rhs.stringValue_;
+
+        default:
+            ;
+    }
+    return false;
+}
+
+bool Value::operator>(const Value &r) const {
+    return !(*this <= r);
+}
+
+bool Value::operator<=(const Value &r) const {
+    if (*this == r) return true;
+    return *this < r;
+}
+
+bool Value::operator>=(const Value &r) const {
+    return ! (*this < r);
+}
+
 bool Value::isDoubleQuotedString() const {
     return ctype_ == STRING
      && stringValue_.length() >= 2

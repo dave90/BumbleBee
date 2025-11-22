@@ -18,28 +18,15 @@
  */
 
 #include <gtest/gtest.h>
+
+#include "../../BumbleBaseTest.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 #include "bumblebee/common/Assert.hpp"
 
 using namespace bumblebee;
 
-class VectorOperationsCastTest : public ::testing::Test {
+class VectorOperationsCastTest : public BumbleBaseTest {
 protected:
-
-    template <class T>
-    void setValuesVector(Vector &v, vector<T> values ) {
-        for (idx_t i = 0; i < values.size(); i++) {
-            Value val(values[i]);
-            v.setValue(i, val.cast(v.getType()));
-        }
-    }
-
-    template <class T>
-    Vector generateVector(ConstantType type, vector<T> values ) {
-        Vector v1(type,values.size());
-        setValuesVector<T>(v1,values);
-        return v1;
-    }
 
 };
 

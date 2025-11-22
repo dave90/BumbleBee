@@ -63,6 +63,12 @@ string BumbleString::getString() const {
 
 bool BumbleString::operator<(const BumbleString &r) const {
     // compare the data
+    auto left_length = size();
+    auto right_length = r.size();
+    auto min_length = std::min(left_length, right_length);
+    auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
+    return memcmp_res < 0 || (memcmp_res == 0 && left_length < right_length);
+
     auto cmp = strcmp(getDataUnsafe(), r.getDataUnsafe());
     return (cmp < 0);
 }

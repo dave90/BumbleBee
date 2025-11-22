@@ -56,6 +56,11 @@ public:
 	friend bool operator==(const Value &lhs, const Value &rhs);
 	friend bool operator!=(const Value &lhs, const Value &rhs);
 
+	bool operator<(const Value &r) const;
+	bool operator<=(const Value &r) const;
+	bool operator>(const Value &r) const;
+	bool operator>=(const Value &r) const;
+
 	bool isDoubleQuotedString() const;
 
 	ConstantType getConstantType() const;
