@@ -61,6 +61,8 @@ public:
     void getData(DataChunk& input);
     // combine with another heap
     void combine(TopNHeap &other);
+    // sort the heap
+    void finalize();
 
     vector<OrderModifiers> & getModifiers() {
         return modifiers_;
@@ -68,6 +70,14 @@ public:
 
     vector<idx_t> & getSortCols() {
         return sortCols_;
+    }
+
+    vector<ConstantType> & getPayloadTypes() {
+        return payloadTypes_;
+    }
+
+    idx_t getHeapSize() const {
+        return heapSize_;
     }
 
     string toString() const;
@@ -114,6 +124,8 @@ private:
     // Cached objects
     DataChunk keyStrings_;
     SelectionVector dataToInsert_;
+
+    bool finalized_{false};
 
 };
 

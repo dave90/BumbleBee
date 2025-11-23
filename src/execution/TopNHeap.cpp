@@ -94,8 +94,7 @@ void TopNHeap::getData(DataChunk &input) {
     BB_ASSERT(input.getTypes() == heapPayload_.getTypes());
     if (heap_.empty())return;
 
-    // we need to sort the keys
-    std::sort(heap_.begin(), heap_.end());
+    // we need to sort the keys, so copy the heap and sort it
     SelectionVector sel(heap_.size());
     for (idx_t i = 0; i < heap_.size(); ++i)
         sel.setIndex(i, heap_[i].index_);
@@ -105,15 +104,22 @@ void TopNHeap::getData(DataChunk &input) {
 }
 
 void TopNHeap::combine(TopNHeap &other) {
-    BB_ASSERT(payloadTypes_ == other.payloadTypes_ && modifiers_ == other.modifiers_);
+    BB_ASSERT(payloadTypes_ == other.payloadTypes_);
+    BB_ASSERT(modifiers_ == other.modifiers_);
+    BB_ASSERT(sortCols_ == other.sortCols_);
     if (other.heap_.empty()) return;
+
+    // expected other is sorted (finalize)
+    if (!other.finalized_)
+        other.finalize();
 
     idx_t count = 0;
     idx_t idx = heapData_.getSize();
-    for (idx_t i = 0; i < other.heap_.size(); ++i) {
+    for(idx_t i = 0; i < other.heap_.size(); ++i) {
         auto& key = other.heap_[i].sortKey_;
         if (!shouldAddToHeap(key))
-            continue;
+            break;
+
         dataToInsert_.setIndex(count++, other.heap_[i].index_);
 
         TopNEntry entry{.sortKey_ = key, .index_ = idx++};
@@ -122,10 +128,15 @@ void TopNHeap::combine(TopNHeap &other) {
 
     if (!count) return;
     // for all the entry added we need to copy the strings and the payload
-    heapData_.append(other.keyStrings_, true, &dataToInsert_, count);
+    heapData_.append(other.heapData_, true, &dataToInsert_, count);
     heapPayload_.append(other.heapPayload_, true, &dataToInsert_, count);
 
     reduce();
+}
+
+void TopNHeap::finalize() {
+    std::sort(heap_.begin(), heap_.end());
+    finalized_ = true;
 }
 
 

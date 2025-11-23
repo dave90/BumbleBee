@@ -31,39 +31,57 @@ using namespace bumblebee;
 class TopNHeapTest : public BumbleBaseTest {
 protected:
 
-    void topNChunksTest(idx_t randomChunks, const vector<ConstantType>& types,const vector<ColModifier>& modifiers, idx_t limit) {
-        DataChunk chunkone;
-        chunkone.initialize(types);
-        TopNHeap topn(types, modifiers, limit);
-
+    vector<data_chunk_ptr_t> generateDataChunks(idx_t randomChunks, const vector<ConstantType>& types) {
+        vector<data_chunk_ptr_t> result;
         for (idx_t i = 0; i < randomChunks; ++i) {
             DataChunk chunk = generateRandomDataChunk(types);
-            topn.sink(chunk);
-            chunkone.append(chunk, true);
+            chunk.setCardinality(10);
+            auto ptr = chunk.clone();
+            result.push_back(std::move(ptr));
         }
+        return result;
+    }
+
+    DataChunk sinkTopNHeap(TopNHeap& topn, vector<data_chunk_ptr_t>& chunks, bool finalize = true) {
+        for (auto& chunk : chunks) {
+            topn.sink(*chunk);
+        }
+
+        if (finalize)
+            topn.finalize();
+
         DataChunk result;
-        result.initializeEmpty(types);
+        result.initializeEmpty(topn.getPayloadTypes());
         topn.getData(result);
+        return result;
+    }
+
+    void compareResult(vector<data_chunk_ptr_t>& chunks, DataChunk& result, TopNHeap& topn) {
+        DataChunk chunkone;
+        chunkone.initialize(chunks[0]->getTypes());
+        for (auto& chunk : chunks) {
+            chunkone.append(*chunk, true);
+        }
 
         vector<vector<Value>> tableData;
-        std::unordered_set<id_t> sortCols(topn.getSortCols().begin(), topn.getSortCols().end());
-
+        auto sortCols = topn.getSortCols();
         for (idx_t row=0; row < chunkone.getSize();++row) {
             vector<Value> rowData;
-            for (idx_t col=0; col < chunkone.columnCount();++col) {
-                if (!sortCols.contains(col)) continue;
+            for (idx_t col_idx=0; col_idx < sortCols.size();++col_idx) {
+                auto col = sortCols[col_idx];
                 auto val = chunkone.getValue(col, row);
                 rowData.push_back(std::move(val));
             }
             tableData.push_back(std::move(rowData));
         }
+
         DataChunk expectedResult;
-        expectedResult.initialize(types);
+        expectedResult.initialize(chunkone.getTypes());
         vector<idx_t> idxs(tableData.size());
         std::iota(idxs.begin(), idxs.end(), 0);
         RowComparator cmp{topn.getModifiers(), tableData};
         std::sort(idxs.begin(), idxs.end(), cmp);
-        for (idx_t i=0;i<minValue(limit,chunkone.getSize());++i) {
+        for (idx_t i=0;i<minValue(topn.getHeapSize(),chunkone.getSize());++i) {
             for (idx_t col=0; col < chunkone.columnCount();++col) {
                 auto val = chunkone.getValue(col, idxs[i]);
                 expectedResult.setValue(col, i, val);
@@ -71,6 +89,15 @@ protected:
             expectedResult.setCardinality(i+1);
         }
         compareChunks(expectedResult, result, topn.getSortCols());
+    }
+
+    void topNChunksTest(idx_t randomChunks, const vector<ConstantType>& types,const vector<ColModifier>& modifiers, idx_t limit) {
+        auto chunks = generateDataChunks(randomChunks, types);
+
+        TopNHeap topn(types, modifiers, limit);
+        auto result = sinkTopNHeap(topn, chunks);
+
+        compareResult(chunks, result, topn);
     }
 
 };
@@ -132,4 +159,71 @@ TEST_F(TopNHeapTest, TopNAllStringColumns) {
         {.col_ = 1, .modifier_ = OrderType::DESCENDING},
         {.col_ = 2, .modifier_ = OrderType::ASCENDING}
     }, 6);
+}
+
+TEST_F(TopNHeapTest, TopNComplexModifiersCombineSameChunks) {
+    auto randomChunks = 3;
+    vector types = {FLOAT, STRING, INTEGER, DOUBLE};
+    vector<ColModifier> modifiers ={
+        {.col_ = 2, .modifier_ = OrderType::DESCENDING},
+        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
+        {.col_ = 3, .modifier_ = OrderType::DESCENDING}
+    };
+    auto limit = 100;
+
+    auto chunks1 = generateDataChunks(randomChunks, types);
+    vector<data_chunk_ptr_t> chunks2;
+    for (idx_t i = 0; i < chunks1.size(); i++) {
+        chunks2.push_back(chunks1[i]->clone());
+    }
+
+    TopNHeap topn1(types, modifiers, limit);
+    sinkTopNHeap(topn1, chunks1, false);
+    TopNHeap topn2(types, modifiers, limit);
+    sinkTopNHeap(topn2, chunks2,false);
+    topn2.finalize();
+    topn1.combine(topn2);
+
+
+    DataChunk result;
+    result.initializeEmpty(topn1.getPayloadTypes());
+    topn1.getData(result);
+
+    vector<data_chunk_ptr_t> chunks(std::move(chunks1));
+    for (auto& chunk : chunks2) {
+        chunks.push_back(std::move(chunk));
+    }
+    compareResult(chunks, result, topn1);
+}
+
+
+TEST_F(TopNHeapTest, TopNComplexModifiersCombineDifferentChunks) {
+    auto randomChunks = 10;
+    vector types = {STRING, DOUBLE, UINTEGER};
+    vector<ColModifier> modifiers ={
+        {.col_ = 2, .modifier_ = OrderType::DESCENDING},
+        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
+    };
+    auto limit = 800;
+
+    auto chunks1 = generateDataChunks(randomChunks, types);
+    vector<data_chunk_ptr_t> chunks2 = generateDataChunks(randomChunks, types);
+
+    TopNHeap topn1(types, modifiers, limit);
+    sinkTopNHeap(topn1, chunks1, false);
+    TopNHeap topn2(types, modifiers, limit);
+    sinkTopNHeap(topn2, chunks2,false);
+    topn2.finalize();
+    topn1.combine(topn2);
+
+
+    DataChunk result;
+    result.initializeEmpty(topn1.getPayloadTypes());
+    topn1.getData(result);
+
+    vector<data_chunk_ptr_t> chunks(std::move(chunks1));
+    for (auto& chunk : chunks2) {
+        chunks.push_back(std::move(chunk));
+    }
+    compareResult(chunks, result, topn1);
 }
