@@ -6,7 +6,7 @@
     {
       "test": "Create Mini Hits",
       "input_file": "mini_hits.sql",
-      "skip": false,
+      "skip": true,
       "timeout": 500,
       "num_tries": 1,
       "commands": ["duckdb -c \"$(cat $file)\""]
@@ -35,6 +35,34 @@
     {
       "test": "Q03",
       "input_file": "q03.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "Q06",
+      "input_file": "q06.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "Q14",
+      "input_file": "q14.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "Q19",
+      "input_file": "q19.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "Q30",
+      "input_file": "q30.sql",
       "sql_export_csv": true,
       "commands": ["duckdb -c \" $(cat $file)\""]
     }

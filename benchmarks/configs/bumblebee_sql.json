@@ -11,28 +11,56 @@
       "input_file": "q00.sql",
       "sql_export_csv": true,
       "timeout": 600,
-      "commands": ["../cmake-build-release/BumbleBee -t 8 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
     },
     {
       "test": "Q01",
       "input_file": "q01.sql",
       "sql_export_csv": true,
       "timeout": 600,
-      "commands": ["../cmake-build-release/BumbleBee -t 8 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
     },
     {
       "test": "Q02",
       "input_file": "q02.sql",
       "sql_export_csv": true,
       "timeout": 600,
-      "commands": ["../cmake-build-release/BumbleBee -t 8 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
     },
     {
       "test": "Q03",
       "input_file": "q03.sql",
       "sql_export_csv": true,
       "timeout": 600,
-      "commands": ["../cmake-build-release/BumbleBee -t 8 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "Q06",
+      "input_file": "q06.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "Q14",
+      "input_file": "q14.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "Q19",
+      "input_file": "q19.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "Q30",
+      "input_file": "q30.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
     }
   ]
 }

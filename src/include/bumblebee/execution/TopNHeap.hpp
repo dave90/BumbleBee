@@ -58,7 +58,7 @@ public:
     // clean the payload and head data not used
     void reduce(bool reduce = false);
     // get data from heap
-    void getData(DataChunk& input);
+    void getData(DataChunk& input, idx_t pos = 0);
     // combine with another heap
     void combine(TopNHeap &other);
     // sort the heap
@@ -78,6 +78,10 @@ public:
 
     idx_t getHeapSize() const {
         return heapSize_;
+    }
+
+    idx_t getSize() const {
+        return heap_.size();
     }
 
     string toString() const;

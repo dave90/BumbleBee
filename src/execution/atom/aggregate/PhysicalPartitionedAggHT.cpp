@@ -284,7 +284,8 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     // reference in the return chunk
     BB_ASSERT(chunk.columnCount() > dcCols_[0]);
     chunk.reference(input);
-    chunk.slice(sel, group.getSize());
+    if (group.getSize() < chunk.getSize())
+        chunk.slice(sel, group.getSize());
 
     chunk.data_[dcCols_[0]].reference(result);
     context.profiler_.endPhysicalAtom(chunk);

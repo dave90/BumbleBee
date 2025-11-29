@@ -32,6 +32,7 @@
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 #include "../../include/bumblebee/execution/atom/external/PhysicalPredFunction.hpp"
+#include "bumblebee/execution/atom/output/PhysicalTopNHOutput.hpp"
 
 namespace bumblebee {
 PhysicalOptimizer::PhysicalOptimizer(ClientContext& context, bool recursiveRules)
@@ -660,9 +661,16 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
 
         return;
     }
-    if (!ptSink->isDistinct())
+    if (!ptSink->isDistinct() && !rule.getLimit())
         sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols, ptSink.get()));
-    else {
+    else if (rule.getLimit()) {
+        auto modifiers = rule.getModifiers();
+        if (modifiers.empty()) {
+            // create modifiers from the first var
+            modifiers.push_back({.col_ = 0, .modifier_ = OrderType::ASCENDING});
+        }
+        sink = patom_ptr_t(new PhysicalTopNHOutput(types, headCols, ptSink.get(), rule.getModifiers(), rule.getLimit()));
+    } else {
         vector<idx_t> keys = ptSink->getKeys();
         vector<ConstantType> headTypes;
         for (auto c: headCols)
@@ -687,7 +695,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
     idx_t priority = 0;
     auto& schema = context_.defaultSchema_;
 
-    BB_ASSERT(rule.getBody().size() > 0);
+    BB_ASSERT(!rule.getBody().empty());
     auto& firstAtom = rule.getBody()[0];
     if (firstAtom.getType() == CLASSICAL) {
         firstAtom.getVariables(vars);

@@ -1,0 +1,4 @@
+%@sql
+COPY (SELECT p.LAST_NAME, p.FIRST_NAME
+FROM "./files/csv/username.csv" as p
+WHERE p.LAST_NAME > p.FIRST_NAME AND p.IDENTIFIER > 100 OR p.USERNAME > "CIAO") TO "files/sql/actual/where.3.csv" (single_file=1)

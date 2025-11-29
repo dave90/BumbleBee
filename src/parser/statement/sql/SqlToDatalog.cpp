@@ -382,8 +382,10 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
             // put also ID var for duplciates values
             aggVars[i].emplace_back(ID_VAR);
         }
-        if (headVars.contains(t.getVariable())) continue;
-        headVars.insert(t.getVariable());
+        if (t.getType() == VARIABLE) {
+            if (headVars.contains(t.getVariable())) continue;
+            headVars.insert(t.getVariable());
+        }
         headTerms.push_back(std::move(t));
     }
     // add the group by cols in head terms
@@ -418,9 +420,11 @@ void SqlToDatalog::genRuleFromSql(sql::SQLStatement &statement, rules_vector_t &
     auto pred = defaultSchema.createPredicate(&context_, alias.c_str(), headTerms.size());
     auto head = Atom::createClassicalAtom(pred, std::move(headTerms));
     generateRules(head, body, binopAtoms, program);
-    if (statement.getSelect().containsAggregations()) {
+    if (statement.getSelect().containsAggregations())
         generateAggRules(groupVars, aggVars, statement, program);
-    }
+
+    if (!statement.getOrderby().empty())
+        generateOrderRule(statement, program);
 }
 
 void SqlToDatalog::generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars,  sql::SQLStatement &statement, rules_vector_t &rules) {
@@ -518,6 +522,21 @@ void SqlToDatalog::generateAggRules(const std::unordered_set<string>& groupVars,
     rule.setBody(body);
     rules.push_back(std::move(rule));
 
+}
+
+void SqlToDatalog::generateOrderRule(sql::SQLStatement &statement, rules_vector_t &rules) {
+    if (!errorMessage_.empty()) return;
+
+    auto& group = statement.getOrderby();
+    if (group.empty())return;
+    auto& lastRule = rules.back();
+    if (statement.getLimit() > 0)
+        lastRule.setLimit(statement.getLimit());
+
+    lastRule.setModifiers(group.getColModifiers());
+    if (lastRule.getLimit() == 0) {
+        errorMessage_ =  "Unsupported order by directive without a limit. Please add a #limit directive.";
+    }
 }
 
 void SqlToDatalog::generateRules( Atom& head, vector<Atom>& body, vector<vector<Atom>>& conditions, rules_vector_t& program ) {

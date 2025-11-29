@@ -22,7 +22,7 @@
 
 namespace bumblebee{
 
-enum class OrderType : uint8_t { INVALID = 0, ORDER_DEFAULT = 1, ASCENDING = 2, DESCENDING = 3 };
+enum class OrderType : uint8_t { INVALID = 0, ASCENDING = 2, DESCENDING = 3 };
 
 
 struct OrderModifiers {
@@ -48,6 +48,17 @@ struct OrderModifiers {
         }
 
         return OrderModifiers(order_type);
+    }
+
+    string toString() const {
+        switch (order_type) {
+            case OrderType::ASCENDING:
+                return "ASC";
+            case OrderType::DESCENDING:
+                return "DESC";
+            default: ;
+        }
+        return "";
     }
 };
 

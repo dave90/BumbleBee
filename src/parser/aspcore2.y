@@ -67,7 +67,7 @@ bool queryFound=false;
 
 
 /* --- SQL tokens --- */
-%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR SQL_COPY SQL_TO
+%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT
 %token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG SQL_COUNT
 %left SQL_OR
 %left SQL_AND
@@ -768,7 +768,7 @@ sql
     ;
 
 sql_query
-    : sql_select select from opt_where opt_groupby
+    : sql_select select from opt_where opt_groupby opt_orderby opt_limit
     ;
 
 sql_copy_to
@@ -979,6 +979,77 @@ group_list
         director.getBuilder()->onSQLGroupByItem();
     }
     ;
+
+/* ORDER BY */
+opt_orderby
+    : /* empty */
+    | SQL_ORDER SQL_BY order_list
+    ;
+
+order_list
+    : order_col
+    | order_list COMMA order_col
+    ;
+
+order_col
+    : order_col_name modifier_opt
+    {
+        director.getBuilder()->onSqlOrderCol();
+    }
+    ;
+
+order_col_name
+    : qualified_name
+    | SQL_SUM
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+    | SQL_MIN
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+    | SQL_MAX
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+    | SQL_AVG
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+    | SQL_COUNT
+    {
+        director.getBuilder()->onSQLQualifiedName($1);
+        delete[] $1;
+    }
+
+modifier_opt
+    : /* empty */
+    {
+        director.getBuilder()->onSqlOrderModifier(nullptr);
+    }
+    | SQL_ASC
+    {
+        char c[] = "asc";
+        director.getBuilder()->onSqlOrderModifier(c);
+    }
+    | SQL_DESC
+    {
+        char c[] = "desc";
+        director.getBuilder()->onSqlOrderModifier(c);
+    }
+    ;
+
+opt_limit
+    : /* empty */
+    |SQL_LIMIT NUMBER
+    {
+        director.getBuilder()->onSQLLimit($2);
+        delete[] $2;
+    }
 
 /* Expressions (simple arithmetic; reuse PLUS/DASH/TIMES/SLASH/BACK_SLASH) */
 value_expr

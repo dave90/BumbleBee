@@ -19,10 +19,12 @@
 #pragma once
 
 #include "Atom.hpp"
+#include "bumblebee/execution/TopNHeap.hpp"
 
 namespace bumblebee {
 
 using atoms_vector_t = vector<Atom>;
+
 
 class Rule {
 public:
@@ -58,10 +60,18 @@ public:
     void setBody(atoms_vector_t &body);
     bool containsAggregate() const;
 
+    idx_t & getLimit();
+    void setLimit(idx_t limit);
+    vector<ColModifier> & getModifiers();
+    void setModifiers(vector<ColModifier>& modifiers);
+
 private:
 
     atoms_vector_t body_;
     atoms_vector_t head_;
+
+    idx_t limit_{0};
+    vector<ColModifier> modifiers_;
 };
 
 using rules_vector_t = vector<Rule>;

@@ -43,6 +43,74 @@ ParserInputBuilder::~ParserInputBuilder() {
 }
 
 void ParserInputBuilder::onDirective(char *directiveName, char *directiveValue) {
+    if (foundASafetyError_) return;
+
+    string dName = directiveName;
+    if (dName == "#") {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Error: empty directive. Please provide a directive name immediately after '#', without spaces.";
+        return;
+    }
+
+    auto lower = StringUtils::lower(dName);
+
+    if (lower == "#limit")
+        parseLimitDirective(directiveValue);
+    else if (lower== "#order_by")
+        parseOrderByDirective(directiveValue);
+    else {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Error: not supported directive: "+dName;
+    }
+
+}
+
+void ParserInputBuilder::parseLimitDirective(const string &value) {
+    try {
+        size_t idx;
+        int v = std::stoi(value, &idx);
+
+        if (idx != value.size()) {
+            foundASafetyError_ = true;
+            safetyErrorMessage = "invalid value for limit directive: '" + value + "'. Please specify a positive number.";
+            return;
+        }
+
+        if (v > STANDARD_VECTOR_SIZE) {
+            foundASafetyError_ = true;
+            safetyErrorMessage = "limit > "+std::to_string(STANDARD_VECTOR_SIZE)+" is not currently supported :(";
+            return;
+        }
+        limit_ = v;
+    }
+    catch (const std::exception &) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "invalid value for limit directive: '" + value + ". Please specify a positive number.";
+    }
+}
+
+void ParserInputBuilder::parseOrderByDirective(const string &value) {
+    string trimValue = StringUtils::trim(value);
+    std::stringstream ss(trimValue);
+    string token;
+
+    while (getline(ss, token, ',')) { // Split by ';'
+        if (token.empty()) continue;
+        string tokenTrimmed = StringUtils::trim(token);
+        string col;
+        string modifier;
+        auto pos = tokenTrimmed.find(' ');
+        if (pos != string::npos) {
+            col = tokenTrimmed.substr(0, pos);
+            modifier = tokenTrimmed.substr(pos + 1);
+
+        }else {
+            modifier = "asc";
+            col = tokenTrimmed;
+        }
+        orderModifiers_.push_back(OrderModifiers::parse(modifier));
+        colsOrderModifiers_.push_back(col);
+    }
 }
 
 bool ParserInputBuilder::checkRuleSafety() {
@@ -98,10 +166,56 @@ void ParserInputBuilder::onRule() {
             break;
         }
 
+    setRuleDirective();
+
     program_.push_back(std::move(currentRule));
     currentRule = {};
 }
 
+
+void ParserInputBuilder::setRuleDirective() {
+    if (limit_ > 0) {
+        currentRule.setLimit(limit_);
+        limit_ = 0;
+    }
+    if (!colsOrderModifiers_.empty()) {
+        BB_ASSERT(colsOrderModifiers_.size() == orderModifiers_.size());
+        std::unordered_map<string, idx_t> varColIndex;
+        BB_ASSERT(currentRule.getHead().size() == 1);
+        auto& head = currentRule.getHead()[0];
+        if (head.getType() != CLASSICAL) {
+            foundASafetyError_ = true;
+            safetyErrorMessage = "order by directive support only classical atom.";
+            return;
+        }
+        for (idx_t i=0;i < head.getTerms().size();++i) {
+            if (head.getTerms()[i].getType() != VARIABLE)continue;
+            varColIndex[head.getTerms()[i].getVariable()] = i;
+        }
+
+
+        vector<ColModifier> colModifiers;
+        for (idx_t i = 0; i < colsOrderModifiers_.size(); ++i) {
+            auto var = colsOrderModifiers_[i];
+            if (!varColIndex.contains(var)) {
+                foundASafetyError_ = true;
+                safetyErrorMessage = "order by variable: '"+var+"' not found in the head. Please specify a variable in the head.";
+                return;
+            }
+
+            // decrement as 0 is not found
+            colModifiers.push_back({.col_ = varColIndex[var], .modifier_ = orderModifiers_[i]});
+        }
+
+        currentRule.setModifiers(colModifiers);
+        colModifiers.clear();
+    }
+
+    if (!currentRule.getModifiers().empty() && !currentRule.getLimit()) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "unsupported order by directive without a limit. Please add a #limit directive.";
+    }
+}
 
 void ParserInputBuilder::onConstraint() {
     if (!checkRuleSafety()) return;
@@ -382,147 +496,7 @@ void ParserInputBuilder::onAggregate(bool naf) {
 }
 
 
-void ParserInputBuilder::rewriteAggregates() {
-    //TODO move the rewriting in the optimizer (maybe in the optimzier v2)
-
-    // Transform aggregate bodies (which may contain multiple atoms) into a single atom.
-    // Example transformation:
-    //
-    //   a(X), #sum{Y : b(X), c(X,Y)} = T.
-    //     -> a(X), #sum{Y : #AGG1_SUM_GROUP_0_PAYLOADS_1(X,Y)} = T.
-    //        #SUM_GROUP_0_PAYLOADS_1(X,Y) :- b(X), c(X,Y).
-    // The new predicate name encodes:
-    //   - the aggregates function (e.g., #SUM),
-    //   - the grouping variables,
-    //   - and the payload
-    // Details:
-    // - Groups are the variables shared between the aggregate and the rest of the rule body.
-    // - Payloads are the columns being aggregated. Note: payloads.size() == functions.size().
-    // - Since aggregate tables can apply multiple functions on the same groups, we can
-    //   reuse aggregates across rules when possible.
-    //
-    // Two aggregates can be reused if they share:
-    //   1. the same groups,
-    //   2. the same body atoms,
-    //   3. the same aggregation terms (group variables + variables defined inside the aggregate).
-    //
-    // if (rulesWithAggregates_.size() == 0)return;
-    // // information to create an aggregate table
-    // struct AggInfo {
-    //     AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t  &terms)
-    //         : atoms(atoms), groups(groups), terms(std::move(terms)) {
-    //     }
-    //     string createAggPredicateName(idx_t& suffixCounter, const vector<Term>& terms) {
-    //         if (predName.size() > 0)return predName;
-    //         vector<idx_t> groups, payloads;
-    //         vector<string> aggFunctions;
-    //         for (idx_t i=0;i<terms.size();++i) {
-    //             auto& t = terms[i];
-    //             BB_ASSERT(t.getType() == VARIABLE);
-    //             if (this->groups.contains(t.getVariable()))
-    //                 groups.push_back(i);
-    //             if (this->payloadMap.contains(t.getVariable())) {
-    //                 for (auto& fun:payloadMap[t.getVariable()]) {
-    //                     payloads.push_back(i);
-    //                     aggFunctions.push_back(fun);
-    //                 }
-    //             }
-    //         }
-    //         predName = Predicate::buildAggregateInternalPredicate(suffixCounter++, groups, payloads, aggFunctions);
-    //         return predName;
-    //     }
-    //     // atoms in the body of the aggregate
-    //     vector<Atom>& atoms;
-    //     // aggregation terms (group variables + distinct aggregation variable)
-    //     set_term_variable_t terms;
-    //     // group variable in terms
-    //     set_term_variable_t groups;
-    //     // map of payload variable and agg function
-    //     std::unordered_map<string, std::unordered_set<string>> payloadMap;
-    //     // name of the predicate
-    //     string predName;
-    //
-    // };
-    //
-    // vector<AggInfo> aggInfos;
-    // // index of aggInfos to use for the ith aggregates
-    // vector<idx_t> aggInfosIndex;
-    // for (idx_t i=0;i<rulesWithAggregates_.size();i++) {
-    //     auto& rule = program_[rulesWithAggregates_[i]];
-    //     set_term_variable_t ruleVariables;
-    //     rule.getVariables(ruleVariables);
-    //     for (auto& a: rule.getBody()) {
-    //         if (a.getType() != AGGREGATE)continue;
-    //         // calculate the groups
-    //         set_term_variable_t groupVars;
-    //         a.getAggSharedVariables(ruleVariables, groupVars);
-    //         // now join the aggregate terms + the shared variables and the set of vars would be vars in head of new predicate
-    //         set_term_variable_t sterms = groupVars;
-    //         for (auto&t: a.getAggTerms()) sterms.insert((t.getVariable()));
-    //         auto& payload = a.getAggTerms()[0]; // payload is the first term
-    //
-    //         // now check if is present in the aggInfos ( avoiding creating duplicates aggregates tables)
-    //         bool found = false;
-    //         for (idx_t j=0;j<aggInfos.size() && !found;j++) {
-    //             auto& info = aggInfos[j];
-    //             if (compareVectorsNoSort(info.atoms, a.getAggsAtoms())
-    //                 && info.groups == groupVars
-    //                 && info.terms == sterms) {
-    //                 // we can reuse this aggregate
-    //                 aggInfosIndex.push_back(j);
-    //                 found = true;
-    //                 info.payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
-    //             }
-    //         }
-    //         if (found) continue;
-    //         // we need to create a new aggregate tables
-    //         aggInfosIndex.push_back(aggInfos.size());
-    //         aggInfos.emplace_back(a.getAggsAtoms(), groupVars, sterms);
-    //         // add the information of function and payload
-    //         aggInfos.back().payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
-    //     }
-    // }
-    //
-    // // now for each aggregate we have the index to the aggregate table specs (aggInfosIndex)
-    // // and we can replace the aggregate atoms with the single atom
-    // idx_t counter = 0;
-    // for (idx_t i=0;i<rulesWithAggregates_.size();i++) {
-    //     // because of the push back do not create rule variable
-    //     auto ruleIndex = rulesWithAggregates_[i];
-    //     set_term_variable_t ruleVariables;
-    //     program_[ruleIndex].getVariables(ruleVariables);
-    //     for (idx_t j=0;j<program_[ruleIndex].getBody().size();j++) {
-    //         auto& a = program_[ruleIndex].getBody()[j];
-    //         if (a.getType() != AGGREGATE)continue;
-    //         BB_ASSERT(aggInfosIndex[counter] < aggInfos.size());
-    //         auto &info = aggInfos[aggInfosIndex[counter++]];
-    //         vector<Term> terms;
-    //         for (auto& v: info.terms)
-    //             terms.emplace_back(v.c_str(), true);
-    //         bool createAuxRule = info.predName.empty();
-    //         string newPredName = info.createAggPredicateName(newPredCounter_, terms);
-    //         Predicate *predicate = currentSchema_.get().createPredicate(&clientContext_, newPredName.c_str(), info.terms.size());
-    //         if (!hiddenNewPredicate) {
-    //             predicate->setInternal(false);
-    //         }
-    //         if (createAuxRule) {
-    //             Atom head = Atom::createClassicalAtom(predicate, std::move(vector(terms)));
-    //             Rule newRule;
-    //             newRule.addAtomInHead(std::move(head));
-    //             newRule.setBody(a.getAggsAtoms());
-    //             checkRuleSafety(newRule);
-    //             program_.push_back(std::move(newRule));
-    //         }
-    //         auto newAtom =  Atom::createClassicalAtom(predicate, std::move(vector(terms)));
-    //         a.getAggsAtoms().clear();
-    //         a.getAggsAtoms().push_back(std::move(newAtom));
-    //     }
-    // }
-}
-
 void ParserInputBuilder::onEnd() {
-    rewriteAggregates();
-
 }
 
 rules_vector_t & ParserInputBuilder::getProgram() {
@@ -888,6 +862,56 @@ void ParserInputBuilder::onSQLCopy() {
     sqlStatements_.back().setExportPath(sqlExportFilePath_);
     sqlStatements_.back().setExportNamedParameters(namedParameters_);
     string x = "";
+}
+
+void ParserInputBuilder::onSqlOrderModifier(char *modifier) {
+    if (!modifier)
+        orderModifiers_.emplace_back(OrderType::ASCENDING);
+    else
+        orderModifiers_.push_back(OrderModifiers::parse(modifier));
+}
+
+void ParserInputBuilder::onSqlOrderCol() {
+    if (foundASafetyError_)return;
+    auto vp = sqlValuePrimary_.back();
+    auto q = vp.getQualifier();
+    string colVar = (!q.table_.empty())?q.table_+"."+q.name_:q.name_;
+    bool couldBeAlias = q.table_.empty();
+    sqlValuePrimary_.pop_back();
+    BB_ASSERT(!q.name_.empty());
+    // let's find the qualifier in the select items
+    bool find = false;
+    idx_t idx = 0;
+    auto& items = sqlStatements_.back().getSelect().getItems();
+    for (idx_t i=0;i<items.size() && !find;i++) {
+        auto& ve = items[i];
+        if ((!ve.getAlias().empty() && ve.getAlias() == colVar) || (ve.toString() == colVar)) {
+                find = true;
+                idx = i;
+        }
+
+    }
+    if (!find) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "order by variable: '"+colVar+"' not found in the select. Please specify a variable in the head.";
+    }
+    BB_ASSERT(!orderModifiers_.empty());
+    ColModifier colModifier = {.col_ = idx, .modifier_ = orderModifiers_.back()};
+    orderModifiers_.pop_back();
+    sqlStatements_.back().getOrderby().addColModifier(colModifier);
+}
+
+void ParserInputBuilder::onSQLLimit(char *number) {
+    if (foundASafetyError_)return;
+    parseLimitDirective(number);
+    if (limit_ == 0)return;
+    sqlStatements_.back().setLimit(limit_);
+    limit_ = 0;
+    if (sqlStatements_.back().getOrderby().empty()) {
+        // order by is empty because we have a limit create it
+        ColModifier cm = {.col_ = 0, .modifier_ = OrderType::ASCENDING};
+        sqlStatements_.back().getOrderby().addColModifier(cm);
+    }
 }
 }
 

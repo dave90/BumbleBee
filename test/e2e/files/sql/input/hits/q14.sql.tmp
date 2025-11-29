@@ -1,0 +1,6 @@
+%@sql
+COPY (SELECT SEARCHENGINEID, SEARCHPHRASE, COUNT(*) AS c
+FROM "./files/csv/mini_hits.csv"
+WHERE SEARCHPHRASE <> ""
+GROUP BY SEARCHENGINEID, SEARCHPHRASE
+ORDER BY c DESC LIMIT 10) TO "files/sql/actual/q14.sql.csv" (single_file=1)

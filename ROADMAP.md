@@ -1,17 +1,13 @@
 ## TODOLIST
-- SQL translation
-- ORDER BY LIMIT (one scan)
-
+- Click Bench SQL
+- parquet
 
 ## Next
 - Hash build: reduce build tasks
 - CICD
 - - Default minimum integer (small int or int 32 bit not tiny as now)
 - Test: TPC-H, ClickBench https://github.com/electrum/tpch-dbgen
-- Test vs duck
-  - Combine ?
-  - My hash table vs duck
-  -
+
 
 ## Next of Next
  

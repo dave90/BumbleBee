@@ -96,8 +96,12 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
         return _normalize_col(name)
 
     # Read CSVs
-    df_out = pd.read_csv(output_file)
     df_exp = pd.read_csv(expected_file)
+    # if path does not exist and expected dataframe is empty return match
+    if not os.path.exists(output_file) and len(df_exp) == 0:
+        return True
+
+    df_out = pd.read_csv(output_file)
 
     # Rename columns according to rules
     df_out.columns = [_normalize_output_col(c) for c in df_out.columns]

@@ -1,0 +1,4 @@
+%@sql
+SELECT USERID
+FROM "./files/csv/mini_hits.csv"
+WHERE USERID = 435090932899640449

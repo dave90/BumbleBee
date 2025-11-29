@@ -62,6 +62,7 @@ public:
 
 private:
     void findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups);
+    void moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes);
 
     // Aggregates functions
     vector<AggregateFunction*> functions_;

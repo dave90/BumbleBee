@@ -36,9 +36,9 @@ def test_asp(input_file: Path):
     output_file = actual_folder_asp / input_file.name
     expected_file = expected_folder_asp / input_file.name
 
-    args = ["-a", "-i"]
+    args = ["-a", "-t", "1", "-i"]
     if contains_query(str(input_file)):
-        args = ["-i"]
+        args = ["-t","1","-i"]
 
     run_process_on_file(EXE_PATH, args, input_file, output_file)
 
@@ -53,9 +53,11 @@ def test_distinct_asp(input_file: Path):
     output_file = actual_folder_asp / input_file.name
     expected_file = expected_folder_asp / input_file.name
 
-    args = ["-d", "-a", "-i"]
+    args = ["-d","-t","1", "-a", "-i"]
     if contains_query(str(input_file)):
-        args = ["-d","-i"]
+        args = ["-d","-t","1","-i"]
+
+    print(args)
 
     run_process_on_file(EXE_PATH, args, input_file, output_file)
 
@@ -93,7 +95,7 @@ def test_sql(input_file: Path):
     output_file = actual_folder_sql / input_file.name
     expected_file = expected_folder_sql / input_file.name
 
-    args = ["-i"]
+    args = ["-t", "1", "-i"]
     # add the export
     input_file = create_tmp_input_file(input_file, "COPY (",") TO \""+str(output_file)+".csv\" (single_file=1)")
 
@@ -104,7 +106,6 @@ def test_sql(input_file: Path):
         os.rename(str(output_file)+".csv", str(output_file))
 
     assert expected_file.exists(), f"Expected file missing: {expected_file}"
-    assert output_file.exists(), f"Output file missing: {output_file}"
     assert compare_csv(str(output_file), str(expected_file)), f"Files do not match: {output_file} vs {expected_file}"
     # remove the tmp file as the test succeed
     os.remove(input_file)

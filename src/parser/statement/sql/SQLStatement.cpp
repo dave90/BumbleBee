@@ -26,10 +26,12 @@ SQLStatement::SQLStatement(SQLStatement &&other) noexcept: select_(std::move(oth
                                                            from_(std::move(other.from_)),
                                                            where_(std::move(other.where_)),
                                                            groupby_(std::move(other.groupby_)),
+                                                           orderby_(std::move(other.orderby_)),
                                                            exportPath_(std::move(other.exportPath_)),
                                                            exportNamedParameters_(std::move(other.exportNamedParameters_)),
-                                                           alias_(std::move(other.alias_)){
-}
+                                                           limit_(other.limit_),
+                                                           alias_(std::move(other.alias_))
+{}
 
 
 SQLStatement & SQLStatement::operator=(SQLStatement &&other) noexcept {
@@ -40,8 +42,10 @@ SQLStatement & SQLStatement::operator=(SQLStatement &&other) noexcept {
     where_ = std::move(other.where_);
     alias_ = std::move(other.alias_);
     groupby_ = std::move(other.groupby_);
+    orderby_ = std::move(other.orderby_);
     exportPath_ = std::move(other.exportPath_);
     exportNamedParameters_ = std::move(other.exportNamedParameters_);
+    limit_ = other.limit_;
     return *this;
 }
 
@@ -57,8 +61,16 @@ void SQLStatement::setFrom(From &from) {
     from_ = std::move(from);
 }
 
-void SQLStatement::setGroupby(Groupby groupby) {
+void SQLStatement::setGroupby(Groupby& groupby) {
     groupby_ = std::move(groupby);
+}
+
+void SQLStatement::setOrderby(OrderBy &groupby) {
+    orderby_ = std::move(groupby);
+}
+
+OrderBy & SQLStatement::getOrderby() {
+    return orderby_;
 }
 
 void SQLStatement::setExportPath(string& exportPath) {
@@ -116,12 +128,25 @@ std::unordered_map<string, Value> & SQLStatement::getExportNamedParameters() {
     return exportNamedParameters_;
 }
 
+idx_t & SQLStatement::getLimit() {
+    return limit_;
+}
+
+void SQLStatement::setLimit(idx_t limit) {
+    limit_ = limit;
+}
+
 string SQLStatement::toString() const{
     string result = "";
     result += select_.toString() + "\n";
     result += from_.toString() + "\n";
     result += where_.toString();
     result += groupby_.toString();
+    result += orderby_.toString(select_);
+
+    if (limit_ > 0)
+        result += "\n LIMIT "+std::to_string(limit_) + "\n";
+
     if (!exportPath_.empty()) {
         result = "COPY ( " + result + " ) " +" TO '"+ exportPath_ + "' (";
         idx_t idx = 0;

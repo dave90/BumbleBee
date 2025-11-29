@@ -23,6 +23,7 @@ namespace bumblebee{
 TopNHeap::TopNHeap(const vector<ConstantType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit): payloadTypes_(payloadTypes),
     heapSize_(limit),
     dataToInsert_(STANDARD_VECTOR_SIZE){
+    BB_ASSERT(limit <= STANDARD_VECTOR_SIZE);
     heapData_.initialize({STRING});
     keyStrings_.initialize({STRING});
     heapPayload_.initialize(payloadTypes);
@@ -38,6 +39,8 @@ TopNHeap::TopNHeap(const vector<ConstantType> &payloadTypes,const vector<ColModi
 void TopNHeap::sink(DataChunk &input) {
     BB_ASSERT(keyStrings_.columnCount() == 1 && keyStrings_.data_[0].getType() == STRING);
     BB_ASSERT(input.getSize() <= STANDARD_VECTOR_SIZE);
+    // we need to normalify as we will copy only a subset of rows
+    input.normalify();
 
     BB_ASSERT(keyStrings_.getCapacity() >= STANDARD_VECTOR_SIZE);
     DataChunk sortChunk;
@@ -90,17 +93,19 @@ void TopNHeap::reduce(bool force) {
     heapPayload_.setCapacity(idx);
 }
 
-void TopNHeap::getData(DataChunk &input) {
+void TopNHeap::getData(DataChunk &input, idx_t pos) {
     BB_ASSERT(input.getTypes() == heapPayload_.getTypes());
     if (heap_.empty())return;
+    if (pos >= heap_.size()) return;
 
     // we need to sort the keys, so copy the heap and sort it
     SelectionVector sel(heap_.size());
-    for (idx_t i = 0; i < heap_.size(); ++i)
-        sel.setIndex(i, heap_[i].index_);
+    idx_t idx = pos;
+    for (; idx < heap_.size() && pos < STANDARD_VECTOR_SIZE; ++idx)
+        sel.setIndex(idx, heap_[idx].index_);
 
     input.reference(heapPayload_);
-    input.slice(sel, heap_.size());
+    input.slice(sel, idx - pos);
 }
 
 void TopNHeap::combine(TopNHeap &other) {

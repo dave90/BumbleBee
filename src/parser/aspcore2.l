@@ -45,6 +45,7 @@ DOT 				\.
 
 SQL_DIALECT         \%@sql
 
+
 COMMENT_EMPTY       \%\n
 COMMENT             \%[^@\n].*
 
@@ -186,12 +187,14 @@ NUMBER              ([0-9]+)
 <SQL>[Ff][Rr][Oo][Mm]                   { return SQL_FROM; }
 <SQL>[Ww][Hh][Ee][Rr][Ee]               { return SQL_WHERE; }
 <SQL>[Gg][Rr][Oo][Uu][Pp]               { return SQL_GROUP; }
+<SQL>[Oo][Rr][Dd][Ee][Rr]               { return SQL_ORDER; }
 <SQL>[Bb][Yy]                           { return SQL_BY; }
 <SQL>[Aa][Ss]                           { return SQL_AS; }
 <SQL>[Aa][Nn][Dd]                       { return SQL_AND; }
 <SQL>[Oo][Rr]                           { return SQL_OR; }
 <SQL>[Cc][Oo][Po][Yy]                   { return SQL_COPY; }
 <SQL>[Tt][Oo]                           { return SQL_TO; }
+<SQL>[Ll][Ii][Mm][Ii][Tt]               { return SQL_LIMIT; }
 
 <SQL>[Ss][Uu][Mm]                       {
                                             yylval.string=new char[strlen(yytext)+1];
@@ -217,6 +220,16 @@ NUMBER              ([0-9]+)
                                             yylval.string=new char[strlen(yytext)+1];
                                             strcpy(yylval.string,yytext);
                                             return SQL_COUNT;
+                                        }
+<SQL>[Aa][Ss][Cc]                       {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_ASC;
+                                        }
+<SQL>[Dd][Ee][Ss][Cc]                   {
+                                            yylval.string=new char[strlen(yytext)+1];
+                                            strcpy(yylval.string,yytext);
+                                            return SQL_DESC;
                                         }
 
 

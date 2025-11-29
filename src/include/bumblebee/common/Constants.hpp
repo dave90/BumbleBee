@@ -51,8 +51,8 @@ namespace bumblebee {
 // CSV Read
 #define CSV_MULTITHREAD_THRESHOLD_BYTES (1024*1024*100)
 
-// String Heap. NOTE: Maximum string supported is 4096 bytes
-#define MINIMUM_HEAP_SIZE 4096
+// String Heap. NOTE: Maximum string supported is 4096*2 bytes
+#define MINIMUM_HEAP_SIZE (4096*2)
 
 // Default size of morsel (chunk to process in one thread) Must be multiple of STANDARD_VECTOR_SIZE
 #define MORSEL_SIZE (STANDARD_VECTOR_SIZE*4)

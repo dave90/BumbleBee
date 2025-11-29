@@ -20,7 +20,9 @@
 
 namespace bumblebee {
 Rule::Rule(Rule &&other) noexcept: body_(std::move(other.body_)),
-                                   head_(std::move(other.head_)) {
+                                   head_(std::move(other.head_)),
+                                   limit_(other.limit_),
+                                   modifiers_(std::move(other.modifiers_)){
 }
 
 Rule & Rule::operator=(Rule &&other) noexcept {
@@ -28,6 +30,8 @@ Rule & Rule::operator=(Rule &&other) noexcept {
         return *this;
     body_ = std::move(other.body_);
     head_ = std::move(other.head_);
+    limit_ = other.limit_;
+    modifiers_ = std::move(other.modifiers_);
     return *this;
 }
 
@@ -57,6 +61,22 @@ bool Rule::containsAggregate() const {
     for (auto& atom: body_)
         if (atom.getType() == AGGREGATE) return true;
     return false;
+}
+
+idx_t & Rule::getLimit() {
+    return limit_;
+}
+
+void Rule::setLimit(idx_t limit) {
+    limit_ = limit;
+}
+
+vector<ColModifier> & Rule::getModifiers() {
+    return modifiers_;
+}
+
+void Rule::setModifiers(vector<ColModifier> &modifiers) {
+    modifiers_ = std::move(modifiers);
 }
 
 void Rule::getPredicatesInHead(predicates_ptr_set_t &predicates) {
@@ -94,6 +114,18 @@ void Rule::addAtomInBody(Atom &&atom) {
 
 std::string Rule::toString() {
     std::string s;
+    if (limit_ > 0)
+        s+="#limit "+std::to_string(limit_)+"\n";
+    if (modifiers_.size() > 0) {
+        s +="#order_by ";
+        auto& head = head_[0];
+        for (idx_t i = 0; i < modifiers_.size(); i++) {
+            if (i > 0) s+=", ";
+            s += head.getTerms()[modifiers_[i].col_].toString()+" "+modifiers_[i].modifier_.toString();
+        }
+        s+="\n";
+    }
+
     if (!head_.empty()) s += head_.front().toString();
     for (unsigned int i = 1; i < head_.size(); i++) {
         s += SEPARATOR_HAED + head_[i].toString();

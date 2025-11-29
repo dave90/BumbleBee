@@ -40,6 +40,7 @@ public:
     static string lower(const string &str);
     static void removeQuote(string& str);
     static bool startsWith(string str, string prefix);
+    static string trim(const string& str);
 };
 
 

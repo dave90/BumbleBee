@@ -19,7 +19,9 @@
 #pragma once
 #include "From.hpp"
 #include "Groupby.hpp"
+#include "OrderBy.hpp"
 #include "Select.hpp"
+#include "bumblebee/execution/TopNHeap.hpp"
 #include "bumblebee/parser/statement/sql/Where.hpp"
 
 namespace bumblebee{
@@ -36,7 +38,8 @@ public:
     void setWhere(Where &where);
     void setSelect(Select &select);
     void setFrom(From &from);
-    void setGroupby(Groupby groupby);
+    void setGroupby(Groupby& groupby);
+    void setOrderby(OrderBy& orderby);
 
     void setExportPath(string& exportPath);
 
@@ -52,8 +55,11 @@ public:
     From& getFrom() ;
     Where& getWhere() ;
     Groupby& getGroupby() ;
+    OrderBy& getOrderby() ;
     string & getExportPath();
     std::unordered_map<string, Value> & getExportNamedParameters();
+    idx_t & getLimit();
+    void setLimit(idx_t limit);
 
     string toString() const;
 
@@ -63,11 +69,14 @@ private:
     Select select_;
     From from_;
     Where where_;
-    Groupby groupby_ ;
+    Groupby groupby_;
+    OrderBy orderby_;
 
     string alias_;
     string exportPath_;
     std::unordered_map<string, Value> exportNamedParameters_;
+
+    idx_t limit_{0};
 
 };
 }

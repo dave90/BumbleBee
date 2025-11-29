@@ -59,8 +59,6 @@ def compare_outputs(file1, file2):
     return normalize_output(file1) == normalize_output(file2)
 
 def compare_csv_outputs(file1, file2):
-    if not os.path.exists(file1) or not os.path.exists(file2):
-        return False
     from test.e2e.utils import compare_csv
     return compare_csv(str(file1), str(file2))
 

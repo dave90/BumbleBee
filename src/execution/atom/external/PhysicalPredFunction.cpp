@@ -69,7 +69,7 @@ bool PhysicalPredFunction::isSink() const {
 }
 
 string PhysicalPredFunction::getName() const {
-    return "PHYSICAL_PRED_SCAN";
+    return "PHYSICAL_PRED_FUNCTION";
 }
 
 string PhysicalPredFunction::toString() const {
@@ -160,7 +160,8 @@ AtomResultType PhysicalPredFunction::execute(ThreadContext &context, DataChunk &
         for (idx_t i=0;i<dcCols_.size();++i)
             chunk.data_[dcCols_[i]].reference(output.data_[i]);
         chunk.setCardinality(output.getSize());
-    }
+    }else
+        chunk.setCardinality(0);
 
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;

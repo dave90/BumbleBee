@@ -93,12 +93,16 @@
      SQL_OR = 309,
      SQL_COPY = 310,
      SQL_TO = 311,
-     SQL_SUM = 312,
-     SQL_MIN = 313,
-     SQL_MAX = 314,
-     SQL_AVG = 315,
-     SQL_COUNT = 316,
-     SQL_DIALECT = 317
+     SQL_ORDER = 312,
+     SQL_ASC = 313,
+     SQL_DESC = 314,
+     SQL_LIMIT = 315,
+     SQL_SUM = 316,
+     SQL_MIN = 317,
+     SQL_MAX = 318,
+     SQL_AVG = 319,
+     SQL_COUNT = 320,
+     SQL_DIALECT = 321
    };
 #endif
 /* Tokens.  */
@@ -156,12 +160,16 @@
 #define SQL_OR 309
 #define SQL_COPY 310
 #define SQL_TO 311
-#define SQL_SUM 312
-#define SQL_MIN 313
-#define SQL_MAX 314
-#define SQL_AVG 315
-#define SQL_COUNT 316
-#define SQL_DIALECT 317
+#define SQL_ORDER 312
+#define SQL_ASC 313
+#define SQL_DESC 314
+#define SQL_LIMIT 315
+#define SQL_SUM 316
+#define SQL_MIN 317
+#define SQL_MAX 318
+#define SQL_AVG 319
+#define SQL_COUNT 320
+#define SQL_DIALECT 321
 
 
 
@@ -175,7 +183,7 @@ typedef union YYSTYPE
     int integer;
 }
 /* Line 1529 of yacc.c.  */
-#line 179 "src/parser/aspcore2_parser.h"
+#line 187 "src/parser/aspcore2_parser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

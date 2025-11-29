@@ -105,7 +105,9 @@ public:
 	bool isFoundASafetyError();
 	const std::string& getSafetyErrorMessage();
 	rules_vector_t& getProgram();
-	void rewriteAggregates();
+	void parseLimitDirective(const string& value);
+	void parseOrderByDirective(const string& value);
+	void setRuleDirective();
 
 	bool isSQL();
 	void onSQLValue(char*);
@@ -133,6 +135,9 @@ public:
 	void onSQLGroupByItem();
 	void onSQLCopyTo(char*);
 	void onSQLCopy();
+	void onSqlOrderModifier(char*);
+	void onSqlOrderCol();
+	void onSQLLimit(char*);
 
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};
@@ -170,6 +175,10 @@ protected:
 	vector<Value> inputValues_;
 	string externalFunctionName_;
 	idx_t extAtomCounter_{0};
+
+	idx_t limit_{0};
+	vector<OrderModifiers> orderModifiers_;
+	vector<string> colsOrderModifiers_;
 
 
 	// SQL parser

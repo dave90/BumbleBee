@@ -1,0 +1,4 @@
+%@sql
+COPY (SELECT c1.LAST_NAME, c1.FIRST_NAME as F1, c2.FIRST_NAME as F2, c2.USERNAME
+FROM "./files/csv/username.csv" as c1, "./files/csv/username.csv" as c2
+WHERE c1.LAST_NAME > c2.LAST_NAME AND c2.FIRST_NAME > c1.FIRST_NAME) TO "files/sql/actual/where.1.csv" (single_file=1)

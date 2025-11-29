@@ -1,0 +1,5 @@
+%@sql
+COPY (SELECT COUNT(*) as count
+FROM "./files/csv/mini_hits.csv"
+WHERE ADVENGINEID <> 0
+) TO "files/sql/actual/q01.sql.csv" (single_file=1)

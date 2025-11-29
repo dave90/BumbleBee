@@ -234,4 +234,26 @@ bool StringUtils::startsWith(string str, string prefix) {
 	}
 	return equal(prefix.begin(), prefix.end(), str.begin());
 }
+
+string StringUtils::trim(const string& str) {
+	if (str.empty()) {
+		return str;
+	}
+
+	idx_t start = 0;
+	idx_t end = str.size() - 1;
+
+	// Move start forward while characters are whitespace
+	while (start < str.size() && characterIsSpace(str[start])) {
+		start++;
+	}
+
+	// Move end backward while characters are whitespace
+	while (end > start && characterIsSpace(str[end])) {
+		end--;
+	}
+
+	// Extract the trimmed substring
+	return str.substr(start, end - start + 1);
+}
 }

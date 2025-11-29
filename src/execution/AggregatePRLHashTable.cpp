@@ -83,6 +83,20 @@ void AggregatePRLHashTable::addChunk(DataChunk &payload) {
         AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
 }
 
+void AggregatePRLHashTable::moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes) {
+    SelectionVector newGroupsSel(count);
+    idx_t newGroupsCount = 0;
+    auto groupAddresses = move(addresses, hashes, count, &newGroupsSel, newGroupsCount);
+
+    // init new states
+    for (idx_t i = 0; i < functions_.size(); i++)
+        AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
+
+
+    AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, count);
+
+}
+
 void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
     BB_ASSERT(types_ == other.types_);
     BB_ASSERT(functions_ == other.functions_);
@@ -119,22 +133,12 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
         ++idx;
         if (idx >= STANDARD_VECTOR_SIZE) {
             // merge now
-            auto groupAddresses = move(addresses, hashes, idx);
-            AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
+            moveAndMergeStates(idx, addresses, hashes);
             idx = 0;
         }
     }
+    moveAndMergeStates(idx, addresses, hashes);
 
-    SelectionVector newGroupsSel(idx);
-    idx_t newGroupsCount = 0;
-    auto groupAddresses = move(addresses, hashes, idx, &newGroupsSel, newGroupsCount);
-
-    // init new states
-    for (idx_t i = 0; i < functions_.size(); i++)
-        AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
-
-
-    AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, idx);
 }
 
 void AggregatePRLHashTable::findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups) {
@@ -186,7 +190,6 @@ void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, Vec
     }
     // copy the agg results value in the result chunk
     AggregateFunction::finalizeStates(layout_, addresses, result, aggIndex, matchedGroups);
-    groups.slice(sel, matchedGroups);
 }
 
 void AggregatePRLHashTable::fetchAggregates(DataChunk &result) {

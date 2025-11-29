@@ -19,6 +19,7 @@
 #include "include/bumblebee/BumbleBeeDB.hpp"
 
 #include <CLI11.hpp>
+#include <thread>
 
 #include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/Log.hpp"
@@ -34,12 +35,14 @@ namespace bumblebee {
 int BumbleBeeDB::parseArgs(int argc, char **argv) {
     CLI::App app{NAME};
 
+    const unsigned int threads = std::thread::hardware_concurrency();
+
     app.add_option("-l,--log-file", context_.logFilename_, "Log file")->default_val(DEFAULT_LOG_FILE);
     app.add_flag("-p,--print-log", context_.printLog_, "Print log")->default_val(0);
     app.add_flag("--print-program", context_.printProgram_, "Print only the datalog program")->default_val(0);
     // app.add_flag("-s,--single-shot", context_.singleShot_, "Single shot run")->default_val(1);
     app.add_option("-i,--input-files", context_.inputFiles_, "Single shot run")->expected(1, -1);
-    app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(1);
+    app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(threads);
     app.add_flag("-a,--print-all", context_.printAll_, "Print all predicates")->default_val(0);
     app.add_flag("-r,--print-profiling", context_.printProfiling_, "Print profilings")->default_val(0);
     app.add_flag("-d,--distinct", context_.distinct_, "Set distinct all the predicates")->default_val(0);
@@ -171,7 +174,7 @@ void BumbleBeeDB::processExit(RulesBucket &bucket, Scheduler &scheduler) {
         auto atomProfiler = scheduler.getAtomProfiler();
         for (auto& prule : pruleBucket) {
             auto patoms = prule->getPhysicalAtoms();
-            LOG_INFO("Profile rule: %s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+            LOG_INFO("Profile rule: \n%s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
         }
     }
 }

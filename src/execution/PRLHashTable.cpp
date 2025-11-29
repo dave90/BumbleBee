@@ -217,7 +217,8 @@ string PRLHashTable::toString(bool compact) {
     }
     result += "\nPayload : \n";
     payloadApply([&](idx_t page_nr, idx_t page_offset, data_ptr_t ptr) {
-        std::string address = std::format("{}", static_cast<void*>(ptr));
+        //std::string address = std::format("{}", static_cast<uint64_t>(ptr));
+        std::string address = std::format("{}", (uint64_t)(ptr));
         result += std::to_string(page_nr)+" - "+std::to_string(page_offset)+" - "+address;
         for (idx_t i=0;i<layout_.getTypes().size();++i) {
             auto colOffset = layout_.getOffsets()[i];
