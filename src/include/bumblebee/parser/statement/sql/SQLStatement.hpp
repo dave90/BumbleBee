@@ -29,10 +29,10 @@ namespace sql {
 class SQLStatement {
 public:
     SQLStatement() = default;
-    SQLStatement(const SQLStatement &other) = delete;
     SQLStatement(SQLStatement &&other) noexcept;
+    SQLStatement(const SQLStatement &other);
 
-    SQLStatement & operator=(const SQLStatement &other) = delete;
+    SQLStatement & operator=(const SQLStatement &other);
     SQLStatement & operator=(SQLStatement &&other) noexcept;
 
     void setWhere(Where &where);
@@ -48,8 +48,12 @@ public:
     bool containsAggregations();
     idx_t getNumAggregations();
 
-    void setAlias(string &alias);
+    void setAlias(const string &alias);
     string getAlias() const;
+
+    void clearGroupBy();
+    void clearOrderBy();
+    void clearWhere();
 
     Select& getSelect() ;
     From& getFrom() ;

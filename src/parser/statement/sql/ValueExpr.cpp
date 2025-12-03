@@ -85,6 +85,12 @@ ValueExpr::ValueExpr(const ValueExpr &other): values_(other.values_),
                                               alias_(other.alias_) {
 }
 
+ValueExpr::ValueExpr(const QualifiedName &qualifier) {
+    auto q = qualifier;
+    ValuePrimary vp(q);
+    addValuePrimary(vp);
+}
+
 ValueExpr::ValueExpr(ValueExpr &&other) noexcept: values_(std::move(other.values_)),
                                                   operators_(std::move(other.operators_)),
                                                   alias_(std::move(other.alias_)) {
@@ -141,6 +147,10 @@ string ValueExpr::getAlias() const {
 }
 
 void ValueExpr::setAlias(string &alias) {
+    alias_ = alias;
+}
+
+void ValueExpr::setAlias(const string &alias) {
     alias_ = alias;
 }
 

@@ -266,9 +266,7 @@ vector<ConstantType> BufferedCSVReader::sniffCSV(const vector<ConstantType> &req
 	vector<ConstantType> type_candidates = {
 	    ConstantType::STRING,
 	    ConstantType::DOUBLE,
-	    ConstantType::FLOAT,
 	    ConstantType::BIGINT,
-	    ConstantType::INTEGER
 	};
 
 	vector<vector<ConstantType>> best_sql_types_candidates;

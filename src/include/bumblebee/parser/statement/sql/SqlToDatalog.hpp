@@ -23,51 +23,83 @@
 
 namespace bumblebee{
 
-// Transform SQL Statement to Datalog program
+struct TranslationResult {
+    rules_vector_t rules_;
+    std::string errorMessage_;
+
+    bool foundAnError() const {
+        return !errorMessage_.empty();
+    }
+};
+
+struct SQLQuery {
+    static constexpr char PRED_PREFIX[] = "#p";
+    static constexpr char VAR_PREFIX[] = "#V";
+    static constexpr char ID_VAR[] = "#ID";
+
+    SQLQuery(sql::SQLStatement &statement, ClientContext &context)
+        : statement_(statement),
+          context_(context) {
+    }
+
+    sql::SQLStatement& statement_;
+    ClientContext& context_;
+    // Map of table -> list of columns alias of the table
+    std::unordered_map<string, std::unordered_set<string>> tableColumnsMap_;
+    idx_t counter_{0};
+
+
+
+
+    string generatePredicateName();
+    string generateVarName();
+    static string getVariableName(const string& table, const string& col);
+};
+
+class SqlQueryNormalizer {
+public:
+    TranslationResult result_;
+
+    explicit SqlQueryNormalizer(SQLQuery &query);
+
+    void normalize();
+private:
+    void assignAliasesAndCollectColumns(sql::SQLStatement& statement);
+    void expandSelectStars(sql::SQLStatement& statement);
+    void validateGroupBy(sql::SQLStatement& statement);
+
+    SQLQuery& query_;
+};
+
+class DatalogGenerator {
+public:
+    TranslationResult result_;
+
+    explicit DatalogGenerator(SQLQuery &query)
+        : query_(query) {
+    }
+
+    void generate();
+private:
+
+    void generateRules(sql::SQLStatement& statement);
+    void generateExportRule(sql::SQLStatement& statement);
+
+    SQLQuery& query_;
+};
+
 class SqlToDatalog {
 public:
-    static constexpr char PRED_PREFIX[] = "#p";
-    static constexpr char VAR_PREFIX[] = "V";
-    static constexpr char ID_VAR[] = "#ID";
 
     explicit SqlToDatalog(ClientContext &context);
 
-    void replaceStar(sql::SQLStatement & statement);
-
-    void generateExportRule(sql::SQLStatement & statement, rules_vector_t & rules);
 
     rules_vector_t sqlToDatalog(sql::SQLStatement& statement, bool& foundAnError, string& errorMessage);
 
 private:
-    // visit the from tables setting the alias (if not) and gather the columns of the table
-    void visitFrom(sql::SQLStatement& statement);
-    void visitGroup(sql::SQLStatement& statement);
-
-    void generateRuleForExtAtom(sql::FromItem & fi, rules_vector_t & rules);
-
-    void generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars, sql::SQLStatement & statement, rules_vector_t & rules);
-    void generateOrderRule(sql::SQLStatement &statement, rules_vector_t &rules);
-
-    void genRuleFromSql(sql::SQLStatement& statement, rules_vector_t& program);
-    Atom getAtomFromTable(string& table);
-    Atom getExtAtomFromTable(sql::FromItem& table);
-    Atom getBuiltinFromPredCondition(sql::Predicate& predicate);
-    Term getTermFromValueExpr( sql::ValueExpr ve, const string& alias = "");
-
-    void generateRules( Atom& head, vector<Atom>& body, vector<vector<Atom>>& conditions, rules_vector_t& program );
-
-    string generatePredicateName();
-    string generateVarName();
-    string getVariableName(const string& table, const string& col);
-
-    idx_t counter_{0};
-    // Map of column name -> table. If 2 table share the same column name will not be stored in the map
-    std::unordered_map<string, string> columnTableMap_;
-    // Map of table -> list of columns of the table
-    std::unordered_map<string, std::unordered_set<string>> tableColumnsMap_;
 
     ClientContext& context_;
-    string errorMessage_;
 };
+
 
 }

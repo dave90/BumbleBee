@@ -38,10 +38,12 @@ public:
     FromItem(vector<Value> &input_values, string &ext_table_name,
         std::unordered_map<string, Value> &named_parameters);
 
-    FromItem(const FromItem &other) = delete;
+    FromItem(const FromItem &other);
+
+    FromItem & operator=(const FromItem &other);
+
     FromItem(FromItem &&other) noexcept;
 
-    FromItem & operator=(const FromItem &other) = delete;
     FromItem & operator=(FromItem &&other) noexcept;
 
 
@@ -53,7 +55,7 @@ public:
 
     string getAlias() const;
 
-    void setAlias(string&);
+    void setAlias(const string&);
 
     string toString() const;
 
@@ -78,10 +80,10 @@ class From {
 public:
     From() = default;
 
-    From(const From &other) = delete;
     From(From &&other) noexcept;
+    From(const From &other);
 
-    From & operator=(const From &other) = delete;
+    From & operator=(const From &other);
     From & operator=(From &&other) noexcept;
 
     void addItem(FromItem &item);

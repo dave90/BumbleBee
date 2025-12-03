@@ -27,7 +27,8 @@ def create_expected():
 
             print(f"Processing {filename}...")
             f = open(input_path, 'r')
-            query = "COPY ("+f.read()+") TO '"+output_path+"'"
+            sql = f.read()
+            query = "COPY ("+str(sql)+") TO '"+output_path+"'"
 
             # Build the command
             command = [

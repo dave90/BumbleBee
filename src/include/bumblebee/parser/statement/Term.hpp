@@ -172,6 +172,7 @@ public:
 	static Operator getOperator(char sop);
 	static Term createRange(int from, int to);
 	static Term createArith(Term&& t1,Term&& t2, char op );
+	static Term createArith(Term &&t1, Term &&t2, Operator op);
 	static void setConstantNumericTerm(Term& term, long long value);
 	static void setConstantNumericTerm(Term& term, unsigned long long value);
 	static Term createSmallestConstantNumericTerm(unsigned long long value);

@@ -49,6 +49,16 @@ void Select::addItem(ValueExpr &item) {
     if (items_.size() > aggFunctions_.size()) aggFunctions_.push_back(NONE);
 }
 
+void Select::addItem(ValueExpr &item, AggregateFunctionType agg) {
+    items_.push_back(std::move(item));
+    aggFunctions_.push_back(agg);
+}
+
+void Select::addItem(const ValueExpr &item, AggregateFunctionType agg) {
+    items_.push_back(item);
+    aggFunctions_.push_back(agg);
+}
+
 void Select::addAggFunction(AggregateFunctionType agg) {
     aggFunctions_.push_back(agg);
 }
@@ -74,6 +84,11 @@ string Select::toString() const{
 
 void Select::clear() {
     items_.clear();
+}
+
+void Select::removeItem(idx_t i) {
+    items_.erase(items_.begin() + i);
+    aggFunctions_.erase(aggFunctions_.begin() + i);
 }
 
 value_expr_vector_t & Select::getItems() {

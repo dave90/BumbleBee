@@ -358,6 +358,10 @@ Term Term::createArith(Term &&t1, Term &&t2, char sop) {
     return Term(std::move(t1),std::move(t2) ,op);
 }
 
+Term Term::createArith(Term &&t1, Term &&t2, Operator op) {
+    return Term(std::move(t1),std::move(t2) ,op);
+}
+
 bool operator==(const Term &lhs, const Term &rhs) {
     if (lhs.type_ != rhs.type_) return false;
     // constant and variable checks

@@ -175,7 +175,10 @@ bool stringCastSwitch(Vector &source, Vector &result, idx_t count, string *error
 
 
 void VectorOperations::cast(Vector &source, Vector &result, idx_t count) {
-    tryCast(source, result, count, nullptr);
+    if (source.getType() != result.getType())
+        tryCast(source, result, count, nullptr);
+    else
+        copy(source, result, count, 0, 0);
 }
 
 bool VectorOperations::tryCast(Vector &source, Vector &result, idx_t count, string *errorMessage) {

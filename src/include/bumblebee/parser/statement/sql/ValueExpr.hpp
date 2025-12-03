@@ -56,6 +56,7 @@ public:
     ValueExpr() = default;
 
     ValueExpr(const ValueExpr &other);
+    ValueExpr(const QualifiedName &qualifier);
     ValueExpr(ValueExpr &&other) noexcept;
 
     ValueExpr & operator=(const ValueExpr &other);
@@ -65,6 +66,7 @@ public:
     void addOperator(Operator op);
 
     void setAlias(string& alias);
+    void setAlias(const string& alias);
 
     string toString(bool alias = true) const;
 

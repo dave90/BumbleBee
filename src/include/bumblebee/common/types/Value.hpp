@@ -63,6 +63,8 @@ public:
 
 	bool isDoubleQuotedString() const;
 
+	Value clone() const;
+
 	ConstantType getConstantType() const;
 	void setConstantType(ConstantType type);
 	std::string toString()const;

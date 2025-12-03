@@ -1,6 +1,0 @@
-%@sql
-COPY (SELECT TITLE, COUNT(*) AS PageViews
-FROM "./files/csv/mini_hits.csv"
-WHERE COUNTERID = 62 AND EVENTDATE >= "2013-07-01" AND EVENTDATE <= "2013-07-31" AND DONTCOUNTHITS = 0 AND ISREFRESH = 0 AND TITLE <> ""
-GROUP BY TITLE
-ORDER BY PageViews DESC LIMIT 10) TO "files/sql/actual/q37.sql.csv" (single_file=1)

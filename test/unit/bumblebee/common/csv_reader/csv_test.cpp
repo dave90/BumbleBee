@@ -66,7 +66,7 @@ TEST_F(CSVSCanTest, SimpleCSVScanTest) {
     options.header_ = true;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {STRING, INTEGER, STRING, STRING};
+    vector<ConstantType> expectedTypes = {STRING, BIGINT, STRING, STRING};
     EXPECT_EQ(reader.types_, expectedTypes);
     EXPECT_GE(reader.avgBytesInChunk_, 170);
     EXPECT_LE(reader.avgBytesInChunk_, 190);
@@ -102,7 +102,7 @@ TEST_F(CSVSCanTest, FloatCSVScanTest) {
     options.header_ = true;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {FLOAT ,STRING, INTEGER, STRING, STRING};
+    vector<ConstantType> expectedTypes = {DOUBLE ,STRING, BIGINT, STRING, STRING};
     EXPECT_EQ(reader.types_, expectedTypes);
     DataChunk chunk;
     chunk.initialize(reader.types_);
@@ -156,7 +156,7 @@ TEST_F(CSVSCanTest, MultiScanCSVTest) {
     };
     EXPECT_EQ(reader.colNames_, colNamesExpected);
     EXPECT_EQ(reader.types_.size(), 12);
-    EXPECT_EQ(reader.types_[0], INTEGER);
+    EXPECT_EQ(reader.types_[0], BIGINT);
     EXPECT_GT(reader.bytesInChunk_, 0);
     DataChunk chunk;
     chunk.initialize(reader.types_);
@@ -213,9 +213,9 @@ TEST_F(CSVSCanTest, MultiScanSkipRowsCSVTest) {
     options.skipRows_ = 5000;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {STRING, INTEGER, STRING, STRING};
+    vector<ConstantType> expectedTypes = {STRING, BIGINT, STRING, STRING};
     EXPECT_EQ(reader.types_.size(), 9);
-    EXPECT_EQ(reader.types_[0], INTEGER);
+    EXPECT_EQ(reader.types_[0], BIGINT);
     DataChunk chunk;
     chunk.initialize(reader.types_);
     idx_t lines = 0;

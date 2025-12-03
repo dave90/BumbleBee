@@ -35,6 +35,10 @@ public:
     Rule() = default;
     Rule(const Rule &other) = delete;
     Rule(Rule &&other) noexcept;
+    Rule(Atom& head, vector<Atom>& body);
+    Rule(const Atom& head, vector<Atom>& body);
+    Rule(Atom& head, Atom& body);
+    Rule(const Atom& head, Atom& body);
     ~Rule() = default;
 
     Rule & operator=(const Rule &other) = delete;

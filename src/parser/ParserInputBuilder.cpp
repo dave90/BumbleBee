@@ -654,6 +654,11 @@ void ParserInputBuilder::onSQLValue(char *value) {
 }
 
 void ParserInputBuilder::onSQLQualifiedName(char *name, char *table) {
+    if (strcmp(name, "*") == 0) {
+        Value v("*");
+        sqlValuePrimary_.emplace_back(v);
+        return;
+    }
     sql::QualifiedName qName{.name_ = name};
     if (table)
         qName.table_ = table;

@@ -1,12 +1,15 @@
 ## TODOLIST
 - Click Bench SQL
+- Refactor SqlToDatalog
+- Formula expression with parenthesis
 - parquet
+- Test: TPC-H, ClickBench https://github.com/electrum/tpch-dbgen
+- OR in rule
 
 ## Next
 - Hash build: reduce build tasks
 - CICD
-- - Default minimum integer (small int or int 32 bit not tiny as now)
-- Test: TPC-H, ClickBench https://github.com/electrum/tpch-dbgen
+- Default minimum integer (small int or int 32 bit not tiny as now)
 
 
 ## Next of Next
@@ -14,7 +17,6 @@
 
 - Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner with statistics better optimizer and rule ordering
-- Rules with OR body and compaction of the rules
 - functions
 - DATE / TIMESTAMP
 - Specific table types

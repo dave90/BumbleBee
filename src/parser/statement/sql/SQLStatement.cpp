@@ -33,6 +33,36 @@ SQLStatement::SQLStatement(SQLStatement &&other) noexcept: select_(std::move(oth
                                                            alias_(std::move(other.alias_))
 {}
 
+SQLStatement::SQLStatement(const SQLStatement &other): select_(other.select_),
+                                                       from_(other.from_),
+                                                       where_(other.where_),
+                                                       groupby_(other.groupby_),
+                                                       orderby_(other.orderby_),
+                                                       alias_(other.alias_),
+                                                       exportPath_(other.exportPath_),
+                                                       limit_(other.limit_) {
+    for (auto & [k,v] : other.exportNamedParameters_)
+        exportNamedParameters_[k] = v.clone();
+
+}
+
+SQLStatement & SQLStatement::operator=(const SQLStatement &other) {
+    if (this == &other)
+        return *this;
+    select_ = other.select_;
+    from_ = other.from_;
+    where_ = other.where_;
+    groupby_ = other.groupby_;
+    orderby_ = other.orderby_;
+    alias_ = other.alias_;
+    exportPath_ = other.exportPath_;
+    limit_ = other.limit_;
+    for (auto & [k,v] : other.exportNamedParameters_)
+        exportNamedParameters_[k] = v.clone();
+
+    return *this;
+}
+
 
 SQLStatement & SQLStatement::operator=(SQLStatement &&other) noexcept {
     if (this == &other)
@@ -96,13 +126,28 @@ idx_t SQLStatement::getNumAggregations() {
     return result;
 }
 
-void SQLStatement::setAlias(string &alias) {
-    alias_ = std::move(alias);
+void SQLStatement::setAlias(const string &alias) {
+    alias_ = alias;
 }
 
 string SQLStatement::getAlias() const {
     return alias_;
 }
+
+void SQLStatement::clearGroupBy() {
+    Groupby gb;
+    groupby_ = gb;
+}
+
+void SQLStatement::clearOrderBy() {
+    OrderBy ob;
+    orderby_ = ob;
+}
+
+void SQLStatement::clearWhere() {
+    where_.clear();
+}
+
 
 Select& SQLStatement::getSelect() {
     return select_;
@@ -140,9 +185,9 @@ string SQLStatement::toString() const{
     string result = "";
     result += select_.toString() + "\n";
     result += from_.toString() + "\n";
-    result += where_.toString();
-    result += groupby_.toString();
-    result += orderby_.toString(select_);
+    result += where_.toString() + "\n";
+    result += groupby_.toString()+ "\n";
+    result += orderby_.toString(select_)+ "\n";
 
     if (limit_ > 0)
         result += "\n LIMIT "+std::to_string(limit_) + "\n";

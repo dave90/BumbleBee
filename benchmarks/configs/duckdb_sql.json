@@ -12,6 +12,14 @@
       "commands": ["duckdb -c \"$(cat $file)\""]
     },
     {
+      "test": "Create TPCH",
+      "input_file": "tpch.sql",
+      "skip": true,
+      "timeout": 500,
+      "num_tries": 1,
+      "commands": ["duckdb -c \"$(cat $file)\""]
+    },
+    {
       "test": "Q00",
       "input_file": "q00.sql",
       "sql_export_csv": true,

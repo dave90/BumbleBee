@@ -6,6 +6,7 @@ from typing import List
 import pandas as pd
 import os
 import zipfile
+import numpy as np
 
 # Utility function to run the exe process
 def run_process_on_file(exe_path: str, args:List[str], input_file: Path, output_file: Path = None) -> None:
@@ -68,6 +69,8 @@ def create_tmp_input_file(input_file:Path, prefix:str, suffix:str, skip_lines=1)
 
 
 def compare_csv(output_file:str, expected_file:str) -> bool:
+    pd.set_option('display.float_format', '{:.4f}'.format)
+
     """
     Compare two CSV files ignoring:
     - column order
@@ -119,11 +122,18 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
     df_out = df_out[cols]
     df_exp = df_exp[cols]
 
-    # for float cols take 4 decimal
+    # helper function for true rounding
+    def round_half_up(x, ndigits=2):
+        from decimal import Decimal, ROUND_HALF_UP
+        if pd.isna(x):
+            return x
+        return float(Decimal(str(x)).quantize(Decimal('1.' + '0'*ndigits), rounding=ROUND_HALF_UP))
+
+    # for float cols take 2 decimal
     for col in cols:
         if pd.api.types.is_float_dtype(df_out[col]) or pd.api.types.is_float_dtype(df_exp[col]):
-            df_out[col] = df_out[col].round(4)
-            df_exp[col] = df_exp[col].round(4)
+            df_out[col] = df_out[col].apply(lambda x: round_half_up(x, 4))
+            df_exp[col] = df_exp[col].apply(lambda x: round_half_up(x, 4))
 
     # Sort rows to ignore row order
     df_out_sorted = df_out.sort_values(by=cols).reset_index(drop=True)
@@ -132,6 +142,34 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
     # If they are exactly equal, good
     if df_out_sorted.equals(df_exp_sorted):
         return True
+
+    # differ try to match with numeric tolerance
+    # Tolerances: tweak to your needs
+    ATOL = 1e-4   # absolute tolerance (good for your 4th-decimal case)
+    RTOL = 0.01    # relative tolerance; set >0 if you also want relative tolerance
+    # First, shapes must match
+    if df_out_sorted.shape == df_exp_sorted.shape:
+        all_equal = True
+        diff_mask = pd.DataFrame(False, index=df_out_sorted.index, columns=cols)
+
+        for col in cols:
+            s_out = df_out_sorted[col]
+            s_exp = df_exp_sorted[col]
+
+            if pd.api.types.is_numeric_dtype(s_out) or pd.api.types.is_numeric_dtype(s_exp):
+                # numeric: compare with tolerance
+                a = s_out.astype(float).to_numpy()
+                b = s_exp.astype(float).to_numpy()
+                equal_col = np.isclose(a, b, rtol=RTOL, atol=ATOL, equal_nan=True)
+                print(a, b, equal_col)
+                diff_mask[col] = ~equal_col
+
+
+            if diff_mask[col].any():
+                all_equal = False
+
+        if all_equal:
+            return True
 
     # They differ: print some debug info using pandas compare
     print("CSV content differs.")

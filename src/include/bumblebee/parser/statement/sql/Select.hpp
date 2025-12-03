@@ -37,8 +37,11 @@ public:
     Select & operator=(Select &&other) noexcept;
 
     void addItem(ValueExpr& item);
+    void addItem(ValueExpr& item, AggregateFunctionType agg);
+    void addItem(const ValueExpr& item, AggregateFunctionType agg);
     void addAggFunction(AggregateFunctionType agg);
     void clear();
+    void removeItem(idx_t i);
 
     value_expr_vector_t & getItems();
 

@@ -372,7 +372,7 @@ void Atom::calculateIsGround() {
     ground_ = true;
 }
 
-Atom Atom::clone() {
+Atom Atom::clone() const {
     terms_vector_t terms;
     for (auto& term : terms_)
         terms.emplace_back(term);

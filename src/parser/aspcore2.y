@@ -1094,12 +1094,7 @@ value_primary
     ;
 
 aggregate_arg
-    : STRING
-    {
-        director.getBuilder()->onSQLValue($1);
-        delete[] $1;
-    }
-    | qualified_name
+    : value_expr
     | TIMES        /* for * */
     {
         char c[] = "*";

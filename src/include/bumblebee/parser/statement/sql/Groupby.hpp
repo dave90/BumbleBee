@@ -26,10 +26,10 @@ class Groupby {
 
 public:
     Groupby() = default;
-    Groupby(const Groupby &other) = delete;
     Groupby(Groupby &&other) noexcept;
+    Groupby(const Groupby &other);
 
-    Groupby & operator=(const Groupby &other) = delete;
+    Groupby & operator=(const Groupby &other);
     Groupby & operator=(Groupby &&other) noexcept;
 
     bool isEmpty();

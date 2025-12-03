@@ -1,0 +1,3 @@
+l_shipmode,c
+MAIL,213766
+SHIP,1452375000

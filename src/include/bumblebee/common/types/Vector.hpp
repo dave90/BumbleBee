@@ -90,6 +90,8 @@ public:
 	void slice(const SelectionVector &sel, idx_t count);
 	// Slice and avoid to recalculate the slice of dictionary if sel is present in the cache
 	void slice(const SelectionVector &sel, idx_t count, SelCache& cache);
+	// swap with another vector
+	void swap(Vector &other);
 
 	// Create empty vector
 	void initialize(bool zero_data, idx_t capacity);

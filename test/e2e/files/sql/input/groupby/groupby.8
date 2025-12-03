@@ -1,0 +1,8 @@
+%@sql
+SELECT
+    SUM(L_QUANTITY) AS sum_qty,
+    SUM(L_EXTENDEDPRICE) AS sum_base_price
+FROM
+    "./files/csv/tpch/lineitem.csv"
+
+

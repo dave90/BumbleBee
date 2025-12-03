@@ -110,27 +110,40 @@ Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &
             resultType = BIGINT;
     }
 
-    Vector v3(resultType);
-    // make first operation
-    executeOperator(vectors[0], vectors[1], v3, count, op.operators_[0]);
-    if (op.operators_.size() == 1)
-        return v3;
-
-    // Multiple operators to execute, create a temp vector
-    // to be swaped with the result
-    Vector temp(resultType);
-    Vector * resultPtr = &v3;
-    Vector * tempPtr = &temp;
     BB_ASSERT(op.operators_.size() + 1 == vectors.size());
-    for (idx_t i=1;i<op.operators_.size();++i) {
-        // swap the tmp and result pointer
-        std::swap(resultPtr, tempPtr);
-        executeOperator(*tempPtr, vectors[i+1], *resultPtr, count, op.operators_[i]);
+    Vector resultVec(resultType, true, true );
+    if (op.operators_.size() == 1) {
+        executeOperator(vectors[0], vectors[1], resultVec, count, op.operators_[0]);
+        return resultVec;
     }
 
-    // reference to the result vector
-    Vector result(*resultPtr);
-    return result;
+    Vector lastTermVec(resultType);
+    VectorOperations::cast(vectors[0], lastTermVec, count);
+
+    Vector temp(resultType);
+    for (idx_t i=0;i<op.operators_.size();++i) {
+        auto& nextVec = vectors[i+1];
+        if ( op.operators_[i] == Operator::PLUS || op.operators_[i] == Operator::MINUS ) {
+            // lower priority operators
+            executeOperator(resultVec, lastTermVec, temp, count, Operator::PLUS);
+            resultVec.swap(temp);
+
+            VectorOperations::cast(nextVec, lastTermVec, count);
+            if (op.operators_[i] == Operator::MINUS)  {
+                // multiply -1
+                Vector v((int8_t)-1);
+                executeOperator(lastTermVec, v, temp, count, Operator::TIMES);
+                lastTermVec.swap(temp);
+            }
+        }else {
+            executeOperator(lastTermVec, nextVec, temp, count, op.operators_[i]);
+            lastTermVec.swap(temp);
+        }
+    }
+    executeOperator(resultVec, lastTermVec, temp, count, Operator::PLUS);
+    resultVec.swap(temp);
+
+    return resultVec;
 }
 
 idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel, idx_t count) const{

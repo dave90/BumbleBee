@@ -33,12 +33,40 @@ FromItem::FromItem(vector<Value> &input_values, string &ext_table_name,
                                                                 namedParameters_(std::move(named_parameters)), type_(EXTERNAL) {
 }
 
+FromItem::FromItem(const FromItem &other): tableName_(other.tableName_),
+                                           extTableName_(other.extTableName_),
+                                           alias_(other.alias_),
+                                           type_(other.type_) {
+    if (other.statement_)
+        statement_ = std::make_unique<SQLStatement>(*other.statement_);
+    for (auto& v:other.inputValues_)
+        inputValues_.push_back(v.clone());
+    for (auto & [k,v] : other.namedParameters_)
+        namedParameters_[k] = v.clone();
+}
+
+FromItem & FromItem::operator=(const FromItem &other) {
+    if (this == &other)
+        return *this;
+    if (other.statement_)
+        statement_ = std::make_unique<SQLStatement>(*other.statement_);
+    tableName_ = other.tableName_;
+    extTableName_ = other.extTableName_;
+    alias_ = other.alias_;
+    type_ = other.type_;
+    for (auto& v:other.inputValues_)
+        inputValues_.push_back(v.clone());
+    for (auto & [k,v] : other.namedParameters_)
+        namedParameters_[k] = v.clone();
+    return *this;
+}
+
 FromItem::FromItem(FromItem &&other) noexcept: statement_(std::move(other.statement_)),
                                                tableName_(std::move(other.tableName_)),
                                                alias_(std::move(other.alias_)), type_(other.type_),
-                                            extTableName_(std::move(other.extTableName_)),
-                                            inputValues_(std::move(other.inputValues_)),
-                                            namedParameters_(std::move(other.namedParameters_)){
+                                               extTableName_(std::move(other.extTableName_)),
+                                               inputValues_(std::move(other.inputValues_)),
+                                               namedParameters_(std::move(other.namedParameters_)){
 }
 
 FromItem &FromItem::operator=(FromItem &&other) noexcept {
@@ -107,10 +135,10 @@ FromItemType FromItem::getType() const {
     return type_;
 }
 
-void FromItem::setAlias(string& alias) {
+
+void FromItem::setAlias(const string& alias) {
     alias_ = alias;
 }
-
 
 string FromItem::getAlias() const {
     return alias_;
@@ -119,6 +147,18 @@ string FromItem::getAlias() const {
 
 From::From(From &&other) noexcept: items_(std::move(other.items_)),
                                    subQueries_(std::move(other.subQueries_)) {
+}
+
+From::From(const From &other): items_(other.items_),
+                               subQueries_(other.subQueries_) {
+}
+
+From & From::operator=(const From &other) {
+    if (this == &other)
+        return *this;
+    items_ = other.items_;
+    subQueries_ = other.subQueries_;
+    return *this;
 }
 
 

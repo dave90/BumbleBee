@@ -68,7 +68,7 @@ public:
     void getAggSharedVariables(const set_term_variable_t& globalVariables,set_term_variable_t& sharedVariables);
     bool isGround();
     std::string toString() const;
-    Atom clone();
+    Atom clone() const;
 
 
     friend bool operator==(const Atom &lhs, const Atom &rhs);

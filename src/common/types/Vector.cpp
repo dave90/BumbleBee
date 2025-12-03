@@ -144,6 +144,12 @@ void Vector::slice(const SelectionVector &sel, idx_t count, SelCache &cache) {
     }
 }
 
+void Vector::swap(Vector &other) {
+    Vector tmp(other);
+    other.reference(*this);
+    reference(tmp);
+}
+
 void Vector::initialize(bool zeroData, idx_t capacity) {
     auxDataMngr_.reset();
     dataMngr_ = VectorDataMngr::createStandardVector(ctype_, capacity);

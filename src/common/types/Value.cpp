@@ -152,6 +152,10 @@ bool Value::isDoubleQuotedString() const {
      && stringValue_[0] == '"' && stringValue_[stringValue_.length() - 1] == '"';
 }
 
+Value Value::clone() const {
+    return cast(getConstantType());
+}
+
 ConstantType Value::getConstantType() const{
     return ctype_;
 }

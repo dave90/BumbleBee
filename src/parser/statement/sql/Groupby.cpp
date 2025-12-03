@@ -26,6 +26,16 @@ namespace sql{
 Groupby::Groupby(Groupby &&other) noexcept: items_(std::move(other.items_)) {
 }
 
+Groupby::Groupby(const Groupby &other): items_(other.items_) {
+}
+
+Groupby & Groupby::operator=(const Groupby &other) {
+    if (this == &other)
+        return *this;
+    items_ = other.items_;
+    return *this;
+}
+
 Groupby & Groupby::operator=(Groupby &&other) noexcept {
     if (this == &other)
         return *this;

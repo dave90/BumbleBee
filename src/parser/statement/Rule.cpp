@@ -25,6 +25,26 @@ Rule::Rule(Rule &&other) noexcept: body_(std::move(other.body_)),
                                    modifiers_(std::move(other.modifiers_)){
 }
 
+Rule::Rule(Atom &head, vector<Atom> &body) {
+    body_ = std::move(body);
+    head_.push_back(std::move(head));
+}
+
+Rule::Rule(Atom &head, Atom &body) {
+    head_.push_back(std::move(head));
+    body_.push_back(std::move(body));
+}
+
+Rule::Rule(const Atom &head, vector<Atom> &body) {
+    head_.push_back(head.clone());
+    body_ = std::move(body);
+}
+
+Rule::Rule(const Atom &head, Atom &body) {
+    head_.push_back(head.clone());
+    body_.push_back(std::move(body));
+}
+
 Rule & Rule::operator=(Rule &&other) noexcept {
     if (this == &other)
         return *this;

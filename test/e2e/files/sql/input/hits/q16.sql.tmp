@@ -1,5 +1,0 @@
-%@sql
-COPY (SELECT USERID, SEARCHPHRASE, COUNT(*) AS c
-FROM "./files/csv/mini_hits.csv"
-GROUP BY USERID, SEARCHPHRASE
-ORDER BY c DESC LIMIT 10) TO "files/sql/actual/q16.sql.csv" (single_file=1)

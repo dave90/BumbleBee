@@ -121,6 +121,8 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
     auto state = pe.getState();
 
     auto input = createChunkWithValue(count, 0);
+    std::cout << input.toString() <<std::endl;
+
     DataChunk output;
     output.initializeEmpty(testTypes);
 
@@ -132,8 +134,94 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
         auto v2 = input.getValue(2, i).getNumericValue<int64_t>();
         auto v3 = input.getValue(3, i).getNumericValue<uint16_t>();
         auto v4 = input.getValue(4, i).getNumericValue<int16_t>();
-        auto result = ((v1 -v2) + v3 ) * v4  / v2;
+        auto result = v1 - v2 + v3  * v4  / v2;
+
         EXPECT_EQ(output.getValue(0, i).getNumericValue<int64_t>(), result);
     }
 }
-// test multiple operators
+
+TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpPrecedence1) {
+    // v1 + v2 * v3 - v4  (should be v1 + (v2 * v3) - v4)
+    idx_t count = 100;
+    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 4}, {PLUS, TIMES, MINUS});
+
+    PhysicalExpression pe(expr, testTypes);
+    auto gstate = pe.getGlobalState();
+    auto state = pe.getState();
+
+    // use offset 1 to avoid all-zero row; not strictly needed here but consistent
+    auto input = createChunkWithValue(count, 1);
+    DataChunk output;
+    output.initializeEmpty(testTypes);
+
+    pe.execute(context, input, output, *state);
+    EXPECT_EQ(output.getSize(), input.getSize());
+
+    for (idx_t i = 0; i < count; ++i) {
+        auto v1 = input.getValue(1, i).getNumericValue<uint32_t>();
+        auto v2 = input.getValue(2, i).getNumericValue<int64_t>();
+        auto v3 = input.getValue(3, i).getNumericValue<uint16_t>();
+        auto v4 = input.getValue(4, i).getNumericValue<int16_t>();
+
+        auto result = v1 + v2 * v3 - v4; // precedence: v2 * v3 first
+        EXPECT_EQ(output.getValue(0, i).getNumericValue<int64_t>(), result);
+    }
+}
+
+TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpPrecedence2) {
+    // v1 * v2 + v3 / v4 - v2  (should be (v1 * v2) + (v3 / v4) - v2)
+    idx_t count = 100;
+    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 4, 2},
+                                         {TIMES, PLUS, DIV, MINUS});
+
+    PhysicalExpression pe(expr, testTypes);
+    auto gstate = pe.getGlobalState();
+    auto state = pe.getState();
+
+    // offset 1 to avoid division by zero on v4
+    auto input = createChunkWithValue(count, 1);
+    DataChunk output;
+    output.initializeEmpty(testTypes);
+
+    pe.execute(context, input, output, *state);
+    EXPECT_EQ(output.getSize(), input.getSize());
+
+    for (idx_t i = 0; i < count; ++i) {
+        auto v1 = input.getValue(1, i).getNumericValue<uint32_t>();
+        auto v2 = input.getValue(2, i).getNumericValue<int64_t>();
+        auto v3 = input.getValue(3, i).getNumericValue<uint16_t>();
+        auto v4 = input.getValue(4, i).getNumericValue<int16_t>();
+
+        auto result = v1 * v2 + v3 / v4 - v2; // * and / before + and -
+        EXPECT_EQ(output.getValue(0, i).getNumericValue<int64_t>(), result);
+    }
+}
+
+TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpPrecedence3) {
+    // v1 - v2 * v3 + v1 / v4  (should be v1 - (v2 * v3) + (v1 / v4))
+    idx_t count = 100;
+    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 1, 4},
+                                         {MINUS, TIMES, PLUS, DIV});
+
+    PhysicalExpression pe(expr, testTypes);
+    auto gstate = pe.getGlobalState();
+    auto state = pe.getState();
+
+    // offset 1 to avoid division by zero on v4 and v1
+    auto input = createChunkWithValue(count, 1);
+    DataChunk output;
+    output.initializeEmpty(testTypes);
+
+    pe.execute(context, input, output, *state);
+    EXPECT_EQ(output.getSize(), input.getSize());
+
+    for (idx_t i = 0; i < count; ++i) {
+        auto v1 = input.getValue(1, i).getNumericValue<uint32_t>();
+        auto v2 = input.getValue(2, i).getNumericValue<int64_t>();
+        auto v3 = input.getValue(3, i).getNumericValue<uint16_t>();
+        auto v4 = input.getValue(4, i).getNumericValue<int16_t>();
+
+        auto result = v1 - v2 * v3 + v1 / v4; // v2 * v3, v1 / v4 first
+        EXPECT_EQ(output.getValue(0, i).getNumericValue<int64_t>(), result);
+    }
+}
