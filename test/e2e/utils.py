@@ -161,7 +161,6 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
                 a = s_out.astype(float).to_numpy()
                 b = s_exp.astype(float).to_numpy()
                 equal_col = np.isclose(a, b, rtol=RTOL, atol=ATOL, equal_nan=True)
-                print(a, b, equal_col)
                 diff_mask[col] = ~equal_col
 
 

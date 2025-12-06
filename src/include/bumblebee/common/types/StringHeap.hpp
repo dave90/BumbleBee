@@ -63,7 +63,7 @@ private:
         // previous chunk
         std::unique_ptr<StringChunk> prev_;
     };
-    std::unique_ptr<StringChunk> chunk_{nullptr};
+    std::unique_ptr<StringChunk> chunk_;
 };
 
 

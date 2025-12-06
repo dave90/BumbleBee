@@ -1,9 +1,6 @@
 ## TODOLIST
-- Click Bench SQL
-- Refactor SqlToDatalog
-- Formula expression with parenthesis
+- block parenthesis in sql ad datalog
 - parquet
-- Test: TPC-H, ClickBench https://github.com/electrum/tpch-dbgen
 - OR in rule
 
 ## Next
@@ -15,7 +12,6 @@
 ## Next of Next
  
 
-- Statistics / Predicate Tables data structures (hash , intermediate results)
 - Planner with statistics better optimizer and rule ordering
 - functions
 - DATE / TIMESTAMP

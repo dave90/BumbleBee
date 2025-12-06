@@ -385,7 +385,7 @@ rules_vector_t generateRulesFromConditions( Atom& head, vector<Atom>& body, vect
 
 
 void generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars,
-        SQLQuery& query, sql::SQLStatement& statement, Rule& rule,
+        SQLQuery& query, sql::SQLStatement& statement, Rule& rule, string& headPredicateName,
         rules_vector_t& aggRules, rules_vector_t& additionalRules,  string& errorMessage) {
 
     auto& select = statement.getSelect();
@@ -471,8 +471,7 @@ void generateAggRules(const std::unordered_set<string>& groupVars, const std::un
     }
 
 
-    string alias = query.generatePredicateName();
-    auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, alias.c_str(), headTerms.size());
+    auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, headPredicateName.c_str(), headTerms.size());
     Atom head = Atom::createClassicalAtom(newPred, std::move(headTerms));
     Rule newRule(head, body);
     aggRules.push_back(std::move(newRule));
@@ -657,8 +656,9 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
         vector<Rule> aggregatedRules;
         vector<Rule> additionalRules;
         // generate the aggregated rules
+        string headPredName = query_.generatePredicateName();
         for (auto& rule: rules)
-            generateAggRules(groupVars, aggVars, query_, statement, rule, aggregatedRules, additionalRules, result_.errorMessage_);
+            generateAggRules(groupVars, aggVars, query_, statement, rule, headPredName, aggregatedRules, additionalRules, result_.errorMessage_);
         // call the order generator only on aggregates rules
         if (!statement.getOrderby().empty())
             generateOrderRule(statement, query_, aggregatedRules, result_.errorMessage_);

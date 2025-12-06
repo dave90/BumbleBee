@@ -755,9 +755,12 @@ aggregate_function
 
 
 
+
+
 /* ===========================================================================
    SQL  DIALECT
    =========================================================================== */
+
 
 sql
     : sql_query
@@ -938,12 +941,14 @@ search_condition
     {
         director.getBuilder()->onSQLPredicate();
     }
-    | search_condition SQL_AND search_condition
+    | search_condition SQL_AND predicate
     {
+        director.getBuilder()->onSQLPredicate();
         director.getBuilder()->onSQLOperatorCondition("AND");
     }
-    | search_condition SQL_OR  search_condition
+    | search_condition SQL_OR  predicate
     {
+        director.getBuilder()->onSQLPredicate();
         director.getBuilder()->onSQLOperatorCondition("OR");
     }
     ;

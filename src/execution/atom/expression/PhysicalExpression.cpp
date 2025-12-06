@@ -46,6 +46,7 @@ string PhysicalExpression::toString() const {
 AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
     context.profiler_.startPhysicalAtom(this);
     if (input.getSize() == 0) {
+        chunk.setCardinality(0);
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }

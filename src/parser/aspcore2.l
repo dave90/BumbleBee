@@ -61,7 +61,7 @@ DIRECTIVE_VALUE     .*
 SYMBOLIC_CONSTANT   ([a-z][A-Za-z_0-9]*)
 VARIABLE            ([A-Z][A-Za-z_0-9]*)
 STRING              (\"[^\"]*\")
-NUMBER              ([0-9]+)
+NUMBER              ([0-9]+(\.[0-9]+)?)
 
 %x ANNOTATION
 

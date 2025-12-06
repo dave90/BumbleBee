@@ -19,6 +19,7 @@
 #pragma once
 
 #include "Expression.hpp"
+#include "bumblebee/common/Mutex.hpp"
 #include "bumblebee/common/types/DataChunk.hpp"
 #include "bumblebee/parser/statement/Predicate.hpp"
 
@@ -166,6 +167,8 @@ private:
     JoinHashTableStats stats_;
     // If is ready to use
     bool ready_{false};
+    // mutex for string vectors
+    vector<mutex> mutex_;
 
 public:
 

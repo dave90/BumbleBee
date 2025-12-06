@@ -61,6 +61,34 @@
       "sql_export_csv": true,
       "timeout": 600,
       "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "TPCH Q01",
+      "input_file": "tpch_q01.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "TPCH Q03",
+      "input_file": "tpch_q03.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "TPCH Q05",
+      "input_file": "tpch_q05.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
+    },
+    {
+      "test": "TPCH Q10",
+      "input_file": "tpch_q10.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -i $file"]
     }
   ]
 }

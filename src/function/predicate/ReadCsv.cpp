@@ -127,7 +127,7 @@ idx_t ReadCSVData::getMaxThread() {
 		}
 
 		filesToProcess_.emplace_back(0,start,end);
-		start = end + 2;
+		start = end + 1;
 	}
 	return tasks;
 }

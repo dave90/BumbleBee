@@ -1,6 +1,6 @@
 INSTALL tpch;
 LOAD tpch;
-CALL dbgen(sf=0.10);
+CALL dbgen(sf=1);
 
 COPY customer  TO 'downloads/tpch/customer.csv'  (FORMAT CSV, HEADER TRUE);
 COPY orders    TO 'downloads/tpch/orders.csv'    (FORMAT CSV, HEADER TRUE);

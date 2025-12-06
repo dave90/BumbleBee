@@ -1,24 +1,24 @@
 %@sql
-COPY (SELECT
+SELECT
     C_CUSTKEY AS c_custkey,
     C_NAME AS c_name,
-    SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue,
+    SUM(L_EXTENDEDPRICE - L_EXTENDEDPRICE * L_DISCOUNT) AS revenue,
     C_ACCTBAL AS c_acctbal,
     N_NAME AS n_name,
     C_ADDRESS AS c_address,
     C_PHONE AS c_phone,
     C_COMMENT AS c_comment
 FROM
-    "./files/csv/tpch/customer.csv",
-    "./files/csv/tpch/orders.csv",
-    "./files/csv/tpch/lineitem.csv",
-    "./files/csv/tpch/nation.csv"
+    "downloads/tpch/customer.csv",
+    "downloads/tpch/orders.csv",
+    "downloads/tpch/lineitem.csv",
+    "downloads/tpch/nation.csv"
 WHERE
     C_CUSTKEY = O_CUSTKEY
   AND L_ORDERKEY = O_ORDERKEY
-  AND O_ORDERDATE >= '1993-10-01'
-  AND O_ORDERDATE < '1994-01-01'
-  AND L_RETURNFLAG = 'R'
+  AND O_ORDERDATE >= "1993-10-01"
+  AND O_ORDERDATE < "1994-01-01"
+  AND L_RETURNFLAG = "R"
   AND C_NATIONKEY = N_NATIONKEY
 GROUP BY
     C_CUSTKEY,
@@ -31,4 +31,3 @@ GROUP BY
 ORDER BY
     revenue DESC
 LIMIT 20
-) TO "files/sql/actual/tpch_q10.sql.csv" (single_file=1)

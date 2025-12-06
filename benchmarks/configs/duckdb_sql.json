@@ -14,7 +14,7 @@
     {
       "test": "Create TPCH",
       "input_file": "tpch.sql",
-      "skip": true,
+      "skip": false,
       "timeout": 500,
       "num_tries": 1,
       "commands": ["duckdb -c \"$(cat $file)\""]
@@ -71,6 +71,34 @@
     {
       "test": "Q30",
       "input_file": "q30.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "TPCH Q01",
+      "input_file": "tpch_q01.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "TPCH Q03",
+      "input_file": "tpch_q03.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "TPCH Q05",
+      "input_file": "tpch_q05.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    }
+  ,
+    {
+      "test": "TPCH Q10",
+      "input_file": "tpch_q10.sql",
       "sql_export_csv": true,
       "commands": ["duckdb -c \" $(cat $file)\""]
     }

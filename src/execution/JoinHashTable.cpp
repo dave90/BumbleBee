@@ -360,7 +360,7 @@ JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, 
 }
 
 JoinHashTable::JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, idx_t buckets): predicate_(predicate),
-    keys_(keys), buckets_(nextPowerOfTwo(buckets)), stats_(nextPowerOfTwo(buckets)) {
+    keys_(keys), buckets_(nextPowerOfTwo(buckets)), stats_(nextPowerOfTwo(buckets)), mutex_(predicate->getArity()) {
     // check that buckets is power of 2
     BB_ASSERT(buckets_ != 0 && (buckets_ & (buckets_ - 1)) == 0);
     int bits = 64 - BLOOM_SIZE;
@@ -453,6 +453,10 @@ void JoinHashTable::build(idx_t bucket) {
         for (idx_t j = 0; j< dc.columnCount(); j++) {
             auto& sourceVector = dc.data_[j];
             auto& targetVector = chunkone_.data_[j];
+            // for string vectors we need to lock as we need to add in the string heap
+            std::unique_lock<std::mutex> lock;
+            if (targetVector.getType() == STRING)
+                lock = std::unique_lock<std::mutex>(mutex_[j]);
             if (sourceVector.getVectorType() != VectorType::CONSTANT_VECTOR)
                 VectorOperations::copy(sourceVector,targetVector,sel,size, 0, bucketOffset);
             else

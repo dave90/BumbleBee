@@ -123,7 +123,7 @@ bool GlobalPhysicalAtomState::getNextBucket(idx_t &start, idx_t &end, idx_t &cur
     start = current;
     end = start;
     while (end < size.size() - 1) {
-        if (s + size[end+1]> MORSEL_SIZE) break;
+        if (s + size[end+1] > MORSEL_SIZE) break;
         ++end;
         s += size[end];
     }

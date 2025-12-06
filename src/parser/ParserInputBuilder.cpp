@@ -525,6 +525,15 @@ void ParserInputBuilder::newTerm(char * value) {
         terms_parsered.push_back(std::move(term));
         return;
     }
+
+    if (strchr(value, '.') != nullptr) {
+        // contains dot is a decimal
+        double num = strtod(value, nullptr);
+        Term term(num);
+        terms_parsered.push_back(std::move(term));
+        return;
+    }
+
     // Numeric constant
     long long num = atoll(value);
     if (num >= 0) {
@@ -636,6 +645,13 @@ void ParserInputBuilder::onSQLValue(char *value) {
             // remove the quote
             s = s.substr(1, s.size() - 2);
         Value v(std::move(s));
+        sqlValuePrimary_.emplace_back(v);
+        return;
+    }
+    if (strchr(value, '.') != nullptr) {
+        // contains dot is a decimal
+        double num = strtod(value, nullptr);
+        Value v(num);
         sqlValuePrimary_.emplace_back(v);
         return;
     }

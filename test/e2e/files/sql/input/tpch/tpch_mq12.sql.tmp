@@ -7,14 +7,15 @@ FROM
     "./files/csv/tpch/lineitem.csv"
 WHERE
     O_ORDERKEY = L_ORDERKEY
-  AND L_SHIPMODE = 'MAIL'
-   OR L_SHIPMODE = 'SHIP'
+  AND L_SHIPMODE = "MAIL"
+   OR L_SHIPMODE = "SHIP"
+  AND O_ORDERKEY = L_ORDERKEY
   AND L_COMMITDATE < L_RECEIPTDATE
   AND L_SHIPDATE < L_COMMITDATE
-  AND L_RECEIPTDATE >= '1994-01-01'
-  AND L_RECEIPTDATE < '1995-01-01'
+  AND L_RECEIPTDATE >= "1994-01-01"
+  AND L_RECEIPTDATE < "1995-01-01"
 GROUP BY
     L_SHIPMODE
 ORDER BY
-    L_SHIPMODE
-) TO "files/sql/actual/tpch_mq12.sql.csv" (single_file=1)
+    l_shipmode
+LIMIT 10) TO "files/sql/actual/tpch_mq12.sql.csv" (single_file=1)

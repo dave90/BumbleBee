@@ -38,7 +38,9 @@ string_t StringHeap::addEmptyString(idx_t len) {
         // create a new chunk
         // NOTE: Max string len supported is MINIMUM_HEAP_SIZE
         auto newChunk = std::make_unique<StringChunk>(MINIMUM_HEAP_SIZE);
-        newChunk->prev_ = std::move(chunk_);
+        if (chunk_)
+            newChunk->prev_ = std::move(chunk_);
+
         chunk_ = std::move(newChunk);
     }
     // create a new string

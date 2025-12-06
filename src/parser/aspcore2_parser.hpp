@@ -632,7 +632,7 @@ static const yytype_int16 yyrhs[] =
        3,    -1,     5,    -1,    -1,    52,   153,    -1,     3,    -1,
        5,    -1,    65,    -1,    64,    -1,    63,    -1,    62,    -1,
       61,    -1,    -1,    49,   155,    -1,   156,    -1,   155,    53,
-     155,    -1,   155,    54,   155,    -1,   157,   100,   166,    -1,
+     156,    -1,   155,    54,   156,    -1,   157,   100,   166,    -1,
      166,    -1,    -1,    50,    51,   159,    -1,   166,    -1,   159,
       40,   166,    -1,    -1,    57,    51,   161,    -1,   162,    -1,
      161,    40,   162,    -1,   163,   164,    -1,   170,    -1,    61,
@@ -665,15 +665,15 @@ static const yytype_uint16 yyrline[] =
      614,   621,   628,   629,   633,   640,   644,   645,   649,   656,
      660,   667,   674,   675,   679,   680,   681,   682,   683,   687,
      691,   698,   702,   709,   710,   714,   715,   720,   727,   732,
-     737,   742,   747,   763,   764,   771,   775,   783,   787,   794,
-     803,   812,   816,   817,   821,   830,   839,   840,   844,   848,
-     852,   859,   864,   871,   876,   884,   886,   890,   895,   900,
-     905,   910,   915,   920,   928,   930,   937,   941,   945,   953,
-     960,   967,   969,   973,   977,   984,   986,   990,   991,   995,
-    1002,  1003,  1008,  1013,  1018,  1023,  1031,  1034,  1039,  1046,
-    1048,  1056,  1057,  1061,  1065,  1069,  1076,  1081,  1086,  1091,
-    1092,  1093,  1097,  1098,  1106,  1111,  1116,  1122,  1128,  1134,
-    1145,  1150,  1155,  1160,  1165
+     737,   742,   747,   766,   767,   774,   778,   786,   790,   797,
+     806,   815,   819,   820,   824,   833,   842,   843,   847,   851,
+     855,   862,   867,   874,   879,   887,   889,   893,   898,   903,
+     908,   913,   918,   923,   931,   933,   940,   944,   949,   958,
+     965,   972,   974,   978,   982,   989,   991,   995,   996,  1000,
+    1007,  1008,  1013,  1018,  1023,  1028,  1036,  1039,  1044,  1051,
+    1053,  1061,  1062,  1066,  1070,  1074,  1081,  1086,  1091,  1096,
+    1097,  1098,  1102,  1103,  1111,  1116,  1121,  1127,  1133,  1139,
+    1150,  1155,  1160,  1165,  1170
 };
 #endif
 
@@ -899,7 +899,7 @@ static const yytype_int16 yypact[] =
      380,  -282,   386,  -282,   154,   422,  -282,  -282,   160,  -282,
      428,  -282,   428,  -282,   358,   428,  -282,   233,   233,   233,
      233,   402,   403,  -282,   428,  -282,   163,   167,  -282,    24,
-    -282,   412,    46,   431,    46,   147,   469,  -282,   154,  -282,
+    -282,  -282,    46,   425,    46,   147,   467,  -282,   154,  -282,
     -282,   428,   233,  -282,  -282,  -282,  -282,  -282,   432,  -282,
      165,  -282,  -282,   177,    46,   147,  -282,  -282,  -282,  -282,
     -282
@@ -909,14 +909,14 @@ static const yytype_int16 yypact[] =
 static const yytype_int16 yypgoto[] =
 {
     -282,  -282,  -282,  -282,   456,  -282,  -282,    -5,  -282,  -282,
-    -282,  -282,  -282,  -282,   234,   382,   335,  -282,  -282,  -282,
-    -141,   360,   389,     2,    23,     3,  -207,  -248,   181,  -109,
+    -282,  -282,  -282,  -282,   230,   381,   334,  -282,  -282,  -282,
+    -141,   360,   384,     2,    23,     3,  -207,  -248,   181,  -109,
     -282,  -282,   -10,   -30,  -282,  -282,  -282,   372,     0,  -282,
-     377,   242,  -282,  -282,  -282,   348,  -282,  -282,  -282,  -282,
+     377,   237,  -282,  -282,  -282,   348,  -282,  -282,  -282,  -282,
       15,  -282,  -282,  -282,  -282,  -282,  -282,  -282,  -282,  -282,
-    -282,   427,   453,  -282,   447,     7,   -18,   218,  -282,   269,
-    -282,   250,   368,  -282,  -282,  -282,  -282,  -282,  -282,   288,
-    -282,  -282,   209,  -282,  -282,  -257,  -282,  -282,   -29,  -282,
+    -282,   427,   453,  -282,   447,     7,   -18,   218,  -282,   240,
+    -282,   249,   367,  -282,  -282,  -282,  -282,  -282,  -282,   286,
+    -282,  -282,   209,  -282,  -282,  -257,  -282,  -282,  -282,   -29,
     -282,  -282,  -282,  -282,  -282,   148,  -282,  -282,  -282,   -85,
      109,  -282,  -282,  -281,  -282
 };
@@ -974,16 +974,16 @@ static const yytype_int16 yytable[] =
       14,     2,     3,     4,     5,   224,   332,   341,   334,     8,
        9,   183,    10,     8,     9,   335,    10,   194,   195,   196,
      197,   340,    66,   355,     8,     9,    66,    10,   194,   195,
-     196,   197,   344,   356,   -57,   337,   -57,    66,   -57,   -57,
-     198,   362,   375,   372,    91,   115,   199,   293,   178,   214,
-     -57,   198,   189,   200,   176,   327,   182,   180,   -57,   296,
+     196,   197,   344,   356,   -57,   362,   -57,    66,   -57,   -57,
+     198,   372,   375,   293,    91,   115,   199,   178,   214,   176,
+     -57,   198,   189,   200,   296,   327,   182,   180,   -57,   298,
      212,   136,   120,   -57,   200,    98,    99,   100,   101,   102,
      103,   -83,   -83,   -83,   -83,   -83,   -83,  -124,  -124,  -124,
-    -124,  -124,  -128,  -128,  -128,  -128,  -128,   137,   298,   310,
-     228,   336,   277,   380
+    -124,  -124,  -128,  -128,  -128,  -128,  -128,   137,   310,   228,
+     277,   336,     0,   380
 };
 
-static const yytype_uint16 yycheck[] =
+static const yytype_int16 yycheck[] =
 {
        0,    31,     0,     0,    89,   146,   115,     7,    13,     9,
       10,   259,    12,    13,     8,     0,   273,   274,    18,   226,
@@ -1031,13 +1031,13 @@ static const yytype_uint16 yycheck[] =
       44,     3,     4,     5,     6,    18,    27,    57,    28,    26,
       27,    28,    29,    26,    27,    27,    29,     3,     4,     5,
        6,    51,    39,    51,    26,    27,    39,    29,     3,     4,
-       5,     6,    40,    60,    16,    53,    18,    39,    20,    21,
-      26,    40,    40,     4,    18,    27,    32,   243,    96,   144,
-      32,    26,   122,    39,    95,   304,   114,   110,    40,   247,
+       5,     6,    40,    60,    16,    40,    18,    39,    20,    21,
+      26,     4,    40,   243,    18,    27,    32,    96,   144,    95,
+      32,    26,   122,    39,   247,   304,   114,   110,    40,   249,
      142,    64,    45,    45,    39,    33,    34,    35,    36,    37,
       38,    33,    34,    35,    36,    37,    38,     9,    10,    11,
-      12,    13,     9,    10,    11,    12,    13,    64,   249,   269,
-     152,   312,   234,   375
+      12,    13,     9,    10,    11,    12,    13,    64,   269,   152,
+     234,   312,    -1,   375
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -1079,7 +1079,7 @@ static const yytype_uint8 yystos[] =
      158,    28,    40,    28,    96,   105,    30,    95,    96,   105,
       93,     6,    27,   141,    28,    27,   149,    53,    54,   100,
       51,    57,   160,    87,    40,    28,    96,    94,   152,    96,
-     155,   155,   166,   159,   166,    51,    60,   165,    96,    28,
+     156,   156,   166,   159,   166,    51,    60,   165,    96,    28,
       28,    93,    40,    61,    62,    63,    64,    65,   161,   162,
      163,   170,     4,    94,   166,    40,    58,    59,   164,    28,
      162
@@ -2655,14 +2655,14 @@ yyreduce:
     break;
 
   case 154:
-#line 765 "src/parser/aspcore2.y"
+#line 768 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLCopy();
     }
     break;
 
   case 156:
-#line 776 "src/parser/aspcore2.y"
+#line 779 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLCopyTo((yyvsp[(2) - (2)].string));
          delete [] (yyvsp[(2) - (2)].string);
@@ -2670,21 +2670,21 @@ yyreduce:
     break;
 
   case 158:
-#line 788 "src/parser/aspcore2.y"
+#line 791 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLStart();
     }
     break;
 
   case 159:
-#line 795 "src/parser/aspcore2.y"
+#line 798 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLSelect();
     }
     break;
 
   case 160:
-#line 804 "src/parser/aspcore2.y"
+#line 807 "src/parser/aspcore2.y"
     {
         char * c = new char[2];
         c[0] = '*';
@@ -2696,42 +2696,42 @@ yyreduce:
     break;
 
   case 164:
-#line 822 "src/parser/aspcore2.y"
+#line 825 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLSelectItem();
     }
     break;
 
   case 165:
-#line 831 "src/parser/aspcore2.y"
+#line 834 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLFrom();
     }
     break;
 
   case 168:
-#line 845 "src/parser/aspcore2.y"
+#line 848 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLExtTable();
     }
     break;
 
   case 169:
-#line 849 "src/parser/aspcore2.y"
+#line 852 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLFromItem();
     }
     break;
 
   case 170:
-#line 853 "src/parser/aspcore2.y"
+#line 856 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLSubQuery();
     }
     break;
 
   case 171:
-#line 860 "src/parser/aspcore2.y"
+#line 863 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLExtTableName((yyvsp[(2) - (7)].string));
         delete[] (yyvsp[(2) - (7)].string);
@@ -2739,7 +2739,7 @@ yyreduce:
     break;
 
   case 172:
-#line 865 "src/parser/aspcore2.y"
+#line 868 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLExtTableNameString((yyvsp[(1) - (1)].string));
         delete[] (yyvsp[(1) - (1)].string);
@@ -2747,7 +2747,7 @@ yyreduce:
     break;
 
   case 173:
-#line 872 "src/parser/aspcore2.y"
+#line 875 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLTableRef((yyvsp[(1) - (1)].string));
         delete[] (yyvsp[(1) - (1)].string);
@@ -2755,7 +2755,7 @@ yyreduce:
     break;
 
   case 174:
-#line 877 "src/parser/aspcore2.y"
+#line 880 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLTableRef((yyvsp[(1) - (1)].string));
         delete[] (yyvsp[(1) - (1)].string);
@@ -2763,7 +2763,7 @@ yyreduce:
     break;
 
   case 177:
-#line 891 "src/parser/aspcore2.y"
+#line 894 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
         delete[] (yyvsp[(1) - (1)].string);
@@ -2771,7 +2771,7 @@ yyreduce:
     break;
 
   case 178:
-#line 896 "src/parser/aspcore2.y"
+#line 899 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
          delete[] (yyvsp[(1) - (1)].string);
@@ -2779,7 +2779,7 @@ yyreduce:
     break;
 
   case 179:
-#line 901 "src/parser/aspcore2.y"
+#line 904 "src/parser/aspcore2.y"
     {
           director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
           delete[] (yyvsp[(1) - (1)].string);
@@ -2787,7 +2787,7 @@ yyreduce:
     break;
 
   case 180:
-#line 906 "src/parser/aspcore2.y"
+#line 909 "src/parser/aspcore2.y"
     {
           director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
           delete[] (yyvsp[(1) - (1)].string);
@@ -2795,7 +2795,7 @@ yyreduce:
     break;
 
   case 181:
-#line 911 "src/parser/aspcore2.y"
+#line 914 "src/parser/aspcore2.y"
     {
           director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
           delete[] (yyvsp[(1) - (1)].string);
@@ -2803,7 +2803,7 @@ yyreduce:
     break;
 
   case 182:
-#line 916 "src/parser/aspcore2.y"
+#line 919 "src/parser/aspcore2.y"
     {
           director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
           delete[] (yyvsp[(1) - (1)].string);
@@ -2811,7 +2811,7 @@ yyreduce:
     break;
 
   case 183:
-#line 921 "src/parser/aspcore2.y"
+#line 924 "src/parser/aspcore2.y"
     {
           director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
           delete[] (yyvsp[(1) - (1)].string);
@@ -2819,77 +2819,71 @@ yyreduce:
     break;
 
   case 185:
-#line 931 "src/parser/aspcore2.y"
+#line 934 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLWhere();
     }
     break;
 
   case 186:
-#line 938 "src/parser/aspcore2.y"
+#line 941 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLPredicate();
     }
     break;
 
   case 187:
-#line 942 "src/parser/aspcore2.y"
+#line 945 "src/parser/aspcore2.y"
     {
+        director.getBuilder()->onSQLPredicate();
         director.getBuilder()->onSQLOperatorCondition("AND");
     }
     break;
 
   case 188:
-#line 946 "src/parser/aspcore2.y"
+#line 950 "src/parser/aspcore2.y"
     {
+        director.getBuilder()->onSQLPredicate();
         director.getBuilder()->onSQLOperatorCondition("OR");
     }
     break;
 
   case 189:
-#line 954 "src/parser/aspcore2.y"
+#line 959 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLPredicateValueExprOp();
     }
     break;
 
   case 190:
-#line 961 "src/parser/aspcore2.y"
+#line 966 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLPredicateValueExpr();
     }
     break;
 
   case 193:
-#line 974 "src/parser/aspcore2.y"
+#line 979 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLGroupByItem();
     }
     break;
 
   case 194:
-#line 978 "src/parser/aspcore2.y"
+#line 983 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLGroupByItem();
     }
     break;
 
   case 199:
-#line 996 "src/parser/aspcore2.y"
+#line 1001 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSqlOrderCol();
     }
     break;
 
   case 201:
-#line 1004 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 202:
 #line 1009 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
@@ -2897,7 +2891,7 @@ yyreduce:
     }
     break;
 
-  case 203:
+  case 202:
 #line 1014 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
@@ -2905,7 +2899,7 @@ yyreduce:
     }
     break;
 
-  case 204:
+  case 203:
 #line 1019 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
@@ -2913,7 +2907,7 @@ yyreduce:
     }
     break;
 
-  case 205:
+  case 204:
 #line 1024 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
@@ -2921,15 +2915,23 @@ yyreduce:
     }
     break;
 
+  case 205:
+#line 1029 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
+        delete[] (yyvsp[(1) - (1)].string);
+    }
+    break;
+
   case 206:
-#line 1031 "src/parser/aspcore2.y"
+#line 1036 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSqlOrderModifier(nullptr);
     }
     break;
 
   case 207:
-#line 1035 "src/parser/aspcore2.y"
+#line 1040 "src/parser/aspcore2.y"
     {
         char c[] = "asc";
         director.getBuilder()->onSqlOrderModifier(c);
@@ -2937,7 +2939,7 @@ yyreduce:
     break;
 
   case 208:
-#line 1040 "src/parser/aspcore2.y"
+#line 1045 "src/parser/aspcore2.y"
     {
         char c[] = "desc";
         director.getBuilder()->onSqlOrderModifier(c);
@@ -2945,7 +2947,7 @@ yyreduce:
     break;
 
   case 210:
-#line 1049 "src/parser/aspcore2.y"
+#line 1054 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLLimit((yyvsp[(2) - (2)].string));
         delete[] (yyvsp[(2) - (2)].string);
@@ -2953,42 +2955,34 @@ yyreduce:
     break;
 
   case 212:
-#line 1058 "src/parser/aspcore2.y"
+#line 1063 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLValueTerm('+');
     }
     break;
 
   case 213:
-#line 1062 "src/parser/aspcore2.y"
+#line 1067 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLValueTerm('-');
     }
     break;
 
   case 214:
-#line 1066 "src/parser/aspcore2.y"
+#line 1071 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLValueTerm('*');
     }
     break;
 
   case 215:
-#line 1070 "src/parser/aspcore2.y"
+#line 1075 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLValueTerm('/');
     }
     break;
 
   case 217:
-#line 1082 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLValue((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 218:
 #line 1087 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLValue((yyvsp[(1) - (1)].string));
@@ -2996,8 +2990,16 @@ yyreduce:
     }
     break;
 
+  case 218:
+#line 1092 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLValue((yyvsp[(1) - (1)].string));
+        delete[] (yyvsp[(1) - (1)].string);
+    }
+    break;
+
   case 223:
-#line 1099 "src/parser/aspcore2.y"
+#line 1104 "src/parser/aspcore2.y"
     {
         char c[] = "*";
         director.getBuilder()->onSQLValue(c);
@@ -3005,14 +3007,6 @@ yyreduce:
     break;
 
   case 224:
-#line 1107 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 225:
 #line 1112 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
@@ -3020,8 +3014,16 @@ yyreduce:
     }
     break;
 
-  case 226:
+  case 225:
 #line 1117 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
+        delete[] (yyvsp[(1) - (1)].string);
+    }
+    break;
+
+  case 226:
+#line 1122 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
          delete[] (yyvsp[(1) - (3)].string);
@@ -3030,7 +3032,7 @@ yyreduce:
     break;
 
   case 227:
-#line 1123 "src/parser/aspcore2.y"
+#line 1128 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
          delete[] (yyvsp[(1) - (3)].string);
@@ -3039,7 +3041,7 @@ yyreduce:
     break;
 
   case 228:
-#line 1129 "src/parser/aspcore2.y"
+#line 1134 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
          delete[] (yyvsp[(1) - (3)].string);
@@ -3048,7 +3050,7 @@ yyreduce:
     break;
 
   case 229:
-#line 1135 "src/parser/aspcore2.y"
+#line 1140 "src/parser/aspcore2.y"
     {
          director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
          delete[] (yyvsp[(1) - (3)].string);
@@ -3057,14 +3059,6 @@ yyreduce:
     break;
 
   case 230:
-#line 1146 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 231:
 #line 1151 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
@@ -3072,7 +3066,7 @@ yyreduce:
     }
     break;
 
-  case 232:
+  case 231:
 #line 1156 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
@@ -3080,7 +3074,7 @@ yyreduce:
     }
     break;
 
-  case 233:
+  case 232:
 #line 1161 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
@@ -3088,8 +3082,16 @@ yyreduce:
     }
     break;
 
-  case 234:
+  case 233:
 #line 1166 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
+        delete[] (yyvsp[(1) - (1)].string);
+    }
+    break;
+
+  case 234:
+#line 1171 "src/parser/aspcore2.y"
     {
         director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
         delete[] (yyvsp[(1) - (1)].string);
@@ -3098,7 +3100,7 @@ yyreduce:
 
 
 /* Line 1267 of yacc.c.  */
-#line 3102 "src/parser/aspcore2_parser.hpp"
+#line 3104 "src/parser/aspcore2_parser.hpp"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
