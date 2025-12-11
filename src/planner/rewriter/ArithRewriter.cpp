@@ -102,12 +102,12 @@ void ArithRewriter::rewrite(Rule &rule) {
     auto size = builtins.size(); // store the size because new atoms will be pushed
     for (idx_t i = 0; i < size; ++i) {
         auto& atom = builtins[i];
-        if (atom.getType() != BUILTIN || isConstantAssignment(atom, rule.getBody()))continue;
-        auto& left = atom.getTerms()[0];
-        auto& right = atom.getTerms()[1];
-        while (left.containsOrIsConstant() || right.containsOrIsConstant()) {
-            auto builtinAtom = extractConstantBuiltinArith(builtins[i]); // pass builtins[i] as atom ref could change for the push_back
-            builtins.push_back(std::move(builtinAtom));
+        if (atom.getType() != BUILTIN || isConstantAssignment(atom, rule.getBody())) continue;
+        for(auto & bt: atom.getBuiltinTerms()) {
+            while (bt.left.containsOrIsConstant() || bt.right.containsOrIsConstant()) {
+                auto builtinAtom = extractConstantBuiltinArith(bt.left, bt.right);
+                builtins.push_back(std::move(builtinAtom));
+            }
         }
     }
     for (auto& atom: builtins)
@@ -220,12 +220,8 @@ atoms_vector_t ArithRewriter::rewriteAggregate(Atom &atom) {
     return builtins;
 }
 
-Atom ArithRewriter::extractConstantBuiltinArith(Atom &atom) {
-    BB_ASSERT(atom.getType() == BUILTIN);
-    BB_ASSERT(atom.getTerms().size() == 2);
+Atom ArithRewriter::extractConstantBuiltinArith(Term& left, Term& right) {
 
-    auto& left = atom.getTerms()[0];
-    auto& right = atom.getTerms()[1];
     // we do not want to have builtin with 2 contant, must be evaluated directly in the optimizer
     BB_ASSERT(left.getType() != TermType::CONSTANT || right.getType() != TermType::CONSTANT );
     Term cterm;

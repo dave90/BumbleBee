@@ -93,7 +93,7 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
             // then evaluate it now
 
             if ((
-                ba->getType() == BUILTIN
+                ba->getType() == BUILTIN && !ba->isOrBuiltin()
                  && ( ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)
                  && isAssignmePossibleToEvaluate(currentVariables, builtInVariables[j], *ba))
                  ||(

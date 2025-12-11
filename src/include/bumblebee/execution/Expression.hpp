@@ -41,11 +41,16 @@ struct Expression {
     Expression(Binop op, const Operands &left, const Operands &right);
     Expression(Binop op, vector<idx_t>& leftCols, vector<Operator>& leftOps,vector<idx_t> &rightCols, vector<Operator>& rightOps );
     Expression(Expression &&other) noexcept;
+    Expression(const Expression &other);
+
+    Expression & operator=(const Expression &other);
+    Expression & operator=(Expression &&other) noexcept;
 
     std::string toString() const;
     // Execute the binop operation and set the results in the selection vector
     // and returns the numbers of rows filtered
     idx_t executeBinop(Vector& left,Vector& right, SelectionVector& sel, idx_t count) const;
+    void executeBinop(Vector& left,Vector& right, SelectionVector& sel, idx_t count, SelectionVector& trueSel, SelectionVector& falseSel, idx_t& falseCount) const;
     // verify the expression
     bool verify() const;
     // Execute the right side of the expression (expected vector of all the columns of the data chunk)

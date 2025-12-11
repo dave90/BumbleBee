@@ -49,6 +49,9 @@ SQL_DIALECT         \%@sql
 COMMENT_EMPTY       \%\n
 COMMENT             \%[^@\n].*
 
+
+OR                  OR
+AND                 AND
 AGGR_COUNT          #count
 AGGR_MAX            #max
 AGGR_MIN            #min
@@ -132,6 +135,8 @@ NUMBER              ([0-9]+(\.[0-9]+)?)
 "<="                    { return LESS_OR_EQ; }
 ">="                    { return GREATER_OR_EQ; }
 "&"                     { return AMPERSAND; }
+"OR"                    { return OR; }
+"AND"                   { return AND; }
 
 {AGGR_COUNT}            {
                             yylval.string=new char[strlen(yytext)+1];
@@ -190,8 +195,6 @@ NUMBER              ([0-9]+(\.[0-9]+)?)
 <SQL>[Oo][Rr][Dd][Ee][Rr]               { return SQL_ORDER; }
 <SQL>[Bb][Yy]                           { return SQL_BY; }
 <SQL>[Aa][Ss]                           { return SQL_AS; }
-<SQL>[Aa][Nn][Dd]                       { return SQL_AND; }
-<SQL>[Oo][Rr]                           { return SQL_OR; }
 <SQL>[Cc][Oo][Po][Yy]                   { return SQL_COPY; }
 <SQL>[Tt][Oo]                           { return SQL_TO; }
 <SQL>[Ll][Ii][Mm][Ii][Tt]               { return SQL_LIMIT; }

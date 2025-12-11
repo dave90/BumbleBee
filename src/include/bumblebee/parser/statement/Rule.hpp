@@ -63,6 +63,7 @@ public:
     void replaceVariable(const string& var,const string& newVar);
     void setBody(atoms_vector_t &body);
     bool containsAggregate() const;
+    Rule clone();
 
     idx_t & getLimit();
     void setLimit(idx_t limit);

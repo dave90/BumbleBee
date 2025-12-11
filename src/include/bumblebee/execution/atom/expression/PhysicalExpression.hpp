@@ -25,6 +25,7 @@ namespace bumblebee{
 class PhysicalExpression : public PhysicalAtom {
 public:
     PhysicalExpression(Expression& expr, vector<ConstantType>& types);
+    PhysicalExpression(vector<Expression>& expr, vector<ConstantType>& types);
     // constant assignment of the expression (X = 100)
     PhysicalExpression(idx_t col,Value& constantValue, vector<ConstantType>& types);
     ~PhysicalExpression() override;
@@ -34,7 +35,7 @@ public:
     string toString() const override;
 
 private:
-    Expression expression_;
+    vector<Expression> expressions_;
     bool constantAssignment_;
     Value constantValue_;
 };

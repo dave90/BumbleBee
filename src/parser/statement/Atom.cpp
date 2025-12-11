@@ -43,8 +43,7 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
                                    predicate_(other.predicate_),
                                    type_(other.type_),
                                    negative_(other.negative_),
-                                   binop_(other.binop_),
-                                   secondBinop_(other.secondBinop_),
+                                   binops_(other.binops_),
                                    aggregate_(other.aggregate_),
                                    aggAtoms_(std::move(other.aggAtoms_)),
                                    aggTerms_(std::move(other.aggTerms_)),
@@ -54,17 +53,20 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
     calculateIsGround();
 }
 
-Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), binop_(binop), type_(AtomType::BUILTIN) {
+Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), type_(AtomType::BUILTIN) {
+    binops_.push_back(binop);
     calculateIsGround();
 }
 
 Atom::Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard, Term &upperGuard,
     terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms): aggregate_(aggFunction),
-    binop_(firstBinop), secondBinop_(secondBinop),aggTerms_(std::move(aggTerms)),
+    aggTerms_(std::move(aggTerms)),
     aggAtoms_(std::move(aggAtoms)), predicate_(nullptr), type_(AGGREGATE){
     terms_.resize(2);
     terms_[0] = std::move(lowerGuard);
     terms_[1] = std::move(upperGuard);
+    binops_.push_back(firstBinop);
+    binops_.push_back(secondBinop);
 }
 
 terms_vector_t& Atom::getTerms() {
@@ -115,19 +117,31 @@ void Atom::setNegative(bool negative) {
 }
 
 Binop Atom::getBinop() const {
-    return binop_;
+    if (binops_.empty())
+        return NONE_OP;
+    return binops_[0];
 }
 
 void Atom::setBinop(Binop binop) {
-    binop_ = binop;
+    if (binops_.empty())
+        binops_.push_back(NONE_OP);
+    binops_[0] = binop;
 }
 
 Binop Atom::getSecondBinop() const {
-    return secondBinop_;
+    if (binops_.size() < 1) return NONE_OP;
+    return binops_[1];
+}
+
+Binop Atom::getBinop(idx_t i) const {
+    if (i >= binops_.size()) return NONE_OP;
+    return binops_[i];
 }
 
 void Atom::setSecondBinop(Binop binop) {
-    secondBinop_ = binop;
+    while (binops_.size() < 2)
+        binops_.push_back(NONE_OP);
+    binops_[1] = binop;
 }
 
 bool Atom::containsAnonymous() const {
@@ -165,9 +179,44 @@ bool Atom::containsVariables(set_term_variable_t &vars) {
     return result.size();
 }
 
+bool Atom::isOrBuiltin() const{
+    return (type_ == BUILTIN && binops_.size() > 1);
+}
+
+void Atom::addBuiltin(Atom &atom) {
+    BB_ASSERT(atom.getType() == BUILTIN);
+    BB_ASSERT(!atom.isOrBuiltin());
+    binops_.push_back(atom.getBinop());
+    for (auto& term: atom.terms_) {
+        terms_.push_back(std::move(term));
+    }
+}
+
+idx_t Atom::getBuiltinsSize() const {
+    if (type_ != BUILTIN) return 0;
+    return binops_.size();
+}
+
+vector<BuiltinTerms> Atom::getBuiltinTerms() {
+    vector<BuiltinTerms> terms;
+    for (idx_t i = 0; i < getBuiltinsSize(); ++i) {
+        terms.emplace_back(terms_[i*2], terms_[i*2+1]);
+    }
+    return terms;
+}
+
+void Atom::setTerms(terms_vector_t &terms) {
+    terms_ = std::move(terms);
+}
+
+void Atom::setBinops(vector<Binop> &ops) {
+    binops_ = std::move(ops);
+}
+
 bool Atom::isConstantAssignment() {
     if (type_ != BUILTIN) return false;
-    if (binop_ != EQUAL && binop_ != ASSIGNMENT) return false;
+    if (isOrBuiltin()) return false;
+    if (getBinop() != EQUAL && getBinop() != ASSIGNMENT) return false;
     auto lType = terms_[0].getType();
     auto rType = terms_[1].getType();
 
@@ -178,7 +227,7 @@ bool Atom::isConstantAssignment() {
 
 bool Atom::isAggregateAssignment() {
     if (getType() != AGGREGATE) return false;
-    if (binop_ == ASSIGNMENT || secondBinop_ == ASSIGNMENT) return true;
+    if (getBinop() == ASSIGNMENT || getSecondBinop() == ASSIGNMENT) return true;
     return false;
 }
 
@@ -229,10 +278,9 @@ Atom & Atom::operator=(Atom &&other) noexcept {
     predicate_ = std::move(other.predicate_);
     type_ = other.type_;
     negative_ = other.negative_;
-    binop_ = other.binop_;
+    binops_ = other.binops_;
     ground_ = other.ground_;
     aggregate_ = other.aggregate_;
-    secondBinop_ = other.secondBinop_;
     aggAtoms_ = std::move(other.aggAtoms_);
     aggTerms_ = std::move(other.aggTerms_);
     namedParameters_ = std::move(other.namedParameters_);
@@ -248,7 +296,7 @@ bool operator==(const Atom &lhs, const Atom &rhs) {
            && lhs.predicate_ == rhs.predicate_
            && lhs.type_ == rhs.type_
            && lhs.negative_ == rhs.negative_
-           && lhs.binop_ == rhs.binop_;
+           && lhs.binops_ == rhs.binops_;
 }
 
 bool operator!=(const Atom &lhs, const Atom &rhs) {
@@ -273,6 +321,19 @@ void Atom::getVariables(set_term_variable_t &variables) {
     }
     for (auto& term : terms_) {
         term.getVariables(variables);
+    }
+}
+
+void Atom::getVariablesList(vector<string> &variables) {
+    if (getType() == AGGREGATE) {
+        if (getBinop() != NONE_OP)
+            terms_[0].getVariablesList(variables);
+        if (getSecondBinop() != NONE_OP)
+            terms_[1].getVariablesList(variables);
+        return;
+    }
+    for (auto& term : terms_) {
+        term.getVariablesList(variables);
     }
 }
 
@@ -311,13 +372,20 @@ std::string Atom::toString() const {
         }
         return s+")";
     }
-    if (type_ == AtomType::BUILTIN) {
-        return terms_[0].toString() + " "+ getBinopStr(binop_) + " " + terms_[1].toString();
+    if (type_ == AtomType::BUILTIN ) {
+        string result = "";
+        idx_t idx = 0;
+        BB_ASSERT(terms_.size() == binops_.size() * 2);
+        for (idx_t i = 0; i < getBuiltinsSize(); ++i) {
+            if (idx++ > 0) result += " OR ";
+            result += terms_[i*2].toString() + " " + getBinopStr(binops_[i]) + " " + terms_[i*2+1].toString();
+        }
+        return result;
     }
     if (type_ == AGGREGATE) {
         string s ="";
-        if (binop_ != NONE_OP)
-            s += terms_[0].toString() + " " + getBinopStr(binop_) ;
+        if (getBinop() != NONE_OP)
+            s += terms_[0].toString() + " " + getBinopStr(getBinop()) ;
 
         s += getAggFunction(aggregate_) + "{";
         for (auto& term : aggTerms_) {
@@ -330,8 +398,8 @@ std::string Atom::toString() const {
         }
         s.pop_back(); // remove last comma
         s += "}";
-        if (secondBinop_ != NONE_OP)
-            s += getBinopStr(secondBinop_) + terms_[1].toString() ;
+        if (getSecondBinop() != NONE_OP)
+            s += getBinopStr(getSecondBinop()) + terms_[1].toString() ;
 
         return s;
     }
@@ -388,11 +456,17 @@ Atom Atom::clone() const {
             for (auto& term : aggTerms_)
                 aggTerms.emplace_back(term);
             BB_ASSERT(terms.size() == 2);
-            return createAggregateAtom(aggregate_, binop_, secondBinop_, terms[0],terms[1], std::move(aggTerms), std::move(aggAtoms));
+            return createAggregateAtom(aggregate_, getBinop(), getSecondBinop(), terms[0],terms[1], std::move(aggTerms), std::move(aggAtoms));
         }case BUILTIN: {
-            return createBuiltinAtom(std::move(terms), binop_);
+            Atom cloned;
+            cloned.setType(BUILTIN);
+            cloned.terms_ = std::move(terms);
+            cloned.binops_ = binops_;
+            return cloned;
         }case CLASSICAL: {
-            return createClassicalAtom(predicate_, std::move(terms));
+            Atom newAtom = createClassicalAtom(predicate_, std::move(terms));
+            newAtom.setNegative(negative_);
+            return newAtom;
         }
         case EXTERNAL: {
             std::unordered_map<string, Value> namedParameters;
@@ -427,6 +501,13 @@ Atom Atom::createExternalAtom(std::unordered_map<string, Value> &namedParams, ve
     return Atom(namedParams, inputValues, externalFunctionName, std::move(terms));
 }
 
+Atom Atom::createOrBuiltinAtom(vector<Atom>& builtins) {
+    Atom newAtom;
+    newAtom.setType(BUILTIN);
+    for (auto& builtin: builtins)
+        newAtom.addBuiltin(builtin);
+    return newAtom;
+}
 
 string Atom::getAggFunction(AggregateFunctionType agg) {
     switch (agg) {
@@ -459,4 +540,9 @@ AggregateFunctionType Atom::getAggFunction(const char* aggFunction) {
     return NONE; // default if no match
 }
 
+bool Atom::isEqualBuiltins(Term &lhs1, Term &rhs1, Binop op1, Term &lhs2, Term &rhs2, Binop op2) {
+    if (lhs1 == lhs2 && rhs1 == rhs2 && op1 == op2) return true;
+    if (lhs1 == rhs2 && rhs1 == lhs2 && op1 == getFlippedBinop(op2)) return true;
+    return false;
+}
 }

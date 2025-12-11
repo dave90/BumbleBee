@@ -129,7 +129,7 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
             return x
         return float(Decimal(str(x)).quantize(Decimal('1.' + '0'*ndigits), rounding=ROUND_HALF_UP))
 
-    # for float cols take 2 decimal
+    # for float cols take 4 decimal
     for col in cols:
         if pd.api.types.is_float_dtype(df_out[col]) or pd.api.types.is_float_dtype(df_exp[col]):
             df_out[col] = df_out[col].apply(lambda x: round_half_up(x, 4))
@@ -149,6 +149,8 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
     RTOL = 0.01    # relative tolerance; set >0 if you also want relative tolerance
     # First, shapes must match
     if df_out_sorted.shape == df_exp_sorted.shape:
+        print("Comparison failed...")
+        print("Try to compare with numeric tolerance")
         all_equal = True
         diff_mask = pd.DataFrame(False, index=df_out_sorted.index, columns=cols)
 
@@ -161,8 +163,14 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
                 a = s_out.astype(float).to_numpy()
                 b = s_exp.astype(float).to_numpy()
                 equal_col = np.isclose(a, b, rtol=RTOL, atol=ATOL, equal_nan=True)
-                diff_mask[col] = ~equal_col
+            else:
+                # non-numeric: require exact equality (including NaNs in the same positions)
+                # convert to string but keep NaN alignment
+                a = s_out.astype("string")
+                b = s_exp.astype("string")
+                equal_col = (a == b).to_numpy()
 
+            diff_mask[col] = ~equal_col
 
             if diff_mask[col].any():
                 all_equal = False
@@ -190,8 +198,27 @@ def compare_csv(output_file:str, expected_file:str) -> bool:
         out_not_in_exp = pd.concat([df_out_sorted, df_exp_sorted]).drop_duplicates(subset=[c for c in df_out_sorted.columns if c != "#TYPE"], keep=False)
         if not out_not_in_exp.empty:
             print("\nRows that differ between output and expected (union of mismatches):")
-            print(out_not_in_exp.head(20))  # limit to first 20 rows for readability
+            print(out_not_in_exp.head(20).to_string(index=False))  # limit to first 20 rows for readability
             print(f"... total differing rows: {len(out_not_in_exp)}")
+            # take the first pair of rows
+            row_out = out_not_in_exp[out_not_in_exp["#TYPE"] == "df_out"].iloc[0]
+            row_exp = out_not_in_exp[out_not_in_exp["#TYPE"] == "df_exp"].iloc[0]
+
+            for col in out_not_in_exp.columns:
+                if col == "#TYPE":
+                    continue
+
+                v_out = row_out[col]
+                v_exp = row_exp[col]
+
+                # treat NaNs as equal
+                if pd.isna(v_out) and pd.isna(v_exp):
+                    continue
+
+                if v_out != v_exp:
+                    print(f"Column: {col}")
+                    print("  OUT:", repr(v_out))
+                    print("  EXP:", repr(v_exp))
         else:
             # Shapes might differ, or some subtle mismatch — use compare for aligned rows
             try:

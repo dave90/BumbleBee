@@ -75,22 +75,22 @@
      GREATER = 291,
      LESS_OR_EQ = 292,
      GREATER_OR_EQ = 293,
-     DASH = 294,
-     COMMA = 295,
-     NAF = 296,
-     AT = 297,
-     WCONS = 298,
-     AMPERSAND = 299,
-     VEL = 300,
-     EXISTS = 301,
-     SQL_SELECT = 302,
-     SQL_FROM = 303,
-     SQL_WHERE = 304,
-     SQL_GROUP = 305,
-     SQL_BY = 306,
-     SQL_AS = 307,
-     SQL_AND = 308,
-     SQL_OR = 309,
+     OR = 294,
+     AND = 295,
+     DASH = 296,
+     COMMA = 297,
+     NAF = 298,
+     AT = 299,
+     WCONS = 300,
+     AMPERSAND = 301,
+     VEL = 302,
+     EXISTS = 303,
+     SQL_SELECT = 304,
+     SQL_FROM = 305,
+     SQL_WHERE = 306,
+     SQL_GROUP = 307,
+     SQL_BY = 308,
+     SQL_AS = 309,
      SQL_COPY = 310,
      SQL_TO = 311,
      SQL_ORDER = 312,
@@ -142,22 +142,22 @@
 #define GREATER 291
 #define LESS_OR_EQ 292
 #define GREATER_OR_EQ 293
-#define DASH 294
-#define COMMA 295
-#define NAF 296
-#define AT 297
-#define WCONS 298
-#define AMPERSAND 299
-#define VEL 300
-#define EXISTS 301
-#define SQL_SELECT 302
-#define SQL_FROM 303
-#define SQL_WHERE 304
-#define SQL_GROUP 305
-#define SQL_BY 306
-#define SQL_AS 307
-#define SQL_AND 308
-#define SQL_OR 309
+#define OR 294
+#define AND 295
+#define DASH 296
+#define COMMA 297
+#define NAF 298
+#define AT 299
+#define WCONS 300
+#define AMPERSAND 301
+#define VEL 302
+#define EXISTS 303
+#define SQL_SELECT 304
+#define SQL_FROM 305
+#define SQL_WHERE 306
+#define SQL_GROUP 307
+#define SQL_BY 308
+#define SQL_AS 309
 #define SQL_COPY 310
 #define SQL_TO 311
 #define SQL_ORDER 312

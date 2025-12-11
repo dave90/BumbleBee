@@ -39,6 +39,29 @@ Expression::Expression(Expression &&other) noexcept: op_(other.op_),
                                                      right_(std::move(other.right_)) {
 }
 
+Expression::Expression(const Expression &other): op_(other.op_),
+                                                 left_(other.left_),
+                                                 right_(other.right_) {
+}
+
+Expression & Expression::operator=(const Expression &other) {
+    if (this == &other)
+        return *this;
+    op_ = other.op_;
+    left_ = other.left_;
+    right_ = other.right_;
+    return *this;
+}
+
+Expression & Expression::operator=(Expression &&other) noexcept {
+    if (this == &other)
+        return *this;
+    op_ = other.op_;
+    left_ = std::move(other.left_);
+    right_ = std::move(other.right_);
+    return *this;
+}
+
 std::string Expression::toString() const{
     std::string result ="";
     result += std::to_string(left_.cols_[0])+" ";
@@ -166,6 +189,35 @@ idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel,
             return 0;
     }
     return 0;
+}
+
+
+void Expression::executeBinop(Vector& left,Vector& right,SelectionVector& sel, idx_t count,
+        SelectionVector& trueSel,SelectionVector& falseSel, idx_t& falseCount) const{
+
+    BB_ASSERT(op_ != ASSIGNMENT && op_ != NONE_OP);
+    switch (op_) {
+        case EQUAL:
+            VectorOperations::equals(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case UNEQUAL:
+            VectorOperations::notEquals(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case GREATER:
+            VectorOperations::greaterThan(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case GREATER_OR_EQ:
+            VectorOperations::greaterThanEquals(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case LESS:
+            VectorOperations::lessThan(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case LESS_OR_EQ:
+            VectorOperations::lessThanEquals(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        default:
+            ErrorHandler::errorNotImplemented("Binop not implemented");
+    }
 }
 
 Expression Expression::generateExpression(Binop op, idx_t leftCol, idx_t rightCol) {

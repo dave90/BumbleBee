@@ -120,17 +120,17 @@ protected:
 					falseSel->setIndex(i, sel->getIndex(i));
 				}
 			}
-			false_count = 1;
+			false_count = count;
 			return 0;
-		} else {
-			if (trueSel) {
-				for (idx_t i = 0; i < count; i++) {
-					trueSel->setIndex(i, sel->getIndex(i));
-				}
-			}
-			false_count = 0;
-			return count;
 		}
+		if (trueSel) {
+			for (idx_t i = 0; i < count; i++) {
+				trueSel->setIndex(i, sel->getIndex(i));
+			}
+		}
+		false_count = 0;
+		return count;
+
 	}
 
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT, bool HAS_TRUE_SEL, bool HAS_FALSE_SEL>
@@ -140,14 +140,14 @@ protected:
 		idx_t true_count = 0;
 		false_count = 0;
 		for (idx_t idx = 0; idx < count; idx++) {
-			idx_t lidx = LEFT_CONSTANT ? 0 : idx;
-			idx_t ridx = RIGHT_CONSTANT ? 0 : idx;
+			idx_t lidx = LEFT_CONSTANT ? 0 : sel->getIndex(idx);
+			idx_t ridx = RIGHT_CONSTANT ? 0 : sel->getIndex(idx);
 			bool comparison_result = OP::operation(ldata[lidx], rdata[ridx]);
 			if (HAS_TRUE_SEL) {
 				trueSel->setIndex(true_count, sel->getIndex(idx));
 			}
 			if (HAS_FALSE_SEL) {
-				falseSel->setIndex(true_count, sel->getIndex(idx));
+				falseSel->setIndex(false_count, sel->getIndex(idx));
 			}
 			true_count += comparison_result;
 			false_count += !comparison_result;
@@ -181,22 +181,22 @@ protected:
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool HAS_TRUE_SEL,bool HAS_FALSE_SEL >
 	static inline idx_t
 	selectGenericLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata, const SelectionVector *__restrict lsel,
-	                  const SelectionVector *__restrict rsel, const SelectionVector *__restrict resultSel, idx_t count,
+	                  const SelectionVector *__restrict rsel, const SelectionVector *__restrict sel, idx_t count,
 	                  SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 
 		idx_t true_count = 0;
 		false_count = 0;
 		for (idx_t i = 0; i < count; i++) {
-			auto result_idx = resultSel->getIndex(i);
-			auto lindex = lsel->getIndex(i);
-			auto rindex = rsel->getIndex(i);
+			auto idx = sel->getIndex(i);
+			auto lindex = lsel->getIndex(idx);
+			auto rindex = rsel->getIndex(idx);
 			bool comparison_result = OP::operation(ldata[lindex], rdata[rindex]);
+			// write same index if does not match ( branchless operation ;) )
 			if (HAS_TRUE_SEL) {
-				// write same index if does not match ( branchless operation ;) )
-				trueSel->setIndex(true_count, result_idx);
+				trueSel->setIndex(true_count, idx);
 			}
 			if (HAS_FALSE_SEL)
-				falseSel->setIndex(false_count, result_idx);
+				falseSel->setIndex(false_count, idx);
 			true_count += comparison_result;
 			false_count += !comparison_result;
 		}

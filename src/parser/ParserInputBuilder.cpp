@@ -422,8 +422,20 @@ void ParserInputBuilder::onChoiceAtom() {
 void ParserInputBuilder::onBuiltinAtom() {
     if(foundASafetyError_) return;
 
-    currentAtom = Atom::createBuiltinAtom(std::move(terms_parsered), binop_);
+    auto atom = Atom::createBuiltinAtom(std::move(terms_parsered), binop_);
+    builtin_atoms.push_back(std::move(atom));
     terms_parsered.clear();
+}
+
+void ParserInputBuilder::onBuiltinOrList() {
+    if(foundASafetyError_) return;
+    BB_ASSERT(builtin_atoms.size() > 0);
+    if (builtin_atoms.size() == 1) {
+        currentAtom = std::move(builtin_atoms[0]);
+    }else {
+        currentAtom = Atom::createOrBuiltinAtom(builtin_atoms);
+    }
+    builtin_atoms.clear();
 }
 
 void ParserInputBuilder::onAggregateLowerGuard() {

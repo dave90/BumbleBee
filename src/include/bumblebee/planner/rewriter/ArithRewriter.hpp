@@ -37,7 +37,7 @@ private:
     // rewrite the aggregate as assignment
     atoms_vector_t rewriteAggregate(Atom& atom);
     // extract constant values from arith term
-    Atom extractConstantBuiltinArith(Atom& atom);
+    Atom extractConstantBuiltinArith(Term& left, Term& right);
 
     // extract the first arith term found in the atom and replace with
     // a fresh variable and return the builtin created with the arith term

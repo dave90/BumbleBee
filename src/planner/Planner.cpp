@@ -22,6 +22,7 @@
 #include "bumblebee/common/Log.hpp"
 #include "bumblebee/planner/optimizer/PhysicalOptimizer.hpp"
 #include "bumblebee/planner/rewriter/ArithRewriter.hpp"
+#include "bumblebee/planner/rewriter/BuiltinsRewriter.hpp"
 #include "bumblebee/planner/rewriter/ExtAtomRewriter.hpp"
 #include "bumblebee/planner/rewriter/FilterPushDownRewriter.hpp"
 #include "bumblebee/planner/rewriter/VariablesRewriter.hpp"
@@ -64,6 +65,7 @@ void Planner::executeRewriters(rules_vector_t &rules) {
 
     LOG_DEBUG("Rewriting rules...");
     vector<rewriter_ptr_t> rewriters;
+    rewriters.emplace_back(new BinopRewriter());
     rewriters.emplace_back(new VariablesRewriter(context_));
     rewriters.emplace_back(new ExtAtomRewriter(context_));
     rewriters.emplace_back(new ArithRewriter());

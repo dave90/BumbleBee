@@ -102,6 +102,7 @@ public:
 	void setType(TermType type);
 	bool isGround();
 	void getVariables(set_term_variable_t& vars);
+	void getVariablesList(vector<string> &variables);
 	std::string toString()const;
 	bool isAnonymous();
 	void addInArithTermBegin(Term&& term, Operator op);

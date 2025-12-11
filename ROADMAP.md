@@ -2,6 +2,7 @@
 - block parenthesis in sql ad datalog
 - parquet
 - OR in rule
+- OPTIMIZE JOIN HT with string
 
 ## Next
 - Hash build: reduce build tasks
@@ -10,16 +11,16 @@
 
 
 ## Next of Next
- 
 
 - Planner with statistics better optimizer and rule ordering
 - functions
 - DATE / TIMESTAMP
 - Specific table types
+- Python embedding (like duckdb) and interoperability with pandas dataframe https://github.com/pybind/pybind11
 
 ## 0.1
 - CSV
-- server mode
+- server mode ???
 - store data multi session
 - python lib
 - sql (basic)

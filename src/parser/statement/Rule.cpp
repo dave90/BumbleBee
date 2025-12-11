@@ -83,6 +83,15 @@ bool Rule::containsAggregate() const {
     return false;
 }
 
+Rule Rule::clone() {
+    Rule clonedRule;
+    for (auto& atom: body_) clonedRule.addAtomInBody(atom.clone());
+    for (auto& atom: head_) clonedRule.addAtomInHead(atom.clone());
+    clonedRule.limit_ = limit_;
+    clonedRule.modifiers_ = modifiers_;
+    return clonedRule;
+}
+
 idx_t & Rule::getLimit() {
     return limit_;
 }
@@ -153,7 +162,8 @@ std::string Rule::toString() {
     s += std::string(" ")+ SEPARATOR+" ";
     if (!body_.empty()) s += body_.front().toString();
     for (unsigned int i = 1; i < body_.size(); i++) {
-        s += SEPARATOR_BODY + body_[i].toString();
+        s += SEPARATOR_BODY;
+        s += " " + body_[i].toString();
     }
     return s + ".";
 }

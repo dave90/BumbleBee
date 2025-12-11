@@ -74,7 +74,6 @@ bool PhysicalOptimizer::canBeSkipped(Rule &rule) {
 
 void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
     BB_ASSERT(atom.getType() == BUILTIN);
-    BB_ASSERT(atom.getTerms().size() == 2);
     vector<string> vars;
 
     if (atom.isConstantAssignment()) {
@@ -88,7 +87,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         typesMap_[left.getVariable()] = right.getConstantType();
         colsMap_[left.getVariable()] = colsMap_.size();
         vars.insert(vars.begin(),left.getVariable());
-    }else if (atom.getBinop() != ASSIGNMENT) {
+    }else if (atom.isOrBuiltin() || atom.getBinop() != ASSIGNMENT) {
         // is not assignment so all the variables should be present in the col and types map
         for (auto &term: atom.getTerms()) {
             if (term.getType() == VARIABLE) {
@@ -105,6 +104,8 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
             }
         }
     }else {
+        BB_ASSERT(!atom.isOrBuiltin());
+        BB_ASSERT(atom.getBinop() == ASSIGNMENT);
         // if is assignment the left part is a new variable and we need to insert in the
         // map and type cols
         auto& left = atom.getTerms()[0];
@@ -364,26 +365,30 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& co
         patoms.push_back(std::move(patom));
         return;
     }
-    Operands left, right;
-    Term& leftTerm = atom.getTerms()[0];
-    Term& rightTerm = atom.getTerms()[1];
-    left.cols_.push_back(cols[0]);
-    idx_t idx = 1;
-    for (auto& o: leftTerm.getOperators()) {
-        BB_ASSERT(cols.size() > idx);
+    vector<Expression> exprs;
+    auto builtinTerms = atom.getBuiltinTerms();
+    idx_t idx = 0;
+    for (idx_t i=0;i<atom.getBuiltinsSize();++i) {
+        auto bt = builtinTerms[i];
+        Operands left, right;
         left.cols_.push_back(cols[idx++]);
-        left.operators_.push_back(o);
-    }
-    right.cols_.push_back(cols[idx++]);
-    for (auto& o: rightTerm.getOperators()) {
-        BB_ASSERT(cols.size() > idx - leftTerm.getOperators().size() - 1); // subtract the left iterms counter
+        for (auto& o: bt.left.getOperators()) {
+            BB_ASSERT(cols.size() > idx);
+            left.cols_.push_back(cols[idx++]);
+            left.operators_.push_back(o);
+        }
         right.cols_.push_back(cols[idx++]);
-        right.operators_.push_back(o);
-    }
+        for (auto& o: bt.right.getOperators()) {
+            BB_ASSERT(cols.size() > idx - bt.left.getOperators().size() - 1); // subtract the left iterms counter
+            right.cols_.push_back(cols[idx++]);
+            right.operators_.push_back(o);
+        }
 
-    // create the expression based on atom
-    Expression expr(atom.getBinop(), left, right);
-    auto patom = patom_ptr_t(new PhysicalExpression(expr, types));
+        // create the expression based on atom
+        Expression expr(atom.getBinop(i), left, right);
+        exprs.push_back(std::move(expr));
+    }
+    auto patom = patom_ptr_t(new PhysicalExpression(exprs, types));
     patoms.push_back(std::move(patom));
 }
 
@@ -513,31 +518,34 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         auto& nextAtom = rule.getBody()[j];
         if (nextAtom.getType() != BUILTIN)break; // If a classical atom is found, stop the process as all possible built-ins have been evaluated
         if (nextAtom.getBinop() == ASSIGNMENT) continue;
+        if (nextAtom.isOrBuiltin()) continue;
         // check the size of conditions, for now is allowed only simplified condition
         // TODO allow expression with arith
-        auto &left = nextAtom.getTerms()[0];
-        auto &right = nextAtom.getTerms()[1];
-        if (left.getType() != VARIABLE || right.getType() != VARIABLE) continue;
-        auto& lvar = left.getVariable();
-        auto& rvar = right.getVariable();
+        for (auto &bt : atom.getBuiltinTerms()) {
+            auto &left = bt.left;
+            auto &right = bt.right;
+            if (left.getType() != VARIABLE || right.getType() != VARIABLE) continue;
+            auto& lvar = left.getVariable();
+            auto& rvar = right.getVariable();
 
-        if (varMap.contains( rvar) && varMap.contains( lvar)) {
-            // skip this binop as the condition does not involve left side
-            continue;
-        }
-        if (varMap.contains( rvar) ) {
+            if (varMap.contains( rvar) && varMap.contains( lvar)) {
+                // skip this binop as the condition does not involve left side
+                continue;
+            }
+            if (varMap.contains( rvar) ) {
+                BB_ASSERT(colsMap_.contains(lvar));
+                joinConditions.emplace_back(Expression::generateExpression(nextAtom.getBinop(), colsMap_[lvar], varMap[rvar] ));
+            } else {
+                // right var point to left join
+                // then swap the condition to set the left index in left side and right index in right side
+                BB_ASSERT(colsMap_.contains(rvar));
+                BB_ASSERT(varMap.contains(lvar));
+                joinConditions.emplace_back(Expression::generateExpression(getFlippedBinop(nextAtom.getBinop()), colsMap_[rvar], varMap[lvar] ));
+            }
             BB_ASSERT(colsMap_.contains(lvar));
-            joinConditions.emplace_back(Expression::generateExpression(nextAtom.getBinop(), colsMap_[lvar], varMap[rvar] ));
-        } else {
-            // right var point to left join
-            // then swap the condition to set the left index in left side and right index in right side
             BB_ASSERT(colsMap_.contains(rvar));
-            BB_ASSERT(varMap.contains(lvar));
-            joinConditions.emplace_back(Expression::generateExpression(getFlippedBinop(nextAtom.getBinop()), colsMap_[rvar], varMap[lvar] ));
+            skipAtom_[j] = true; // skip the creation of physical atom j
         }
-        BB_ASSERT(colsMap_.contains(lvar));
-        BB_ASSERT(colsMap_.contains(rvar));
-        skipAtom_[j] = true; // skip the creation of physical atom j
     }
 
 

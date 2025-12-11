@@ -59,7 +59,7 @@ bool queryFound=false;
 %token SQUARE_OPEN SQUARE_CLOSE
 %token CURLY_OPEN CURLY_CLOSE
 
-%token EQUAL UNEQUAL LESS GREATER LESS_OR_EQ GREATER_OR_EQ
+%token EQUAL UNEQUAL LESS GREATER LESS_OR_EQ GREATER_OR_EQ OR AND
 
 %token DASH COMMA NAF AT WCONS AMPERSAND
 
@@ -67,10 +67,8 @@ bool queryFound=false;
 
 
 /* --- SQL tokens --- */
-%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_AND SQL_OR SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT
+%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT
 %token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG SQL_COUNT
-%left SQL_OR
-%left SQL_AND
 %token <string> SQL_DIALECT
 
 %left PLUS DASH
@@ -288,8 +286,9 @@ naf_literal
         {
             director.getBuilder()->onNafLiteral(true);
         }
-    | builtin_atom
+    | builtin_or_list
         {
+            director.getBuilder()->onBuiltinOrList();
             director.getBuilder()->onNafLiteral();
         }
     | ext_atom
@@ -386,11 +385,16 @@ basic_terms
     | basic_terms COMMA basic_term
     ;
 
+builtin_or_list
+    : builtin_atom
+    | builtin_or_list OR builtin_atom
+    ;
+
 builtin_atom
     : term binop term
-        {
-            director.getBuilder()->onBuiltinAtom();
-        }
+    {
+        director.getBuilder()->onBuiltinAtom();
+    }
     ;
 
 compareop
@@ -941,12 +945,12 @@ search_condition
     {
         director.getBuilder()->onSQLPredicate();
     }
-    | search_condition SQL_AND predicate
+    | search_condition AND predicate
     {
         director.getBuilder()->onSQLPredicate();
         director.getBuilder()->onSQLOperatorCondition("AND");
     }
-    | search_condition SQL_OR  predicate
+    | search_condition OR  predicate
     {
         director.getBuilder()->onSQLPredicate();
         director.getBuilder()->onSQLOperatorCondition("OR");

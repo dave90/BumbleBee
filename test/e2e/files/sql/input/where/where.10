@@ -1,0 +1,4 @@
+%@sql
+SELECT c1.LAST_NAME, c1.FIRST_NAME, c1.USERNAME, c1.IDENTIFIER
+FROM "./files/csv/username.csv" as c1
+WHERE c1.LAST_NAME <> "Brown" AND c1.FIRST_NAME <> "Alice" OR c1.USERNAME = "root" AND c1.IDENTIFIER > 100 OR c1.LAST_NAME < "Z" AND c1.FIRST_NAME > "A" OR c1.USERNAME < "user" AND c1.IDENTIFIER = 42 OR c1.LAST_NAME = "White"

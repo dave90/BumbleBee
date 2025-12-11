@@ -156,14 +156,14 @@ void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) 
 
 void BumbleBeeDB::processExit(RulesBucket &bucket, Scheduler &scheduler) {
     LOG_INFO("Starting planner exit rules...");
+    for (auto& rule : bucket.exit_) {
+        LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
+    }
+
     Planner planner(context_);
     prule_ptr_vector_t pruleBucket = planner.plan(bucket.exit_);
     LOG_INFO("Planner completed");
 
-
-    for (auto& rule : bucket.exit_) {
-        LOG_DEBUG("Exit rule: %s", rule.toString().c_str());
-    }
 
     LOG_INFO("Starting execution...");
     scheduler.scheduleRules(pruleBucket);
@@ -203,8 +203,13 @@ void BumbleBeeDB::processRecursive(RulesBucket &bucket, Scheduler &scheduler) {
         LOG_DEBUG("Iteration %d", iteration);
 
         LOG_INFO("Starting planner recursive rules...");
+
+        // copy the rules as the planner can modify it
+        rules_vector_t iterationRules;
+        for (auto& rule : bucket.recursive_) iterationRules.push_back(rule.clone());
+
         Planner planner(context_, true);
-        prule_ptr_vector_t pruleBucket = planner.plan(bucket.recursive_);
+        prule_ptr_vector_t pruleBucket = planner.plan(iterationRules);
         LOG_INFO("Planner completed");
 
         // execute the rules

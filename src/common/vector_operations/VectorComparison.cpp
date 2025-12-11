@@ -197,4 +197,34 @@ idx_t VectorOperations::equals(Vector &left, Vector &right, const SelectionVecto
     return templatedSelectOperationSwitchLeft<Equals>(left, right, sel, count, trueSel, falseSel, falseCount);
 }
 
+idx_t VectorOperations::notEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel,SelectionVector *falseSel, idx_t& falseCount){
+    if (left.getType() == right.getType())
+        return templatedSelectOperationSwitchEqualType<NotEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+    return templatedSelectOperationSwitchLeft<NotEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+}
+
+idx_t VectorOperations::greaterThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel,SelectionVector *falseSel, idx_t& falseCount){
+    if (left.getType() == right.getType())
+        return templatedSelectOperationSwitchEqualType<GreaterThan>(left, right, sel, count, trueSel, falseSel, falseCount);
+    return templatedSelectOperationSwitchLeft<GreaterThan>(left, right, sel, count, trueSel, falseSel, falseCount);
+}
+
+idx_t VectorOperations::greaterThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel,SelectionVector *falseSel, idx_t& falseCount){
+    if (left.getType() == right.getType())
+        return templatedSelectOperationSwitchEqualType<GreaterThanEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+    return templatedSelectOperationSwitchLeft<GreaterThanEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+}
+
+idx_t VectorOperations::lessThan(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel,SelectionVector *falseSel, idx_t& falseCount){
+    if (left.getType() == right.getType())
+        return templatedSelectOperationSwitchEqualType<LessThan>(left, right, sel, count, trueSel, falseSel, falseCount);
+    return templatedSelectOperationSwitchLeft<LessThan>(left, right, sel, count, trueSel, falseSel, falseCount);
+}
+
+idx_t VectorOperations::lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel,SelectionVector *falseSel, idx_t& falseCount){
+    if (left.getType() == right.getType())
+        return templatedSelectOperationSwitchEqualType<LessThanEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+    return templatedSelectOperationSwitchLeft<LessThanEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+}
+
 }

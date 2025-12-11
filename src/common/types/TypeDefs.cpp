@@ -78,6 +78,21 @@ std::string getBinopStr(Binop binop) {
     return "";
 }
 
+Binop getFlippedBinop(Binop binop) {
+    switch (binop) {
+        case NONE_OP:        return NONE_OP;
+        case EQUAL:          return EQUAL;
+        case UNEQUAL:        return UNEQUAL;
+        case LESS:           return GREATER;
+        case GREATER:        return LESS;
+        case LESS_OR_EQ:     return GREATER_OR_EQ;
+        case GREATER_OR_EQ:  return LESS_OR_EQ;
+        case ASSIGNMENT:     return ASSIGNMENT;
+    }
+    ErrorHandler::errorNotImplemented("Binop not implemented");
+    return NONE_OP;
+}
+
 idx_t getCTypeSize(ConstantType type) {
     switch (type) {
         case TINYINT:    return sizeof(int8_t);
@@ -188,20 +203,6 @@ ConstantType ctypeFromString(const string& typeStr) {
     if (typeStr == "UNKNOWN")    return UNKNOWN;
 
     return UNKNOWN; // default case
-}
-
-Binop getFlippedBinop(Binop op) {
-    switch (op) {
-        case EQUAL:         return EQUAL;
-        case UNEQUAL:       return UNEQUAL;
-        case LESS:          return GREATER;
-        case GREATER:       return LESS;
-        case LESS_OR_EQ:    return GREATER_OR_EQ;
-        case GREATER_OR_EQ: return LESS_OR_EQ;
-        case ASSIGNMENT:    return ASSIGNMENT;
-        case NONE_OP:       return NONE_OP;
-        default:            return NONE_OP;
-    }
 }
 
 idx_t nextPowerOfTwo(idx_t n) {

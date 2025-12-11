@@ -41,8 +41,18 @@ enum AtomType {
     EXTERNAL = 3
 };
 
-using terms_vector_t = vector<Term>;
+struct BuiltinTerms {
+    BuiltinTerms(Term &left, Term &right)
+        : left(left),
+          right(right) {
+    }
 
+    Term& left;
+    Term& right;
+};
+
+using terms_vector_t = vector<Term>;
+//TODO Remove the && as function parameter
 class Atom {
 public:
 
@@ -61,9 +71,11 @@ public:
     Atom & operator=(Atom &&other) noexcept;
     Binop getBinop() const;
     Binop getSecondBinop() const;
+    Binop getBinop(idx_t i) const;
 
     hash_t hash();
     void getVariables(set_term_variable_t &variables);
+    void getVariablesList(vector<string> &variables);
     void getAggAtomsVariables(set_term_variable_t &variables);
     void getAggSharedVariables(const set_term_variable_t& globalVariables,set_term_variable_t& sharedVariables);
     bool isGround();
@@ -93,6 +105,14 @@ public:
     bool containsConstant() const;
     bool containsVariables(set_term_variable_t& vars);
     // return true if is constant assignment , i.e X == 10
+    bool isOrBuiltin() const;
+    // construct list of builtin OR
+    void addBuiltin(Atom& atom);
+    idx_t getBuiltinsSize() const;
+    vector<BuiltinTerms> getBuiltinTerms();
+    void setTerms(terms_vector_t& terms);
+    void setBinops(vector<Binop> &ops);
+
     bool isConstantAssignment();
     bool isAggregateAssignment();
     vector<ConstantType> getTermsCType();
@@ -118,14 +138,12 @@ private:
     Predicate* predicate_;
     AtomType type_;
     bool negative_{false};
-    // If it is a builtin the binop operation
-    Binop binop_{NONE_OP};
+    // Binops for list or builtins and aggregate atoms
+    vector<Binop> binops_;
     // True if it is ground
     bool ground_{false};
 
     // Aggregate fields
-    // Aggregates can have 2 Binop (example 1 < #sum{...} < 10)
-    Binop secondBinop_;
     AggregateFunctionType aggregate_{NONE};
     // Atoms to aggregate
     vector<Atom> aggAtoms_;
@@ -145,6 +163,8 @@ public:
     static string getAggFunction(AggregateFunctionType agg);
     static AggregateFunctionType getAggFunction(const char* agg);
     static Atom createExternalAtom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& t);
+    static Atom createOrBuiltinAtom(vector<Atom>& builtins);
+    static bool isEqualBuiltins(Term& lhs1, Term& rhs1, Binop op1,Term& lhs2, Term& rhs2, Binop op2 );
 
 };
 

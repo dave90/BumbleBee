@@ -354,39 +354,9 @@ Atom generateBuiltinFromPredCondition(sql::Predicate &predicate, SQLQuery& query
     return Atom::createBuiltinAtom(std::move(terms), predicate.getOp());
 }
 
-rules_vector_t generateRulesFromConditions( Atom& head, vector<Atom>& body, vector<vector<Atom>>& conditions ) {
-    rules_vector_t program;
-    if (conditions.size() == 1) {
-        // we have only one block of conditions so merge with the body
-        for (auto& a:conditions.back())
-            body.push_back(std::move(a));
-    }
-    if (conditions.size() < 2) {
-        Rule rule(head, body);
-        program.push_back(std::move(rule));
-        return program;
-    }
-
-    // set the predicate as distinct because we will generate multiple rules
-    head.getPredicate()->setDistinct();
-    // for each condition let's generate a rule
-    for (auto& condition: conditions) {
-        Atom h = head.clone();
-        for (auto& a:body) {
-            Atom ca = a.clone();
-            condition.insert(condition.begin(), std::move(ca));
-        }
-        Rule r(h, condition);
-        program.push_back(std::move(r));
-    }
-
-    return program;
-}
-
-
-void generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars,
+Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars,
         SQLQuery& query, sql::SQLStatement& statement, Rule& rule, string& headPredicateName,
-        rules_vector_t& aggRules, rules_vector_t& additionalRules,  string& errorMessage) {
+        rules_vector_t& additionalRules,  string& errorMessage) {
 
     auto& select = statement.getSelect();
     vector<Atom> body;
@@ -474,49 +444,22 @@ void generateAggRules(const std::unordered_set<string>& groupVars, const std::un
     auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, headPredicateName.c_str(), headTerms.size());
     Atom head = Atom::createClassicalAtom(newPred, std::move(headTerms));
     Rule newRule(head, body);
-    aggRules.push_back(std::move(newRule));
+    return newRule;
 }
 
 
-void generateOrderRule(sql::SQLStatement &statement, SQLQuery& query, rules_vector_t &rules, string& errorMessage) {
+void generateOrderRule(sql::SQLStatement &statement,Rule& rule, string& errorMessage) {
     if (!errorMessage.empty()) return;
 
     auto& group = statement.getOrderby();
     if (group.empty())return;
 
-    if (rules.size() == 1) {
-        // only one rules related to the order by
-        auto& lastRule = rules.back();
-        lastRule.setLimit(statement.getLimit());
+    rule.setLimit(statement.getLimit());
 
-        lastRule.setModifiers(group.getColModifiers());
-        if (lastRule.getLimit() == 0) {
-            errorMessage =  "Unsupported order by directive without a limit. Please add a #limit directive.";
-        }
-        return;
-    }
-    // multiple rules with order by, so we need to create an additional rule that gather all
-    // the values for the rule and then apply the order by
-    auto pred = rules[0].getHead()[0].getPredicate();
-    // expect same predicate in the head
-    for (auto& rule: rules) {
-        BB_ASSERT(rule.getHead().size() == 1);
-        BB_ASSERT(rule.getHead()[0].getPredicate() == pred);
-    }
-    Atom body = rules[0].getHead()[0].clone();
-    vector<Term> headTerms = body.getTerms();
-    string alias = query.generatePredicateName();
-    auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, alias.c_str(), headTerms.size());
-    newPred->setDistinct();
-    Atom head = Atom::createClassicalAtom(newPred, std::move(headTerms));
-    Rule newRule(head, body);
-    newRule.setLimit(statement.getLimit());
-
-    newRule.setModifiers(group.getColModifiers());
-    if (newRule.getLimit() == 0) {
+    rule.setModifiers(group.getColModifiers());
+    if (rule.getLimit() == 0) {
         errorMessage =  "Unsupported order by directive without a limit. Please add a #limit directive.";
     }
-    rules.push_back(std::move(newRule));
 }
 
 
@@ -585,6 +528,53 @@ void getAggregatesInformation(sql::SQLStatement &statement, SQLQuery& query,
     }
 }
 
+vector<vector<Atom>> toBinopAtomsCnf(vector<Atom>& atoms) {
+    vector<vector<Atom>> result;
+    for (auto& a: atoms) {
+        result.emplace_back();
+        result.back().push_back(std::move(a));
+    }
+    return result;
+}
+
+vector<vector<Atom>> distributeBinopAtoms(vector<vector<Atom>>& cnf1,vector<vector<Atom>>& cnf2) {
+    vector<vector<Atom>> result;
+    for (auto& c1: cnf1) {
+        for (auto& c2: cnf2) {
+            result.emplace_back();
+            for (auto& a:c1) result.back().push_back(a.clone());
+            for (auto& a:c2) result.back().push_back(a.clone());
+        }
+    }
+    return result;
+}
+
+void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& predicates, vector<sql::SQLOperator>& ops, SQLQuery& query, string& errorMessage) {
+    vector<vector<Atom>> binopAtomsDNF;
+    BB_ASSERT(predicates.empty() || predicates.size() == ops.size() +1);
+    binopAtomsDNF.emplace_back();
+    for (idx_t i =0;i<predicates.size();++i){
+        auto& p = predicates[i];
+        auto batom = generateBuiltinFromPredCondition(p, query, errorMessage);
+        binopAtomsDNF.back().push_back(std::move(batom));
+        if (i < ops.size() && ops[i] == sql::SQL_OR) {
+            // we have an or so we need to generate builtin or list
+            binopAtomsDNF.emplace_back();
+        }
+    }
+    // transform in CNF (AND of ORs)
+    auto binopAtomsCNF = toBinopAtomsCnf(binopAtomsDNF[0]);
+    for (idx_t i=1;i<binopAtomsDNF.size();++i) {
+        auto c = toBinopAtomsCnf(binopAtomsDNF[i]);
+        binopAtomsCNF = distributeBinopAtoms(binopAtomsCNF, c);
+    }
+    // now generate the binops atom
+    for (auto& atoms : binopAtomsCNF) {
+        Atom binopAtom = Atom::createOrBuiltinAtom(atoms);
+        body.push_back(std::move(binopAtom));
+    }
+}
+
 void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     auto& defaultSchema = query_.context_.defaultSchema_;
     vector<Atom> body;
@@ -620,6 +610,7 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
         ++i;
     }
 
+    // aggregates atoms information
     string alias = statement.getAlias();
     // generate head atom from the select
     vector<Term> headTerms; // head terms
@@ -628,56 +619,39 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     std::unordered_map<idx_t, vector<string>> aggVars;
     // for each agg function index the aggregation vars. note: is possible to aggregate on multiple columns.
     getAggregatesInformation(statement, query_, result_.errorMessage_, body, headTerms, headVars, groupVars, aggVars);
+    if (result_.foundAnError()) return;
 
-    // as the OR condition split the rules
-    // generate a vector of conditions for each OR
-    vector<vector<Atom>> binopAtoms;
-    auto& predicates = statement.getWhere().getItems();
-    auto& ops = statement.getWhere().getOps();
-    BB_ASSERT(predicates.empty() || predicates.size() == ops.size() +1);
-    i = 0;
-    binopAtoms.emplace_back();
-    for (auto& p: predicates) {
-        auto batom = generateBuiltinFromPredCondition(p, query_, result_.errorMessage_);
-        binopAtoms.back().push_back(std::move(batom));
-        if (i < ops.size() && ops[i] == sql::SQL_OR) {
-            // we have an or so we need to generate another rule
-            binopAtoms.emplace_back();
-        }
-        ++i;
-    }
+    // binops atoms
+    generateBinopAtoms(body, statement.getWhere().getItems(), statement.getWhere().getOps(), query_, result_.errorMessage_);
+    if (result_.foundAnError()) return;
 
-    // generates the final rules
+    // generate the rule
     auto pred = defaultSchema.createPredicate(&query_.context_, alias.c_str(), headTerms.size());
     auto head = Atom::createClassicalAtom(pred, std::move(headTerms));
-    auto rules = generateRulesFromConditions(head, body, binopAtoms);
+    Rule rule(head, body);
+
 
     if (statement.getSelect().containsAggregations()){
-        vector<Rule> aggregatedRules;
         vector<Rule> additionalRules;
         // generate the aggregated rules
         string headPredName = query_.generatePredicateName();
-        for (auto& rule: rules)
-            generateAggRules(groupVars, aggVars, query_, statement, rule, headPredName, aggregatedRules, additionalRules, result_.errorMessage_);
+        auto aggRule = generateAggRules(groupVars, aggVars, query_, statement, rule, headPredName, additionalRules, result_.errorMessage_);
         // call the order generator only on aggregates rules
         if (!statement.getOrderby().empty())
-            generateOrderRule(statement, query_, aggregatedRules, result_.errorMessage_);
+            generateOrderRule(statement, aggRule, result_.errorMessage_);
 
-        for (auto& rule: rules)
-            result_.rules_.push_back(std::move(rule));
-        for (auto& rule: additionalRules)
-            result_.rules_.push_back(std::move(rule));
-        for (auto& rule: aggregatedRules)
-            result_.rules_.push_back(std::move(rule));
+        result_.rules_.push_back(std::move(rule));
+        for (auto& r: additionalRules)
+            result_.rules_.push_back(std::move(r));
+        result_.rules_.push_back(std::move(aggRule));
 
         return;
     }
 
     if (!statement.getOrderby().empty())
-        generateOrderRule(statement, query_, rules, result_.errorMessage_);
+        generateOrderRule(statement, rule, result_.errorMessage_);
 
-    for (auto& rule: rules)
-        result_.rules_.push_back(std::move(rule));
+    result_.rules_.push_back(std::move(rule));
 }
 
 

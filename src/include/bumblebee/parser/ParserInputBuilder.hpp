@@ -81,6 +81,7 @@ public:
 	virtual void onChoiceElement();
 	virtual void onChoiceAtom();
 	virtual void onBuiltinAtom();
+	virtual void onBuiltinOrList();
 	virtual void onAggregateLowerGuard();
 	virtual void onAggregateUpperGuard();
 	virtual void onAggregateFunction( char* functionSymbol );
@@ -153,6 +154,7 @@ protected:
 	vector<Term> guard_terms;
 	vector<Term> agg_terms_parsered;
 	vector<Atom> agg_atoms;
+	vector<Atom> builtin_atoms;
 	Atom currentAtom{};
 	Rule currentRule{};
 

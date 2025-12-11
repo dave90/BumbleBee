@@ -20,13 +20,18 @@
 
 namespace bumblebee{
 
-PhysicalExpression::PhysicalExpression(Expression& expr, vector<ConstantType>& types) : PhysicalAtom(types), expression_(std::move(expr)) {
+PhysicalExpression::PhysicalExpression(Expression& expr, vector<ConstantType>& types) : PhysicalAtom(types) {
+    expressions_.push_back(std::move(expr));
+}
 
+PhysicalExpression::PhysicalExpression(vector<Expression> &expr, vector<ConstantType> &types):PhysicalAtom(types), expressions_(std::move(expr)) {
 }
 
 PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue, vector<ConstantType>& types) : PhysicalAtom(types), constantAssignment_(true), constantValue_(std::move(constantValue)) {
     // put the col in the left side of the expression
-    expression_.left_.cols_.push_back(col);
+    Expression expression;
+    expression.left_.cols_.push_back(col);
+    expressions_.push_back(std::move(expression));
 }
 
 PhysicalExpression::~PhysicalExpression() {}
@@ -38,9 +43,12 @@ string PhysicalExpression::getName() const {
 
 string PhysicalExpression::toString() const {
     std::string result = getName();
-    if (!constantAssignment_)
-        return result += "( " + expression_.toString() + " )";
-    return result += "( " + std::to_string(expression_.left_.cols_[0]) + " = Value(" + constantValue_.toString() + ") )";
+    if (constantAssignment_)
+        return result += "( " + std::to_string(expressions_[0].left_.cols_[0]) + " = Value(" + constantValue_.toString() + ") )";
+    for (auto& expression : expressions_)
+        result += "( " + expression.toString() + " ), ";
+    result.resize(result.size() - 2); // remove last ", "
+    return result;
 }
 
 AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
@@ -53,39 +61,60 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
     auto &vectors = input.data_;
     if (constantAssignment_) {
         // constant assignment, assign in the data chunk the constant
-        BB_ASSERT(expression_.left_.cols_.size() == 1);
-        auto col = expression_.left_.cols_[0];
+        BB_ASSERT(expressions_.size() == 1);
+        BB_ASSERT(expressions_[0].left_.cols_.size() == 1);
+        auto col = expressions_[0].left_.cols_[0];
         Vector vec(constantValue_);
         chunk.reference(input);
         chunk.data_[col].reference(vec);
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }
-    if (expression_.op_ == ASSIGNMENT) {
+    if (expressions_.size() == 1 && expressions_[0].op_ == ASSIGNMENT) {
         // execute the right operand and assign to left column
-        BB_ASSERT(expression_.left_.cols_.size() == 1);
-        auto colToAssign = expression_.left_.cols_[0];
-        BB_ASSERT(expression_.right_.cols_.size() >= 1);
+        auto& expression = expressions_[0];
+        BB_ASSERT(expression.left_.cols_.size() == 1);
+        auto colToAssign = expression.left_.cols_[0];
+        BB_ASSERT(expression.right_.cols_.size() >= 1);
         BB_ASSERT(colToAssign < types_.size());
-        auto result = expression_.executeRight(vectors, input.getSize(), types_[colToAssign] );
+        auto result = expression.executeRight(vectors, input.getSize(), types_[colToAssign] );
         chunk.reference(input);
         BB_ASSERT(types_[colToAssign] == result.getType());
 
-        chunk.data_[expression_.left_.cols_[0]].reference(result);
+        chunk.data_[expression.left_.cols_[0]].reference(result);
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }
-    auto leftResult = expression_.executeLeft(vectors, input.getSize());
-    auto rightResult = expression_.executeRight(vectors, input.getSize());
 
-    SelectionVector sel(STANDARD_VECTOR_SIZE);
-    idx_t count = expression_.executeBinop(leftResult, rightResult, sel, input.getSize());
+
+    SelectionVector matchSel(STANDARD_VECTOR_SIZE);
+    idx_t matchCount = 0;
+    SelectionVector trueSel(STANDARD_VECTOR_SIZE);
+    SelectionVector falseSel(STANDARD_VECTOR_SIZE);
+    idx_t falseCount = 0;
+    SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
+    idx_t count = input.getSize();
+    for (auto& expression : expressions_) {
+        auto leftResult = expression.executeLeft(vectors, input.getSize());
+        auto rightResult = expression.executeRight(vectors, input.getSize());
+        expression.executeBinop(leftResult, rightResult, sel, count, trueSel, falseSel, falseCount);
+        // add the true sel to the matched
+        BB_ASSERT(count >= falseCount);
+        for (idx_t i = 0; i < count - falseCount; ++i)
+            matchSel.setIndex(matchCount++, trueSel.getIndex(i));
+        if (falseCount == 0) break; // all matches stop the expr evaluation
+        // add the false sel to the next iteration
+        sel.initialize(falseSel);
+        count = falseCount;
+    }
+
     chunk.reference(input);
-    chunk.slice(sel, count);
-    chunk.setCardinality(count);
+    chunk.slice(matchSel, matchCount);
+    chunk.setCardinality(matchCount);
 
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
 }
+
 
 }

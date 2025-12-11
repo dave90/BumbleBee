@@ -119,6 +119,18 @@ void Term::getVariables(set_term_variable_t &vars) {
         t.getVariables(vars);
 }
 
+void Term::getVariablesList(vector<string> &variables) {
+    if (type_ == TermType::CONSTANT || type_ == TermType::RANGE || (type_ == TermType::VARIABLE && isAnonymous())) return;
+    if (type_ == TermType::VARIABLE) {
+        variables.push_back(value_.stringValue_);
+        return;
+    }
+    // ARITH term
+    for (auto &t:terms_)
+        t.getVariablesList(variables);
+}
+
+
 hash_t Term::hash() {
     if (type_ == TermType::RANGE) {
         return  CombineHash(Hash<uint64_t>(interval_.from), Hash<uint64_t>(interval_.to));

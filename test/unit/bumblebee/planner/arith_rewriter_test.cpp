@@ -68,7 +68,7 @@ TEST(ArithRewriterTest, RewriteArith) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(),"a(X,Y) :- b(X,Y,T),b(Z,#ARITH0,#ARITH2),b(A,B,#ARITH1),#ARITH0 == #ARITH3,#ARITH1 == Y+#ARITH4,Z == #ARITH2,#ARITH3 = 100,#ARITH4 = 1.");
+    EXPECT_EQ(rule.toString(),"a(X,Y) :- b(X,Y,T), b(Z,#ARITH0,#ARITH2), b(A,B,#ARITH1), #ARITH0 == #ARITH3, #ARITH1 == Y+#ARITH4, Z == #ARITH2, #ARITH3 = 100, #ARITH4 = 1.");
 }
 
 
@@ -88,5 +88,5 @@ TEST(ArithRewriterTest, RewriteArithWithConstant) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(), "a(X) :- b(X),X > #ARITH0,#ARITH0 = 1.");
+    EXPECT_EQ(rule.toString(), "a(X) :- b(X), X > #ARITH0, #ARITH0 = 1.");
 }

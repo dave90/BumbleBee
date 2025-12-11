@@ -59,7 +59,7 @@ TEST(FilterRewriterTest, OrderBuiltin) {
     rewriter.rewrite(rule);
     std::cout << rule.toString() << std::endl;
     EXPECT_NE(rule.toString(), beforeRewriting);
-    EXPECT_EQ(rule.toString(), "a(X,Y) :- b(X,Y,T),Z = X,O = T+Z,X == Y,b(Z,100,W),W > 100.");
+    EXPECT_EQ(rule.toString(), "a(X,Y) :- b(X,Y,T), Z = X, O = T+Z, X == Y, b(Z,100,W), W > 100.");
 }
 
 TEST(FilterRewriterTest, OrderOneBuiltin) {
