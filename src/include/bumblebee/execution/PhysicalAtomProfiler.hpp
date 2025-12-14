@@ -39,6 +39,7 @@ class PhysicalAtomProfiler {
 public:
     void startPhysicalAtom(const PhysicalAtom* patom);
     void endPhysicalAtom(DataChunk& chunk);
+    void endPhysicalAtom();
     void endPhysicalAtomFinalize();
     patom_profiling_map_t& getProfilingMap() {
         return profilingInfo_;

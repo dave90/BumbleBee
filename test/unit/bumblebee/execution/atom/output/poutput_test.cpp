@@ -75,10 +75,11 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputSingleThreadedTest) {
 
     DataChunk chunk = createChunkWithValue(STANDARD_VECTOR_SIZE, 0, true);
     auto result = pco.sink(context, chunk, *state, *gstate);
+    pco.combine(context, *state, *gstate);
+    pco.finalize(context, *gstate);
 
     EXPECT_EQ(result, AtomResultType::NEED_MORE_INPUT);
 
-    pco.finalize(context, *gstate);
 
     ASSERT_EQ(ptable->chunkCount(), 1);
     EXPECT_EQ(ptable->getChunk(0).getSize(), STANDARD_VECTOR_SIZE);
@@ -101,6 +102,7 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputMultiThreadedTest) {
                 DataChunk chunk = createChunkWithValue(STANDARD_VECTOR_SIZE, 0 , false);
                 pco.sink(context, chunk, *state, *gstate);
             }
+            pco.combine(context, *state, *gstate);
         });
     }
 
@@ -134,8 +136,6 @@ TEST_F(PhysicalOutputTest, PhysicalChunkOutputFlushPartialChunksTest) {
                 DataChunk chunk = createChunkWithValue(STANDARD_VECTOR_SIZE / 2, 0 , false);
                 result = pco.sink(context, chunk, *state, *gstate);
             }
-            // final chunk is not full so expected have more output
-            EXPECT_EQ(result, AtomResultType::HAVE_MORE_OUTPUT);
             // Call combine
             pco.combine(context, *state, *gstate);
         });

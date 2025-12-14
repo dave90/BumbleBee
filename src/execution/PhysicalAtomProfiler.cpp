@@ -29,6 +29,19 @@ void PhysicalAtomProfiler::startPhysicalAtom(const PhysicalAtom *patom) {
     profiler_.start();
 }
 
+void PhysicalAtomProfiler::endPhysicalAtom() {
+    profiler_.end();
+    auto elapsed = profiler_.elapsed();
+    auto find = profilingInfo_.find(active_patom_);
+    if (find == profilingInfo_.end()) {
+        profilingInfo_.insert(std::make_pair(active_patom_, ProfilingInformation{elapsed, 0}));
+
+    }else {
+        find->second.elements_ += 0;
+        find->second.time_ += elapsed;
+    }
+}
+
 void PhysicalAtomProfiler::endPhysicalAtom(DataChunk &chunk) {
     profiler_.end();
     auto elapsed = profiler_.elapsed();

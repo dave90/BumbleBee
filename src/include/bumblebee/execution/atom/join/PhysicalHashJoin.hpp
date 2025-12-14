@@ -49,6 +49,9 @@ public:
         GlobalPhysicalAtomState &gstate) const override;
     // Finalize the build
     void finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const override;
+    // Combine
+    void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
+
     // Execute probe
     AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
             PhysicalAtomState &state) const override;

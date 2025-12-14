@@ -297,12 +297,18 @@ def process_test(test, config, config_name, comparison_results, previous_results
         avg_time = mean(times)
         min_time = min(times)
         max_time = max(times)
+        cmp_avg = comparison_results.get(test_name)
         delta_vs_cmp = avg_time - comparison_results.get(test_name, 0.0)
         delta_vs_prev = avg_time - previous_results.get(test_name, 0.0)
+        delta_vs_cmp_pct = "-"
         if test_name not in comparison_results:
             delta_vs_cmp = "-"
         else:
             delta_vs_cmp = f"{delta_vs_cmp:.4f}"
+            delta_val = avg_time - cmp_avg
+            if cmp_avg != 0:
+                delta_pct = (delta_val / cmp_avg) * 100.0
+                delta_vs_cmp_pct = f"{delta_pct:.2f}%"
 
         if test_name not in previous_results:
             delta_vs_prev = "-"
@@ -316,6 +322,7 @@ def process_test(test, config, config_name, comparison_results, previous_results
             "min": f"{min_time:.4f}",
             "max": f"{max_time:.4f}",
             "delta_vs_cmp": f"{delta_vs_cmp}",
+            "delta_vs_cmp_%": delta_vs_cmp_pct,
             "delta_vs_prev": f"{delta_vs_prev}",
             "output_match": output_match
         })
@@ -333,7 +340,7 @@ def write_results_csv(config_name, results):
         fieldnames = [
             "test", "input_file",
             "avg", "min", "max",
-            "delta_vs_cmp", "delta_vs_prev",
+            "delta_vs_cmp", "delta_vs_cmp_%", "delta_vs_prev",
             "output_match"
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

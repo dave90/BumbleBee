@@ -376,7 +376,6 @@ JoinHashTable::JoinHashTableStats::JoinHashTableStats(idx_t buckets):bucketMutex
     }
 }
 
-
 Vector JoinHashTable::calculateBucketVector(Vector &hash, idx_t size) {
     Vector bucket(hash.getType(), size);
     Value maskValue(buckets_-1);
@@ -439,7 +438,7 @@ void JoinHashTable::initDirectory() {
 }
 
 
-void JoinHashTable::build(idx_t bucket) {
+void JoinHashTable::build(idx_t bucket, vector<vector_data_mngr_ptr_t>& stringVectorsDataMngr) {
     BB_ASSERT(bucket < stats_.bucketChunks_.size());
     auto bucketOffset = dirBegin(directory_.get(), bucket);
     uint64_t accBloom = 0; // bloom across all chunks
@@ -452,11 +451,14 @@ void JoinHashTable::build(idx_t bucket) {
 
         for (idx_t j = 0; j< dc.columnCount(); j++) {
             auto& sourceVector = dc.data_[j];
-            auto& targetVector = chunkone_.data_[j];
-            // for string vectors we need to lock as we need to add in the string heap
-            std::unique_lock<std::mutex> lock;
-            if (targetVector.getType() == STRING)
-                lock = std::unique_lock<std::mutex>(mutex_[j]);
+            Vector targetVector(chunkone_.data_[j]);
+            if (targetVector.getType() == STRING) {
+                // change the data aux vector to the input vector to avoid collision
+                BB_ASSERT(j < stringVectorsDataMngr.size());
+                BB_ASSERT(stringVectorsDataMngr[j]);
+                BB_ASSERT(stringVectorsDataMngr[j]->getType() ==VectorDataMngrType::STRING_BUFFER);
+                targetVector.setAuxiliary(stringVectorsDataMngr[j]);
+            }
             if (sourceVector.getVectorType() != VectorType::CONSTANT_VECTOR)
                 VectorOperations::copy(sourceVector,targetVector,sel,size, 0, bucketOffset);
             else
@@ -468,7 +470,45 @@ void JoinHashTable::build(idx_t bucket) {
         accBloom |= bloomFilterBitVector(BLOOM_SIZE, hash, sel, size);
         bucketOffset += size;
     }
-    directory_[bucket] = dirEnd(directory_.get(), bucket) | (accBloom << BLOOM_SHIFT) ;
+    directory_[bucket] = dirEnd(directory_.get(), bucket) | (accBloom << BLOOM_SHIFT);
+}
+
+void JoinHashTable::build(idx_t start, idx_t end) {
+    // create the string data manager to be merged at the end of the build phase
+    vector<vector_data_mngr_ptr_t> stringVectorsDataMngr;
+    for (idx_t i=0;i<chunkone_.columnCount();++i) {
+        if (chunkone_.data_[i].getType() == STRING) {
+            if (stringVectorsDataMngr.empty())
+                stringVectorsDataMngr.resize(chunkone_.columnCount());
+            stringVectorsDataMngr[i] = vector_data_mngr_ptr_t(new StringDataMngr());
+        }
+    }
+
+    BB_ASSERT(start < stats_.bucketSize_.size());
+    BB_ASSERT(end < stats_.bucketSize_.size());
+    BB_ASSERT(start <= end);
+
+    for (idx_t bucket = start; bucket <= end; bucket++) {
+        build(bucket, stringVectorsDataMngr);
+    }
+
+    mergeStringDataMngr(stringVectorsDataMngr);
+}
+
+void JoinHashTable::mergeStringDataMngr(vector<vector_data_mngr_ptr_t>& stringDataMngrs) {
+    for (idx_t i = 0; i < chunkone_.columnCount(); i++) {
+        if (chunkone_.data_[i].getType() != STRING) continue;
+        lock_guard lock(mutex_[i]);
+        BB_ASSERT(i < stringDataMngrs.size());
+        BB_ASSERT(stringDataMngrs[i]);
+        BB_ASSERT(stringDataMngrs[i]->getType() ==VectorDataMngrType::STRING_BUFFER);
+        if (!chunkone_.data_[i].getAuxiliary()) {
+            chunkone_.data_[i].setAuxiliary(stringDataMngrs[i]);
+            continue;
+        }
+        auto& strDataMngr = (StringDataMngr&)*chunkone_.data_[i].getAuxiliary();
+        strDataMngr.addHeapReference(stringDataMngrs[i]);
+    }
 }
 
 void JoinHashTable::clearStats() {

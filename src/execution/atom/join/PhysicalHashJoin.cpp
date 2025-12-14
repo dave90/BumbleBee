@@ -29,9 +29,11 @@ public:
         lpos_ = 0;
     }
 
+    // data for probe phase
     JoinHashTable& ht_;
     idx_t rpos_{0};
     idx_t lpos_{0};
+
 };
 
 
@@ -51,7 +53,17 @@ public:
         }
         return getNextBucket(start, end, bucketsProcessed_, bucketsSize_);
     }
+
+    idx_t estimateMaxThreads() {
+        initPredicateTable();
+        idx_t maxThreads = 1;
+        idx_t start, end;
+        while (getNextBucket(start, end, bucketsProcessed_, bucketsSize_)) ++maxThreads;
+        return maxThreads;
+    }
 private:
+    bool isPtInitialized_{false};
+
     void initPredicateTable() {
         isPtInitialized_ = true;
         bucketsProcessed_ = 0;
@@ -59,8 +71,9 @@ private:
             bucketsSize_.push_back(ht_.getStats().bucketSize_[b].load());
     }
 
+
+
     std::mutex mutex_;
-    bool isPtInitialized_{false};
     idx_t bucketsProcessed_{0};
     vector<idx_t> bucketsSize_;
 };
@@ -121,7 +134,9 @@ pstate_ptr_t PhysicalHashJoin::getState() const {
 }
 
 idx_t PhysicalHashJoin::getMaxThreads() const {
-    return pt_->getJoinHashTable(keys_)->getBuckets(); // you can parallelize max. 1 bucket per thread
+    auto state = getGlobalState();
+    auto& gstate = (GlobalHTJoinAtomState&)*state;
+    return gstate.estimateMaxThreads();
 }
 
 bool PhysicalHashJoin::isSource() const {
@@ -202,8 +217,19 @@ void PhysicalHashJoin::finalize(ThreadContext &context, GlobalPhysicalAtomState 
     context.profiler_.endPhysicalAtomFinalize();
 }
 
-AtomResultType PhysicalHashJoin::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+void PhysicalHashJoin::combine(ThreadContext &context, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
+
+    auto& cgstate = (GlobalHTJoinAtomState&)gstate;
+    auto& cstate = (HTJoinAtomState&)state;
+
+
+    context.profiler_.endPhysicalAtom();
+}
+
+AtomResultType PhysicalHashJoin::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
+                                         GlobalPhysicalAtomState &gstate) const {
     auto& cgstate = (GlobalHTJoinAtomState&)gstate;
     context.profiler_.startPhysicalAtom(this);
 
@@ -215,9 +241,8 @@ AtomResultType PhysicalHashJoin::getData(ThreadContext &context, DataChunk &chun
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::FINISHED;
     }
-    for (idx_t i=start; i<=end; ++i) {
-        cgstate.ht_.build(i);
-    }
+    cgstate.ht_.build(start, end);
+
     chunk.setCardinality(0);
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::FINISHED;
@@ -226,6 +251,7 @@ AtomResultType PhysicalHashJoin::getData(ThreadContext &context, DataChunk &chun
 AtomResultType PhysicalHashJoin::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
     auto& cgstate = (GlobalHTJoinAtomState&)gstate;
+    auto& cstate = (HTJoinAtomState&)state;
 
     context.profiler_.startPhysicalAtom(this);
     if (input.getSize() == 0 ) {

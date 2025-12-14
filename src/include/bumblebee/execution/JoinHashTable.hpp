@@ -20,6 +20,7 @@
 
 #include "Expression.hpp"
 #include "bumblebee/common/Mutex.hpp"
+#include "bumblebee/common/types/ChunkCollection.hpp"
 #include "bumblebee/common/types/DataChunk.hpp"
 #include "bumblebee/parser/statement/Predicate.hpp"
 
@@ -94,16 +95,17 @@ public:
 public:
     JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, idx_t buckets);
 
-    // add the chunk in the stats
+
     void addDataChunkSel(Vector& hash, DataChunk& chunk);
     // init directory and chunkone. Call after all the chunks was added with addDataChunkSel
     void initDirectory();
     // build hash table for specific bucket
-    void build(idx_t bucket);
+    void build(idx_t start, idx_t end);
     // clear stats
     void clearStats();
     // get the data of the hash table
     DataChunk& getDataChunk();
+
 
     // Get and set ready
     void setReady();
@@ -121,7 +123,6 @@ public:
     // Get number of buckets
     idx_t getBuckets();
 
-
 private:
     // increment size of a bucket
     void incrementBucketSize(idx_t bucket, idx_t size){
@@ -129,12 +130,16 @@ private:
         stats_.bucketSize_[bucket].fetch_add(size);
     }
 
+    // merge the string aux data mngr to chunkone
+    void mergeStringDataMngr(vector<vector_data_mngr_ptr_t>& stringDataMngrs);
+    void build(idx_t bucket, vector<vector_data_mngr_ptr_t>&);
+
     // Calculate the bucket vector from the hash
     Vector calculateBucketVector(Vector& hash, idx_t size);
 
     // This struct store the statistics for the building of the hash table
     struct JoinHashTableStats {
-        JoinHashTableStats(idx_t buckets);;
+        JoinHashTableStats(idx_t buckets);
 
         struct DataChunkSel {
             DataChunkSel(DataChunk &chunk_, Vector& hash_, SelectionVector &sel, idx_t size);

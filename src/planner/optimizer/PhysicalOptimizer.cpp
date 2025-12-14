@@ -417,13 +417,16 @@ void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
         }
 
         dbCols.clear();
-        for (auto i:keys)
+        for (auto i:keys) {
             dbCols.push_back(i);
-        for (auto i:payloads)
+        }
+        for (auto i:payloads) {
             dbCols.push_back(i);
+        }
         selCols = dbCols;
 
         // create prl ht table
+
         pred->createJoinPRLHashTable( pred->getTypes() , keys, payloads);
         patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , selCols,pred, keys, COLLECT, false));
 
@@ -574,6 +577,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         return;
     }
     if (atom.isNegative() || recursiveRules_) {
+    // if (true) {
 
         if (atom.isNegative() && pred->getCount() == 0) {
             // negative atom with empty data, do not create patom as will be always true
@@ -582,6 +586,15 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
 
         // find payloads
         vector<idx_t> payloads = selCols;
+        if (keys.size() + payloads.size() != pred->predicate_->getArity()) {
+            // insert the remaining cols in payloads
+            std::unordered_set used(keys.begin(), keys.end());
+            used.insert(payloads.begin(), payloads.end());
+            for (idx_t k = 0; k < pred->predicate_->getArity(); ++k) {
+                if (used.contains(k)) continue;
+                payloads.push_back(k);
+            }
+        }
         // if atom is negative payloads is 0
         BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
 

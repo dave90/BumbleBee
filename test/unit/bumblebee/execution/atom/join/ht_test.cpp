@@ -104,7 +104,7 @@ TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
     }
     ht.initDirectory();
     for (idx_t i = 0; i < buckets; ++i) {
-        ht.build(i);
+        ht.build(i, i);
     }
     auto& rchunk = ht.getDataChunk();
     EXPECT_EQ(rchunk.getSize(), ptableLeft->getCount());
@@ -221,8 +221,10 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
 
     // Build
     ht.initDirectory();
+    vector<vector_data_mngr_ptr_t> stringVectorsDataMngr;
+
     for (idx_t i = 0; i < buckets; ++i)
-        ht.build(i);
+        ht.build(i, i);
 
 
     // Prepare probe inputs
@@ -276,7 +278,7 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
     ht.addDataChunkSel(rhash, rchunk);
 
     ht.initDirectory();
-    ht.build(0);
+    ht.build(0, 0);
 
     Vector lhash(UBIGINT);
     lchunk.hash(lhash, keys);
@@ -358,7 +360,7 @@ TEST_F(PhysicalHJTest, HTProbeMultipleConditionsRefine) {
     rchunk.hash(rhash, build_keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
-    ht.build(0);
+    ht.build(0, 0);
 
     // Probe (left) with two conditions:
     //   1) left.col1 == right.col0
@@ -417,7 +419,7 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
     rchunk.hash(rhash, keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
-    for (idx_t i = 0; i < buckets; ++i) ht.build(i);
+    for (idx_t i = 0; i < buckets; ++i) ht.build(i, i);
 
     // Probe
     Vector lhash(UBIGINT, N);
@@ -462,7 +464,7 @@ TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
     rchunk.hash(rhash, build_keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
-    ht.build(0);
+    ht.build(0, 0);
 
     // Probe conditions:
     //  1) left.col1 (UINTEGER) == right.col0 (UINTEGER)  -> candidate set
@@ -526,7 +528,7 @@ TEST_F(PhysicalHJTest, HTProbeWithMultipleKeys) {
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
     for (idx_t i = 0; i < buckets; ++i) {
-        ht.build(i);
+        ht.build(i, i);
     }
 
     // Probe: left's keys {0,1} against right's {2,0}

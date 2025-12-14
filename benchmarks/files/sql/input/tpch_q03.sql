@@ -5,9 +5,9 @@ SELECT
     O_ORDERDATE AS o_orderdate,
     O_SHIPPRIORITY AS o_shippriority
 FROM
-    "downloads/tpch/customer.csv",
+    "downloads/tpch/lineitem.csv",
     "downloads/tpch/orders.csv",
-    "downloads/tpch/lineitem.csv"
+    "downloads/tpch/customer.csv"
 WHERE
     C_MKTSEGMENT = "BUILDING"
   AND C_CUSTKEY = O_CUSTKEY

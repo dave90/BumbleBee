@@ -3,9 +3,9 @@ SELECT
     N_NAME AS n_name,
     SUM(L_EXTENDEDPRICE - L_EXTENDEDPRICE * L_DISCOUNT) AS revenue
 FROM
-    "downloads/tpch/customer.csv",
-    "downloads/tpch/orders.csv",
     "downloads/tpch/lineitem.csv",
+    "downloads/tpch/orders.csv",
+    "downloads/tpch/customer.csv",
     "downloads/tpch/supplier.csv",
     "downloads/tpch/nation.csv",
     "downloads/tpch/region.csv"
