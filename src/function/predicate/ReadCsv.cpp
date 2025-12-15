@@ -318,10 +318,10 @@ static void readCSVFunction(ClientContext &context, const FunctionData *bind_dat
 		// exhausted this file
 		data.finished_ = true;
 		data.csvReader_ = nullptr;
+		data.readChunk_.data_.clear();
 	}else {
 		data.readChunk_.reset();
 	}
-
 
 }
 

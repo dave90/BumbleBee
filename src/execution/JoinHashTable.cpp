@@ -351,13 +351,10 @@ uint64_t bloomFilterBitVector(idx_t bloomSize, Vector& hash, SelectionVector& se
 
 
 
-JoinHashTable::DataChunkSel::DataChunkSel(DataChunk &chunk, Vector& hash, SelectionVector &sel, idx_t size):
+JoinHashTable::DataChunkSel::DataChunkSel(DataChunk *chunk, SelectionVector &sel, idx_t size):
     sel_(sel),
-    hash_(hash.getType()),
+    chunk_(chunk),
     size_(size){
-    chunk_.initializeEmpty(chunk.getTypes());
-    chunk_.reference(chunk);
-    hash_.reference(hash);
 }
 
 
@@ -418,6 +415,8 @@ void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
         bucketSelection[data[i]].push_back(i);
     }
 
+    auto clonedChunk = chunk.clone();
+    clonedChunk->data_.push_back(std::move(hash));
 
     // store the stats
     for (auto& [bucket, idxs] : bucketSelection) {
@@ -427,8 +426,10 @@ void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
 
         incrementBucketSize(bucket, idxs.size());
         lock_guard lock(stats_.bucketMutex_[bucket]);
-        stats_.bucketChunks_[bucket].emplace_back(chunk, hash, sel, idxs.size());
+        stats_.bucketChunks_[bucket].emplace_back(clonedChunk.get(), sel, idxs.size());
     }
+    lock_guard lock(stats_.mutex_);
+    stats_.chunkCollection_.append(std::move(clonedChunk));
 }
 
 
@@ -445,7 +446,8 @@ void JoinHashTable::initDirectory() {
     // init the big data chunk
     for (auto& chunks: stats_.bucketChunks_) {
         if (chunks.empty())continue;
-        auto types = chunks[0].chunk_.getTypes();
+        auto types = chunks[0].chunk_->getTypes();
+        types.pop_back(); // remove last type as is the hash
         chunkone_.initialize(types);
         break;
     }
@@ -472,12 +474,12 @@ void JoinHashTable::build(idx_t bucket, vector<vector_data_mngr_ptr_t>& stringVe
     uint64_t accBloom = 0; // bloom across all chunks
     for (idx_t i = 0; i < stats_.bucketChunks_[bucket].size(); i++) {
         auto& stat = stats_.bucketChunks_[bucket][i];
-        auto& dc = stat.chunk_;
+        auto& dc = *stat.chunk_;
         auto& sel = stat.sel_;
         auto size = stat.size_;
-        auto& hash = stat.hash_;
+        auto& hash = dc.data_[dc.columnCount() -1]; // last column is the has
 
-        for (idx_t j = 0; j< dc.columnCount(); j++) {
+        for (idx_t j = 0; j< dc.columnCount() -1; j++) {
             if (!usedCols_[j]) continue; // avoid to copy column that we do not use
             auto& sourceVector = dc.data_[j];
             Vector targetVector(chunkone_.data_[j]);
@@ -500,6 +502,7 @@ void JoinHashTable::build(idx_t bucket, vector<vector_data_mngr_ptr_t>& stringVe
         bucketOffset += size;
     }
     directory_[bucket] = dirEnd(directory_.get(), bucket) | (accBloom << BLOOM_SHIFT);
+    stats_.bucketChunks_[bucket].clear();
 }
 
 void JoinHashTable::build(idx_t start, idx_t end) {
@@ -544,6 +547,7 @@ void JoinHashTable::clearStats() {
     stats_.bucketSize_.clear();
     stats_.bucketChunks_.clear();
     stats_.bucketMutex_.clear();
+    stats_.chunkCollection_.reset();
 }
 
 DataChunk & JoinHashTable::getDataChunk() {

@@ -205,12 +205,14 @@ void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState
     auto& cstate = (PartitionedAggHTJoinAtomState&)state;
 
     if (!cstate.ht_ || cstate.ht_->getSize() == 0) {
+        cstate.ht_ = nullptr;
         context.profiler_.endPhysicalAtom(input);
         return;
     }
     input.setCapacity(cstate.ht_->getSize());
     input.setCardinality(cstate.ht_->getSize());
     cgstate.pht_.partitionHT(cstate.ht_);
+    cstate.ht_ = nullptr;
     context.profiler_.endPhysicalAtom(input);
 }
 

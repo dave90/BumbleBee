@@ -94,11 +94,10 @@ public:
 
 
     struct DataChunkSel {
-        DataChunkSel(DataChunk &chunk_, Vector& hash_, SelectionVector &sel, idx_t size);
+        DataChunkSel(DataChunk *chunk_, SelectionVector &sel, idx_t size);
 
-        DataChunk chunk_;
+        DataChunk* chunk_;
         SelectionVector sel_;
-        Vector hash_;
         idx_t size_;
     };
 public:
@@ -156,6 +155,8 @@ private:
         vector<vector<DataChunkSel>> bucketChunks_;
         // locks for each bucket
         vector<std::mutex> bucketMutex_;
+        ChunkCollection chunkCollection_;
+        std::mutex mutex_;
     };
     // Number of buckets
     idx_t buckets_;
