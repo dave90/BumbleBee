@@ -86,6 +86,17 @@ void Select::clear() {
     items_.clear();
 }
 
+vector<QualifiedName> Select::getQualifiedNames() {
+    vector<QualifiedName> names;
+    for (auto& ve : getItems()) {
+        for (auto& vp: ve.getValues()) {
+            if (vp.isIsConstant())continue;
+            names.push_back(vp.getQualifier());
+        }
+    }
+    return names;
+}
+
 void Select::removeItem(idx_t i) {
     items_.erase(items_.begin() + i);
     aggFunctions_.erase(aggFunctions_.begin() + i);

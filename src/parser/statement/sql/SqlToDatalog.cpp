@@ -46,6 +46,7 @@ void SqlQueryNormalizer::normalize() {
     assignAliasesAndCollectColumns(query_.statement_);
     expandSelectStars(query_.statement_);
     validateGroupBy(query_.statement_);
+    removeUnusedCols(query_.statement_);
 }
 
 
@@ -254,7 +255,23 @@ void SqlQueryNormalizer::validateGroupBy(sql::SQLStatement& statement) {
     }
 }
 
+void SqlQueryNormalizer::removeUnusedCols(sql::SQLStatement &statement) {
+    auto queryQualifiedNames = statement.getQualifiedNames();
+    std::unordered_set<string> usedCols;
+    for (auto& q: queryQualifiedNames)
+        usedCols.insert(q.table_+"."+q.name_);
 
+    for (auto& [table, cols]: query_.tableColumnsMap_) {
+        for (auto it = cols.begin(); it != cols.end(); ) {
+            if (usedCols.contains(table + "." + *it)) {
+                ++it;
+            } else {
+                it = cols.erase(it); // erase returns the next valid iterator
+            }
+            if (cols.size() <= 1) break; // keep at least one column
+        }
+    }
+}
 
 
 void DatalogGenerator::generate() {
@@ -283,8 +300,9 @@ Atom generateAtomFromTable(string& alias, SQLQuery& query, string& errorMessage 
     return Atom::createClassicalAtom(pred, std::move(terms));
 }
 
-void generateRuleForExtAtom(sql::FromItem& item, SQLQuery& query, TranslationResult& result) {
+void generateRuleForExtAtom( sql::FromItem& item, SQLQuery& query, TranslationResult& result) {
     BB_ASSERT(item.getType() == sql::FromItemType::EXTERNAL);
+
     vector<Term> terms;
     for (auto& col: query.tableColumnsMap_[item.getAlias()]) {
         // do not change the var name otherwise the external atom does not match with the var name

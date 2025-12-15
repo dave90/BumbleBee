@@ -167,59 +167,6 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
 
     context.profiler_.endPhysicalAtom(input);
     return AtomResultType::NEED_MORE_INPUT;
-    //
-    // return AtomResultType::NEED_MORE_INPUT;
-    // if ( pinput.getSize() == pinput.getCapacity()) {
-    //     // chunk is full push in the global state
-    //     data_chunk_ptr_t cptr = pinput.clone();
-    //     gcstate.sinkChunk(cptr);
-    //     auto resultState = AtomResultType::HAVE_MORE_OUTPUT;
-    //     if (cstate.cachedChunk_.getSize() == 0)
-    //         resultState =  AtomResultType::NEED_MORE_INPUT;
-    //     context.profiler_.endPhysicalAtom(input);
-    //     return resultState;
-    // }
-    //
-    // // pinput chunk is not full so we need to flat it
-    // pinput.normalify();
-    // // if cache is empty set to cache
-    // if (cstate.cachedChunk_.getSize() == 0) {
-    //     cstate.cachedChunk_.initializeEmpty(dcColsType_);
-    //     cstate.cachedChunk_.reference(pinput);
-    //     context.profiler_.endPhysicalAtom(pinput);
-    //     return AtomResultType::HAVE_MORE_OUTPUT;
-    // }
-    //
-    // auto spaceAvailable = cstate.cachedChunk_.getCapacity() - cstate.cachedChunk_.getSize();
-    // // check if pinput fit into the cache
-    // if (spaceAvailable >= pinput.getSize()) {
-    //     cstate.cachedChunk_.append(pinput);
-    //     // if cache is full send to global state and reset the cache
-    //     if (cstate.cachedChunk_.getSize() == cstate.cachedChunk_.getCapacity()) {
-    //         data_chunk_ptr_t cptr = cstate.cachedChunk_.clone();
-    //         gcstate.sinkChunk(cptr);
-    //         cstate.cachedChunk_.destroy();
-    //         context.profiler_.endPhysicalAtom(pinput);
-    //         return AtomResultType::NEED_MORE_INPUT;
-    //     }
-    //     context.profiler_.endPhysicalAtom(pinput);
-    //     return AtomResultType::HAVE_MORE_OUTPUT;
-    // }
-    //
-    // // pinput does not fit into the cache, so append a portion of pinput
-    // // send the cache to global state and set the remaining portion of pinput into the cache
-    // auto oldSize = pinput.getSize();
-    // pinput.setCardinality(spaceAvailable);
-    // cstate.cachedChunk_.append(pinput);
-    // data_chunk_ptr_t cptr = cstate.cachedChunk_.clone();
-    // gcstate.sinkChunk(cptr);
-    // cstate.cachedChunk_.reset();
-    //
-    // pinput.setCardinality(oldSize);
-    // auto inputOffset = spaceAvailable;
-    // pinput.copy(cstate.cachedChunk_, inputOffset);
-    // context.profiler_.endPhysicalAtom(pinput);
-    // return AtomResultType::HAVE_MORE_OUTPUT;
 }
 
 void PhysicalChunkOutput::combine(ThreadContext &context, PhysicalAtomState &state,

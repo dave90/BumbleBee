@@ -116,6 +116,21 @@ predicate_vector_t & Where::getItems() {
     return items_;
 }
 
+vector<QualifiedName> Where::getQualifiedNames() {
+    vector<QualifiedName> names;
+    for (auto& p:getItems()) {
+        for (auto& vp: p.getValue1().getValues()) {
+            if (vp.isIsConstant())continue;
+            names.push_back(vp.getQualifier());
+        }
+        for (auto& vp: p.getValue2().getValues()) {
+            if (vp.isIsConstant())continue;
+            names.push_back(vp.getQualifier());
+        }
+    }
+    return names;
+}
+
 vector<SQLOperator> & Where::getOps() {
     return ops_;
 }

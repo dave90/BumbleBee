@@ -92,8 +92,17 @@ public:
     static constexpr int BLOOM_SHIFT = 64 - BLOOM_SIZE;
     static constexpr uint64_t BLOOM_MASK64 = (~0ULL << BLOOM_SHIFT); // only high BLOOM_SIZE bits are 1
 
+
+    struct DataChunkSel {
+        DataChunkSel(DataChunk &chunk_, Vector& hash_, SelectionVector &sel, idx_t size);
+
+        DataChunk chunk_;
+        SelectionVector sel_;
+        Vector hash_;
+        idx_t size_;
+    };
 public:
-    JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, idx_t buckets);
+    JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, const vector<idx_t> &payloads, idx_t buckets);
 
 
     void addDataChunkSel(Vector& hash, DataChunk& chunk);
@@ -111,7 +120,7 @@ public:
     void setReady();
     bool isReady();
     // check if the keys are equal to the ht keys
-    bool checkKeys(const vector<idx_t>& keys);
+    bool checkKeys(const vector<idx_t>& keys,const vector<idx_t>& payloads );
     // Probe the left chunk
     idx_t probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,
                          SelectionVector &lsel, SelectionVector &rsel, const vector<Expression> &conditions);
@@ -141,14 +150,6 @@ private:
     struct JoinHashTableStats {
         JoinHashTableStats(idx_t buckets);
 
-        struct DataChunkSel {
-            DataChunkSel(DataChunk &chunk_, Vector& hash_, SelectionVector &sel, idx_t size);
-
-            DataChunk chunk_;
-            SelectionVector sel_;
-            Vector hash_;
-            idx_t size_;
-        };
         // Number of elements for each bucket
         vector<std::atomic<idx_t>> bucketSize_;
         // Chunks with selection vector for each bucket
@@ -160,8 +161,10 @@ private:
     idx_t buckets_;
     // predicate of ht
     Predicate* predicate_;
-    // Keys of the HT
+    // Keys and payloads of the HT
     vector<idx_t> keys_;
+    vector<idx_t> payloads_;
+    vector<bool> usedCols_;
     // Store the element indices for each bucket.
     // For bucket i, the data range is [directory[i-1], directory[i])
     // (start inclusive, end exclusive).

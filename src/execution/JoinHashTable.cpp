@@ -19,6 +19,7 @@
 #include "bumblebee/execution/JoinHashTable.hpp"
 
 #include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/Log.hpp"
 #include "bumblebee/common/operator/ComparisonOperators.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
@@ -350,7 +351,7 @@ uint64_t bloomFilterBitVector(idx_t bloomSize, Vector& hash, SelectionVector& se
 
 
 
-JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, Vector& hash, SelectionVector &sel, idx_t size):
+JoinHashTable::DataChunkSel::DataChunkSel(DataChunk &chunk, Vector& hash, SelectionVector &sel, idx_t size):
     sel_(sel),
     hash_(hash.getType()),
     size_(size){
@@ -359,18 +360,34 @@ JoinHashTable::JoinHashTableStats::DataChunkSel::DataChunkSel(DataChunk &chunk, 
     hash_.reference(hash);
 }
 
-JoinHashTable::JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, idx_t buckets): predicate_(predicate),
-    keys_(keys), buckets_(nextPowerOfTwo(buckets)), stats_(nextPowerOfTwo(buckets)), mutex_(predicate->getArity()) {
+
+JoinHashTable::JoinHashTable(Predicate *predicate, const vector<idx_t> &keys, const vector<idx_t> &payloads, idx_t buckets): predicate_(predicate),
+                                                                                                                             keys_(keys), payloads_(payloads), buckets_(nextPowerOfTwo(buckets)), stats_(nextPowerOfTwo(buckets)), mutex_(predicate->getArity()) {
     // check that buckets is power of 2
     BB_ASSERT(buckets_ != 0 && (buckets_ & (buckets_ - 1)) == 0);
     int bits = 64 - BLOOM_SIZE;
     auto maxValue = (1ULL << bits) - 1ULL;
     // check the buckets can fit in a uint of 64 - BLOOM_SIZE bits (as BLOOM_SIZE bits are used for bloom)
     BB_ASSERT(buckets < maxValue);
+    std::unordered_set cols(keys.begin(), keys.end());
+    if (!payloads.empty())
+        cols.insert(payloads.begin(), payloads.end());
+    else {
+        // if no payloads is needed just select the first non key column
+        for (idx_t i = 0; i < predicate->getArity(); i++)
+            if (!cols.contains(i)) {
+                cols.insert(i);
+                break;
+            }
+    }
+    usedCols_.resize(predicate->getArity(), 0);
+    for (idx_t i = 0; i < predicate->getArity(); i++)
+        if (cols.contains(i)) usedCols_[i] = true;
+
 }
 
 
-JoinHashTable::JoinHashTableStats::JoinHashTableStats(idx_t buckets):bucketMutex_(buckets), bucketChunks_(buckets), bucketSize_(buckets) {
+JoinHashTable::JoinHashTableStats::JoinHashTableStats(idx_t buckets):bucketMutex_(buckets), bucketSize_(buckets), bucketChunks_(buckets) {
     for (idx_t i = 0; i < buckets; i++) {
         bucketSize_[i].store(0);
     }
@@ -394,11 +411,13 @@ void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
     BB_ASSERT(buckets.getType() == UBIGINT);
     std::unordered_map<idx_t, vector<idx_t>> bucketSelection;
 
+
     // collect the idx for each bucket
     auto data = FlatVector::getData<uint64_t>(buckets);
     for (idx_t i = 0; i < chunk.getSize(); i++) {
         bucketSelection[data[i]].push_back(i);
     }
+
 
     // store the stats
     for (auto& [bucket, idxs] : bucketSelection) {
@@ -407,11 +426,11 @@ void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
             sel.setIndex(i, idxs[i]);
 
         incrementBucketSize(bucket, idxs.size());
-
-        std::lock_guard lock(stats_.bucketMutex_[bucket]);
+        lock_guard lock(stats_.bucketMutex_[bucket]);
         stats_.bucketChunks_[bucket].emplace_back(chunk, hash, sel, idxs.size());
     }
 }
+
 
 void JoinHashTable::initDirectory() {
     directory_ = directory_t(new uint64_t[buckets_]);
@@ -424,12 +443,20 @@ void JoinHashTable::initDirectory() {
     }
 
     // init the big data chunk
-    for (idx_t i = 0; i < stats_.bucketChunks_.size(); i++) {
-        //find first chunk and init the data types
-        if (stats_.bucketChunks_[i].size() == 0)continue;
-        auto types = stats_.bucketChunks_[i][0].chunk_.getTypes();
+    for (auto& chunks: stats_.bucketChunks_) {
+        if (chunks.empty())continue;
+        auto types = chunks[0].chunk_.getTypes();
         chunkone_.initialize(types);
         break;
+    }
+    idx_t usedBuckets = 0;
+    for (auto& chunks: stats_.bucketChunks_) {
+        if (chunks.empty())continue;
+        ++usedBuckets;
+    }
+    for (idx_t i=0;i< chunkone_.columnCount();++i) {
+        if (usedCols_[i]) continue;
+        chunkone_.data_[i].initialize(false, 0);
     }
     auto size = directory_[buckets_-1];
     chunkone_.resize(size);
@@ -439,7 +466,8 @@ void JoinHashTable::initDirectory() {
 
 
 void JoinHashTable::build(idx_t bucket, vector<vector_data_mngr_ptr_t>& stringVectorsDataMngr) {
-    BB_ASSERT(bucket < stats_.bucketChunks_.size());
+    if (stats_.bucketChunks_[bucket].empty()) return;
+
     auto bucketOffset = dirBegin(directory_.get(), bucket);
     uint64_t accBloom = 0; // bloom across all chunks
     for (idx_t i = 0; i < stats_.bucketChunks_[bucket].size(); i++) {
@@ -450,6 +478,7 @@ void JoinHashTable::build(idx_t bucket, vector<vector_data_mngr_ptr_t>& stringVe
         auto& hash = stat.hash_;
 
         for (idx_t j = 0; j< dc.columnCount(); j++) {
+            if (!usedCols_[j]) continue; // avoid to copy column that we do not use
             auto& sourceVector = dc.data_[j];
             Vector targetVector(chunkone_.data_[j]);
             if (targetVector.getType() == STRING) {
@@ -547,8 +576,8 @@ idx_t JoinHashTable::getBuckets() {
     return buckets_;
 }
 
-bool JoinHashTable::checkKeys(const vector<idx_t>& keys) {
-    return compareVectors<idx_t>(keys, keys_);
+bool JoinHashTable::checkKeys(const vector<idx_t>& keys, const vector<idx_t>& payloads) {
+    return compareVectors<idx_t>(keys, keys_) && compareVectors<idx_t>(payloads, payloads_);
 }
 
 idx_t JoinHashTable::probe(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, Vector &lhash, SelectionVector &lsel,

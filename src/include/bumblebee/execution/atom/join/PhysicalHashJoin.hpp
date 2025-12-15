@@ -27,9 +27,9 @@ namespace bumblebee{
 // - executor for probe phase
 class PhysicalHashJoin : public PhysicalAtom {
 public:
-    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys,
+    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads,
         vector<idx_t> lkeys, vector<Expression>& conditions);
-    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, PhysicalHashType type);
+    PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads, PhysicalHashType type);
 
     ~PhysicalHashJoin() override;
 
@@ -60,6 +60,7 @@ private:
 
     PredicateTables* pt_;
     vector<idx_t> keys_; // keys of the current predicate
+    vector<idx_t> payloads_; // payloads of the current predicate
     vector<idx_t> lkeys_; // keys on the input dataset
     vector<Expression> conditions_;
     PhysicalHashType type_;

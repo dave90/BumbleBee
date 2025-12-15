@@ -67,6 +67,7 @@ private:
     void assignAliasesAndCollectColumns(sql::SQLStatement& statement);
     void expandSelectStars(sql::SQLStatement& statement);
     void validateGroupBy(sql::SQLStatement& statement);
+    void removeUnusedCols(sql::SQLStatement& statement);
 
     SQLQuery& query_;
 };

@@ -44,6 +44,7 @@ public:
     void removeItem(idx_t i);
 
     value_expr_vector_t & getItems();
+    vector<QualifiedName> getQualifiedNames();
 
     vector<AggregateFunctionType> & getAggFunctions();
     bool containsAggregations();

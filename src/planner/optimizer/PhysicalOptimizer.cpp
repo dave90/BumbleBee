@@ -438,7 +438,7 @@ void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
 
 
 void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
-    vector<idx_t>& keys, prule_ptr_vector_t& prules, idx_t& priority) {
+    vector<idx_t>& keys, vector<idx_t>& payloads, prule_ptr_vector_t& prules, idx_t& priority) {
 
     vector<idx_t> cols;
     for (idx_t i = 0;i<pred->predicate_->getArity();++i)
@@ -459,13 +459,13 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
             source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
         }
         dbCols = cols; selCols = cols;
-        patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, COLLECT));
+        patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, payloads, COLLECT));
         prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
         prules.push_back(std::move(pruleStats));
     }
     {
         auto dbCols = cols, selCols = cols;
-        patom_ptr_t source = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, BUILD));
+        patom_ptr_t source = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, payloads, BUILD));
         dbCols = cols; selCols = cols;
         patom_ptr_t sink = patom_ptr_t(new PhysicalNopeOutput(types, dbCols, selCols ));
         prule_ptr_t pruleBuild(new PhysicalRule(source, sink, empty, 1));
@@ -576,6 +576,9 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         patoms.push_back(std::move(nj));
         return;
     }
+    // find payloads
+    vector<idx_t> payloads = selCols;
+
     if (atom.isNegative() || recursiveRules_) {
     // if (true) {
 
@@ -584,17 +587,6 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
             return;
         }
 
-        // find payloads
-        vector<idx_t> payloads = selCols;
-        if (keys.size() + payloads.size() != pred->predicate_->getArity()) {
-            // insert the remaining cols in payloads
-            std::unordered_set used(keys.begin(), keys.end());
-            used.insert(payloads.begin(), payloads.end());
-            for (idx_t k = 0; k < pred->predicate_->getArity(); ++k) {
-                if (used.contains(k)) continue;
-                payloads.push_back(k);
-            }
-        }
         // if atom is negative payloads is 0
         BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
 
@@ -618,15 +610,15 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
 
 
     // check if the hash table is present
-    if (!pred->existJoinHashTable(keys) ) {
+    if (!pred->existJoinHashTable(keys, payloads) ) {
         // we need to build the hash table
-        generateHTBuildRules(pred, keys, prules, priority);
+        generateHTBuildRules(pred, keys, payloads, prules, priority);
     }
     // check if the hash table is ready, otherwise we need to set the priority >= 2
-    if (!pred->getJoinHashTable(keys)->isReady())
+    if (!pred->getJoinHashTable(keys, payloads)->isReady())
         priority = (priority < 2)? 2 : priority;
 
-    auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, dcKeys, joinConditions ));
+    auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, payloads, dcKeys, joinConditions ));
     patoms.push_back(std::move(nj));
 }
 

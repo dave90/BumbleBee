@@ -62,7 +62,7 @@ private:
 
     void generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, patom_ptr_vector_t &patoms);
 
-    void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys,
+    void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
                               prule_ptr_vector_t& prules, idx_t& priority);
     void generatePRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
                               prule_ptr_vector_t& prules, idx_t& priority);

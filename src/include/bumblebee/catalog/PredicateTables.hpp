@@ -89,8 +89,8 @@ public:
     vector<ConstantType> getTypes();
 
     // Return a join hash table with the same keys. If does not exist create it
-    joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys);
-    bool existJoinHashTable(const vector<idx_t>& keys);
+    joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads);
+    bool existJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads);
 
     // Return a join PRL hash table with the same keys and payloads.
     join_prl_ht_ptr_t& getJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );

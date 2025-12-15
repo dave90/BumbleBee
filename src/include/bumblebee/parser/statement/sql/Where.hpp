@@ -71,6 +71,7 @@ public:
     void addOperator(SQLOperator op);
 
     predicate_vector_t & getItems();
+    vector<QualifiedName> getQualifiedNames();
 
     vector<SQLOperator> & getOps();
 

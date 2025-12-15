@@ -33,7 +33,6 @@ public:
     JoinHashTable& ht_;
     idx_t rpos_{0};
     idx_t lpos_{0};
-
 };
 
 
@@ -81,21 +80,23 @@ private:
 
 PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols,
-    PredicateTables *pt, vector<idx_t> keys, vector<idx_t> lkeys,
+    PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads, vector<idx_t> lkeys,
     vector<Expression>& conditions)
         :PhysicalAtom(types, dcCols, selectedCols),
         pt_(pt),
         conditions_(std::move(conditions)),
         keys_(std::move(keys)),
+        payloads_(std::move(payloads)),
         type_(PROBE),
         lkeys_(std::move(lkeys)){
 }
 
 PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t> &dcCols,
-    vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys,
+    vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     PhysicalHashType type):PhysicalAtom(types, dcCols, selectedCols),
     pt_(pt),
     keys_(std::move(keys)),
+    payloads_(std::move(payloads)),
     type_(type) {
 }
 
@@ -130,7 +131,7 @@ string PhysicalHashJoin::toString() const {
 }
 
 pstate_ptr_t PhysicalHashJoin::getState() const {
-    return pstate_ptr_t(new HTJoinAtomState(*pt_->getJoinHashTable(keys_)));
+    return pstate_ptr_t(new HTJoinAtomState(*pt_->getJoinHashTable(keys_, payloads_)));
 }
 
 idx_t PhysicalHashJoin::getMaxThreads() const {
@@ -148,7 +149,7 @@ bool PhysicalHashJoin::isSink() const {
 }
 
 gpstate_ptr_t PhysicalHashJoin::getGlobalState() const {
-    return gpstate_ptr_t(new GlobalHTJoinAtomState(*pt_->getJoinHashTable(keys_)));
+    return gpstate_ptr_t(new GlobalHTJoinAtomState(*pt_->getJoinHashTable(keys_, payloads_)));
 }
 
 AtomResultType PhysicalHashJoin::execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
@@ -223,7 +224,6 @@ void PhysicalHashJoin::combine(ThreadContext &context, PhysicalAtomState &state,
 
     auto& cgstate = (GlobalHTJoinAtomState&)gstate;
     auto& cstate = (HTJoinAtomState&)state;
-
 
     context.profiler_.endPhysicalAtom();
 }

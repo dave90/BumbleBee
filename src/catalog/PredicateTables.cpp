@@ -62,18 +62,18 @@ vector<ConstantType> PredicateTables::getTypes() {
     return types_;
 }
 
-joinht_ptr_t & PredicateTables::getJoinHashTable(const vector<idx_t>& keys) {
+joinht_ptr_t & PredicateTables::getJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads) {
     for (auto&ht: jhtables_)
-        if (ht->checkKeys(keys))
+        if (ht->checkKeys(keys, payloads))
             return ht;
 
-    jhtables_.emplace_back(new JoinHashTable(predicate_.get(), keys, getCount()));
+    jhtables_.emplace_back(new JoinHashTable(predicate_.get(), keys,payloads,getCount()));
     return jhtables_.back();
 }
 
-bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys) {
+bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads) {
     for (auto&ht: jhtables_)
-        if (ht->checkKeys(keys))
+        if (ht->checkKeys(keys, payloads))
             return true;
     return false;
 }

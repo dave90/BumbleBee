@@ -92,8 +92,9 @@ TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
     populatePTable(ptableLeft, tLeft, 1, 10);
     populatePTable(ptableLeft, tLeft, 1, 10);
     vector<idx_t> keys = {1};
+    vector<idx_t> payloads = {0,2};
     auto buckets = 16;
-    JoinHashTable ht(ptableLeft.get()->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableLeft.get()->predicate_.get(), keys, payloads, buckets);
 
     for (idx_t i = 0; i < ptableLeft->chunkCount(); ++i) {
         auto& chunk = ptableLeft->getChunk(i);
@@ -131,8 +132,10 @@ TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
  */
 TEST_F(PhysicalHJTest, HTInitDirectoryEmptyInput) {
     vector<idx_t> keys = {1}; // arbitrary; no data will be hashed
+    vector<idx_t> payloads = {0,2};
+
     const idx_t buckets = 8;
-    JoinHashTable ht(ptableLeft.get()->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableLeft.get()->predicate_.get(), keys,payloads, buckets);
 
     // No addDataChunkSel calls
     ht.initDirectory();
@@ -156,9 +159,11 @@ TEST_F(PhysicalHJTest, HTBucketDistributionMatchesHashUnderConcurrency) {
     // Use a power-of-two bucket count with multiple buckets to stress distribution.
     const idx_t buckets = 16;
     vector<idx_t> keys = {1}; // hash on column 1 (non-trivial values)
+    vector<idx_t> payloads = {0,2};
+
     populatePTable(ptableRight, tRight, 6, 64);
 
-    JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, payloads, buckets);
 
     // Launch threads that add each chunk with its hash vector
     vector<std::thread> threads;
@@ -210,9 +215,11 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
     auto lchunk = createChunkWithValue(tLeft, 20, 0);
 
     vector<idx_t> keys = {1}; // join on column 1
+    vector<idx_t> payloads = {0,2};
+
     const idx_t buckets = 8;
 
-    JoinHashTable ht(ptableRight->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableRight->predicate_.get(), keys, payloads, buckets);
 
     // Add right chunk to the HT
     Vector rhash(UBIGINT);
@@ -270,8 +277,9 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
 
     vector<idx_t> keys = {1};
     const idx_t buckets = 1;
+    vector<idx_t> payloads = {0,2};
 
-    JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, payloads, buckets);
 
     Vector rhash(UBIGINT);
     rchunk.hash(rhash, keys);
@@ -301,8 +309,10 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
  */
 TEST_F(PhysicalHJTest, HTBucketMaskingMatchesBitwiseAnd) {
     vector<idx_t> keys = {0}; // key doesn't matter for this test
+    vector<idx_t> payloads = {1,2};
+
     const idx_t buckets = 32;       // power of two
-    JoinHashTable ht(ptableLeft->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableLeft->predicate_.get(), keys, payloads, buckets);
 
     // Craft a vector of "hashes" directly (UBIGINT) and check calculateBucketVector()
     Vector hash(UBIGINT, 16);
@@ -324,17 +334,19 @@ TEST_F(PhysicalHJTest, HTBucketMaskingMatchesBitwiseAnd) {
  */
 TEST_F(PhysicalHJTest, HTCheckKeysOrderAndMismatch) {
     vector<idx_t> keys_ref = {2, 0, 1};
-    JoinHashTable ht(ptableLeft->predicate_.get(), keys_ref, 8);
+    vector<idx_t> payloads = {};
+
+    JoinHashTable ht(ptableLeft->predicate_.get(), keys_ref, payloads, 8);
 
     // Same set, different order -> true
-    EXPECT_TRUE(ht.checkKeys({1, 2, 0}));
-    EXPECT_TRUE(ht.checkKeys({0, 1, 2}));
+    EXPECT_TRUE(ht.checkKeys({1, 2, 0}, {}));
+    EXPECT_TRUE(ht.checkKeys({0, 1, 2}, {}));
 
     // Different cardinality -> false
-    EXPECT_FALSE(ht.checkKeys({0, 1}));
+    EXPECT_FALSE(ht.checkKeys({0, 1}, {2}));
 
     // Same cardinality but different element -> false
-    EXPECT_FALSE(ht.checkKeys({0, 1, 42}));
+    EXPECT_FALSE(ht.checkKeys({0, 1, 42}, {}));
 }
 
 
@@ -352,8 +364,9 @@ TEST_F(PhysicalHJTest, HTProbeMultipleConditionsRefine) {
 
     // We’ll join on left.col1 (UINTEGER) == right.col0 (UINTEGER) to keep key types identical
     vector<idx_t> build_keys = {0}; // for rchunk (its col0 is UINTEGER)
+    vector<idx_t> payloads = {1,2};
     const idx_t buckets = 1; // avoid hash-bucket alignment issues for this logical test
-    JoinHashTable ht(ptableRight->predicate_.get(), build_keys, buckets);
+    JoinHashTable ht(ptableRight->predicate_.get(), build_keys, payloads, buckets);
 
     // Add to HT (right)
     Vector rhash(UBIGINT);
@@ -412,8 +425,9 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
     auto lchunk = createChunkWithValue(tLeft,  N, 0);
 
     vector<idx_t> keys = {1}; // join on the 10*i column
+    vector<idx_t> payloads = {0,2};
     const idx_t buckets = 8;
-    JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, buckets);
+    JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, payloads, buckets);
 
     Vector rhash(UBIGINT, N);
     rchunk.hash(rhash, keys);
@@ -457,8 +471,10 @@ TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
 
     // Build on right key = col0 (UINTEGER)
     vector<idx_t> build_keys = {0};
+    vector<idx_t> payloads = {1,2};
+
     const idx_t buckets = 1;
-    JoinHashTable ht(ptableRight.get()->predicate_.get(), build_keys, buckets);
+    JoinHashTable ht(ptableRight.get()->predicate_.get(), build_keys, payloads, buckets);
 
     Vector rhash(UBIGINT);
     rchunk.hash(rhash, build_keys);
@@ -518,9 +534,10 @@ TEST_F(PhysicalHJTest, HTProbeWithMultipleKeys) {
     // Keys: left.col0 (INTEGER) matches right.col2 (INTEGER)
     //       left.col1 (UINTEGER) matches right.col0 (UINTEGER)
     vector<idx_t> build_keys = {2, 0};
+    vector<idx_t> payloads = {1};
     const idx_t buckets = 8;
 
-    JoinHashTable ht(ptableRight->predicate_.get(), build_keys, buckets);
+    JoinHashTable ht(ptableRight->predicate_.get(), build_keys, payloads, buckets);
 
     // Hash on the two keys and build
     Vector rhash(UBIGINT);

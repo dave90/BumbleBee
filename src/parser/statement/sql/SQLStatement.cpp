@@ -181,6 +181,17 @@ void SQLStatement::setLimit(idx_t limit) {
     limit_ = limit;
 }
 
+vector<QualifiedName> SQLStatement::getQualifiedNames() {
+    vector<QualifiedName> names;
+    auto selectNames = select_.getQualifiedNames();
+    names.insert(names.end(), selectNames.begin(), selectNames.end());
+    auto whereNames = where_.getQualifiedNames();
+    names.insert(names.end(), whereNames.begin(), whereNames.end());
+    auto groupbiesNames = groupby_.getQualifiedNames();
+    names.insert(names.end(), groupbiesNames.begin(), groupbiesNames.end());
+    return names;
+}
+
 string SQLStatement::toString() const{
     string result = "";
     result += select_.toString() + "\n";

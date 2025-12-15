@@ -1,0 +1,27 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_cmp_%,delta_vs_prev,output_match
+edge 1M,edge1M,0.8808,0.8786,0.8819,-2.1640,-71.07%,-0.1540,match
+edge 1M Filter 1,edge1M.filter.1,0.9341,0.9290,0.9403,-2.5326,-73.06%,0.0033,match
+edge 1M Filter 2,edge1M.filter.2,1.0945,1.0894,1.0995,-3.5446,-76.41%,0.0011,match
+Col500K,col500K,0.5622,0.5533,0.5686,-3.6357,-86.61%,-0.0517,match
+Cross product 1,join_cp.1,1.2753,1.2551,1.3085,-7.8355,-86.00%,0.0224,match
+Cross product 2,join_cp.2,0.2911,0.2872,0.2962,-3.0933,-91.40%,-0.0048,match
+Cross product 3,join_cp.3,5.1725,5.1326,5.2303,-83.1699,-94.14%,0.0075,match
+Join NL 1,join_nl.1,0.3803,0.3444,0.4014,-0.8815,-69.86%,-0.0030,match
+Join NL 2,join_nl.2,0.2567,0.2382,0.2894,-0.4291,-62.57%,-0.0349,match
+Join NL 3,join_nl.3,1.9066,1.8930,1.9181,-2.9504,-60.75%,0.0011,match
+Join NL 4,join_nl.4,1.9791,1.9630,2.0103,-16.3307,-89.19%,-0.0367,match
+Join NL 5,join_nl.5,0.1870,0.1842,0.1891,-0.1209,-39.28%,0.0058,match
+Join HT 1,join_ht.1,5.9779,5.9052,6.0251,-6.2053,-50.93%,-0.3782,match
+Join HT 2,join_ht.2,0.6156,0.6139,0.6169,-0.5225,-45.91%,-0.2715,match
+Join HT 3,join_ht.3,12.2035,12.0425,12.3467,-107.7965,-89.83%,-1.4079,mismatch
+Join HT 4,join_ht.4,8.8113,8.7824,8.8578,-14.8455,-62.75%,-0.2325,match
+Join HT 5,join_ht.5,21.6259,21.4680,21.8736,18.5530,603.76%,-0.0021,match
+Aggregates 1,agg.1,1.4169,1.3712,1.4597,1.2234,632.22%,0.0842,match
+Aggregates 2,agg.2,1.2850,1.2779,1.2893,-3.1947,-71.32%,0.0375,match
+Aggregates Complex 1,agg.complex.1,62.3980,62.2633,62.5182,57.6775,1221.85%,-5.9985,mismatch
+Aggregates MinMax 1,agg.minmax.1,8.0458,7.9833,8.1146,-15.0087,-65.10%,0.1758,match
+Aggregates Single 1,agg.single.1,10.7259,10.3536,11.0560,-109.2741,-91.06%,-1.2802,match
+Aggregates Single 2,agg.single.2,11.0636,10.8364,11.3210,-108.9364,-90.78%,-1.0957,match
+Aggregates Single 3,agg.single.3,11.1311,10.8081,11.3055,-108.8689,-90.72%,-1.1487,match
+Reach 1,reach.1,2.1486,2.1149,2.1658,-2.9828,-58.13%,0.0457,match
+Reach 2,reach.2,0.8703,0.8574,0.8802,-2.1462,-71.15%,-0.0141,match

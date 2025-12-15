@@ -65,6 +65,8 @@ public:
     idx_t & getLimit();
     void setLimit(idx_t limit);
 
+    vector<QualifiedName> getQualifiedNames();
+
     string toString() const;
 
     void clear();
