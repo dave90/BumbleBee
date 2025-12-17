@@ -31,8 +31,8 @@ namespace bumblebee{
 // Hash table bucket entry
 struct HTEntry64 {
     uint64_t hash_;
-    uint32_t pageOffset_;
     uint32_t pageNum_;
+    uint32_t pageOffset_;
 };
 
 /*

@@ -72,7 +72,6 @@ public:
 private:
     void findAggregates(rules_vector_t& program);
 
-private:
     ClientContext& clientContext_;
     vector<idx_t> rulesWithAggregates_;
     idx_t newPredCounter_{0};

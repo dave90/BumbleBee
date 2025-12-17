@@ -120,7 +120,7 @@ private:
     // mutex of the partitioned HT
     mutex mutex_;
     // statistics of entries for each partition
-    std::unordered_map<idx_t, idx_t> partitionEntries_;
+    vector<atomic<idx_t>> partitionEntries_;
 
     // Aggregate Group columns
     vector<idx_t> groupCols_;

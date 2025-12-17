@@ -180,8 +180,9 @@ void PRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t shift)
             infoIdx++;
             continue;
         }
-        if (!partitions[infoIdx])
-            partitions[infoIdx] = distinct_ht_ptr_t(new PRLHashTable(bufferManager_, types_));
+        if (!partitions[infoIdx]) {
+            partitions[infoIdx] = distinct_ht_ptr_t(new PRLHashTable(bufferManager_, types_, nextPowerOfTwo(pInfo.size_)));
+        }
         partitions[infoIdx]->move(pInfo.groupAddresses_, pInfo.hashes_, pInfo.size_);
         pInfo.size_ = 0;
 
@@ -355,7 +356,7 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
         resize(capacity_ * 2);
     }
 
-    BB_ASSERT(entries_ + size < capacity_ );
+    BB_ASSERT(!createGroups || entries_ + size <= capacity_ );
     BB_ASSERT(groups.columnCount() == types_.size());
     BB_ASSERT(hash.getType() == UBIGINT);
 

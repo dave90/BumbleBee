@@ -46,7 +46,7 @@ namespace bumblebee {
 
 // Vector size
 #define STANDARD_VECTOR_SIZE 1024
-#define HT_INIT_CAPACITY 32768
+#define HT_INIT_CAPACITY (MORSEL_SIZE * 4)
 
 // CSV Read
 #define CSV_MULTITHREAD_THRESHOLD_BYTES (1024*1024*100)

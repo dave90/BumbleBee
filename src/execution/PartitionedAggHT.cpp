@@ -25,32 +25,34 @@
 namespace bumblebee{
 PartitionedAggHT::PartitionedAggHT(ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
     const vector<AggregateFunction*>& functions, idx_t partitions)
-    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions) {
+    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions), partitionEntries_(partitions) {
     BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2
     BB_ASSERT(payloadCols_.size() == functions_.size());
     shift_ = (sizeof(hash_t)*8) - std::bit_width(partitions_) + 1;
     partitionsAggVec_.resize(partitions_);
+    for (idx_t i = 0; i < partitions_; i++)
+        partitionEntries_[i].store(0);
 }
 
 
 void PartitionedAggHT::partitionHT(distinct_ht_ptr_t& ht) {
-    if (ht->getSize() == 0)return;
+    if (ht->getSize() == 0) return;
 
 
     vector<distinct_ht_ptr_t> partitions;
     partitions.resize(partitions_);
+    vector<ConstantType> types = ht->getTypes();
     ht->partition(partitions, shift_);
-    // lock the vector
-    lock_guard guard(mutex_);
     // log the statistics
     for (idx_t i = 0; i < partitions_; i++) {
         auto& ht = partitions[i];
         if (!ht)continue;
-        if (!partitionEntries_.contains(i))partitionEntries_[i] = 0;
         partitionEntries_[i] += ht->getSize();
-        if (types_.empty()) {
-            types_ = ht->getTypes();
-        }
+    }
+    // lock the vector
+    lock_guard guard(mutex_);
+    if (types_.empty()) {
+        types_ = types;
     }
     // push the partitions in the vector
     partitionsVec_.push_back(std::move(partitions));

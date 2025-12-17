@@ -451,17 +451,17 @@ void JoinHashTable::initDirectory() {
         chunkone_.initialize(types);
         break;
     }
-    idx_t usedBuckets = 0;
-    for (auto& chunks: stats_.bucketChunks_) {
-        if (chunks.empty())continue;
-        ++usedBuckets;
-    }
+
     for (idx_t i=0;i< chunkone_.columnCount();++i) {
         if (usedCols_[i]) continue;
         chunkone_.data_[i].initialize(false, 0);
     }
     auto size = directory_[buckets_-1];
-    chunkone_.resize(size);
+    auto currentSize = chunkone_.getCapacity();
+    for (idx_t i = 0; i < chunkone_.columnCount(); i++) {
+        if (!usedCols_[i] || currentSize > size) continue;
+        chunkone_.data_[i].resize(currentSize,size);
+    }
     chunkone_.setCapacity(size);
     chunkone_.setCardinality(size);
 }
