@@ -52,6 +52,8 @@ public:
     // Compare the keys and payload with the current JoinPRLHashTable
     bool checkKeysAndPayloads(const vector<idx_t>& keys,const vector<idx_t>& payloads);
 
+    void combine(PRLHashTable &other) override;
+
     bool isReady();
     void setReady();
 
@@ -75,8 +77,6 @@ private:
     bool ready_{false};
 
 public:
-    // scan the data chunks of h1  and cast and add into h2
-    static void insert(JoinPRLHashTable &h1, JoinPRLHashTable &h2);
     // Combine h1 with h2 using the common types. Results are in h1
     static void castAndCombine(BufferManager &manager, std::unique_ptr<JoinPRLHashTable> &h1, JoinPRLHashTable &h2);
 

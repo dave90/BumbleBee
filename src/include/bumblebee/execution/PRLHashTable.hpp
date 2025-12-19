@@ -117,7 +117,7 @@ public:
 
 
     // Combine with other HT
-    void combine(PRLHashTable& other);
+    virtual void combine(PRLHashTable& other);
     // Partition the HT
     void partition(vector<distinct_ht_ptr_t>& partitions, idx_t shift);
 

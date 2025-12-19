@@ -8,7 +8,7 @@
 - Hash build: reduce build tasks
 - CICD
 - Default minimum integer (small int or int 32 bit not tiny as now)
-
+- Perfect hash join
 
 ## Next of Next
 

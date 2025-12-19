@@ -27,7 +27,6 @@ JoinPRLHashTable::JoinPRLHashTable(BufferManager &manager, const vector<Constant
     keyColumns_(key_columns),
     payloadColumns_(payload_columns) {
     // create the types where keys are in the beginning and after the payloads
-    BB_ASSERT(types.size() == key_columns.size() + payload_columns.size());
     cols_ = keyColumns_;
     cols_.insert(cols_.end(), payloadColumns_.begin(), payloadColumns_.end());
     vector<ConstantType> orderedTypes;
@@ -57,8 +56,6 @@ vector<idx_t> JoinPRLHashTable::getPayloads() {
 }
 
 void JoinPRLHashTable::addChunk(DataChunk &chunk) {
-    BB_ASSERT(chunk.columnCount() == keyColumns_.size() + payloadColumns_.size());
-
     Vector hash(UBIGINT, chunk.getSize());
     chunk.hash(hash, keyColumns_);
     Vector addresses(UBIGINT, chunk.getSize());
@@ -216,6 +213,36 @@ void JoinPRLHashTable::findAddresses(const SelectionVector* sel, idx_t size,Vect
     }
 }
 
+void JoinPRLHashTable::combine(PRLHashTable &other) {
+   auto& joinOth = (JoinPRLHashTable&)other;
+
+    if (joinOth.entries_ == 0)
+        return;
+
+    BB_ASSERT(types_ == joinOth.types_);
+    BB_ASSERT(keyColumns_ == joinOth.keyColumns_);
+    BB_ASSERT(payloadColumns_ == joinOth.payloadColumns_);
+
+    idx_t position = 0;
+    DataChunk group;
+    group.initialize(types_);
+    vector<idx_t> keys; // keys are the first N column
+    for (idx_t i=0; i < keyColumns_.size(); ++i)
+        keys.push_back(i);
+
+    while (position < joinOth.entries_) {
+        joinOth.scan(position, group);
+
+        Vector hash(UBIGINT, group.getSize());
+        group.hash(hash, keys);
+        Vector addresses(UBIGINT, group.getSize());
+        findOrCreateGroups(hash, group, addresses);
+
+        position += minValue<idx_t>(STANDARD_VECTOR_SIZE, joinOth.entries_ - position);
+    }
+}
+
+
 void JoinPRLHashTable::incrementBuckets(Vector& buckets, SelectionVector& notEqual, idx_t notEqualCount) {
     auto bucketPtr = FlatVector::getData<uint64_t>(buckets);
     for (idx_t i=0;i<notEqualCount;++i) {
@@ -226,7 +253,7 @@ void JoinPRLHashTable::incrementBuckets(Vector& buckets, SelectionVector& notEqu
     }
 }
 
-void JoinPRLHashTable::insert(JoinPRLHashTable &h1, JoinPRLHashTable &h2) {
+void insert(JoinPRLHashTable &h1, JoinPRLHashTable &h2) {
     BB_ASSERT(h1.getTypes() != h2.getTypes());
     BB_ASSERT(h1.getTypes().size() == h2.getTypes().size());
 
@@ -255,11 +282,11 @@ void JoinPRLHashTable::castAndCombine(BufferManager &manager, std::unique_ptr<Jo
     if (commonTypes!= h1->getTypes()) {
         // we need to cast the h1
         join_prl_ht_ptr_t newDht = join_prl_ht_ptr_t(new JoinPRLHashTable(manager, commonTypes, h1->keyColumns_, {}, h1->getCapacity(), true));
-        JoinPRLHashTable::insert( *h1, *newDht);
+        insert( *h1, *newDht);
         h1 = std::move(newDht);
     }
     if (t2 != h1->getTypes())
-        JoinPRLHashTable::insert(h2, *h1);
+        insert(h2, *h1);
     else
         h1->combine(h2);
 

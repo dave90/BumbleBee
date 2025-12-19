@@ -80,18 +80,16 @@ private:
 };
 
 PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vector<ConstantType> &types,
-    vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys,
+    vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     vector<idx_t> lkeys, bool negative) : PhysicalAtom(types, dcCols,selectedCols),
-    keys_(std::move(keys)), lkeys_(std::move(lkeys)),pt_(pt), context_(context), type_(PROBE), negative_(negative){
-    initialize();
+    keys_(std::move(keys)), lkeys_(std::move(lkeys)),pt_(pt), context_(context), type_(PROBE), negative_(negative), payloads_(std::move(payloads)){
     BB_ASSERT(!negative || (keys_.size() == pt_->predicate_->getArity() && payloads_.empty()) );
 }
 
 PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vector<ConstantType> &types,
-    vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys,
+    vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     PhysicalHashType type, bool sinkInDelta) : PhysicalAtom(types, dcCols,selectedCols),
-    keys_(std::move(keys)),pt_(pt), context_(context), type_(type), sinkInDelta_(sinkInDelta){
-    initialize();
+    keys_(std::move(keys)),pt_(pt), context_(context), type_(type), sinkInDelta_(sinkInDelta), payloads_(std::move(payloads)){
     // in build phase (source) all columns should be keys and pt is flagged as distinct
     BB_ASSERT(type_ != BUILD || payloads_.empty() );
     BB_ASSERT(type_ != BUILD || pt_->isDistinct() );
@@ -101,7 +99,6 @@ PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vec
     vector<idx_t> &dcCols, PredicateTables *pt, bool sinkInDelta): PhysicalAtom(types), pt_(pt), context_(context),type_(COLLECT), sinkInDelta_(sinkInDelta) {
     dcCols_ = std::move(dcCols);
     for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
-
     BB_ASSERT(dcCols_.size() == pt_->predicate_->getArity());
     // insert all the index as keys
     for (idx_t i=0;i<pt->predicate_->getArity();++i)
@@ -116,15 +113,6 @@ PhysicalPRLHashJoin::PhysicalPRLHashJoin(const ClientContext &context, const vec
         keys_.push_back(i);
 }
 
-void PhysicalPRLHashJoin::initialize() {
-    // payload columns are not key columns
-    std::unordered_set<idx_t> keySet;
-    keySet.insert(keys_.begin(), keys_.end());
-    for (auto& col : selectCols_)
-        if (!keySet.contains(col))
-            payloads_.push_back(col);
-
-}
 
 PhysicalPRLHashJoin::~PhysicalPRLHashJoin() {}
 
@@ -316,12 +304,11 @@ AtomResultType PhysicalPRLHashJoin::sink(ThreadContext &context, DataChunk &inpu
         return AtomResultType::NEED_MORE_INPUT;
     }
     BB_ASSERT(input.getSize() > 0);
+
     DataChunk pinput = projectColumns(input);
-    BB_ASSERT(pinput.columnCount() == dcColsType_.size());
 
     cstate.ht_.addChunk(pinput);
-
-    context.profiler_.endPhysicalAtom(pinput);
+    context.profiler_.endPhysicalAtom(input);
     return AtomResultType::HAVE_MORE_OUTPUT;
 }
 

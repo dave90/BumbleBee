@@ -416,19 +416,13 @@ void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
             source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
         }
 
-        dbCols.clear();
-        for (auto i:keys) {
-            dbCols.push_back(i);
-        }
-        for (auto i:payloads) {
-            dbCols.push_back(i);
-        }
-        selCols = dbCols;
+        dbCols = cols;
+        selCols = cols;
 
         // create prl ht table
 
         pred->createJoinPRLHashTable( pred->getTypes() , keys, payloads);
-        patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , selCols,pred, keys, COLLECT, false));
+        patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , selCols,pred, keys, payloads, COLLECT, false));
 
         prule_ptr_t prule(new PhysicalRule(source, sink, empty, 0));
         prules.push_back(std::move(prule));
@@ -590,7 +584,8 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         // if atom is negative payloads is 0
         BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
 
-        if (!pred->existJoinPRLHashTable(keys, payloads)) {
+        if (!pred->existJoinPRLHashTable(keys, payloads) || keys.size() + payloads.size() < pred->predicate_->getArity()) {
+            // generate also if exist because you need to add new data into the join hash table
             // generate the build rule
             generatePRLHTBuildRules(pred, keys, payloads, prules, priority);
         }else if (!pred->getJoinPRLHashTable(keys, payloads)->isReady()) {
@@ -600,7 +595,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
 
         }
 
-        auto nj = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dcCols, selCols, pred, keys, dcKeys, atom.isNegative() ));
+        auto nj = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dcCols, selCols, pred, keys, payloads, dcKeys, atom.isNegative() ));
         patoms.push_back(std::move(nj));
         return;
     }

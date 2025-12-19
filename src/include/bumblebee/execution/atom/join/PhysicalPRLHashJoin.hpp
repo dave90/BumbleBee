@@ -28,14 +28,12 @@ namespace bumblebee{
 // - executor for probe phase
 class PhysicalPRLHashJoin : public PhysicalAtom {
 public:
-    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys,
+    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads,
     vector<idx_t> lkeys,bool negative = false);
-    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, PhysicalHashType type, bool sinkInDelta = false);
+    PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads, PhysicalHashType type, bool sinkInDelta = false);
     PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, PredicateTables* pt, bool sinkInDelta = false);
     PhysicalPRLHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt);
     ~PhysicalPRLHashJoin() override;
-
-    void initialize();
 
     idx_t getMaxThreads() const override;
     bool isSource() const override;

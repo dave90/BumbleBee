@@ -94,7 +94,6 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
             dht = std::move(ht);
         }
 
-
         // clear the memory
         partitionsVec_[i][partition] = nullptr;
     }
