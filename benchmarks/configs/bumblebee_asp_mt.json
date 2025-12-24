@@ -8,87 +8,132 @@
     {
       "test": "Cross product 3",
       "input_file": "join_cp.3",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     },
     {
       "test": "Join NL 1",
       "input_file": "join_nl.1",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -t 10 -i $file"]
     },
     {
       "test": "Join NL 3",
       "input_file": "join_nl.3",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -t 10 -i $file"]
     },
     {
       "test": "Join NL 4",
       "input_file": "join_nl.4",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     },
     {
       "test": "Join HT 1",
       "input_file": "join_ht.1",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     },
     {
       "test": "Join HT 3",
       "input_file": "join_ht.3",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     },
     {
       "test": "Join HT 4",
       "input_file": "join_ht.4",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     },
     {
       "test": "Join HT 5",
       "input_file": "join_ht.5",
-      "commands": ["../cmake-build-release/BumbleBee -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     },
     {
       "test": "Aggregates 1",
       "input_file": "agg.1",
-      "commands": ["../cmake-build-release/BumbleBee -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee -t 10 -i $file"]
     },
     {
       "test": "Aggregates 2",
       "input_file": "agg.2",
-      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -t 10 -i $file"]
     },
     {
       "test": "Aggregates Complex 1",
       "input_file": "agg.complex.1",
-      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -t 10 -i $file"]
     },
     {
       "test": "Aggregates MinMax 1",
       "input_file": "agg.minmax.1",
-      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -t 10 -i $file"]
     },
     {
       "test": "Aggregates Single 1",
       "input_file": "agg.single.1",
-      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -t 10 -i $file"]
     },
     {
       "test": "Aggregates Single 2",
       "input_file": "agg.single.2",
-      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -t 10 -i $file"]
     },
     {
       "test": "Aggregates Single 3",
       "input_file": "agg.single.3",
-      "commands": ["../cmake-build-release/BumbleBee  -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -t 10 -i $file"]
     },
     {
       "test": "Reach 1",
       "input_file": "reach.1",
-      "commands": ["../cmake-build-release/BumbleBee  -a -t 4 -i $file"]
+      "commands": ["../cmake-build-release/BumbleBee  -a -t 10 -i $file"]
     },
     {
-      "test": "Reach 2",
-      "input_file": "reach.2",
-      "commands": ["../cmake-build-release/BumbleBee  -a -t 4 -i $file"]
+      "test": "ORB Join 2",
+      "input_file": "orb_join_2",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB Join A 10K",
+      "input_file": "orb_join_a.10k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB JOIN A Duplicates 10k",
+      "input_file": "orb_join_a_duplicates.10k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB Join B2 250k",
+      "input_file": "orb_join_b2.250k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB Join B2 Duplicates 10k",
+      "input_file": "orb_join_b2_duplicates.10k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB SG Cyc 2k",
+      "input_file": "orb_sg_cyc.2k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB SG NoCyc 4k",
+      "input_file": "orb_sg_nocyc.4k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB TC Cyc 50k",
+      "input_file": "orb_tc_cyc.50k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB DTC Cyc 50k",
+      "input_file": "orb_dtc_cyc.50k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
+    },
+    {
+      "test": "ORB TC Cyc 500k",
+      "input_file": "orb_tc_cyc.500k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 10 -i $file"]
     }
   ]
 }

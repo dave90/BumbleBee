@@ -131,8 +131,53 @@
       "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
     },
     {
-      "test": "Reach 2",
-      "input_file": "reach.2",
+      "test": "ORB Join 2",
+      "input_file": "orb_join_2",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB Join A 10K",
+      "input_file": "orb_join_a.10k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB JOIN A Duplicates 10k",
+      "input_file": "orb_join_a_duplicates.10k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB Join B2 250k",
+      "input_file": "orb_join_b2.250k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB Join B2 Duplicates 10k",
+      "input_file": "orb_join_b2_duplicates.10k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB SG Cyc 2k",
+      "input_file": "orb_sg_cyc.2k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB SG NoCyc 4k",
+      "input_file": "orb_sg_nocyc.4k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB TC Cyc 50k",
+      "input_file": "orb_tc_cyc.50k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB DTC Cyc 50k",
+      "input_file": "orb_dtc_cyc.50k",
+      "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
+    },
+    {
+      "test": "ORB TC Cyc 500k",
+      "input_file": "orb_tc_cyc.500k",
       "commands": ["../cmake-build-release/BumbleBee -a -t 1 -i $file"]
     }
   ]

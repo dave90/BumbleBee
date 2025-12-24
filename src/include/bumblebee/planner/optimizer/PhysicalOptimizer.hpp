@@ -64,10 +64,14 @@ private:
 
     void generateHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
                               prule_ptr_vector_t& prules, idx_t& priority);
+    void generateJoinRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
+                              prule_ptr_vector_t& prules, idx_t& priority);
     void generatePRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
                               prule_ptr_vector_t& prules, idx_t& priority);
 
     void generatePhysicalExternal(const set_term_variable_t& vars, idx_t index, Rule& rule, patom_ptr_vector_t &patoms);
+
+    bool isRowLayoutHTRuleHTCreated(Predicate* predicate, const vector<idx_t>& keys, const vector<idx_t>& payloads );
 
 
     // global client context
@@ -88,6 +92,8 @@ private:
     std::unordered_map<idx_t, bool> skipAtom_;
     // bind data for the external atoms
     std::unordered_map<idx_t, function_data_ptr_t> externalBindData_;
+    // Track all the row laoyt join table created
+    std::unordered_map<Predicate*, vector<RowLayoutJoinHashTable*>> predicatesRLJoins_;;
 
 
     bool recursiveRules_{false};

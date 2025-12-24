@@ -179,4 +179,25 @@ protected:
 };
 
 
+template <class FUNC>
+void PRLHashTable::payloadApply(FUNC fun) {
+    if (entries_ == 0) {
+        return;
+    }
+    idx_t apply_entries = entries_;
+    idx_t page_nr = 0;
+    idx_t page_offset = 0;
+
+    for (auto &payload_chunk_ptr : payloadPtrs_) {
+        auto this_entries = minValue(tuplesPerBlock_, apply_entries);
+        page_offset = 0;
+        auto end = payload_chunk_ptr + this_entries * tupleSize_;
+        for (data_ptr_t ptr = payload_chunk_ptr; ptr < end; ptr += tupleSize_)
+            fun(page_nr, page_offset++, ptr);
+
+        apply_entries -= this_entries;
+        page_nr++;
+    }
+    BB_ASSERT(apply_entries == 0);
+}
 }

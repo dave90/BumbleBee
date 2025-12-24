@@ -25,6 +25,7 @@
 #include "bumblebee/execution/JoinHashTable.hpp"
 #include "bumblebee/execution/JoinPRLHashTable.hpp"
 #include "bumblebee/execution/PartitionedAggHT.hpp"
+#include "bumblebee/execution/RowLayoutJoinHashTable.hpp"
 
 namespace bumblebee{
 
@@ -97,6 +98,11 @@ public:
     void createJoinPRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
     bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
 
+    // Return a join Row Layout hash table with the same keys and payloads.
+    rl_join_ht_ptr_t& getJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
+    void createJoinRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
+    bool existJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
+
     // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
     partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
         return partitionedAggHT_;
@@ -150,6 +156,8 @@ protected:
     vector<joinht_ptr_t> jhtables_;
     // PRL hash tables
     vector<join_prl_ht_ptr_t> prlHTables_;
+    // Row Layout hash tables
+    vector<rl_join_ht_ptr_t> rlHTables_;
     // partitioned aggregate hash table (for aggregates)
     partitioned_agg_ht_ptr_t partitionedAggHT_;
 

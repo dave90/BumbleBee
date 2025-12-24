@@ -54,8 +54,23 @@ def normalize_output(file_path):
         lines = f.readlines()
     return set(sorted(line.strip() for line in lines if line.strip()))
 
+def normalize_output_shell(file_path):
+    if not os.path.exists(file_path):
+        return set()
+
+    result = subprocess.run(
+        ["bash", "-c", "awk '{$1=$1} NF' \"$1\" | sort -u", "_", file_path],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    return set(result.stdout.splitlines())
 
 def compare_outputs(file1, file2):
+    is_unix = sys.platform.startswith(("linux", "darwin"))
+    if is_unix:
+        return normalize_output_shell(file1) == normalize_output_shell(file2)
     return normalize_output(file1) == normalize_output(file2)
 
 def compare_csv_outputs(file1, file2):

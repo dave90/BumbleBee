@@ -135,6 +135,25 @@ ConstantType getSignedBumpedType(ConstantType type) {
     }
 }
 
+ConstantType getGeneralBumpedType(ConstantType type) {
+    switch (type) {
+        case TINYINT:    return BIGINT;
+        case SMALLINT:   return BIGINT;
+        case INTEGER:    return BIGINT;
+        case BIGINT:     return BIGINT;
+
+        case UTINYINT:   return BIGINT;
+        case USMALLINT:  return BIGINT;
+        case UINTEGER:   return BIGINT;
+        case UBIGINT:    return BIGINT;
+
+        case FLOAT:      return DOUBLE;
+        case DOUBLE:     return DOUBLE;
+
+        default:         return type;
+    }
+}
+
 ConstantType getBumpedType(ConstantType type) {
     switch (type) {
         case TINYINT:    return SMALLINT;

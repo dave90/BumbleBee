@@ -32,6 +32,8 @@
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 #include "../../include/bumblebee/execution/atom/external/PhysicalPredFunction.hpp"
+#include "bumblebee/common/Log.hpp"
+#include "bumblebee/execution/atom/join/PhysicalRowLayoutHashJoin.hpp"
 #include "bumblebee/execution/atom/output/PhysicalTopNHOutput.hpp"
 
 namespace bumblebee {
@@ -392,10 +394,8 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& co
     patoms.push_back(std::move(patom));
 }
 
-
-void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
-        vector<idx_t>& keys, vector<idx_t>& payloads, prule_ptr_vector_t& prules, idx_t& priority) {
-
+void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables *pred, vector<idx_t> &keys, vector<idx_t> &payloads,
+    prule_ptr_vector_t &prules, idx_t &priority) {
     vector<idx_t> cols;
     for (idx_t i = 0; i <pred->predicate_->getArity(); i++)
         cols.push_back(i);
@@ -423,6 +423,51 @@ void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables* pred,
 
         pred->createJoinPRLHashTable( pred->getTypes() , keys, payloads);
         patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , selCols,pred, keys, payloads, COLLECT, false));
+
+        prule_ptr_t prule(new PhysicalRule(source, sink, empty, 0));
+        prules.push_back(std::move(prule));
+    }
+    if (priority == 0)priority = 1;
+}
+
+void PhysicalOptimizer::generateJoinRLHTBuildRules(PredicateTables* pred,
+                                                   vector<idx_t>& keys, vector<idx_t>& payloads, prule_ptr_vector_t& prules, idx_t& priority) {
+
+    auto & ht = pred->getJoinRLHashTable(keys, payloads);
+    // check if the types changed
+    if (!ht->checksTypes(pred->getTypes())) {
+        // types changed we need to cast it
+        LOG_WARNING("Warning, casting hash join of predicate: %s . Consider to specify the types for predicate table.", pred->predicate_->toString().c_str());
+        RowLayoutJoinHashTable::cast(*context_.bufferManager_, ht, pred->getTypes());
+    }
+    predicatesRLJoins_[pred->predicate_.get()].push_back(ht.get());
+
+
+    vector<idx_t> cols;
+    for (idx_t i = 0; i <pred->predicate_->getArity(); i++)
+        cols.push_back(i);
+
+
+    auto types = pred->getTypes();
+
+    patom_ptr_vector_t empty;
+    {
+        auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
+        patom_ptr_t source;
+        if (!pred->isDistinct())
+            source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
+        else {
+            if (!pred->existJoinPRLHashTable(pred->getKeys(), {}))
+                pred->createJoinPRLHashTable(pred->getTypes(),pred->getKeys(),{});
+
+            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
+        }
+
+        dbCols = cols;
+        selCols = cols;
+
+        // create rl ht table
+        patom_ptr_t sink = patom_ptr_t(new PhysicalRowLayoutHashJoin(context_, types, dbCols , selCols,pred, keys, payloads, COLLECT));
 
         prule_ptr_t prule(new PhysicalRule(source, sink, empty, 0));
         prules.push_back(std::move(prule));
@@ -478,6 +523,14 @@ void PhysicalOptimizer::generatePhysicalExternal(const set_term_variable_t& vars
     BB_ASSERT(externalBindData_.contains(index));
     auto ext = patom_ptr_t(new PhysicalPredFunction(context_, types, dcCols, selCols, func, externalBindData_[index]));
     patoms.push_back(std::move(ext));
+}
+
+bool PhysicalOptimizer::isRowLayoutHTRuleHTCreated(Predicate* predicate, const vector<idx_t>& keys, const vector<idx_t>& payloads ) {
+    for (auto& rl: predicatesRLJoins_[predicate]) {
+        if (rl->checkKeysAndPayloads(keys, payloads))
+            return true;
+    }
+    return false;
 }
 
 void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
@@ -573,18 +626,17 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     // find payloads
     vector<idx_t> payloads = selCols;
 
-    if (atom.isNegative() || recursiveRules_) {
-    // if (true) {
+    // hash join is possible
 
-        if (atom.isNegative() && pred->getCount() == 0) {
+    if (atom.isNegative()) {
+        // if atom is negative payloads is 0
+        BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
+        if (pred->getCount() == 0) {
             // negative atom with empty data, do not create patom as will be always true
             return;
         }
 
-        // if atom is negative payloads is 0
-        BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
-
-        if (!pred->existJoinPRLHashTable(keys, payloads) || keys.size() + payloads.size() < pred->predicate_->getArity()) {
+        if (!pred->existJoinPRLHashTable(keys, payloads) ) {
             // generate also if exist because you need to add new data into the join hash table
             // generate the build rule
             generatePRLHTBuildRules(pred, keys, payloads, prules, priority);
@@ -600,7 +652,30 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         return;
     }
 
-    // hash join is possible
+    if (recursiveRules_ || pred->isRecursive()) {
+        if (atom.isNegative() && pred->getCount() == 0) {
+            // negative atom with empty data, do not create patom as will be always true
+            return;
+        }
+
+        // if atom is negative payloads is 0
+        BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
+
+        if (!pred->existJoinRLHashTable(keys, payloads) ||
+            (pred->isRecursive() && !isRowLayoutHTRuleHTCreated(pred->predicate_.get(), keys, payloads)) ) {
+            // generate also if exist because you need to add new data into the join hash table during the recursions
+            // generate the build rule
+            generateJoinRLHTBuildRules(pred, keys, payloads, prules, priority);
+        }else if (!pred->getJoinRLHashTable(keys, payloads)->isReady()) {
+            // ht is not ready so will be created in priority 0
+            // then increment prio if is 0
+            if (priority == 0)priority = 1;
+        }
+
+        auto nj = patom_ptr_t(new PhysicalRowLayoutHashJoin(context_, types, dcCols, selCols, pred, keys, payloads, dcKeys ));
+        patoms.push_back(std::move(nj));
+        return;
+    }
 
 
 

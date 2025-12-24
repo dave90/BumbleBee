@@ -23,6 +23,7 @@
 #include "bumblebee/parser/statement/Atom.hpp"
 #include "bumblebee/execution/JoinHashTable.hpp"
 #include "bumblebee/execution/PartitionedAggHT.hpp"
+#include "bumblebee/execution/RowLayoutJoinHashTable.hpp"
 
 namespace bumblebee{
 PredicateTables::PredicateTables(ClientContext* context_, const char* name, unsigned arity): context_(context_), predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
@@ -104,8 +105,33 @@ bool PredicateTables::existJoinPRLHashTable(const vector<idx_t> &keys, const vec
     return false;
 }
 
+rl_join_ht_ptr_t & PredicateTables::getJoinRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) {
+    for (auto&ht: rlHTables_)
+        if (ht->checkKeysAndPayloads(keys, payload))
+            return ht;
+
+    auto ht = rl_join_ht_ptr_t(new RowLayoutJoinHashTable(*context_->bufferManager_, getTypes(), keys, payload));
+    rlHTables_.push_back(std::move(ht));
+    return rlHTables_.back();
+}
+
+void PredicateTables::createJoinRLHashTable(const vector<ConstantType> &types, const vector<idx_t> &keys,
+    const vector<idx_t> &payload) {
+    if (existJoinRLHashTable(keys, payload)) return;
+    auto ht = rl_join_ht_ptr_t(new RowLayoutJoinHashTable(*context_->bufferManager_, types, keys, payload));
+    rlHTables_.push_back(std::move(ht));
+}
+
+bool PredicateTables::existJoinRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) const {
+    for (auto&ht: rlHTables_)
+        if (ht->checkKeysAndPayloads(keys, payload))
+            return true;
+
+    return false;
+}
+
 partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
-                                                                          const vector<AggregateFunction *> &aggregateFunctions) {
+                                                                           const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
     partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(*context_, groups, payloads, aggregateFunctions));
     return partitionedAggHT_;

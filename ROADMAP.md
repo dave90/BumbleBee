@@ -1,14 +1,14 @@
 ## TODOLIST
 - block parenthesis in sql ad datalog
 - parquet
-- OR in rule
-- OPTIMIZE JOIN HT with string
+- Specify predicate tables types
+- Refactor PRL and Recursion join HT
 
 ## Next
-- Hash build: reduce build tasks
 - CICD
 - Default minimum integer (small int or int 32 bit not tiny as now)
 - Perfect hash join
+- Test ldbc_snb_interactive_v1_impls https://github.com/ldbc/ldbc_snb_interactive_v1_impls/blob/main/duckdb/queries/interactive-complex-6.sql
 
 ## Next of Next
 
