@@ -93,7 +93,7 @@ TEST_F(SchedulerTest, ScheduleSingleRuleTest) {
     vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols,cols, sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes,cols_to_project, sinkPtable.get()));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(client_context, sourceTypes,cols_to_project, sinkPtable.get()));
     patom_ptr_vector_t patoms;
     prule_ptr_t rule = prule_ptr_t(new PhysicalRule(source, sink, patoms, 0 ));
 
@@ -116,7 +116,7 @@ TEST_F(SchedulerTest, ScheduleSingleRulePartialChunkTest) {
     vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols,cols, sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes, cols_to_project, sinkPtable.get()));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(client_context, sourceTypes, cols_to_project, sinkPtable.get()));
     patom_ptr_vector_t patoms;
     prule_ptr_t rule = prule_ptr_t(new PhysicalRule(source, sink, patoms, 0 ));
 
@@ -140,7 +140,7 @@ TEST_F(SchedulerTest, ScheduleRuleSourceAndSinkTest) {
     vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols, cols, sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes,cols_to_project, sinkPtable.get()));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(client_context, sourceTypes,cols_to_project, sinkPtable.get()));
     patom_ptr_vector_t patoms;
     prule_ptr_t rule = prule_ptr_t(new PhysicalRule(source, sink, patoms, 0 ));
 
@@ -167,7 +167,7 @@ TEST_F(SchedulerTest, ScheduleRuleWithFilterTest) {
     vector<idx_t> cols = {0,1,2};
     auto source = patom_ptr_t(new PhysicalChunkScan(sourceTypes, cols,cols, sourcePtable.get() ));
     // we do not care of estimated cardinality of sink and other patom
-    auto sink = patom_ptr_t(new PhysicalChunkOutput(sourceTypes,cols_to_project, sinkPtable.get()));
+    auto sink = patom_ptr_t(new PhysicalChunkOutput(client_context, sourceTypes,cols_to_project, sinkPtable.get()));
     patom_ptr_vector_t patoms;
     auto expr = generateExpression(EQUAL, {0}, {}, {2}, {});
     patoms.emplace_back(  new PhysicalExpression(expr, sourceTypes));

@@ -58,14 +58,14 @@ public:
 
 PhysicalRowLayoutHashJoin::PhysicalRowLayoutHashJoin(const ClientContext &context, const vector<ConstantType> &types,
     vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
-    vector<idx_t> lkeys) : PhysicalAtom(types, dcCols,selectedCols),
-    keys_(std::move(keys)), lkeys_(std::move(lkeys)),pt_(pt), context_(context), type_(PROBE), payloads_(std::move(payloads)){
+    vector<idx_t> lkeys, bool negative) : PhysicalAtom(types, dcCols,selectedCols),
+    keys_(std::move(keys)), lkeys_(std::move(lkeys)),pt_(pt), context_(context), type_(PROBE), payloads_(std::move(payloads)), negative_(negative){
 }
 
 PhysicalRowLayoutHashJoin::PhysicalRowLayoutHashJoin(const ClientContext &context, const vector<ConstantType> &types,
     vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     PhysicalHashType type) : PhysicalAtom(types, dcCols,selectedCols),
-    keys_(std::move(keys)),pt_(pt), context_(context), type_(type), payloads_(std::move(payloads)){
+    keys_(std::move(keys)),pt_(pt), context_(context), type_(type), payloads_(std::move(payloads)), negative_(false){
     // in build phase (source) all columns should be keys and pt is flagged as distinct
     BB_ASSERT(type_ != BUILD || payloads_.empty() );
     BB_ASSERT(type_ != BUILD || pt_->isDistinct() );
@@ -145,6 +145,27 @@ void PhysicalRowLayoutHashJoin::executeProbe(PhysicalAtomState& state, DataChunk
     }
 }
 
+
+void PhysicalRowLayoutHashJoin::executeExist(PhysicalAtomState& state, DataChunk& input, DataChunk& chunk) const{
+    auto& cstate = (RLJoinHTAtomState&)state;
+
+
+    DataChunk lchunk;
+    lchunk.initAndReference(input, lkeys_);
+    Vector hash(UBIGINT);
+    lchunk.hash(hash);
+    SelectionVector mSel(lchunk.getSize());
+    SelectionVector nmSel(lchunk.getSize());
+    idx_t mCount =0, nmCount =0;
+    cstate.ht_->match(lchunk, hash, mSel, mCount, nmSel, nmCount);
+    // if is not negative slice with the matched index
+    // otherwise slice with the non matched index
+    if (!negative_)
+        chunk.slice(input, mSel, mCount);
+    else
+        chunk.slice(input, nmSel, nmCount);
+}
+
 AtomResultType PhysicalRowLayoutHashJoin::execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
     PhysicalAtomState &state) const {
     auto& cstate = (RLJoinHTAtomState&)state;
@@ -157,7 +178,10 @@ AtomResultType PhysicalRowLayoutHashJoin::execute(ThreadContext &context, DataCh
         return AtomResultType::NEED_MORE_INPUT;
     }
 
-    executeProbe(state, input, chunk);
+    if (!payloads_.empty())
+        executeProbe(state, input, chunk);
+    else
+        executeExist(state, input, chunk);
 
     context.profiler_.endPhysicalAtom(chunk);
 

@@ -37,19 +37,15 @@ bool operator!=(const PredicateTables &lhs, const PredicateTables &rhs) {
     return !(lhs == rhs);
 }
 
-void PredicateTables::updateTypes(vector<ConstantType>& newTypes) {
-    BB_ASSERT(newTypes.size() == types_.size() && "Wrong number of terms for Fact");
-    for (idx_t i = 0; i < newTypes.size(); i++) {
-        if (newTypes[i] == types_[i]) continue;
-        types_[i] = getCommonType(types_[i], newTypes[i]);
-    }
-}
 
 void PredicateTables::addFact(Atom &atom) {
     if (atom.containsArith())
         ErrorHandler::errorNotImplemented("Arith term in fact not implemented!");
     auto types = atom.getTermsCType();
-    updateTypes(types);
+    for (idx_t i = 0; i < types.size(); i++) {
+        if (types[i] == types_[i]) continue;
+        types_[i] = getCommonType(types_[i], types[i]);
+    }
 
     // track the types for each column
     if (!atom.containsRange()) {
@@ -93,7 +89,6 @@ void PredicateTables::createJoinPRLHashTable( const vector<ConstantType>& types,
     if (existJoinPRLHashTable(keys, payload)) return;
     auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, keys, payload));
     prlHTables_.push_back(std::move(ht));
-
 }
 
 
@@ -130,8 +125,15 @@ bool PredicateTables::existJoinRLHashTable(const vector<idx_t> &keys, const vect
     return false;
 }
 
-partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
-                                                                           const vector<AggregateFunction *> &aggregateFunctions) {
+partitioned_prl_ht_ptr_t&  PredicateTables::getPartitionedPRLHashTable() {
+    if (partitionedPRLHT_) return partitionedPRLHT_;
+    partitionedPRLHT_ = partitioned_prl_ht_ptr_t(new PartitionedPRLHashTable(*context_->bufferManager_, types_));
+    return partitionedPRLHT_;
+}
+
+
+    partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
+                                                                               const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
     partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(*context_, groups, payloads, aggregateFunctions));
     return partitionedAggHT_;
@@ -140,23 +142,6 @@ partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const
 
 bool PredicateTables::existPartitionedAggHashTable() {
     return partitionedAggHT_ != nullptr;
-}
-
-void PredicateTables::mergeIntoPRLHT(JoinPRLHashTable &ht) {
-    lock_guard lock(mutex_);
-    auto &dht = getJoinPRLHashTable(ht.getKeys(), ht.getPayloads());
-    if (dht->getTypes() != ht.getTypes()) {
-        JoinPRLHashTable::castAndCombine(*context_->bufferManager_ ,dht, ht);
-        dht->setReady();
-        if (ht.getKeys() == getKeys())
-            types_ = dht->getTypes();
-        return;
-    }
-    if (ht.getKeys() == getKeys())
-        types_ = dht->getTypes();
-    dht->combine(ht);
-    dht->setReady();
-
 }
 
 void PredicateTables::initializeChunks() {
@@ -170,49 +155,17 @@ void PredicateTables::initializeChunks() {
     ranges_.clear();
     if (isDistinct()) {
         // is distinct predicate move the chunks in the HT
-        moveChunksToHT();
+        auto& pprl = getPartitionedPRLHashTable();
+        for (auto& chunk:chunks_.chunks()) {
+            pprl->addChunk(*chunk);
+            if (delta_.delta_)
+                delta_.delta_->addChunk(*chunk);
+        }
     }
     LOG_DEBUG("Initializing PredicateTables %s completed", predicate_->toString().c_str());
 }
 
-JoinPRLHashTable * PredicateTables::getDistinctHT() const {
-    vector<idx_t> keys;
-    for (idx_t i=0;i<predicate_->getArity();++i)
-        keys.push_back(i);
-    JoinPRLHashTable* htPtr = nullptr;
-    for (auto&ht: prlHTables_)
-        if (ht->checkKeysAndPayloads(keys, {})) {
-            htPtr = ht.get();
-            break;
-        }
-    BB_ASSERT(htPtr != nullptr);
-    return htPtr;
-}
 
-join_prl_ht_ptr_t & PredicateTables::getDistinctUHT() {
-    vector<idx_t> keys;
-    for (idx_t i=0;i<predicate_->getArity();++i)
-        keys.push_back(i);
-    BB_ASSERT(existJoinPRLHashTable(getKeys(), {}));
-    for (auto&ht: prlHTables_)
-        if (ht->checkKeysAndPayloads(keys, {})) {
-            return ht;
-        }
-    // fallback
-    return *prlHTables_.end();
-}
-
-void PredicateTables::moveChunksToHT(){
-    vector<idx_t> keys;
-    for (idx_t i=0;i<predicate_->getArity();++i)keys.push_back(i);
-    if (!existJoinPRLHashTable(keys, {})) {
-        createJoinPRLHashTable(getTypes(), getKeys(), {});
-    }
-    JoinPRLHashTable* htPtr = getDistinctHT();
-    for (auto& chunk:chunks_.chunks()) {
-        htPtr->addChunk(*chunk);
-    }
-}
 
 idx_t PredicateTables::getCount() const {
     if (facts_.empty() && ranges_.empty()) {
@@ -220,9 +173,7 @@ idx_t PredicateTables::getCount() const {
             return chunks_.getCount();
         if (isRecursive() && delta_.delta_)
             return delta_.delta_->getSize();
-        if (existJoinPRLHashTable(getKeys(), {}))
-            return getDistinctHT()->getSize();
-        return 0;
+        return (partitionedPRLHT_)?partitionedPRLHT_->getSize():0;
     }
     auto estimateCount = facts_.size();
     for (auto& atom: ranges_) {
@@ -235,6 +186,17 @@ idx_t PredicateTables::getCount() const {
         estimateCount += rangeSie;
     }
     return estimateCount;
+}
+
+DataChunk PredicateTables::getChunkFromDistinct(idx_t index, idx_t size) {
+    BB_ASSERT(existPartitionedPRLHashTable() || delta_.delta_);
+    auto& ht = (isRecursive() && delta_.delta_)? *delta_.delta_:  *getPartitionedPRLHashTable();
+
+    DataChunk result;
+    result.initialize(ht.getTypes());
+    BB_ASSERT(result.getCapacity() >= size);
+    ht.scan(index, result, size);
+    return result;
 }
 
 void PredicateTables::loadFacts() {
@@ -373,39 +335,48 @@ Value PredicateTables::getValue(idx_t column, idx_t index) {
     return chunks_.getValue(column, index);
 }
 
+bool PredicateTables::updateTypes(const vector<ConstantType> &types) {
+    BB_ASSERT(types.size() == getTypes().size());
+    if (types == getTypes()) return false;
+    // missmatch of types
+    vector<ConstantType> commonTypes;
+    bool castPredicateTable = false;
+    for (idx_t i =0;i<types.size();++i) {
+        commonTypes.push_back(getCommonType(types[i], types_[i]));
+        if (commonTypes.back() != types_[i])
+            castPredicateTable = true; // common type is not the type that we have in pt
+    }
+    if (castPredicateTable)
+        castEntirePredicateTable(commonTypes);
+    return castPredicateTable;
+}
 
 void PredicateTables::castEntirePredicateTable(const vector<ConstantType> &newTypes) {
     LOG_WARNING("Casting predicate tables of type %s. For better optimization, set the table types explicitly using directives.", predicate_->getName());
     BB_ASSERT(newTypes.size() == types_.size());
     chunks_.cast(newTypes);
+    if (existPartitionedPRLHashTable())
+        PartitionedPRLHashTable::cast(*context_->bufferManager_, partitionedPRLHT_, newTypes);
+    if (delta_.delta_)
+        PartitionedPRLHashTable::cast(*context_->bufferManager_, delta_.delta_, newTypes);
+    if (delta_.nextDelta_)
+        PartitionedPRLHashTable::cast(*context_->bufferManager_, delta_.nextDelta_, newTypes);
+
     types_ = newTypes;
 }
 
-void PredicateTables::append(DataChunk& chunk) {
+void PredicateTables::appendInChunkCollection(DataChunk& chunk) {
     BB_ASSERT(chunk.columnCount() == predicate_->getArity());
+    BB_ASSERT(!isRecursive());
+    BB_ASSERT(!isDistinct());
     lock_guard guard(mutex_);
     BB_ASSERT(chunk.columnCount() == types_.size());
-    if (types_.size() > 0 && types_[0] != UNKNOWN && chunk.getTypes() != types_) {
-        // different types, check if we need to cast the entire predicate tables
-        // or just the chunk
-        bool castPredicateTable = false;
-        auto ctype = chunk.getTypes();
-        vector<ConstantType> commonTypes;
-        for (idx_t i =0;i<ctype.size()&&!castPredicateTable;++i) {
-            commonTypes.push_back(getCommonType(ctype[i], types_[i]));
-            if (commonTypes.back() != types_[i])
-                castPredicateTable = true; // common type is not the type that we have in pt
-        }
-
-        chunk.cast(commonTypes);
-        if (castPredicateTable)
-            castEntirePredicateTable(chunk.getTypes());
-    }
-
     if (!types_.empty() && types_[0] == UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk.getTypes();
     }
+    BB_ASSERT(types_ == chunk.getTypes());
+
     if (chunk.getSize() < STANDARD_VECTOR_SIZE) {
         chunks_.append(chunk);
         return;
@@ -424,6 +395,29 @@ void PredicateTables::append(DataChunk& chunk) {
 
 }
 
+void PredicateTables::appendInDistinctHT(DataChunk& chunk) {
+    BB_ASSERT(isDistinct());
+    BB_ASSERT(getTypes().size() == chunk.getTypes().size());
+    BB_ASSERT(chunk.getTypes() == types_);
+
+    if (!isRecursive() || !delta_.nextDelta_) {
+        BB_ASSERT(existPartitionedPRLHashTable());
+        getPartitionedPRLHashTable()->addChunk(chunk);
+        return;
+    }
+
+    BB_ASSERT(delta_.nextDelta_);
+    BB_ASSERT(delta_.nextDelta_->equalTypes(chunk.getTypes()));
+    // insert first in the HT and then insert in the next delta only the new rows
+    // such that in the next iteration we start from the new derived data
+    idx_t newCount = 0;
+    SelectionVector newGroupSel(chunk.getSize());
+    getPartitionedPRLHashTable()->addChunk(chunk, newCount, newGroupSel);
+    if (!newCount) return;
+    chunk.slice(newGroupSel, newCount);
+    delta_.nextDelta_->addChunk(chunk);
+    delta_.deltaCount_ += newCount;
+}
 
 void PredicateTables::setRecursive(bool recursive) {
     recursive_ = recursive;
@@ -433,58 +427,52 @@ bool PredicateTables::isRecursive() const{
     return recursive_;
 }
 
-void PredicateTables::initializeDelta(const vector<ConstantType>& types) {
+void PredicateTables::initializeDelta() {
     BB_ASSERT(isDistinct());
-    delta_.delta_ = nullptr;
-    delta_.nextDelta_ = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, getKeys(), {}));
     delta_.deltaCount_ = 0;
+    if (!delta_.nextDelta_) {
+        delta_.delta_ = partitioned_prl_ht_ptr_t(new PartitionedPRLHashTable(*context_->bufferManager_, types_));
+        if (existPartitionedPRLHashTable()) {
+            // let's copy the data from HT to delta
+            // TODO possible optimization is to use the HT as starting delta but
+            // a tricky point is that the same table is used to insert and to scan
+            idx_t position = 0;
+            DataChunk group;
+            group.initialize(partitionedPRLHT_->getTypes());
+            while (position < partitionedPRLHT_->getSize()) {
+                partitionedPRLHT_->scan(position, group);
+                delta_.delta_->addChunk( group);
+                position += minValue<idx_t>(STANDARD_VECTOR_SIZE, partitionedPRLHT_->getSize() - position);
+                group.setCardinality(0);
+            }
+        }
+        delta_.nextDelta_ = partitioned_prl_ht_ptr_t(new PartitionedPRLHashTable(*context_->bufferManager_, types_));
+        delta_.deltaCount_ = 0;
+    }
 }
 
 idx_t PredicateTables::getDeltaCount() const {
     return delta_.deltaCount_;
 }
 
-JoinPRLHashTable& PredicateTables::getDelta() {
-    if (delta_.delta_)
-        return *delta_.delta_;
-    // delta is null so return the distinct HT
-    return *getDistinctHT();
+void PredicateTables::resetDeltaCount() {
+    delta_.deltaCount_ = 0;
 }
 
-void PredicateTables::mergeIntoNextDelta(JoinPRLHashTable &delta) {
-    lock_guard lock(mutex_);
-    if (delta_.nextDelta_ == nullptr) {
-        // init delta
-        initializeDelta(delta.getTypes());
-    }
-    auto& dht = delta_.nextDelta_;
-    if (dht->getTypes() != delta.getTypes()) {
-        JoinPRLHashTable::castAndCombine(*context_->bufferManager_, dht, delta);
-        return;
-    }
-    dht->combine(delta);
-}
 
 void PredicateTables::mergeDelta() {
     // if dht and next delta are null this recursive predicate was not processed so skip the merge delta phase
-    if (!existJoinPRLHashTable(getKeys(), {}) && !delta_.nextDelta_)
+    if (!existPartitionedPRLHashTable() && !delta_.nextDelta_)
         return;
-    lock_guard lock(mutex_);
-    auto& dht = getDistinctUHT();
-    idx_t prevCounter = dht->getSize();
-    // merge next delta into distinct ht
-    if (delta_.nextDelta_) {
-        if (dht->getTypes() == delta_.nextDelta_->getTypes())
-            dht->combine(*delta_.nextDelta_);
-        else {
-            JoinPRLHashTable::castAndCombine(*context_->bufferManager_, dht, *delta_.nextDelta_);
-        }
 
-        // swap delta and next delta
-        delta_.delta_ = std::move(delta_.nextDelta_);
-        delta_.nextDelta_ = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, delta_.delta_->getTypes(), getKeys(), {}));
+    lock_guard lock(mutex_);
+    if (!existPartitionedPRLHashTable()) {
+        partitionedPRLHT_ = partitioned_prl_ht_ptr_t(new PartitionedPRLHashTable(*context_->bufferManager_, delta_.nextDelta_->getTypes()));
     }
-    delta_.deltaCount_ = dht->getSize() - prevCounter;
-    types_ = dht->getTypes();
+    if (delta_.nextDelta_) {
+        delta_.delta_ = std::move(delta_.nextDelta_);
+        delta_.nextDelta_ = partitioned_prl_ht_ptr_t(new PartitionedPRLHashTable(*context_->bufferManager_, delta_.delta_->getTypes()));
+    }
 }
+
 }

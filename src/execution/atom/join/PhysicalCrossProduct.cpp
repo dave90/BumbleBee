@@ -44,7 +44,9 @@ public:
             else
                 finished = true;
         }else {
-            auto& ht = pt->getJoinPRLHashTable(pt->getKeys(), {});
+            BB_ASSERT(pt->existPartitionedPRLHashTable());
+            auto& ht = pt->getPartitionedPRLHashTable();
+            cacheChunk_.setCardinality(0);
             if (rightIdx_ < ht->getSize()) {
                 ht->scan(rightIdx_, cacheChunk_);
                 rightIdx_ += cacheChunk_.getSize();
@@ -114,12 +116,10 @@ AtomResultType PhysicalCrossProduct::execute(ThreadContext &context, DataChunk &
         cstate.cacheChunk_.setCardinality(0);
     }
     if (cstate.loadCache(pt_)){
-
         context.profiler_.endPhysicalAtom(chunk);
         cstate.reset();
         chunk.reset();
         return AtomResultType::NEED_MORE_INPUT;
-
     }
 
     auto& leftChunk = input;

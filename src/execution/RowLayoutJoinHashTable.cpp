@@ -19,6 +19,7 @@
 #include "bumblebee/execution/RowLayoutJoinHashTable.hpp"
 
 #include "bumblebee/common/row_operations/RowOperations.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
 RowLayoutJoinHashTable::RowLayoutJoinHashTable(BufferManager &manager, const vector<ConstantType> &types, const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns,idx_t capacity,
@@ -106,6 +107,7 @@ bool RowLayoutJoinHashTable::checksTypes(const vector<ConstantType>& predicateTy
 }
 
 void RowLayoutJoinHashTable::addChunk(DataChunk &chunk) {
+    if (!chunk.getSize()) return;
     // because we are adding new data set ready to false
     ready_ = false;
     // only a chunk x block
@@ -232,7 +234,7 @@ void RowLayoutJoinHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchu
     // construct the result chunk
     vector<ConstantType> payloadTypes;
     for (idx_t i=0;i<payloadColumns_.size();++i)
-        payloadTypes.push_back(types_[i]);
+        payloadTypes.push_back(types_[payloadColumns_[i]]);
     result.initializeEmpty(payloadTypes);
     // fetch the payload columns
     for (idx_t idx=0; idx < payloadTypes.size(); ++idx) {
@@ -244,7 +246,93 @@ void RowLayoutJoinHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchu
     result.setCardinality(finalCount);
 }
 
+void findAddresses(idx_t capacity, idx_t tupleSize, data_ptr_t hashesPtr, vector<data_ptr_t>& payloadPtrs,
+    const SelectionVector* sel, idx_t size,Vector &buckets, Vector &lhash, SelectionVector &nonMatchSel, idx_t& noMatchCount,SelectionVector& toMatch , idx_t& toMatchCount, Vector& addresses) {
+    if (size == 0) {
+        toMatchCount = 0;
+        return;
+    }
+    auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
+    auto hashPtr = FlatVector::getData<uint64_t>(lhash);
+    auto bucketPtr = FlatVector::getData<uint64_t>(buckets);
+    if (!sel)
+        sel = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
 
+    for (idx_t i=0; i < size; ++i) {
+        auto idx = sel->getIndex(i);
+        auto hash = hashPtr[idx];
+        auto bucket = bucketPtr[idx];
+        while (true) {
+            // scan the ht until we found an empty bucket
+            // circular scan
+            if (bucket  >= capacity)
+                bucket = 0;
+            BB_ASSERT(idx < capacity);
+            auto htEntry = ((HTEntry64*)hashesPtr) + bucket;
+            if (htEntry->pageNum_ == 0) {
+                // no match for idx row
+                nonMatchSel.setIndex(noMatchCount++, idx);
+                break;
+            }
+            if (hash == htEntry->hash_) {
+                // same hash put in the address vector
+                auto entry = payloadPtrs[ htEntry->pageNum_ -1] + (htEntry->pageOffset_ * tupleSize);
+                toMatch.setIndex(toMatchCount++, idx);
+                addressesPtr[idx] = entry;
+                break;
+            }
+            ++bucket;
+        }
+    }
+}
+
+void incrementBuckets(idx_t capacity, uint64_t* __restrict bucketPtr, SelectionVector& notEqual, idx_t notEqualCount) {
+    for (idx_t i=0;i<notEqualCount;++i) {
+        auto idx = notEqual.getIndex(i);
+        bucketPtr[idx]++;
+        if (bucketPtr[idx] > capacity)
+            bucketPtr[idx] = 0;
+    }
+}
+
+
+void RowLayoutJoinHashTable::match(DataChunk &lchunk, Vector &lhash, SelectionVector &matchSel, idx_t& matchCount,
+                                 SelectionVector &nonMatchSel, idx_t& noMatchCount) {
+    BB_ASSERT(keyColumns_.size() == lchunk.columnCount());
+
+    auto size = lchunk.getSize();
+    auto vec_data = lchunk.orrify();
+
+    Vector addresses(UBIGINT, size);
+    Vector buckets(UBIGINT, size);
+    Vector mask{Value(bitmask_)};
+    VectorOperations::lAnd(lhash, mask, buckets, size);
+    // row to compare
+    SelectionVector toMatch (size);
+    idx_t toMatchCount = 0;
+    // row layout of the keys
+    // first find the addresses for each row
+    findAddresses(capacity_,  tupleSize_, hashesPtr_, payloadPtrs_, nullptr, size, buckets, lhash, nonMatchSel, noMatchCount, toMatch, toMatchCount, addresses);
+
+    // sel vector of the rows that failed the comparison and more iterations needed
+    SelectionVector notEqual(toMatchCount);
+    idx_t notEqualCount = 0;
+    while (toMatchCount > 0) {
+        notEqualCount = 0;
+        // execute the equal
+        auto matched = RowOperations::equal(lchunk, vec_data.get(), keyLayout_,addresses, toMatch, toMatchCount, &notEqual, notEqualCount );
+        // populate the matched rows
+        for (idx_t i=0;i<matched;++i)
+            matchSel.setIndex(matchCount++, toMatch.getIndex(i));
+
+        // increment the addresses of not equal
+        auto bucketPtr = FlatVector::getData<hash_t>(buckets);
+        incrementBuckets(capacity_, bucketPtr, notEqual, notEqualCount);
+        // find the addresses
+        toMatchCount = 0;
+        findAddresses(capacity_,  tupleSize_, hashesPtr_, payloadPtrs_, &notEqual, notEqualCount, buckets, lhash, nonMatchSel, noMatchCount, toMatch, toMatchCount, addresses);
+    }
+}
 
 
 void insert(RowLayoutJoinHashTable &h1, RowLayoutJoinHashTable &h2) {

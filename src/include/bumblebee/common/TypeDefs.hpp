@@ -107,6 +107,7 @@ idx_t getCTypeSize(ConstantType type);
 bool isUnsigned(ConstantType type);
 ConstantType getBumpedType(ConstantType type);
 ConstantType getGeneralBumpedType(ConstantType type);
+vector<ConstantType> getGeneralBumpedType(const vector<ConstantType>& type);
 ConstantType getSignedBumpedType(ConstantType type);
 // Determines the dominant constant type between two types, resolving UNKNOWN values,
 // adjusting for signedness differences, and returning the type with the larger size.

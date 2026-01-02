@@ -27,7 +27,6 @@
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
 #include "bumblebee/execution/atom/join/PhysicalHashJoin.hpp"
 #include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
-#include "bumblebee/execution/atom/join/PhysicalPRLHashJoin.hpp"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
@@ -37,8 +36,23 @@
 #include "bumblebee/execution/atom/output/PhysicalTopNHOutput.hpp"
 
 namespace bumblebee {
+
 PhysicalOptimizer::PhysicalOptimizer(ClientContext& context, bool recursiveRules)
     : context_(context), recursiveRules_(recursiveRules) {
+}
+
+std::unordered_map<Predicate *, vector<ConstantType>> PhysicalOptimizer::getHeadTypes(Rule &rule) {
+    if (canBeSkipped(rule))return {};
+    findColsAndTypes(rule);
+    std::unordered_map<Predicate *, vector<ConstantType>> types;
+    BB_ASSERT(rule.getHead().size() == 1);
+    auto& headAtom = rule.getHead()[0];
+    auto headCols = headCols_[0];
+    vector<ConstantType> headTypes;
+    for (auto c: headCols)
+        headTypes.push_back(types_[c]);
+    types[headAtom.getPredicate()] = headTypes;
+    return types;
 }
 
 prule_ptr_vector_t PhysicalOptimizer::optimize(Rule &rule) {
@@ -394,42 +408,6 @@ void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& co
     patoms.push_back(std::move(patom));
 }
 
-void PhysicalOptimizer::generatePRLHTBuildRules(PredicateTables *pred, vector<idx_t> &keys, vector<idx_t> &payloads,
-    prule_ptr_vector_t &prules, idx_t &priority) {
-    vector<idx_t> cols;
-    for (idx_t i = 0; i <pred->predicate_->getArity(); i++)
-        cols.push_back(i);
-
-
-    auto types = pred->getTypes();
-
-    patom_ptr_vector_t empty;
-    {
-        auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
-        patom_ptr_t source;
-        if (!pred->isDistinct())
-            source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
-        else {
-            if (!pred->existJoinPRLHashTable(pred->getKeys(), {}))
-                pred->createJoinPRLHashTable(pred->getTypes(),pred->getKeys(),{});
-
-            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
-        }
-
-        dbCols = cols;
-        selCols = cols;
-
-        // create prl ht table
-
-        pred->createJoinPRLHashTable( pred->getTypes() , keys, payloads);
-        patom_ptr_t sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols , selCols,pred, keys, payloads, COLLECT, false));
-
-        prule_ptr_t prule(new PhysicalRule(source, sink, empty, 0));
-        prules.push_back(std::move(prule));
-    }
-    if (priority == 0)priority = 1;
-}
-
 void PhysicalOptimizer::generateJoinRLHTBuildRules(PredicateTables* pred,
                                                    vector<idx_t>& keys, vector<idx_t>& payloads, prule_ptr_vector_t& prules, idx_t& priority) {
 
@@ -453,15 +431,7 @@ void PhysicalOptimizer::generateJoinRLHTBuildRules(PredicateTables* pred,
     patom_ptr_vector_t empty;
     {
         auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
-        patom_ptr_t source;
-        if (!pred->isDistinct())
-            source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
-        else {
-            if (!pred->existJoinPRLHashTable(pred->getKeys(), {}))
-                pred->createJoinPRLHashTable(pred->getTypes(),pred->getKeys(),{});
-
-            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
-        }
+        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
 
         dbCols = cols;
         selCols = cols;
@@ -488,15 +458,8 @@ void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     patom_ptr_vector_t empty;
     {
         auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
-        patom_ptr_t source ;
-        if (!pred->isDistinct())
-            source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
-        else {
-            if (!pred->existJoinPRLHashTable(pred->getKeys(), {}))
-                pred->createJoinPRLHashTable(pred->getTypes(),pred->getKeys(),{});
+        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
 
-            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dbCols, selCols, pred));
-        }
         dbCols = cols; selCols = cols;
         patom_ptr_t sink = patom_ptr_t(new PhysicalHashJoin(types, dbCols, selCols , pred, keys, payloads, COLLECT));
         prule_ptr_t pruleStats(new PhysicalRule(source, sink, empty, 0));
@@ -626,37 +589,14 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     // find payloads
     vector<idx_t> payloads = selCols;
 
-    // hash join is possible
-
-    if (atom.isNegative()) {
-        // if atom is negative payloads is 0
-        BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
-        if (pred->getCount() == 0) {
-            // negative atom with empty data, do not create patom as will be always true
-            return;
-        }
-
-        if (!pred->existJoinPRLHashTable(keys, payloads) ) {
-            // generate also if exist because you need to add new data into the join hash table
-            // generate the build rule
-            generatePRLHTBuildRules(pred, keys, payloads, prules, priority);
-        }else if (!pred->getJoinPRLHashTable(keys, payloads)->isReady()) {
-            // ht is not ready so will be created in priority 0
-            // then increment prio if is 0
-            if (priority == 0)priority = 1;
-
-        }
-
-        auto nj = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, dcCols, selCols, pred, keys, payloads, dcKeys, atom.isNegative() ));
-        patoms.push_back(std::move(nj));
-        return;
-    }
-
-    if (recursiveRules_ || pred->isRecursive()) {
+    if (atom.isNegative() || recursiveRules_ || pred->isRecursive()) {
         if (atom.isNegative() && pred->getCount() == 0) {
             // negative atom with empty data, do not create patom as will be always true
             return;
         }
+
+        BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
+
 
         // if atom is negative payloads is 0
         BB_ASSERT(!atom.isNegative() || payloads.size() == 0 );
@@ -666,17 +606,16 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
             // generate also if exist because you need to add new data into the join hash table during the recursions
             // generate the build rule
             generateJoinRLHTBuildRules(pred, keys, payloads, prules, priority);
-        }else if (!pred->getJoinRLHashTable(keys, payloads)->isReady()) {
-            // ht is not ready so will be created in priority 0
+        }else if (isRowLayoutHTRuleHTCreated(pred->predicate_.get(), keys, payloads)) {
+            // ht was created in this bucket so is not ready
             // then increment prio if is 0
             if (priority == 0)priority = 1;
         }
 
-        auto nj = patom_ptr_t(new PhysicalRowLayoutHashJoin(context_, types, dcCols, selCols, pred, keys, payloads, dcKeys ));
+        auto nj = patom_ptr_t(new PhysicalRowLayoutHashJoin(context_, types, dcCols, selCols, pred, keys, payloads, dcKeys, atom.isNegative() ));
         patoms.push_back(std::move(nj));
         return;
     }
-
 
 
     // check if the hash table is present
@@ -744,25 +683,29 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
 
         return;
     }
-    if (!ptSink->isDistinct() && !rule.getLimit())
-        sink = patom_ptr_t(new PhysicalChunkOutput(types, headCols, ptSink.get()));
-    else if (rule.getLimit()) {
+    vector<ConstantType> headTypes;
+    for (auto c: headCols)
+        headTypes.push_back(types[c]);
+    BB_ASSERT(headTypes == ptSink->getTypes());
+    bool delta = recursiveRules_ && ptSink->isRecursive();
+
+    if (ptSink->isDistinct())
+        ptSink->getPartitionedPRLHashTable(); // init the HT
+    if (delta)
+        ptSink->initializeDelta(); // during recursion init delta tables
+
+    if (!rule.getLimit()) {
+        sink = patom_ptr_t(new PhysicalChunkOutput(context_, types, headCols, ptSink.get()));
+    }else  {
+        if (delta) {
+            ErrorHandler::errorNotImplemented("Error, limit on recursive rule not supported.");
+        }
         auto modifiers = rule.getModifiers();
         if (modifiers.empty()) {
             // create modifiers from the first var
             modifiers.push_back({.col_ = 0, .modifier_ = OrderType::ASCENDING});
         }
         sink = patom_ptr_t(new PhysicalTopNHOutput(types, headCols, ptSink.get(), rule.getModifiers(), rule.getLimit()));
-    } else {
-        vector<idx_t> keys = ptSink->getKeys();
-        vector<ConstantType> headTypes;
-        for (auto c: headCols)
-            headTypes.push_back(types[c]);
-
-        if (!ptSink->existJoinPRLHashTable(keys, {})) {
-            ptSink->createJoinPRLHashTable(headTypes,keys,{});
-        }
-        sink = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, headCols, ptSink.get(), ptSink->isRecursive()));
     }
 }
 
@@ -784,14 +727,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         firstAtom.getVariables(vars);
         auto& ptSource = schema.getPredicateTable(firstAtom.getPredicate());
         auto types = types_;
-        if (!ptSource->isDistinct())
-            source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
-        else {
-            if (!ptSource->existJoinPRLHashTable(ptSource->getKeys(), {})) {
-                ptSource->createJoinPRLHashTable(ptSource->getTypes(),ptSource->getKeys(),{});
-            }
-            source = patom_ptr_t(new PhysicalPRLHashJoin(context_, types, cols_[0], selectedCols_[0], ptSource.get()));
-        }
+        source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
     }else if (firstAtom.getType() == EXTERNAL) {
         // get the function and bind it
         PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesCType() ).get();
@@ -835,6 +771,5 @@ void PhysicalOptimizer::clear() {
     selectedCols_.clear();
     skipAtom_.clear();
     externalBindData_.clear();
-
 }
 }

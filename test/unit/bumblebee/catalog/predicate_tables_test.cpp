@@ -115,10 +115,6 @@ TEST_F(PredicateTablesTest, FloatToDoublePromotion) {
     EXPECT_EQ(table->getTypes()[0], DOUBLE);
 }
 
-TEST_F(PredicateTablesTest, TypeCountMismatchTriggersAssert) {
-    vector<ConstantType> badSize = {INTEGER, INTEGER}; // only 2 types
-    EXPECT_DEATH(table->callUpdateTypes(badSize), "Wrong number of terms for Fact");
-}
 
 
 TEST_F(PredicateTablesTest, TestAddSingleFact) {

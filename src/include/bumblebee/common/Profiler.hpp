@@ -55,5 +55,73 @@ private:
 
 };
 
+// Profiler for the internal functions
+class FunctionProfiler {
+public:
+    struct Stats {
+        std::uint64_t calls = 0;
+        std::chrono::nanoseconds total{0};
+    };
+
+    void add(std::string_view name, std::chrono::nanoseconds elapsed) {
+        std::lock_guard g(mu_);
+        auto &s = data_[std::string(name)];
+        s.calls += 1;
+        s.total += elapsed;
+    }
+
+    // Example reporting function (customize as needed)
+    std::string toString() const {
+        std::string result;
+        for (const auto& [name, s] : data_) {
+            const double ms = std::chrono::duration<double, std::milli>(s.total).count();
+            result += name + " | calls=" + std::to_string(s.calls)
+               + " | total_ms=" + std::to_string(ms)
+               + " | avg_us=" + std::to_string(ms * 1000.0 / (s.calls ? s.calls : 1)) + "\n";
+        }
+        return result;
+    }
+
+    static FunctionProfiler& instance() {
+        // One global store.
+        static FunctionProfiler p;
+        return p;
+    }
+
+private:
+    mutable std::mutex mu_;
+    std::unordered_map<std::string, Stats> data_;
+};
+
+class ScopeTimer {
+public:
+    using clock = std::chrono::steady_clock;
+
+    explicit ScopeTimer(std::string_view name, FunctionProfiler& prof = FunctionProfiler::instance())
+        : name_(name), prof_(prof), start_(clock::now()) {}
+
+    ~ScopeTimer() {
+        const auto end = clock::now();
+        prof_.add(name_, std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_));
+    }
+
+    ScopeTimer(const ScopeTimer&) = delete;
+    ScopeTimer& operator=(const ScopeTimer&) = delete;
+
+private:
+    std::string_view name_;
+    FunctionProfiler& prof_;
+    clock::time_point start_;
+};
+
+#if defined(_MSC_VER)
+#define FUNC_NAME __FUNCSIG__
+#else
+#define FUNC_NAME __PRETTY_FUNCTION__
+#endif
+
+#define CONCAT_IMPL(a,b) a##b
+#define CONCAT(a,b) CONCAT_IMPL(a,b)
+#define PROFILE_SCOPE() ScopeTimer CONCAT(__scopeTimer, __LINE__)(FUNC_NAME)
 
 }

@@ -19,6 +19,7 @@
 #include "bumblebee/common/types/Vector.hpp"
 
 #include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/Profiler.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
@@ -160,6 +161,9 @@ void Vector::initialize(bool zeroData, idx_t capacity) {
 
 string Vector::toString(idx_t count) const {
     string s = "Vector type("+std::to_string(static_cast<int>(vtype_))+"), Type("+std::to_string(ctype_)+ ") [";
+    if (!data_) {
+        return s+" NULL ]";
+    }
     if (vtype_ == VectorType::CONSTANT_VECTOR) {
         s += getValue(0).toString();
     }

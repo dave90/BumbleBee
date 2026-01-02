@@ -33,6 +33,7 @@ public:
 private:
     void executeRewriters(rules_vector_t& rules);
     void executeOptimizer(rules_vector_t&, prule_ptr_vector_t& );
+    void setHeadTypes(rules_vector_t&);
 
     ClientContext& context_;
     bool recursiveRules_;

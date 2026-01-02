@@ -26,7 +26,6 @@
 namespace bumblebee{
 
 using agg_ht_ptr_t = AggregatePRLHashTable::agg_ht_ptr_t;
-using distinct_ht_ptr_t = PRLHashTable::distinct_ht_ptr_t;
 
 /*
  * Class PartitionedAggHT

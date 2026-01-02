@@ -84,7 +84,6 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 	// Set the validity mask for each row before inserting data
 	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
 
-	const auto vcount = columns.getSize();
 	auto &offsets = layout.getOffsets();
 	auto &types = layout.getTypes();
 
@@ -127,7 +126,6 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 	}
 
 	for (idx_t col_no = 0; col_no < types.size(); col_no++) {
-		auto &vec = columns.data_[col_no];
 		auto &col = col_data[col_no];
 		auto col_offset = offsets[col_no];
 

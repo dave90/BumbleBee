@@ -18,6 +18,7 @@
  */
 #include "bumblebee//execution/PRLHashTable.hpp"
 
+#include "bumblebee/common/Profiler.hpp"
 #include "bumblebee/common/row_operations/RowOperations.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 #include "bumblebee/function/AggregateFunction.hpp"
@@ -62,13 +63,13 @@ void PRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
 void PRLHashTable::addChunk(DataChunk &chunk) {
     Vector hash(UBIGINT, chunk.getSize());
     chunk.hash(hash);
-   addChunk(hash, chunk);
+    addChunk(hash, chunk);
 }
 
 idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
     BB_ASSERT(offset < entries_);
     BB_ASSERT(result.getCapacity() >= size);
-    BB_ASSERT(result.columnCount() == types_.size());
+    BB_ASSERT(result.columnCount() <= types_.size());
     // find the addresses
 
     auto remaining = entries_ - offset;
@@ -91,7 +92,7 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
     }
 
     // now fetch the vectors
-    for (id_t i = 0;i<types_.size();++i) {
+    for (id_t i = 0;i<result.columnCount();++i) {
         BB_ASSERT(result.data_[i].getType() == types_[i]);
         BB_ASSERT(result.data_[i].getVectorType() == VectorType::FLAT_VECTOR);
         RowOperations::gather(addresses, FlatVector::INCREMENTAL_SELECTION_VECTOR,
@@ -129,7 +130,7 @@ void PRLHashTable::combine(PRLHashTable &other) {
 
     idx_t position = 0;
     DataChunk group;
-    group.initialize(other.types_);
+    group.initialize(other.getTypes());
     while (position < other.entries_) {
         other.scan(position, group);
         addChunk( group);
@@ -327,7 +328,6 @@ Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count) {
 void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
                                               Vector &addresses, idx_t &matchedCount, idx_t &newGroupsCount, bool createGroups, SelectionVector *matchedSel,
                                               SelectionVector *newGroupSel) {
-
     idx_t size = groups.getSize();
     while (createGroups &&
         (groups.getSize() + entries_ >= capacity_  || (float)(entries_ + size) / (float)capacity_ > LOAD_FACTOR  )) {

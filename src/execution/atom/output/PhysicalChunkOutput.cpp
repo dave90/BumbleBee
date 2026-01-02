@@ -31,9 +31,14 @@ public:
     ChunkCollection chunks_;
     // Copy the chunk (call if is not full)
     virtual void sinkChunk(DataChunk &chunk) {
-        chunks_.append(chunk);
+        if ( chunk.getSize() == chunk.getCapacity()) {
+            auto cloned = chunk.clone();
+            sinkChunk(cloned);
+        }else
+            chunks_.append(chunk);
     }
 
+protected:
     // Append the pointer in the chunk collection (without copying)
     virtual void sinkChunk(data_chunk_ptr_t &chunk) {
         chunks_.append(std::move(chunk));
@@ -88,8 +93,8 @@ public:
 };
 
 
-PhysicalChunkOutput::PhysicalChunkOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols,
-PredicateTables *pt): PhysicalAtom(types), pt_(pt){
+PhysicalChunkOutput::PhysicalChunkOutput(ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    PredicateTables *pt): PhysicalAtom(types), pt_(pt), context_(context) {
     dcCols_ = std::move(dcCols);
     for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
 }
@@ -158,12 +163,10 @@ AtomResultType PhysicalChunkOutput::sink(ThreadContext& context, DataChunk &inpu
     DataChunk pinput = projectColumns(input);
     BB_ASSERT(pinput.columnCount() == dcColsType_.size());
 
-    if ( pinput.getSize() == pinput.getCapacity()) {
-        auto cloned = pinput.clone();
-        cstate.sinkChunk(cloned);
-    }else {
+    if (!pt_->isDistinct())
         cstate.sinkChunk(pinput);
-    }
+    else
+        pt_->append(pinput); //if distinct append directly into pt
 
     context.profiler_.endPhysicalAtom(input);
     return AtomResultType::NEED_MORE_INPUT;
@@ -176,6 +179,9 @@ void PhysicalChunkOutput::combine(ThreadContext &context, PhysicalAtomState &sta
     auto& cstate = (ChunkOutputState&)state;
     auto& gcstate = (GlobalChunkOutputState&)gstate;
 
+    if (pt_->isDistinct())
+        return;
+
     for (auto& c : cstate.chunks_.chunks()) {
         if (c->getCapacity() == c->getSize())
             gcstate.sinkChunk(c);
@@ -184,8 +190,7 @@ void PhysicalChunkOutput::combine(ThreadContext &context, PhysicalAtomState &sta
     }
 
     cstate.chunks_.reset();
-    DataChunk chunk;
-    context.profiler_.endPhysicalAtom(chunk);
+    context.profiler_.endPhysicalAtom();
 }
 
 
@@ -193,9 +198,15 @@ void PhysicalChunkOutput::finalize(ThreadContext& context, GlobalPhysicalAtomSta
     context.profiler_.startPhysicalAtom(this);
     // send the chunks from the global state to predicate table
     auto& gcstate = (GlobalChunkOutputState&)gstate;
+
+    if (pt_->isDistinct())
+        return;
+
+
     for (auto& chunk: gcstate.chunks_.chunks()) {
         pt_->append(*chunk);
     }
+
     context.profiler_.endPhysicalAtomFinalize();
 
 }

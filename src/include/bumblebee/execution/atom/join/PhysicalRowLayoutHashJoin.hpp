@@ -29,7 +29,7 @@ namespace bumblebee{
 class PhysicalRowLayoutHashJoin : public PhysicalAtom {
 public:
     PhysicalRowLayoutHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads,
-    vector<idx_t> lkeys);
+    vector<idx_t> lkeys, bool negative);
     PhysicalRowLayoutHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads, PhysicalHashType type);
     ~PhysicalRowLayoutHashJoin() override;
 
@@ -49,6 +49,7 @@ public:
 
 private:
     void executeProbe(PhysicalAtomState& state, DataChunk& input, DataChunk& chunk) const;
+    void executeExist(PhysicalAtomState& state, DataChunk& input, DataChunk& chunk) const;
 
     const ClientContext& context_;
 
@@ -57,6 +58,8 @@ private:
     vector<idx_t> payloads_; // keys of the current predicate
     vector<idx_t> lkeys_; // keys on the input dataset
     PhysicalHashType type_;
+
+    bool negative_;
 };
 
 

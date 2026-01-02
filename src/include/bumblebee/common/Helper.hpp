@@ -91,6 +91,11 @@ bool compareVectors(vector<T> v1, vector<T> v2) {
 }
 
 template <typename T>
+bool containsVector(vector<T> const &v, const T& val) {
+	return std::find(v.begin(), v.end(), val) != v.end();
+}
+
+template <typename T>
 bool compareVectorsNoSort(vector<T> const &lhs, vector<T> const &rhs) {
 	if (lhs.size() != rhs.size())return false;
 	vector<bool> used(lhs.size(), false);

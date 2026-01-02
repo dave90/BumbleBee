@@ -3,6 +3,8 @@
 - parquet
 - Specify predicate tables types
 - Refactor PRL and Recursion join HT
+- Generate combine delta and next delta rules
+- Refactor aggregates and avoid distinct
 
 ## Next
 - CICD

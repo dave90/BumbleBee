@@ -124,10 +124,10 @@ public:
 
 	// cast data chunks
 	void cast(const vector<ConstantType> &newTypes) {
-		BB_ASSERT(newTypes.size() == types_.size());
+		types_ = newTypes;
+		if (count_ == 0 )return;
 		for (auto& chunk : chunks_)
 			chunk->cast(newTypes);
-		types_ = newTypes;
 	}
 
 private:

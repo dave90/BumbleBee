@@ -32,7 +32,7 @@ namespace bumblebee {
 
 prule_ptr_vector_t Planner::plan(rules_vector_t &rules) {
     executeRewriters(rules);
-
+    setHeadTypes(rules);
     prule_ptr_vector_t physicalRules;
     executeOptimizer(rules, physicalRules);
 
@@ -41,6 +41,48 @@ prule_ptr_vector_t Planner::plan(rules_vector_t &rules) {
         LOG_DEBUG("%s", prule->toString().c_str());
 
     return physicalRules;
+}
+
+void Planner::setHeadTypes(rules_vector_t &rules) {
+    // set the predicates types for the head predicates
+    // if the head types are != compared to pt types let's bump all the types
+    // and cast also the predicate of the body
+
+    PhysicalOptimizer optimizer(context_, recursiveRules_);
+    // head types for each rule, if empty the rule will be skipped
+    vector<std::unordered_map<Predicate *, vector<ConstantType>>> headTypes;
+    for (auto& rule: rules) {
+        headTypes.push_back(optimizer.getHeadTypes(rule));
+        optimizer.clear();
+    }
+
+    bool castAll = false;
+    for (idx_t i=0;i<headTypes.size(); ++i) {
+        for (auto& [pred, types]: headTypes[i]) {
+            BB_ASSERT(!containsVector(types, UNKNOWN));
+            auto &pt = context_.defaultSchema_.getPredicateTable(pred);
+            if (containsVector(pt->getTypes(), UNKNOWN)) {
+                // first time we populate the pt
+                BB_ASSERT(!pt->getCount());
+                pt->setTypes(types);
+                continue;
+            }
+            if ( types != pt->getTypes())
+                castAll = true;;
+        }
+    }
+    if (!castAll) return;
+
+    for (idx_t i=0;i<headTypes.size(); ++i) {
+        if (!headTypes.size())continue;
+        auto predicates = rules[i].getPredicates();
+        for (auto& pred: predicates) {
+            auto &pt = context_.defaultSchema_.getPredicateTable(pred);
+            BB_ASSERT(!containsVector(pt->getTypes(), UNKNOWN));
+            auto commonTypes = getGeneralBumpedType(pt->getTypes());
+            pt->updateTypes(commonTypes);
+        }
+    }
 }
 
 void Planner::executeOptimizer(rules_vector_t & rules, prule_ptr_vector_t & prules) {

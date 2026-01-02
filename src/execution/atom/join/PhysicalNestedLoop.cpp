@@ -47,7 +47,8 @@ public:
             else
                 finished = true;
         }else {
-            auto& ht = pt->getJoinPRLHashTable(pt->getKeys(), {});
+            BB_ASSERT(pt->existPartitionedPRLHashTable());
+            auto& ht = pt->getPartitionedPRLHashTable();
             if (rchunk_ < ht->getSize()) {
                 ht->scan(rchunk_, cacheChunk_);
                 rchunk_ += cacheChunk_.getSize();

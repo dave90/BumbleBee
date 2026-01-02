@@ -178,6 +178,7 @@ protected:
     hash_t bitmask_;
 };
 
+using distinct_ht_ptr_t = PRLHashTable::distinct_ht_ptr_t;
 
 template <class FUNC>
 void PRLHashTable::payloadApply(FUNC fun) {

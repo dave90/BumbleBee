@@ -25,6 +25,7 @@
 #include "bumblebee/execution/JoinHashTable.hpp"
 #include "bumblebee/execution/JoinPRLHashTable.hpp"
 #include "bumblebee/execution/PartitionedAggHT.hpp"
+#include "bumblebee/execution/PartitionedPRLHashTable.hpp"
 #include "bumblebee/execution/RowLayoutJoinHashTable.hpp"
 
 namespace bumblebee{
@@ -61,6 +62,9 @@ public:
     DataChunk & getChunk(idx_t index) {
         return chunks_.getChunk(index);
     }
+    // Gets to the chunk at the given index from distinct HT
+    DataChunk getChunkFromDistinct(idx_t index, idx_t size = STANDARD_VECTOR_SIZE);
+
     const vector<Atom>& getFacts() const {
         return facts_;
     }
@@ -82,9 +86,16 @@ public:
 
     // Get a value given a row and column index
     Value getValue(idx_t column, idx_t index);
+    // Update the types of the pt and in case cast all the tables
+    bool updateTypes(const vector<ConstantType>& types);
 
     // Append a data chunk
-    void append(DataChunk& chunk);
+    void append(DataChunk& chunk) {
+        if (!isDistinct())
+            appendInChunkCollection(chunk);
+        else
+            appendInDistinctHT(chunk);
+    }
 
     // Return the Constat types for each column
     vector<ConstantType> getTypes();
@@ -103,13 +114,17 @@ public:
     void createJoinRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
     bool existJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
 
+    bool existPartitionedPRLHashTable() const{
+        return partitionedPRLHT_ != nullptr;
+    }
+    partitioned_prl_ht_ptr_t&  getPartitionedPRLHashTable();
+
     // Return a partitioned aggregate join hash table with the same groups, payload and functions. If does not exist create it
     partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
         return partitionedAggHT_;
     }
     partitioned_agg_ht_ptr_t& createPartitionedAggHashTable( const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
     bool existPartitionedAggHashTable();
-    void mergeIntoPRLHT(JoinPRLHashTable& ht);
 
     PredicateTables & operator=(const PredicateTables &other) = delete;
     PredicateTables & operator=(PredicateTables &&other) noexcept = delete;
@@ -119,21 +134,24 @@ public:
 
     void setRecursive(bool recursive);
     bool isRecursive() const;
-    void initializeDelta(const vector<ConstantType>& types);
-    JoinPRLHashTable& getDelta();
-    void mergeIntoNextDelta(JoinPRLHashTable& delta);
+    void initializeDelta();
     void mergeDelta();
     idx_t getDeltaCount() const;
+    void resetDeltaCount();
+    void clearDelta() {
+        delta_.deltaCount_ = 0;
+        delta_.nextDelta_ = nullptr;
+        delta_.delta_ = nullptr;
+    }
 
 protected:
-    // Update current types based on new types
-    void updateTypes(vector<ConstantType> &newTypes);
     void loadFacts();
     void loadRanges();
+    void appendInChunkCollection(DataChunk& chunk);
+    void appendInDistinctHT(DataChunk& chunk);
+
     void castEntirePredicateTable(const vector<ConstantType> &newTypes);
-    void moveChunksToHT();
-    JoinPRLHashTable* getDistinctHT() const;
-    join_prl_ht_ptr_t& getDistinctUHT();
+
 
     // Types of the columns
     vector<ConstantType> types_;
@@ -156,6 +174,8 @@ protected:
     vector<joinht_ptr_t> jhtables_;
     // PRL hash tables
     vector<join_prl_ht_ptr_t> prlHTables_;
+    // Partitioned PRL hash table
+    partitioned_prl_ht_ptr_t partitionedPRLHT_;
     // Row Layout hash tables
     vector<rl_join_ht_ptr_t> rlHTables_;
     // partitioned aggregate hash table (for aggregates)
@@ -163,13 +183,13 @@ protected:
 
     ClientContext* context_;
 
-    struct RecuriveDelta {
-        join_prl_ht_ptr_t delta_;
-        join_prl_ht_ptr_t nextDelta_;
-        idx_t deltaCount_{0};
+    struct RecursiveDelta {
+        partitioned_prl_ht_ptr_t delta_;
+        partitioned_prl_ht_ptr_t nextDelta_;
+        atomic<idx_t> deltaCount_{0};
     };
 
-    RecuriveDelta delta_;
+    RecursiveDelta delta_;
     bool recursive_;
 };
 

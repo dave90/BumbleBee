@@ -45,8 +45,10 @@ public:
     void addChunk(DataChunk& payload) override;
 
     // Probe the left chunk (classical join)
-    void probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,SelectionVector &lsel, SelectionVector &rsel, DataChunk &result);
-
+    void probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector& lhash,SelectionVector &lsel,
+        SelectionVector &rsel, DataChunk &result);
+    void match(DataChunk &lchunk, Vector &lhash, SelectionVector &matchSel, idx_t& matchCount,
+                                     SelectionVector &nonMatchSel, idx_t& noMatchCount);
     void finalize();
 
     // Compare the keys and payload with the current JoinPRLHashTable
@@ -75,7 +77,7 @@ private:
     // Index of the data sync in hash table
     idx_t idxEntries_{0};
 
-    atomic<bool> ready_{false};
+    atomic<bool> ready_{true};
 
 public:
     // Combine h1 with h2 using the common types. Results are in h1

@@ -33,6 +33,7 @@ public:
         for (idx_t i = 0; i < pt_->chunkCount(); ++i) {
             chunksSize_.push_back(pt_->getChunk(i).getSize());
         }
+        count_ = pt_->getCount();
     }
 
     // return the start and end index of the next chunks to read
@@ -43,7 +44,24 @@ public:
         if (!isPtInitialized_) {
             initPredicateTable();
         }
-        return getNextBucket(start, end, chunksRead_, chunksSize_);
+        if (!pt_->isDistinct())
+            return getNextBucket(start, end, chunksRead_, chunksSize_);
+
+        return getNextChunksToReadHT(start, end);
+    }
+
+    bool getNextChunksToReadHT(idx_t& start,idx_t& end) {
+        if (currentOffset_ >= count_)
+            return false;
+        start = currentOffset_;
+        end = minValue( count_, start + MORSEL_SIZE) - 1;
+        currentOffset_ += MORSEL_SIZE;
+        return true;
+    }
+
+    idx_t estimateMaxThreads() {
+        idx_t size = pt_->getCount();
+        return size / MORSEL_SIZE + 1;
     }
 
 private:
@@ -55,9 +73,11 @@ private:
     idx_t chunksRead_{0};
     // size of rows for each chunk
     vector<idx_t> chunksSize_;
+    idx_t currentOffset_{0};
     // true if init function was called in pt
     bool isPtInitialized_{false};
-
+    // size of pred table
+    idx_t count_{0};
 };
 
 class ChunkScanState : public  PhysicalAtomState {
@@ -118,7 +138,8 @@ gpstate_ptr_t PhysicalChunkScan::getGlobalState() const {
 }
 
 idx_t PhysicalChunkScan::getMaxThreads() const {
-    return pt_->getCount() / MORSEL_SIZE + 1;
+    auto state = GlobalChunkScanState(pt_);
+    return state.estimateMaxThreads();
 }
 
 AtomResultType PhysicalChunkScan::getData(ThreadContext& context, DataChunk &chunk, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
@@ -138,16 +159,26 @@ AtomResultType PhysicalChunkScan::getData(ThreadContext& context, DataChunk &chu
         cstate.endIdx_ = end;
         cstate.isInitialized_ = true;
     }
+
     if (cstate.currentIdx_ > cstate.endIdx_) {
         // no more data to read return empty chunk
         chunk.setCardinality(0);
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::FINISHED;
     }
-    auto& ptChunk = pt_->getChunk(cstate.currentIdx_);
-    ++cstate.currentIdx_;
-    // project the columns
-    chunk.reference(ptChunk, selectCols_);
+
+    if (!pt_->isDistinct()) {
+        auto& ptChunk = pt_->getChunk(cstate.currentIdx_++);
+        chunk.reference(ptChunk, selectCols_);
+    }else {
+        idx_t size = minValue<idx_t>(STANDARD_VECTOR_SIZE, cstate.endIdx_ - cstate.currentIdx_ + 1);
+        DataChunk result = pt_->getChunkFromDistinct(cstate.currentIdx_, size);
+        cstate.currentIdx_ += result.getSize();
+        chunk.reference(result, selectCols_);
+    }
+
+    BB_ASSERT(chunk.getSize());
+
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::HAVE_MORE_OUTPUT;
 }

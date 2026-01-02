@@ -30,6 +30,12 @@ target_include_directories(bumblebee_lib PUBLIC
         ${PROJECT_SOURCE_DIR}/src/include
 )
 
+# Disable asserts in Release
+target_compile_definitions(bumblebee_lib
+        PRIVATE
+        $<$<CONFIG:Release>:NDEBUG>
+)
+
 # ----------------------------------------
 # Main application executable
 # ----------------------------------------

@@ -154,6 +154,13 @@ ConstantType getGeneralBumpedType(ConstantType type) {
     }
 }
 
+vector<ConstantType> getGeneralBumpedType(const vector<ConstantType>& type) {
+    vector<ConstantType> res;
+    for (auto& t : type)
+        res.push_back(getGeneralBumpedType(t));
+    return res;
+}
+
 ConstantType getBumpedType(ConstantType type) {
     switch (type) {
         case TINYINT:    return SMALLINT;

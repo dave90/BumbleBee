@@ -230,6 +230,7 @@ void BumbleBeeDB::processRecursive(RulesBucket &bucket, Scheduler &scheduler) {
             auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
             pt->mergeDelta();
             deltaCount += pt->getDeltaCount();
+            pt->resetDeltaCount();
         }
         LOG_DEBUG("Iteration %d delta count: %d", iteration, deltaCount);
 
@@ -244,6 +245,7 @@ void BumbleBeeDB::processRecursive(RulesBucket &bucket, Scheduler &scheduler) {
         BB_ASSERT(rule.getHead().size() == 1);
         auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
         pt->setRecursive(false);
+        pt->clearDelta(); // clear delta data
     }
 
 }
@@ -262,10 +264,6 @@ void BumbleBeeDB::processBucketRules( RulesBucket &bucket, Scheduler& scheduler)
         auto& pt = context_.defaultSchema_.getPredicateTable(rule.getHead()[0].getPredicate());
         pt->setRecursive(true);
         pt->predicate_->setDistinct();
-        if (pt->getCount() > 0) {
-            // init recursive table with non empty data
-            pt->createJoinPRLHashTable(pt->getTypes(), pt->getKeys(), {});
-        }
     }
 
     processExit(bucket, scheduler);
@@ -287,13 +285,13 @@ void BumbleBeeDB::print() {
         if (predicate->isInternal())continue;
         auto& pt = context_.defaultSchema_.getPredicateTable(predicate);
         pt->initializeChunks(); // init chunks if no rules initialized
-        if (!pt->isDistinct() || !pt->existJoinPRLHashTable(pt->getKeys(), {})) {
+        if (!pt->isDistinct() || !pt->existPartitionedPRLHashTable()) {
             if (!pt->chunkCount())continue;
             for (idx_t i = 0; i < pt->chunkCount(); ++i) {
                 outputBuilder.outputAtoms(pt->getChunk(i), predicate);
             }
         }else {
-            auto& ht = pt->getJoinPRLHashTable(pt->getKeys(), {});
+            auto& ht = pt->getPartitionedPRLHashTable();
             idx_t offset = 0;
             DataChunk result;
             result.initialize(pt->getTypes());
@@ -305,6 +303,8 @@ void BumbleBeeDB::print() {
             }
         }
     }
+    if (context_.printProfiling_)
+        LOG_INFO(FunctionProfiler::instance().toString().c_str());
 }
 
 void BumbleBeeDB::printProgram(rules_vector_t &program) {
