@@ -296,7 +296,7 @@ static void readCSVFunction(ClientContext &context, const FunctionData *bind_dat
 		if (data.filesToProcess_.byteStart_ > 0)
 			// disable header if this task read in the middle of file
 			option.header_ = false;
-		data.csvReader_ = std::make_unique<BufferedCSVReader>(*context.fileSystem_, option, bind_data.types_);
+		data.csvReader_ = std::make_unique<BufferedCSVReader>(*context.fileSystem_, option, bind_data.types_, bind_data.cols_);
 		if (data.filesToProcess_.byteStart_ > 0)
 			data.csvReader_->fileHandle_->seek(data.filesToProcess_.byteStart_);
 		if (data.filesToProcess_.byteEnd_)

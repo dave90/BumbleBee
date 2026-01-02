@@ -100,9 +100,9 @@ class BufferedCSVReader {
 
 public:
 	BufferedCSVReader(ClientContext &context, BufferedCSVReaderOptions options,
-	                  const vector<ConstantType> &requested_types = vector<ConstantType>());
+	                  const vector<ConstantType> &requested_types = vector<ConstantType>(), const std::vector<idx_t> &select_cols = vector<idx_t>() );
 	BufferedCSVReader(FileSystem &fs, BufferedCSVReaderOptions options,
-					  const vector<ConstantType> &requested_types = vector<ConstantType>());
+					  const vector<ConstantType> &requested_types = vector<ConstantType>(), const std::vector<idx_t> &select_cols = vector<idx_t>());
 
 	FileSystem &fs_;
 	BufferedCSVReaderOptions options_;
@@ -142,6 +142,9 @@ public:
 	idx_t chunkByteSizes_; // bytes in a data chunk
 	idx_t bytesToRead_ = 0; // limit the bytes to read (0 is no limits)
 	idx_t bytesRead_ = 0; // amount of bytes read
+
+	// if not empty load and parse only the columns present in selectCols_
+	std::unordered_set<id_t> selectCols_;
 
 public:
 	// Extract a single DataChunk from the CSV file and stores it in insert_chunk
