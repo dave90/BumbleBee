@@ -155,10 +155,13 @@ BufferedCSVReader::BufferedCSVReader(ClientContext &context, BufferedCSVReaderOp
 BufferedCSVReader::BufferedCSVReader(FileSystem &fs, BufferedCSVReaderOptions options,
 const vector<ConstantType> &requested_types, const std::vector<idx_t> &select_cols) : fs_(fs), options_(options), bufferSize_(0), position_(0) {
 	fileHandle_ = openCSV(options_);
-	for (auto col: select_cols)
-		selectCols_.insert(col);
-
 	initialize(requested_types);
+
+	if (!select_cols.empty()) {
+		selectCols_.resize(types_.size(), false);
+		for (auto& col: select_cols)
+			selectCols_[col] = true;
+	}
 }
 
 void BufferedCSVReader::parseCSV(DataChunk &insertChunk) {
@@ -642,7 +645,7 @@ void BufferedCSVReader::addValue(char *str_val, idx_t length, idx_t &column, vec
 	if (mode_ == ParserMode::PARSING)
 		chunkByteSizes_ += length+ ((column > 0)?options_.delimiter_.size():0);
 
-	if (!selectCols_.empty() && !selectCols_.contains(column) && escape_positions.empty()) {
+	if (!selectCols_.empty() && !selectCols_[column]) {
 		column++;
 		escape_positions.clear();
 		return;
@@ -725,7 +728,7 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 	// convert the columns in the parsed chunk to the types of the table
 	insert_chunk.setCardinality(parseChunk_);
 	for (idx_t col_idx = 0; col_idx < types_.size(); col_idx++) {
-		if (!selectCols_.empty() && !selectCols_.contains(col_idx))
+		if (!selectCols_.empty() && !selectCols_[col_idx])
 			continue;
 
 		if (types_[col_idx] == ConstantType::STRING) {
@@ -764,13 +767,14 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 			}
 		}
 	}
+	// reset only the selected cols
 	if (selectCols_.empty()) {
 		parseChunk_.reset();
 		return;
 	}
-	// reset only the selected cols
-	for (auto& col : selectCols_) {
-		parseChunk_.data_[col].initialize(false, parseChunk_.getCapacity());
+	for (idx_t i =0; i < selectCols_.size(); i++) {
+		if (!selectCols_[i]) continue;
+		parseChunk_.data_[i].initialize(false, parseChunk_.getCapacity());
 	}
 	parseChunk_.setCardinality(0);
 }
@@ -818,7 +822,6 @@ bool BufferedCSVReader::readBuffer(idx_t &start) {
 			position_ += 3;
 		}
 	}
-	// std::cout << buffer_.get() << std::endl;
 
 	return read_count > 0;
 }

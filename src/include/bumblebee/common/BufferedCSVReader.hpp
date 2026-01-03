@@ -144,7 +144,7 @@ public:
 	idx_t bytesRead_ = 0; // amount of bytes read
 
 	// if not empty load and parse only the columns present in selectCols_
-	std::unordered_set<id_t> selectCols_;
+	std::vector<bool> selectCols_;
 
 public:
 	// Extract a single DataChunk from the CSV file and stores it in insert_chunk
