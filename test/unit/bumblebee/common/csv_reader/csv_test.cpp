@@ -66,7 +66,7 @@ TEST_F(CSVSCanTest, SimpleCSVScanTest) {
     options.header_ = true;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {STRING, BIGINT, STRING, STRING};
+    vector<PhysicalType> expectedTypes = {PhysicalType::STRING, PhysicalType::BIGINT, PhysicalType::STRING, PhysicalType::STRING};
     EXPECT_EQ(reader.types_, expectedTypes);
     EXPECT_GE(reader.avgBytesInChunk_, 170);
     EXPECT_LE(reader.avgBytesInChunk_, 190);
@@ -102,7 +102,8 @@ TEST_F(CSVSCanTest, FloatCSVScanTest) {
     options.header_ = true;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {DOUBLE ,STRING, BIGINT, STRING, STRING};
+    vector<PhysicalType> expectedTypes = {PhysicalType::DOUBLE ,PhysicalType::STRING, PhysicalType::BIGINT,
+        PhysicalType::STRING, PhysicalType::STRING};
     EXPECT_EQ(reader.types_, expectedTypes);
     DataChunk chunk;
     chunk.initialize(reader.types_);
@@ -156,7 +157,7 @@ TEST_F(CSVSCanTest, MultiScanCSVTest) {
     };
     EXPECT_EQ(reader.colNames_, colNamesExpected);
     EXPECT_EQ(reader.types_.size(), 12);
-    EXPECT_EQ(reader.types_[0], BIGINT);
+    EXPECT_EQ(reader.types_[0], PhysicalType::BIGINT);
     EXPECT_GT(reader.bytesInChunk_, 0);
     DataChunk chunk;
     chunk.initialize(reader.types_);
@@ -185,7 +186,7 @@ TEST_F(CSVSCanTest, MultiScanNotAutodetectCSVTest) {
     options.header_ = true;
     options.allVarchar_ = true;
     std::cout << options.toString() << std::endl;
-    vector<ConstantType> types(12, STRING);
+    vector<PhysicalType> types(12, PhysicalType::STRING);
     BufferedCSVReader reader(context, options, types);
     EXPECT_GT(reader.bytesInChunk_, 0);
     DataChunk chunk;
@@ -213,9 +214,9 @@ TEST_F(CSVSCanTest, MultiScanSkipRowsCSVTest) {
     options.skipRows_ = 5000;
     std::cout << options.toString() << std::endl;
     BufferedCSVReader reader(context, options);
-    vector<ConstantType> expectedTypes = {STRING, BIGINT, STRING, STRING};
+    vector<PhysicalType> expectedTypes = {PhysicalType::STRING, PhysicalType::BIGINT, PhysicalType::STRING, PhysicalType::STRING};
     EXPECT_EQ(reader.types_.size(), 9);
-    EXPECT_EQ(reader.types_[0], BIGINT);
+    EXPECT_EQ(reader.types_[0], PhysicalType::BIGINT);
     DataChunk chunk;
     chunk.initialize(reader.types_);
     idx_t lines = 0;

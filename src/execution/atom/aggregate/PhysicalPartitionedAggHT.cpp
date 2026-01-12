@@ -62,7 +62,7 @@ private:
 };
 
 
-PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
     const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
     PhysicalHashType type): PhysicalAtom(types, dcCols, selectedCols),
@@ -79,7 +79,7 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
         payloadColsTypes_.push_back(types_[i]);
 }
 
-PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, const vector<idx_t> &group_cols, const vector<idx_t> &payload_cols,
     AggregatePRLHashTable *aht): PhysicalAtom(types, dcCols, selectedCols) ,
                                     context_(context),
@@ -128,7 +128,7 @@ string PhysicalPartitionedAggHT::toString() const {
     }
     result += "; ";
     for (auto c : types_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     return result + " )";
 }
@@ -189,7 +189,7 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
     }
 
     DataChunk sinput = projectColumns(input);
-    Vector hash(UBIGINT, input.getSize());
+    Vector hash(LogicalTypeId::HASH, input.getSize());
     sinput.hash(hash);
     cstate.ht_->addChunk(hash, sinput);
     context.profiler_.endPhysicalAtom(input);
@@ -270,7 +270,7 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     group.initializeEmpty(groupColsTypes_);
     group.reference(input, groupCols_);
 
-    Vector hash(UBIGINT, group.getSize());
+    Vector hash(LogicalTypeId::HASH, group.getSize());
     group.hash(hash);
     Vector result(dcColsType_[0]);
 

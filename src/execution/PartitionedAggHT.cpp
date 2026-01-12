@@ -41,7 +41,7 @@ void PartitionedAggHT::partitionHT(distinct_ht_ptr_t& ht) {
 
     vector<distinct_ht_ptr_t> partitions;
     partitions.resize(partitions_);
-    vector<ConstantType> types = ht->getTypes();
+    vector<LogicalType> types = ht->getTypes();
     ht->partition(partitions, shift_);
     // log the statistics
     for (idx_t i = 0; i < partitions_; i++) {
@@ -101,13 +101,13 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     auto dhtCapacity = dht->getCapacity();
     auto& pht = partitionsAggVec_[partition];
     auto types = dht->getTypes();
-    vector<ConstantType> groupColsType;
+    vector<LogicalType> groupColsType;
     for (auto& col: groupCols_) {
         BB_ASSERT(col < types.size());
         groupColsType.push_back(types[col]);
     }
     partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType, dhtCapacity, true, functions_));
-    vector<ConstantType> payloadTypeCols;
+    vector<LogicalType> payloadTypeCols;
     for (idx_t i = 0; i < payloadCols_.size(); i++) {
         auto col = payloadCols_[i];
         BB_ASSERT(col < types.size());
@@ -120,7 +120,7 @@ void PartitionedAggHT::aggregatePartition(idx_t partition) {
     payloads.initializeEmpty(payloadTypeCols);
     DataChunk result;
     result.initialize(types);
-    Vector hash(UBIGINT);
+    Vector hash(LogicalTypeId::HASH);
 
     while (position <= dht->getSize()) {
         idx_t toScan = minValue<idx_t>(STANDARD_VECTOR_SIZE, dht->getSize());

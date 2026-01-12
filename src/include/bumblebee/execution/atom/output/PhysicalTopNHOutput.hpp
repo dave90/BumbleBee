@@ -28,7 +28,7 @@ namespace bumblebee{
 // predicate table
 class PhysicalTopNHOutput : public PhysicalAtom {
 public:
-    PhysicalTopNHOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols, PredicateTables *pt, const vector<ColModifier>& modifiers, idx_t limit);
+    PhysicalTopNHOutput(const vector<LogicalType> &types, vector<idx_t> &dcCols, PredicateTables *pt, const vector<ColModifier>& modifiers, idx_t limit);
 
     ~PhysicalTopNHOutput() override;
     AtomResultType sink(ThreadContext& context, DataChunk &input, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;

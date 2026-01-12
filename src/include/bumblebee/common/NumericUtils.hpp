@@ -21,6 +21,7 @@
 
 #include "types/BumbleString.hpp"
 #include "types/Vector.hpp"
+#include "bumblebee/common/Helper.hpp"
 
 namespace bumblebee{
 
@@ -38,7 +39,7 @@ public:
 	static int signedLength(SIGNED value) {
 		int sign = -(value < 0);
 		UNSIGNED unsigned_value = (value ^ sign) - sign;
-		return UnsignedLength(unsigned_value) - sign;
+		return unsignedLength(unsigned_value) - sign;
 	}
 
 	// Formats value in reverse and returns a pointer to the beginning.

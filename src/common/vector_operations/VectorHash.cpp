@@ -55,40 +55,40 @@ static inline void TemplatedLoopHash(Vector &input, Vector &result, const Select
 
 template <bool HAS_RSEL>
 static inline void HashTypeSwitch(Vector &input, Vector &result, const SelectionVector *rsel, idx_t count) {
-    BB_ASSERT(result.getType() == ConstantType::UBIGINT);
+    BB_ASSERT(result.getType() == PhysicalType::UBIGINT);
 
     switch (input.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
 		    TemplatedLoopHash<HAS_RSEL, int8_t>(input, result, rsel, count);
             break;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
 		    TemplatedLoopHash<HAS_RSEL, int16_t>(input, result, rsel, count);
             break;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
 		    TemplatedLoopHash<HAS_RSEL, int32_t>(input, result, rsel, count);
             break;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
 		    TemplatedLoopHash<HAS_RSEL, int64_t>(input, result, rsel, count);
             break;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
 		    TemplatedLoopHash<HAS_RSEL, uint8_t>(input, result, rsel, count);
             break;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
 		    TemplatedLoopHash<HAS_RSEL, uint16_t>(input, result, rsel, count);
             break;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
 		    TemplatedLoopHash<HAS_RSEL, uint32_t>(input, result, rsel, count);
             break;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
 		    TemplatedLoopHash<HAS_RSEL, uint64_t>(input, result, rsel, count);
             break;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
 		    TemplatedLoopHash<HAS_RSEL, float>(input, result, rsel, count);
             break;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
 		    TemplatedLoopHash<HAS_RSEL, double>(input, result, rsel, count);
             break;
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             TemplatedLoopHash<HAS_RSEL, string_t>(input, result, rsel, count);
             break;
         default:
@@ -165,40 +165,40 @@ void TemplatedLoopCombineHash(Vector &input, Vector &hashes, const SelectionVect
 
 template <bool HAS_RSEL>
 static inline void CombineHashTypeSwitch(Vector &hashes, Vector &input, const SelectionVector *rsel, idx_t count) {
-	BB_ASSERT(hashes.getType() == ConstantType::UBIGINT);
+	BB_ASSERT(hashes.getType() == PhysicalType::UBIGINT);
 
 	switch (input.getType()) {
-		case ConstantType::TINYINT:
+		case PhysicalType::TINYINT:
 			TemplatedLoopCombineHash<HAS_RSEL, int8_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			TemplatedLoopCombineHash<HAS_RSEL, int16_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			TemplatedLoopCombineHash<HAS_RSEL, int32_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			TemplatedLoopCombineHash<HAS_RSEL, int64_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			TemplatedLoopCombineHash<HAS_RSEL, uint8_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			TemplatedLoopCombineHash<HAS_RSEL, uint16_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			TemplatedLoopCombineHash<HAS_RSEL, uint32_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			TemplatedLoopCombineHash<HAS_RSEL, uint64_t>(input, hashes, rsel, count);
 			break;
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			TemplatedLoopCombineHash<HAS_RSEL, float>(input, hashes, rsel, count);
 			break;
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			TemplatedLoopCombineHash<HAS_RSEL, double>(input, hashes, rsel, count);
 			break;
-		case ConstantType::STRING:
+		case PhysicalType::STRING:
 			TemplatedLoopCombineHash<HAS_RSEL, string_t>(input, hashes, rsel, count);
 			break;
 		default:

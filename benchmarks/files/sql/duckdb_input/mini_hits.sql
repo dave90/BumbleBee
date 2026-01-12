@@ -121,3 +121,9 @@ COPY
 SELECT *
 FROM hits
 ) TO 'downloads/mini_hits.csv'
+
+COPY
+(
+SELECT *
+FROM hits
+) TO 'downloads/mini_hits.parquet'

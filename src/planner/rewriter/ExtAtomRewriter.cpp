@@ -32,7 +32,7 @@ void ExtAtomRewriter::rewrite(Rule &rule) {
     // check if the head atom is ext atom and finalize function is defined
     for (auto& atom: rule.getHead()) {
         if (atom.getType() != EXTERNAL)continue;
-        auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesCType()).get();
+        auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesType()).get();
         if (func->finalize_function_ == nullptr || func->combine_function_ == nullptr) {
             ErrorHandler::errorNotImplemented(
                 " function '" + atom.getExternalFunctionName() +
@@ -46,7 +46,7 @@ void ExtAtomRewriter::rewrite(Rule &rule) {
     // check that the first atom in the rule if is an external support the data sourcing
     auto& source = rule.getBody().front();
     if (source.getType() != EXTERNAL) return;
-    auto func = (PredFunction*) context_.functionRegister_.getFunction(source.getExternalFunctionName(), source.getInputValuesCType()).get();
+    auto func = (PredFunction*) context_.functionRegister_.getFunction(source.getExternalFunctionName(), source.getInputValuesType()).get();
     if (func->maxThreadFunction_ != nullptr) return;
 
     // first atom cannot be a source so move it

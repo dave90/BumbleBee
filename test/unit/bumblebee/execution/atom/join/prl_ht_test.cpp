@@ -54,10 +54,10 @@ class JoinRLHTTest : public BumbleBaseTest {
 
 
 TEST_F(JoinRLHTTest, HTSimpleTest) {
-    vector<ConstantType> types = {INTEGER, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER};
     vector<idx_t> keys = {0};
     vector<idx_t> payload = {1};
-    vector<ConstantType> keyTypes;
+    vector<LogicalType> keyTypes;
     for (auto c:keys) keyTypes.push_back(types[c]);
     vector<vector<Value>> data;
     addData(data, vector{0,0,0,0});
@@ -72,7 +72,7 @@ TEST_F(JoinRLHTTest, HTSimpleTest) {
     data.clear();
     addData(data, vector{0});
     DataChunk lchunk1 = generateDataChunk(keyTypes, data);
-    Vector hash1(UBIGINT);
+    Vector hash1(LogicalTypeId::HASH);
     lchunk1.hash(hash1);
     DataChunk result1;
     SelectionVector lsel(STANDARD_VECTOR_SIZE), rsel(STANDARD_VECTOR_SIZE);
@@ -87,7 +87,7 @@ TEST_F(JoinRLHTTest, HTSimpleTest) {
     data.clear();
     addData(data, vector{1});
     DataChunk lchunk2 = generateDataChunk(keyTypes, data);
-    Vector hash2(UBIGINT);
+    Vector hash2(LogicalTypeId::HASH);
     lchunk2.hash(hash2);
     DataChunk result2;
     ht->probe(ltruple,rtuple, lchunk2, hash2,lsel, rsel, result2);
@@ -97,10 +97,10 @@ TEST_F(JoinRLHTTest, HTSimpleTest) {
 
 
 TEST_F(JoinRLHTTest, HTNoPayloadTest) {
-    vector<ConstantType> types = {INTEGER, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER};
     vector<idx_t> keys = {0,1};
     vector<idx_t> payload = {};
-    vector<ConstantType> keyTypes;
+    vector<LogicalType> keyTypes;
     for (auto c:keys) keyTypes.push_back(types[c]);
     // create chunk:
     // -2 -1 0 1 2 3 -2 -1 0 1 2 3
@@ -121,7 +121,7 @@ TEST_F(JoinRLHTTest, HTNoPayloadTest) {
     addData(data, vector{0,4,-1,3});
     addData(data, vector{0,4,1,5});
     DataChunk lchunk1 = generateDataChunk(keyTypes, data);
-    Vector hash1(UBIGINT);
+    Vector hash1(LogicalTypeId::HASH);
     lchunk1.hash(hash1);
     SelectionVector mSel(STANDARD_VECTOR_SIZE);
     SelectionVector nmSel(STANDARD_VECTOR_SIZE);
@@ -137,10 +137,10 @@ TEST_F(JoinRLHTTest, HTNoPayloadTest) {
 
 TEST_F(JoinRLHTTest, HTProbeMultipleCallsChunkingSingleLeftKey) {
     // Right side: MANY payload rows for the SAME key -> requires multiple probe() calls
-    vector<ConstantType> types = {INTEGER, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER};
     vector<idx_t> keys = {0};
     vector<idx_t> payload = {1};
-    vector<ConstantType> keyTypes; for (auto c: keys) keyTypes.push_back(types[c]);
+    vector<LogicalType> keyTypes; for (auto c: keys) keyTypes.push_back(types[c]);
 
     const idx_t N = STANDARD_VECTOR_SIZE * 2 + 13; // force > 2 chunks of results
     vector<int> r_key(N, 7);                       // same key on the right
@@ -158,7 +158,7 @@ TEST_F(JoinRLHTTest, HTProbeMultipleCallsChunkingSingleLeftKey) {
     vector<vector<Value>> l_data;
     addData(l_data, vector<int>{7});
     DataChunk lchunk = generateDataChunk(keyTypes, l_data);
-    Vector lhash(UBIGINT); lchunk.hash(lhash);
+    Vector lhash(LogicalTypeId::HASH); lchunk.hash(lhash);
 
 
     // Expected rows set assembled from the original right chunk
@@ -202,7 +202,7 @@ TEST_F(JoinRLHTTest, HTNoPayloadBigMatchTest) {
     // -----------------------------
     const idx_t SVS = STANDARD_VECTOR_SIZE;
 
-    vector<ConstantType> types = {INTEGER, INTEGER};
+    vector<LogicalType> types = {LogicalTypeId::INTEGER, LogicalTypeId::INTEGER};
     vector<idx_t> keys = {0, 1};
     vector<idx_t> payload = {};
 
@@ -259,9 +259,9 @@ TEST_F(JoinRLHTTest, HTNoPayloadBigMatchTest) {
     addData(lMix, l0);
     addData(lMix, l1);
 
-    vector<ConstantType> keyTypes; for (auto c : keys) keyTypes.push_back(types[c]);
+    vector<LogicalType> keyTypes; for (auto c : keys) keyTypes.push_back(types[c]);
     DataChunk lchunk = generateDataChunk(keyTypes, lMix);
-    Vector lhash(UBIGINT, lchunk.getSize());
+    Vector lhash(LogicalTypeId::HASH, lchunk.getSize());
     lchunk.hash(lhash);
 
     SelectionVector mSel(L), nmSel(L);
@@ -303,7 +303,7 @@ TEST_F(JoinRLHTTest, HTNoPayloadBigMatchTest) {
     addData(lAllNo, nn0);
     addData(lAllNo, nn1);
     DataChunk lNo = generateDataChunk(keyTypes, lAllNo);
-    Vector hNo(UBIGINT, lNo.getSize());
+    Vector hNo(LogicalTypeId::HASH, lNo.getSize());
     lNo.hash(hNo);
 
     SelectionVector mSelNo(SVS), nmSelNo(SVS);
@@ -336,7 +336,7 @@ TEST_F(JoinRLHTTest, HTNoPayloadBigMatchTest) {
     });
 
     DataChunk lD = generateDataChunk(keyTypes, lDup);
-    Vector hD(UBIGINT,lD.getSize()); lD.hash(hD);
+    Vector hD(LogicalTypeId::HASH,lD.getSize()); lD.hash(hD);
     SelectionVector mSelD(8), nmSelD(8);
     idx_t mcountD = 0, nmcountD = 0;
     ht->match(lD, hD, mSelD, mcountD, nmSelD, nmcountD);

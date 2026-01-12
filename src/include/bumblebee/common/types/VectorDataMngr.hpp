@@ -60,11 +60,11 @@ protected:
 
 public:
     // static method
-    static inline vector_data_mngr_ptr_t createStandardVector(ConstantType type, idx_t capacity = STANDARD_VECTOR_SIZE) {
-        return vector_data_mngr_ptr_t(new VectorDataMngr(capacity * getCTypeSize(type)));
+    static inline vector_data_mngr_ptr_t createStandardVector(PhysicalType type, idx_t capacity = STANDARD_VECTOR_SIZE) {
+        return vector_data_mngr_ptr_t(new VectorDataMngr(capacity * getPhysicalTypeSize(type)));
     }
-    static inline vector_data_mngr_ptr_t createConstantVector(ConstantType type) {
-        return vector_data_mngr_ptr_t(new VectorDataMngr(getCTypeSize(type)));
+    static inline vector_data_mngr_ptr_t createConstantVector(PhysicalType type) {
+        return vector_data_mngr_ptr_t(new VectorDataMngr(getPhysicalTypeSize(type)));
     }
 
 };

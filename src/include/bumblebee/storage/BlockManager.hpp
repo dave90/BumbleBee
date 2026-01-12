@@ -21,7 +21,7 @@
 
 namespace bumblebee{
 
-// BlockManager is an abstract representation to manage blocks on DuckDB. When writing or reading blocks, the
+// BlockManager is an abstract representation to manage blocks. When writing or reading blocks, the
 // BlockManager creates and accesses blocks. The concrete types implements how blocks are stored.
 class BlockManager {
 public:

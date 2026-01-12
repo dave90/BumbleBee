@@ -23,7 +23,7 @@ using namespace bumblebee;
 
 TEST(VectorOperationsGenerateSequenceTest, BasicSequenceGeneration) {
     const idx_t count = 5;
-    Vector result(ConstantType::INTEGER, count);
+    Vector result(PhysicalType::INTEGER, count);
     VectorOperations::generateSequence(result, count, 10, 2);
     int32_t* data = FlatVector::getData<int32_t>(result);
     for (idx_t i = 0; i < count; ++i) {
@@ -33,7 +33,7 @@ TEST(VectorOperationsGenerateSequenceTest, BasicSequenceGeneration) {
 
 TEST(VectorOperationsGenerateSequenceTest, NegativeIncrementSequence) {
     const idx_t count = 4;
-    Vector result(ConstantType::INTEGER, count);
+    Vector result(PhysicalType::INTEGER, count);
     VectorOperations::generateSequence(result, count, 20, -3);
     int32_t* data = FlatVector::getData<int32_t>(result);
     for (idx_t i = 0; i < count; ++i) {
@@ -43,7 +43,7 @@ TEST(VectorOperationsGenerateSequenceTest, NegativeIncrementSequence) {
 
 TEST(VectorOperationsGenerateSequenceTest, SequenceWithSelectionVector) {
     const idx_t count = 3;
-    Vector result(ConstantType::INTEGER, 5); // allocate more than needed
+    Vector result(PhysicalType::INTEGER, 5); // allocate more than needed
     SelectionVector sel(count);
     sel.setIndex(0, 2);
     sel.setIndex(1, 4);
@@ -60,7 +60,7 @@ TEST(VectorOperationsGenerateSequenceTest, SequenceWithSelectionVector) {
 
 TEST(VectorOperationsGenerateSequenceTest, BasicCircularSequenceGeneration) {
     const idx_t count = 100;
-    Vector result(ConstantType::INTEGER, count);
+    Vector result(PhysicalType::INTEGER, count);
     VectorOperations::generateSequence(result, count, 10, 5, 1, 50);
     int32_t* data = FlatVector::getData<int32_t>(result);
     for (idx_t i = 0; i < count; ++i) {
@@ -70,7 +70,7 @@ TEST(VectorOperationsGenerateSequenceTest, BasicCircularSequenceGeneration) {
 
 TEST(VectorOperationsGenerateSequenceTest, BasicCircularSelectionSequenceGeneration) {
     const idx_t count = 7;
-    Vector result(ConstantType::INTEGER);
+    Vector result(PhysicalType::INTEGER);
     SelectionVector sel(count);
     sel.setIndex(0, 0);
     sel.setIndex(1, 2);

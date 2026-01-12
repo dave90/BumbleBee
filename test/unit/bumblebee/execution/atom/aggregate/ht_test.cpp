@@ -40,7 +40,7 @@ class ProbeRLHTTest : public BumbleBaseTest {
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
 
-    vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<PhysicalType> tLeft{PhysicalType::SMALLINT, PhysicalType::UINTEGER, PhysicalType::BIGINT};
 
     void addChunkToHT(std::unique_ptr<PRLHashTable>& ht, DataChunk &chunk,
             idx_t capacity = STANDARD_VECTOR_SIZE, bool resize = false) {
@@ -48,7 +48,7 @@ protected:
         if (!ht)
             ht = std::make_unique<PRLHashTable>(*clientContext.bufferManager_,chunk.getTypes(), capacity, resize);
 
-        Vector hash(UBIGINT,chunk.getSize() );
+        Vector hash(LogicalTypeId::HASH,chunk.getSize() );
         chunk.hash(hash);
         ht->addChunk(hash, chunk);
     }
@@ -69,7 +69,7 @@ TEST_F(ProbeRLHTTest, HTSimpleTest) {
     vector<vector<Value>> data;
     addData(data, vector<int>{0,0,0,0});
     addData(data, vector<int>{0,10,20,30});
-    vector<ConstantType> types = {INTEGER, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
 
@@ -85,7 +85,7 @@ TEST_F(ProbeRLHTTest, HTTestWithDuplicates) {
     vector<vector<Value>> data;
     addData(data, vector<int>{0,0,0,0});
     addData(data, vector<int>{0,10,10,10});
-    vector<ConstantType> types = {INTEGER, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
 
@@ -104,7 +104,7 @@ TEST_F(ProbeRLHTTest, HTTestWithDuplicatesMultiAdd) {
     std::unique_ptr<PRLHashTable> ht;
     idx_t iterations = 3;
     idx_t size = STANDARD_VECTOR_SIZE;
-    vector<ConstantType> types = {UTINYINT, UBIGINT, BIGINT};
+    vector<LogicalType> types = {LogicalTypeId::UTINYINT, LogicalTypeId::UBIGINT, LogicalTypeId::BIGINT};
     DataChunk allData;
     allData.initialize(types);
     for (idx_t i = 1; i < iterations; i++) {
@@ -127,7 +127,7 @@ TEST_F(ProbeRLHTTest, HTCombineTest) {
     std::unique_ptr<PRLHashTable> ht1;
     std::unique_ptr<PRLHashTable> ht2;
     idx_t size = 256;
-    vector<ConstantType> types = {UTINYINT, UBIGINT};
+    vector<LogicalType> types = {LogicalTypeId::UTINYINT, LogicalTypeId::UBIGINT};
     // generate same chunks
     vector<vector<Value>> data;
     addData(data, std::vector<int>(size, 0));
@@ -147,7 +147,7 @@ TEST_F(ProbeRLHTTest, HTCombineTest) {
 TEST_F(ProbeRLHTTest, HTpartitionTest) {
     std::unique_ptr<PRLHashTable> ht;
     idx_t size = STANDARD_VECTOR_SIZE;
-    vector<ConstantType> types = {UTINYINT, UBIGINT};
+    vector<LogicalType> types = {LogicalTypeId::UTINYINT, LogicalTypeId::UBIGINT};
     // generate same chunks
     vector<vector<Value>> data;
     addData(data, std::vector<int>(size, 0));

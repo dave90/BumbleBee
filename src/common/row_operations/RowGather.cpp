@@ -42,42 +42,42 @@ static void templatedGatherLoop(Vector &rows, const SelectionVector &row_sel, Ve
 void RowOperations::gather(Vector &rows, const SelectionVector &row_sel, Vector &col, const SelectionVector &col_sel,
                            const idx_t count, const idx_t col_offset) {
 	BB_ASSERT(rows.getVectorType() == VectorType::FLAT_VECTOR);
-	BB_ASSERT(rows.getType() == UBIGINT); // "Cannot gather from non-pointer type!"
+	BB_ASSERT(rows.getType() == PhysicalType::UBIGINT); // "Cannot gather from non-pointer type!"
 
 	col.setVectorType(VectorType::FLAT_VECTOR);
 
 	switch (col.getType()) {
-		case ConstantType::TINYINT:
+		case PhysicalType::TINYINT:
 			templatedGatherLoop<int8_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			templatedGatherLoop<int16_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			templatedGatherLoop<int32_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			templatedGatherLoop<int64_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			templatedGatherLoop<uint8_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			templatedGatherLoop<uint16_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			templatedGatherLoop<uint32_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			templatedGatherLoop<uint64_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			templatedGatherLoop<float>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			templatedGatherLoop<double>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
-		case ConstantType::STRING:	{
+		case PhysicalType::STRING:	{
 			templatedGatherLoop<string_t>(rows, row_sel, col, col_sel, count, col_offset);
 			break;
 		}
@@ -107,37 +107,37 @@ void RowOperations::fullScanColumn(const RowLayout &layout, Vector &rows, Vector
 	col.setVectorType(VectorType::FLAT_VECTOR);
 	switch (col.getType()) {
 
-		case ConstantType::TINYINT:
+		case PhysicalType::TINYINT:
 			templatedFullScanLoop<int8_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			templatedFullScanLoop<int16_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			templatedFullScanLoop<int32_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			templatedFullScanLoop<int64_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			templatedFullScanLoop<uint8_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			templatedFullScanLoop<uint16_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			templatedFullScanLoop<uint32_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			templatedFullScanLoop<uint64_t>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			templatedFullScanLoop<float>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			templatedFullScanLoop<double>(rows, col, count, col_offset, col_no);
 			break;
-		case ConstantType::STRING:	{
+		case PhysicalType::STRING:	{
 			templatedFullScanLoop<string_t>(rows, col, count, col_offset, col_no);
 			break;
 		}

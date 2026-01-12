@@ -226,12 +226,12 @@ protected:
         vector<Value> input;
         input.emplace_back(getOutputCsvFilePath(folder));
 
-        vector<ConstantType> inputTypes = {STRING};
+        vector<LogicalType> inputTypes = {LogicalTypeId::STRING};
         vector<Expression> filters;
         auto functionPtr = WriteCsvFunc::getFunction();
         func = functionPtr;
         PredFunction& predFunction = (PredFunction&) *functionPtr;
-        vector<ConstantType> returnTypes = chunks[0]->getTypes();
+        vector<LogicalType> returnTypes = chunks[0]->getTypes();
         bind_data = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
         return chunks;
     }
@@ -252,11 +252,11 @@ protected:
 
         vector<Value> input;
         input.emplace_back(getOutputCsvFilePath(outFolderOrFile));
-        vector<ConstantType> inputTypes = { STRING };
+        vector<LogicalType> inputTypes = { LogicalTypeId::STRING };
         vector<Expression> filters;
         auto functionPtr = WriteCsvFunc::getFunction();
         auto& pred = static_cast<PredFunction&>(*functionPtr);
-        vector<ConstantType> returnTypes = chunks[0]->getTypes();
+        auto returnTypes = chunks[0]->getTypes();
         auto map = params.toMap();
         auto bind = pred.bindFunction_(context, input, inputTypes, map,
                                        returnTypes, const_cast<std::vector<std::string>&>(names), filters);

@@ -68,19 +68,19 @@ public:
 	// Create a new constant vector with the value
 	explicit Vector(const Value &value);
 	// Create a new flat vector with 0
-	explicit Vector(ConstantType type, idx_t capacity = STANDARD_VECTOR_SIZE);
+	explicit Vector(LogicalType type, idx_t capacity = STANDARD_VECTOR_SIZE);
 	// Create a vector from a data
-	Vector(ConstantType type, data_ptr_t dataptr);
+	Vector(LogicalType type, data_ptr_t dataptr);
 	// Create a new vector
-	Vector(ConstantType type, bool create_data, bool zero_data, idx_t capacity = STANDARD_VECTOR_SIZE);
+	Vector(LogicalType type, bool create_data, bool zero_data, idx_t capacity = STANDARD_VECTOR_SIZE);
 	// Move a vector
 	Vector(Vector &&other) noexcept;
 	Vector(const Vector &) = delete;
 
 	// Reference from another vector or value
 	void reference(const Value &value);
-	void reference(Vector &other);
-	void reinterpret(Vector &other);
+	void reference(const Vector &other);
+	void reinterpret(const Vector &other);
 	void referenceAndSetType(Vector &other);
 
 	// Slice from another vector starting from offset
@@ -132,8 +132,14 @@ public:
 	inline VectorType getVectorType() const {
 		return vtype_;
 	}
-	inline const ConstantType &getType() const {
-		return ctype_;
+	inline PhysicalType getType() const {
+		return type_.getPhysicalType();
+	}
+	inline LogicalTypeId getLogicalTypeId() const {
+		return type_.type();
+	}
+	inline LogicalType getLogicalType() const {
+		return type_;
 	}
 	inline data_ptr_t getData() {
 		return data_;
@@ -153,7 +159,7 @@ protected:
     // Type of the vector
     VectorType vtype_{VectorType::FLAT_VECTOR};
     // Type of the data of the vector
-    ConstantType ctype_;
+    LogicalType type_;
     // Pointer of the data (does not own the data but is managed by the vector data mngr)
     data_ptr_t data_;
     // Vector Data Manager

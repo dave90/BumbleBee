@@ -40,7 +40,7 @@ using agg_states_ptr = std::unique_ptr<data_t[]> ;
 
 class AggregateFunction : public Function {
 public:
-    AggregateFunction(const string &name,const vector<ConstantType> &arguments, ConstantType result,
+    AggregateFunction(const string &name,const vector<LogicalType> &arguments, LogicalType result,
         aggregate_size_t state_size, aggregate_initialize_t initialize, aggregate_update_t update,
         aggregate_combine_t combine, aggregate_finalize_t finalize)
         : Function(name, arguments, result),
@@ -106,7 +106,7 @@ public:
 public:
 
     template <template <typename> class STATE, class INPUT_TYPE, class RESULT_TYPE, template <typename,typename> class OP>
-    static AggregateFunction unaryAggregate(const string &name,const vector<ConstantType> &arguments, ConstantType result) {
+    static AggregateFunction unaryAggregate(const string &name,const vector<LogicalType> &arguments, LogicalType result) {
         return AggregateFunction(name, arguments, result,
             stateSize<STATE<RESULT_TYPE>>,
             stateInitialize<STATE<RESULT_TYPE>, OP<INPUT_TYPE,RESULT_TYPE>>,

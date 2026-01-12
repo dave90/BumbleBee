@@ -23,37 +23,37 @@
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
-Vector::Vector(Vector &other):ctype_(other.ctype_), vtype_(other.vtype_) {
+Vector::Vector(Vector &other):type_(other.type_), vtype_(other.vtype_) {
     reference(other);
 }
 
-Vector::Vector(Vector &other, const SelectionVector &sel, idx_t count):ctype_(other.ctype_) {
+Vector::Vector(Vector &other, const SelectionVector &sel, idx_t count):type_(other.type_) {
     slice(other, sel, count);
 }
 
-Vector::Vector(Vector &other, idx_t offset):ctype_(other.ctype_), vtype_(other.vtype_) {
+Vector::Vector(Vector &other, idx_t offset):type_(other.type_), vtype_(other.vtype_) {
     slice(other, offset);
 }
 
-Vector::Vector(const Value &other):ctype_(other.ctype_) {
+Vector::Vector(const Value &other):type_(other.ctype_) {
     reference(other);
 }
 
-Vector::Vector(ConstantType type, idx_t capacity):ctype_(type) {
+Vector::Vector(LogicalType type, idx_t capacity):type_(type) {
     initialize(capacity);
 }
 
-Vector::Vector(ConstantType type, data_ptr_t dataptr):ctype_(type), data_(dataptr) {
+Vector::Vector(LogicalType type, data_ptr_t dataptr):type_(type), data_(dataptr) {
 
 }
 
-Vector::Vector(ConstantType type, bool create_data, bool zero_data, idx_t capacity):ctype_(type), data_(nullptr) {
+Vector::Vector(LogicalType type, bool create_data, bool zero_data, idx_t capacity):type_(type), data_(nullptr) {
     if (create_data) {
         initialize(zero_data, capacity);
     }
 }
 
-Vector::Vector(Vector &&other) noexcept : ctype_(other.ctype_), vtype_(other.vtype_), data_(other.data_), dataMngr_(std::move(other.dataMngr_)) , auxDataMngr_(std::move(other.auxDataMngr_)) {
+Vector::Vector(Vector &&other) noexcept : type_(other.type_), vtype_(other.vtype_), data_(other.data_), dataMngr_(std::move(other.dataMngr_)) , auxDataMngr_(std::move(other.auxDataMngr_)) {
 
 }
 
@@ -67,12 +67,12 @@ void Vector::reference(const Value &value) {
     setValue(0, value);
 }
 
-void Vector::reference(Vector &other) {
+void Vector::reference(const Vector &other) {
     reinterpret(other);
 }
 
-void Vector::reinterpret(Vector &other) {
-    ctype_ = other.ctype_;
+void Vector::reinterpret(const Vector &other) {
+    type_ = other.type_;
     vtype_ = other.vtype_;
     data_ = other.data_;
     assignSharedPointer(dataMngr_, other.dataMngr_);
@@ -80,7 +80,7 @@ void Vector::reinterpret(Vector &other) {
 }
 
 void Vector::referenceAndSetType(Vector &other) {
-    ctype_ = other.ctype_;
+    type_ = other.type_;
     reference(other);
 }
 
@@ -96,7 +96,7 @@ void Vector::slice(Vector &other, idx_t offset) {
     reference(other);
     if (offset > 0) {
         // move the data by offset
-        data_ = data_ + getCTypeSize(internalType) * offset;
+        data_ = data_ + getPhysicalTypeSize(internalType) * offset;
     }
 }
 
@@ -153,14 +153,14 @@ void Vector::swap(Vector &other) {
 
 void Vector::initialize(bool zeroData, idx_t capacity) {
     auxDataMngr_.reset();
-    dataMngr_ = VectorDataMngr::createStandardVector(ctype_, capacity);
+    dataMngr_ = VectorDataMngr::createStandardVector(type_.getPhysicalType(), capacity);
     data_ = dataMngr_->getData();
     if (zeroData)
-        memset(data_, 0, getCTypeSize(ctype_) * capacity);
+        memset(data_, 0, getPhysicalTypeSize(type_.getPhysicalType()) * capacity);
 }
 
 string Vector::toString(idx_t count) const {
-    string s = "Vector type("+std::to_string(static_cast<int>(vtype_))+"), Type("+std::to_string(ctype_)+ ") [";
+    string s = "Vector type("+std::to_string(static_cast<int>(vtype_))+", " +type_.toString() + "[";
     if (!data_) {
         return s+" NULL ]";
     }
@@ -194,7 +194,7 @@ string Vector::toString(idx_t count) const {
 }
 
 string Vector::toString() const {
-    string s = "Vector type("+std::to_string(static_cast<int>(vtype_))+"), Type("+std::to_string(ctype_)+ ") [";
+    string s = "Vector type("+std::to_string(static_cast<int>(vtype_))+"), " + type_.toString() +" [";
     switch (vtype_) {
         case VectorType::SEQUENCE_VECTOR:
         case VectorType::SEQUENCE_CIRCULAR_VECTOR:
@@ -253,38 +253,38 @@ void Vector::normalify(idx_t count) {
         dataMngr_ = VectorDataMngr::createStandardVector(getType());
         data_ = dataMngr_->getData();
         vtype_ = VectorType::FLAT_VECTOR;
-        switch (ctype_) {
-            case ConstantType::TINYINT:
+        switch (type_.getPhysicalType()) {
+            case PhysicalType::TINYINT:
                 templatedFlattenConstantVector<int8_t>(data_, oldData, count);
                 break;
-            case ConstantType::SMALLINT:
+            case PhysicalType::SMALLINT:
                 templatedFlattenConstantVector<int16_t>(data_, oldData, count);
                 break;
-            case ConstantType::INTEGER:
+            case PhysicalType::INTEGER:
                 templatedFlattenConstantVector<int32_t>(data_, oldData, count);
                 break;
-            case ConstantType::BIGINT:
+            case PhysicalType::BIGINT:
                 templatedFlattenConstantVector<int64_t>(data_, oldData, count);
                 break;
-            case ConstantType::UTINYINT:
+            case PhysicalType::UTINYINT:
                 templatedFlattenConstantVector<uint8_t>(data_, oldData, count);
                 break;
-            case ConstantType::USMALLINT:
+            case PhysicalType::USMALLINT:
                 templatedFlattenConstantVector<uint16_t>(data_, oldData, count);
                 break;
-            case ConstantType::UINTEGER:
+            case PhysicalType::UINTEGER:
                 templatedFlattenConstantVector<uint32_t>(data_, oldData, count);
                 break;
-            case ConstantType::UBIGINT:
+            case PhysicalType::UBIGINT:
                 templatedFlattenConstantVector<uint64_t>(data_, oldData, count);
                 break;
-            case ConstantType::FLOAT:
+            case PhysicalType::FLOAT:
                 templatedFlattenConstantVector<float>(data_, oldData, count);
                 break;
-            case ConstantType::DOUBLE:
+            case PhysicalType::DOUBLE:
                 templatedFlattenConstantVector<double>(data_, oldData, count);
                 break;
-            case ConstantType::STRING:
+            case PhysicalType::STRING:
                 templatedFlattenConstantVector<string_t>(data_, oldData, count);
                 break;
             default:
@@ -413,28 +413,28 @@ Value Vector::getValue(idx_t index) const {
             ;
     }
     // flat vector
-    switch (ctype_) {
-        case ConstantType::TINYINT:
+    switch (type_.getPhysicalType()) {
+        case PhysicalType::TINYINT:
             return Value( ((int8_t*)data_)[index] );
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return Value( ((int16_t*)data_)[index] );
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return Value( ((int32_t*)data_)[index] );
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return Value( ((int64_t*)data_)[index] );
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return Value( ((uint8_t*)data_)[index] );
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return Value( ((uint16_t*)data_)[index] );
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return Value( ((uint32_t*)data_)[index] );
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return Value( ((uint64_t*)data_)[index] );
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return Value( ((float*)data_)[index] );
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return Value( ((double*)data_)[index] );
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return Value( ((string_t*)data_)[index].getString() );
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type access");
@@ -443,7 +443,7 @@ Value Vector::getValue(idx_t index) const {
 }
 
 void Vector::setValue(idx_t index, const Value &val) {
-    BB_ASSERT(val.ctype_ == ctype_ && "Error during set value on vector: different types");
+    BB_ASSERT(val.ctype_ == type_.getPhysicalType() && "Error during set value on vector: different types");
 
     switch (getVectorType()){
         case VectorType::DICTIONARY_VECTOR: {
@@ -461,38 +461,38 @@ void Vector::setValue(idx_t index, const Value &val) {
             ;
     }
     // FLAT or CONSTANT vector
-    switch (ctype_) {
-        case ConstantType::TINYINT:
+    switch (type_.getPhysicalType()) {
+        case PhysicalType::TINYINT:
             ((int8_t*)data_)[index] = val.value_.tinyint ;
             break;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             ((int16_t*)data_)[index] = val.value_.smallint ;
             break;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             ((int32_t*)data_)[index] = val.value_.integer ;
             break;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             ((int64_t*)data_)[index] = val.value_.bigint ;
             break;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             ((uint8_t*)data_)[index] = val.value_.utinyint ;
             break;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             ((uint16_t*)data_)[index] = val.value_.usmallint ;
             break;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             ((uint32_t*)data_)[index] = val.value_.uinteger ;
             break;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             ((uint64_t*)data_)[index] = val.value_.ubigint ;
             break;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             ((float*)data_)[index] = val.value_.float_ ;
             break;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             ((double*)data_)[index] = val.value_.double_ ;
             break;
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             ((string_t*)data_)[index] = StringVector::addString(*this, val.stringValue_);
             break;
 
@@ -507,8 +507,8 @@ void Vector::resize(idx_t curSize, idx_t newSize) {
         dataMngr_ = vector_data_mngr_ptr_t(new VectorDataMngr(0));
     BB_ASSERT(data_ && "Data empty unexpected");
     // create a new array with the new size and copy the old data into the new data
-    auto newData = std::unique_ptr<data_t[]>(new data_t[newSize * getCTypeSize(ctype_)]);
-    memcpy(newData.get(), data_, curSize * getCTypeSize(ctype_));
+    auto newData = std::unique_ptr<data_t[]>(new data_t[newSize * getPhysicalTypeSize(type_.getPhysicalType())]);
+    memcpy(newData.get(), data_, curSize * getPhysicalTypeSize(type_.getPhysicalType()));
     dataMngr_->setData(std::move(newData));
     data_ = dataMngr_->getData();
 }
@@ -536,7 +536,7 @@ void ConstantVector::reference(Vector &vector, Vector &source, idx_t position, i
 }
 
 string_t StringVector::addString(Vector &vector, const char *data, idx_t len) {
-    BB_ASSERT(vector.getType() == ConstantType::STRING && "Add string on non string vector");
+    BB_ASSERT(vector.getType() == PhysicalType::STRING && "Add string on non string vector");
     if (string_t::isInlined(len)) {
         // string is inline no need to store in a heap
         return data;
@@ -562,7 +562,7 @@ string_t StringVector::addString(Vector &vector, const string &data) {
 }
 
 string_t StringVector::emptyString(Vector &vector, idx_t len) {
-    BB_ASSERT(vector.getType() == ConstantType::STRING && "Add string on non string vector");
+    BB_ASSERT(vector.getType() == PhysicalType::STRING && "Add string on non string vector");
     if (string_t::isInlined(len)) {
         // string is inline no need to store in a heap
         return string_t(len);
@@ -576,7 +576,7 @@ string_t StringVector::emptyString(Vector &vector, idx_t len) {
 }
 
 void StringVector::addBuffer(Vector &vector, vector_data_mngr_ptr_t buffer) {
-    BB_ASSERT(vector.getType() == ConstantType::STRING && "Add string on non string vector");
+    BB_ASSERT(vector.getType() == PhysicalType::STRING && "Add string on non string vector");
     if (!vector.auxDataMngr_)
         // init string heap
         vector.auxDataMngr_ = vector_data_mngr_ptr_t(new StringDataMngr());
@@ -586,7 +586,7 @@ void StringVector::addBuffer(Vector &vector, vector_data_mngr_ptr_t buffer) {
 }
 
 void StringVector::addHeapReference(Vector &vector, Vector &other) {
-    BB_ASSERT(vector.getType() == ConstantType::STRING && "Add string on non string vector");
+    BB_ASSERT(vector.getType() == PhysicalType::STRING && "Add string on non string vector");
  	if (other.getVectorType() == VectorType::DICTIONARY_VECTOR) {
  	    // call the add reference to the child
  	    addHeapReference(vector, DictionaryVector::child(other));

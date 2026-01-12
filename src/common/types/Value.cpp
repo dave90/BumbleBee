@@ -18,6 +18,7 @@
  */
 #include "bumblebee/common/types/Value.hpp"
 
+#include "bumblebee/common/Limits.hpp"
 #include "bumblebee/common/types/Vector.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
@@ -28,67 +29,67 @@ Value::Value(Value &&term):ctype_(term.ctype_), value_(term.value_), stringValue
 }
 
 Value::Value(int8_t c)
-    : ctype_(ConstantType::TINYINT),  value_({.tinyint = c}) {}
+    : ctype_(PhysicalType::TINYINT),  value_({.tinyint = c}) {}
 
 Value::Value(int16_t c)
-    : ctype_(ConstantType::SMALLINT),  value_({.smallint = c}) {}
+    : ctype_(PhysicalType::SMALLINT),  value_({.smallint = c}) {}
 
 Value::Value(int32_t c)
-    : ctype_(ConstantType::INTEGER),  value_({.integer = c}) {}
+    : ctype_(PhysicalType::INTEGER),  value_({.integer = c}) {}
 
 Value::Value(int64_t c)
-    : ctype_(ConstantType::BIGINT),  value_({.bigint = c}) {}
+    : ctype_(PhysicalType::BIGINT),  value_({.bigint = c}) {}
 
 Value::Value(uint8_t c)
-    : ctype_(ConstantType::UTINYINT),  value_({.utinyint = c}) {}
+    : ctype_(PhysicalType::UTINYINT),  value_({.utinyint = c}) {}
 
 Value::Value(uint16_t c)
-    : ctype_(ConstantType::USMALLINT),  value_({.usmallint = c}) {}
+    : ctype_(PhysicalType::USMALLINT),  value_({.usmallint = c}) {}
 
 Value::Value(uint32_t c)
-    : ctype_(ConstantType::UINTEGER),  value_({.uinteger = c}) {}
+    : ctype_(PhysicalType::UINTEGER),  value_({.uinteger = c}) {}
 
 Value::Value(uint64_t c)
-    : ctype_(ConstantType::UBIGINT),  value_({.ubigint = c}) {}
+    : ctype_(PhysicalType::UBIGINT),  value_({.ubigint = c}) {}
 
 Value::Value(float c)
-    : ctype_(ConstantType::FLOAT),  value_({.float_ = c}) {}
+    : ctype_(PhysicalType::FLOAT),  value_({.float_ = c}) {}
 
 Value::Value(double c)
-    : ctype_(ConstantType::DOUBLE),  value_({.double_ = c}) {}
+    : ctype_(PhysicalType::DOUBLE),  value_({.double_ = c}) {}
 
-Value::Value(string &&c) :ctype_(STRING), stringValue_(std::move(c)) {}
+Value::Value(string &&c) :ctype_(PhysicalType::STRING), stringValue_(std::move(c)) {}
 
-Value::Value(const string& c) :ctype_(STRING), stringValue_(c) {}
+Value::Value(const string& c) :ctype_(PhysicalType::STRING), stringValue_(c) {}
 
-Value::Value(string_t c):ctype_(STRING), stringValue_(c.c_str(), c.size()) {}
+Value::Value(string_t c):ctype_(PhysicalType::STRING), stringValue_(c.c_str(), c.size()) {}
 
-Value::Value(const char *c):ctype_(STRING), stringValue_(c) {}
+Value::Value(const char *c):ctype_(PhysicalType::STRING), stringValue_(c) {}
 
 bool operator==(const Value &lhs, const Value &rhs) {
     if (lhs.ctype_ != rhs.ctype_) return false;
     switch (lhs.ctype_) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return lhs.value_.utinyint == rhs.value_.utinyint;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return lhs.value_.smallint == rhs.value_.smallint;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return lhs.value_.integer == rhs.value_.integer;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return lhs.value_.bigint == rhs.value_.bigint;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return lhs.value_.utinyint == rhs.value_.utinyint;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return lhs.value_.usmallint == rhs.value_.usmallint;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return lhs.value_.uinteger == rhs.value_.uinteger;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return lhs.value_.ubigint == rhs.value_.ubigint;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return lhs.value_.float_ == rhs.value_.float_;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return lhs.value_.double_ == rhs.value_.double_;
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return lhs.stringValue_ == rhs.stringValue_;
 
         default:
@@ -104,27 +105,27 @@ bool operator!=(const Value &lhs, const Value &rhs) {
 bool Value::operator<(const Value &rhs) const {
     BB_ASSERT(ctype_ == rhs.ctype_);
     switch (ctype_) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return value_.utinyint < rhs.value_.utinyint;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return value_.smallint < rhs.value_.smallint;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return value_.integer < rhs.value_.integer;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return value_.bigint < rhs.value_.bigint;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return value_.utinyint < rhs.value_.utinyint;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return value_.usmallint < rhs.value_.usmallint;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return value_.uinteger < rhs.value_.uinteger;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return value_.ubigint < rhs.value_.ubigint;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return value_.float_ < rhs.value_.float_;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return value_.double_ < rhs.value_.double_;
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return stringValue_ < rhs.stringValue_;
 
         default:
@@ -147,46 +148,46 @@ bool Value::operator>=(const Value &r) const {
 }
 
 bool Value::isDoubleQuotedString() const {
-    return ctype_ == STRING
+    return ctype_ == PhysicalType::STRING
      && stringValue_.length() >= 2
      && stringValue_[0] == '"' && stringValue_[stringValue_.length() - 1] == '"';
 }
 
 Value Value::clone() const {
-    return cast(getConstantType());
+    return cast(getPhysicalType());
 }
 
-ConstantType Value::getConstantType() const{
+PhysicalType Value::getPhysicalType() const{
     return ctype_;
 }
 
-void Value::setConstantType(ConstantType type) {
+void Value::setConstantType(PhysicalType type) {
     ctype_ = type;
 }
 
 std::string Value::toString() const {
     switch (ctype_) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return std::to_string(value_.tinyint);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return std::to_string(value_.smallint);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return std::to_string(value_.integer);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return std::to_string(value_.bigint);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return std::to_string(value_.utinyint);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return std::to_string(value_.usmallint);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return std::to_string(value_.uinteger);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return std::to_string(value_.ubigint);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return std::to_string(value_.float_);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return std::to_string(value_.double_);
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return stringValue_;
         default:
             return "";
@@ -194,41 +195,41 @@ std::string Value::toString() const {
 }
 
 
-Value Value::cast(ConstantType type) const {
-    if (ctype_ == ConstantType::STRING && type == ConstantType::STRING)
+Value Value::cast(PhysicalType type) const {
+    if (ctype_ == PhysicalType::STRING && type == PhysicalType::STRING)
         return Value(stringValue_.c_str());
 
     switch (type) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return Value(getNumericValue<int8_t>());
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return Value(getNumericValue<int16_t>());
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return Value(getNumericValue<int32_t>());
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return Value(getNumericValue<int64_t>());
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return Value(getNumericValue<uint8_t>());
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return Value(getNumericValue<uint16_t>());
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return Value(getNumericValue<uint32_t>());
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return Value(getNumericValue<uint64_t>());
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return Value(getNumericValue<float>());
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return Value(getNumericValue<double>());
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return Value(toString());
-        case ConstantType::UNKNOWN:
+        case PhysicalType::UNKNOWN:
             ;
     }
     ErrorHandler::errorNotImplemented("Cast not implemented.");
     return {};
 }
 
-bool Value::tryCastAs(ConstantType type, Value &newValue, string *error) const {
+bool Value::tryCastAs(PhysicalType type, Value &newValue, string *error) const {
     newValue = cast(ctype_);
     if (ctype_ == type) {
         return true;
@@ -247,35 +248,93 @@ bool Value::tryCastAs(ConstantType type, Value &newValue, string *error) const {
     return true;
 }
 
-Value Value::cast(ConstantType type, data_ptr_t data) {
+Value Value::cast(PhysicalType type, data_ptr_t data) {
     switch (type) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return Value( * ((int8_t*)data ));
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return Value(*((int16_t*)data));
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return Value(*((int32_t*)data));
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return Value(*((int64_t*)data));
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return Value(*((uint8_t*)data));
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return Value(*((uint16_t*)data));
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return Value(*((uint32_t*)data));
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return Value(*((uint64_t*)data));
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return Value(*((float*)data));
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return Value(*((double*)data));
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return Value(*(string_t*)data );
-        case ConstantType::UNKNOWN:
+        default:
             ;
     }
     ErrorHandler::errorNotImplemented("Cast not implemented.");
     return {};
+}
+
+Value Value::minimumValue(const PhysicalType &type) {
+    switch (type) {
+        case PhysicalType::TINYINT:
+            return Value( NumericLimits<int8_t>::minimum());
+        case PhysicalType::SMALLINT:
+            return Value( NumericLimits<int16_t>::minimum());
+        case PhysicalType::INTEGER:
+            return Value( NumericLimits<int32_t>::minimum());
+        case PhysicalType::BIGINT:
+            return Value( NumericLimits<int64_t>::minimum());
+        case PhysicalType::UTINYINT:
+            return Value( NumericLimits<uint8_t>::minimum());
+        case PhysicalType::USMALLINT:
+            return Value( NumericLimits<uint16_t>::minimum());
+        case PhysicalType::UINTEGER:
+            return Value( NumericLimits<uint32_t>::minimum());
+        case PhysicalType::UBIGINT:
+            return Value( NumericLimits<uint64_t>::minimum());
+        case PhysicalType::FLOAT:
+            return Value( NumericLimits<float>::minimum());
+        case PhysicalType::DOUBLE:
+            return Value( NumericLimits<double>::minimum());
+        default:
+            ErrorHandler::errorNotImplemented("Minimum value not implemented.");
+            return Value();
+            ;
+    }
+}
+
+Value Value::maximumValue(const PhysicalType &type) {
+    switch (type) {
+        case PhysicalType::TINYINT:
+            return Value( NumericLimits<int8_t>::maximum());
+        case PhysicalType::SMALLINT:
+            return Value( NumericLimits<int16_t>::maximum());
+        case PhysicalType::INTEGER:
+            return Value( NumericLimits<int32_t>::maximum());
+        case PhysicalType::BIGINT:
+            return Value( NumericLimits<int64_t>::maximum());
+        case PhysicalType::UTINYINT:
+            return Value( NumericLimits<uint8_t>::maximum());
+        case PhysicalType::USMALLINT:
+            return Value( NumericLimits<uint16_t>::maximum());
+        case PhysicalType::UINTEGER:
+            return Value( NumericLimits<uint32_t>::maximum());
+        case PhysicalType::UBIGINT:
+            return Value( NumericLimits<uint64_t>::maximum());
+        case PhysicalType::FLOAT:
+            return Value( NumericLimits<float>::maximum());
+        case PhysicalType::DOUBLE:
+            return Value( NumericLimits<double>::maximum());
+        default:
+            ErrorHandler::errorNotImplemented("Minimum value not implemented.");
+            return Value();
+            ;
+    }
 }
 
 

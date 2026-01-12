@@ -23,14 +23,14 @@ namespace bumblebee{
 
 
 
-PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols): types_(types),
+PhysicalAtom::PhysicalAtom(const vector<LogicalType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols): types_(types),
     dcCols_(std::move(dcCols)),
     selectCols_(std::move(selectedCols)) {
     BB_ASSERT(dcCols_.size() <= types_.size());
     for (auto c : dcCols_) dcColsType_.push_back(types_[c]);
 }
 
-PhysicalAtom::PhysicalAtom(const vector<ConstantType> &types): types_(types){}
+PhysicalAtom::PhysicalAtom(const vector<LogicalType> &types): types_(types){}
 
 
 AtomResultType PhysicalAtom::execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const {
@@ -70,7 +70,7 @@ string PhysicalAtom::toString() const {
     return "";
 }
 
-const vector<ConstantType> & PhysicalAtom::getTypes() const {
+const vector<LogicalType> & PhysicalAtom::getTypes() const {
     return types_;
 }
 
@@ -83,7 +83,7 @@ gpstate_ptr_t PhysicalAtom::getGlobalState() const {
 }
 
 DataChunk PhysicalAtom::selectColumns(DataChunk &chunk) const {
-    vector<ConstantType> selectColsType;
+    vector<PhysicalType> selectColsType;
     for (auto& i:selectCols_)
         selectColsType.push_back(chunk.data_[i].getType());
     DataChunk newChunk;

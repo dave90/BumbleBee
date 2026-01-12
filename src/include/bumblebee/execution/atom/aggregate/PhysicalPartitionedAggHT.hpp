@@ -26,11 +26,11 @@ class PhysicalPartitionedAggHT : public PhysicalAtom {
 
 public:
     // constructor for sink and source
-    PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
+    PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
         const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
         PhysicalHashType type);
     // constructor for probe
-    PhysicalPartitionedAggHT(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
+    PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
         const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht);
 
     ~PhysicalPartitionedAggHT() override = default;
@@ -61,11 +61,11 @@ private:
     // during build phase point to the internal predicate table columns
     // on probe point to the group column in input data chunk
     vector<idx_t> groupCols_;
-    vector<ConstantType> groupColsTypes_;
+    vector<LogicalType> groupColsTypes_;
     // during build phase point the payloads columns to aggregate
     // during probe phase the payload columns to fetch
     vector<idx_t> payloadCols_;
-    vector<ConstantType> payloadColsTypes_;
+    vector<LogicalType> payloadColsTypes_;
     vector<AggregateFunction*> aggregateFunctions_;
     PhysicalHashType type_;
 };

@@ -3,6 +3,8 @@
 - parquet
 - Specify predicate tables types
 - Refactor aggregates and avoid distinct
+- Decimal in vector operation (logical type switch instead of physical)
+- NUL values in operations
 
 ## Next
 - CICD

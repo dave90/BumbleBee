@@ -42,7 +42,7 @@ public:
     unique_ptr<data_t[]> generateStates(RowLayout& layout, Vector& addresses,  idx_t size) {
         unique_ptr<data_t[]> rowdata = unique_ptr<data_t[]>(new data_t[layout.getRowWidth() * size]);
         addresses.initialize(size);
-        BB_ASSERT(addresses.getType() == UBIGINT);
+        BB_ASSERT(addresses.getType() == PhysicalType::UBIGINT);
         BB_ASSERT(addresses.getVectorType() == VectorType::FLAT_VECTOR);
         auto data = FlatVector::getData<data_ptr_t>(addresses);
         for (idx_t i = 0; i < size; i++)
@@ -56,14 +56,14 @@ public:
 
 TEST_F(AggFuncTest, InitRowSumStateTest ) {
 
-    vector args = {SMALLINT};
+    vector<LogicalType> args = {LogicalTypeId::SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
     idx_t count = 10;
 
-    vector types = {SMALLINT, SMALLINT};
+    vector<LogicalType> types = {LogicalTypeId::SMALLINT, LogicalTypeId::SMALLINT};
     RowLayout layout;
     layout.initialize(types, {&aggFunction}, true);
-    Vector addresses(UBIGINT, count);
+    Vector addresses(LogicalTypeId::ADDRESS, count);
 
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
     auto row_data = generateStates(layout, addresses, count);
@@ -82,15 +82,15 @@ TEST_F(AggFuncTest, InitRowSumStateTest ) {
 
 TEST_F(AggFuncTest, UpdateRowSumStateTest ) {
 
-    vector args = {SMALLINT};
+    vector<LogicalType> args = {LogicalTypeId::SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
     idx_t n = 10;
 
     // init the data
-    vector types = {BIGINT, SMALLINT};
+    vector<LogicalType> types = {LogicalTypeId::BIGINT, LogicalTypeId::SMALLINT};
     RowLayout layout;
     layout.initialize(types, {&aggFunction}, true);
-    Vector addresses(UBIGINT, n);
+    Vector addresses(LogicalTypeId::ADDRESS, n);
 
 
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
@@ -116,15 +116,15 @@ TEST_F(AggFuncTest, UpdateRowSumStateTest ) {
 
 
 TEST_F(AggFuncTest, FinalizeRowSumStateTest ) {
-    vector args = {SMALLINT};
+    vector<LogicalType> args = {LogicalTypeId::SMALLINT};
     auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
     idx_t n = 20;
 
     // init the data
-    vector types = {BIGINT, SMALLINT};
+    vector<LogicalType> types = {LogicalTypeId::BIGINT, LogicalTypeId::SMALLINT};
     RowLayout layout;
     layout.initialize(types, {&aggFunction}, true);
-    Vector addresses(UBIGINT, n);
+    Vector addresses(LogicalTypeId::ADDRESS, n);
 
 
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
@@ -140,7 +140,7 @@ TEST_F(AggFuncTest, FinalizeRowSumStateTest ) {
 
     // Fetch the results
     DataChunk result;
-    result.initialize({aggFunction.result_});
+    result.initialize((vector<LogicalType>){aggFunction.result_});
     AggregateFunction::finalizeStates(layout, addresses, result, n);
 
     // check results

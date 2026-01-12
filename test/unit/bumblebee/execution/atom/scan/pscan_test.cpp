@@ -44,7 +44,7 @@ protected:
         ptable = std::make_shared<PredicateTables>(&client_context, "a",3);
     }
 
-    vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<LogicalType> testTypes{LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT};
 
     DataChunk createChunkWithValue( idx_t count = 1, idx_t offset=0) {
         DataChunk chunk;
@@ -98,7 +98,7 @@ TEST_F(PhysicalScanTest, PhysicalScanProjSimpleTest) {
     auto state = pcs.getState();
     auto gstate = pcs.getGlobalState();
 
-    vector<ConstantType> sourceTypes;
+    vector<LogicalType> sourceTypes;
     for (auto c : {0,1}) sourceTypes.push_back(testTypes[c]);
     DataChunk input;
     input.initializeEmpty(sourceTypes);

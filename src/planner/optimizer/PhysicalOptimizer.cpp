@@ -41,14 +41,14 @@ PhysicalOptimizer::PhysicalOptimizer(ClientContext& context, bool recursiveRules
     : context_(context), recursiveRules_(recursiveRules) {
 }
 
-std::unordered_map<Predicate *, vector<ConstantType>> PhysicalOptimizer::getHeadTypes(Rule &rule) {
+std::unordered_map<Predicate *, vector<LogicalType>> PhysicalOptimizer::getHeadTypes(Rule &rule) {
     if (canBeSkipped(rule))return {};
     findColsAndTypes(rule);
-    std::unordered_map<Predicate *, vector<ConstantType>> types;
+    std::unordered_map<Predicate *, vector<LogicalType>> types;
     BB_ASSERT(rule.getHead().size() == 1);
     auto& headAtom = rule.getHead()[0];
     auto headCols = headCols_[0];
-    vector<ConstantType> headTypes;
+    vector<LogicalType> headTypes;
     for (auto c: headCols)
         headTypes.push_back(types_[c]);
     types[headAtom.getPredicate()] = headTypes;
@@ -100,7 +100,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         BB_ASSERT(right.getType() == CONSTANT);
         BB_ASSERT(!colsMap_.contains(left.getVariable()));
         // we need to calculate the type of the left side
-        typesMap_[left.getVariable()] = right.getConstantType();
+        typesMap_[left.getVariable()] = {right.getPhysicalType()};
         colsMap_[left.getVariable()] = colsMap_.size();
         vars.insert(vars.begin(),left.getVariable());
     }else if (atom.isOrBuiltin() || atom.getBinop() != ASSIGNMENT) {
@@ -126,7 +126,7 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         // map and type cols
         auto& left = atom.getTerms()[0];
         auto& right = atom.getTerms()[1];
-        ConstantType resultType = UNKNOWN; // result type of the right side operations
+        LogicalType resultType = PhysicalType::UNKNOWN; // result type of the right side operations
         if (right.getType() == VARIABLE) {
             BB_ASSERT(colsMap_.contains(right.getVariable()));
             vars.push_back(right.getVariable());
@@ -138,18 +138,18 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
             for (auto& t: right.getTerms()) {
                 BB_ASSERT(t.getType() == VARIABLE);
                 vars.push_back(t.getVariable());
-                if (resultType == UNKNOWN) {
+                if (resultType == PhysicalType::UNKNOWN) {
                     resultType = typesMap_[t.getVariable()];
                     continue;
                 }
                 resultType = getCommonType(resultType, typesMap_[t.getVariable()]);
-                resultType = getBumpedType(resultType);
+                resultType = getBumpedType(resultType.getPhysicalType());
             }
         }
         // if we have a diff and is unsigned set to signed
         bool diff = std::find(right.getOperators().begin(), right.getOperators().end(), MINUS) != right.getOperators().end();
-        if (diff && isUnsigned(resultType))
-            resultType = BIGINT;
+        if (diff && isUnsigned(resultType.getPhysicalType()))
+            resultType = PhysicalType::BIGINT;
 
         BB_ASSERT(left.getType() == VARIABLE);
         BB_ASSERT(!colsMap_.contains(left.getVariable()));
@@ -197,10 +197,10 @@ void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
     auto payloadIndex = getAggPayloadIndex(atom);
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
     BB_ASSERT(pt->getTypes().size() > payloadIndex);
-    ConstantType payloadType = pt->getTypes()[payloadIndex];
-    BB_ASSERT(payloadType != UNKNOWN);
+    LogicalType payloadType = pt->getTypes()[payloadIndex];
+    BB_ASSERT(payloadType != PhysicalType::UNKNOWN);
     auto function = context_.functionRegister_.getFunction(atom.getAggregateFunctionName(), {payloadType});
-    ConstantType returnType = function->result_;
+    LogicalType returnType = function->result_;
     auto& term = atom.getTerms()[0]; // assignment variable
     typesMap_[term.getVariable()] = returnType;
     cols_.push_back({colsMap_.size()}); // where to put the result of the agg
@@ -221,7 +221,7 @@ void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
             // first time we see this variable, will be a new column in data chunk
             // find the data types in the predicate tables
             auto& pt = context_.defaultSchema_.getPredicateTable(atom.getPredicate());
-            BB_ASSERT(pt->getTypes()[i] != UNKNOWN);
+            BB_ASSERT(pt->getTypes()[i] != PhysicalType::UNKNOWN);
             typesMap_[term.getVariable()] = pt->getTypes()[i];
             colsMap_[term.getVariable()] = colsMap_.size();
         }
@@ -238,7 +238,7 @@ void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
     vector<idx_t> prjCols;
     BB_ASSERT(!externalBindData_.contains(index));
 
-    vector<ConstantType> returnTypes;
+    vector<LogicalType> returnTypes;
     vector<string> names;
     bindExternalAtom(index, atom, returnTypes, names);
 
@@ -259,10 +259,10 @@ void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
     cols_.push_back(std::move(atomCols));
 }
 
-void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<ConstantType>& returnTypes, vector<string>& names){
+void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalType>& returnTypes, vector<string>& names){
     BB_ASSERT(!externalBindData_.contains(index));
-    auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesCType()).get();
-    auto inputTypes = atom.getInputValuesCType();
+    auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesType()).get();
+    auto inputTypes = atom.getInputValuesType();
     for (auto& term:atom.getTerms()) {
         BB_ASSERT(term.getType() == VARIABLE);
         names.push_back(term.getVariable());
@@ -307,9 +307,9 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
         }
 
         if (atom.getType() == EXTERNAL) {
-            vector<ConstantType> returnTypes;
+            vector<LogicalType> returnTypes;
             for (auto& col: atomCols) {
-                BB_ASSERT(types_[col] != UNKNOWN);
+                BB_ASSERT(types_[col] != PhysicalType::UNKNOWN);
                 returnTypes.push_back(types_[col]);
             }
             vector<string> names;
@@ -336,10 +336,10 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
         vector<string> funcNames;
         Predicate::parseAggregateInternalPredicate(pt->predicate_->getName(), groups, payloads, funcNames);
         BB_ASSERT(payloads.size() == funcNames.size());
-        vector<ConstantType> arguments;
+        vector<LogicalType> arguments;
         for (auto p:payloads) {
             BB_ASSERT(p < pt->getTypes().size());
-            BB_ASSERT(pt->getTypes()[p] != UNKNOWN);
+            BB_ASSERT(pt->getTypes()[p] != PhysicalType::UNKNOWN);
             arguments.push_back(pt->getTypes()[p]);
         }
         // get the aggregate function
@@ -374,7 +374,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
     patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, aht));
 }
 
-void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<ConstantType> types,patom_ptr_vector_t& patoms ) {
+void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<LogicalType> types,patom_ptr_vector_t& patoms ) {
     BB_ASSERT(atom.getType() == BUILTIN);
     if (atom.isConstantAssignment()) {
         auto patom = patom_ptr_t(new PhysicalExpression(cols[0], atom.getTerms()[1].getValue(), types));
@@ -482,7 +482,7 @@ void PhysicalOptimizer::generatePhysicalExternal(const set_term_variable_t& vars
     auto& types = types_;
     auto& atom = rule.getBody()[index];
 
-    PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesCType() ).get();
+    PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesType() ).get();
     BB_ASSERT(externalBindData_.contains(index));
     auto ext = patom_ptr_t(new PhysicalPredFunction(context_, types, dcCols, selCols, func, externalBindData_[index]));
     patoms.push_back(std::move(ext));
@@ -639,7 +639,7 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
     auto headCols = headCols_[0];
 
     if (headAtom.getType() == EXTERNAL) {
-        PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(headAtom.getExternalFunctionName(), headAtom.getInputValuesCType() ).get();
+        PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(headAtom.getExternalFunctionName(), headAtom.getInputValuesType() ).get();
         BB_ASSERT(externalBindData_.contains(rule.getBody().size()));
         sink = patom_ptr_t(new PhysicalPredFunction(context_, types, headCols, func, externalBindData_[rule.getBody().size()] ));
         return;
@@ -654,7 +654,7 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
         vector<string> funcNames;
         Predicate::parseAggregateInternalPredicate(predicateName, groups, payloads, funcNames);
         BB_ASSERT(payloads.size() == funcNames.size());
-        vector<ConstantType> arguments;
+        vector<LogicalType> arguments;
         for (auto p:payloads) {
             BB_ASSERT(p < headCols.size());
             arguments.push_back(types[headCols[p]]);
@@ -683,7 +683,7 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
 
         return;
     }
-    vector<ConstantType> headTypes;
+    vector<LogicalType> headTypes;
     for (auto c: headCols)
         headTypes.push_back(types[c]);
     BB_ASSERT(headTypes == ptSink->getTypes());
@@ -730,7 +730,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
     }else if (firstAtom.getType() == EXTERNAL) {
         // get the function and bind it
-        PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesCType() ).get();
+        PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesType() ).get();
         source = patom_ptr_t(new PhysicalPredFunction(context_, types_,cols_[0],  selectedCols_[0], (PredFunction*) func, externalBindData_[0]));
     }
 

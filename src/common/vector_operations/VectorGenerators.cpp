@@ -23,7 +23,7 @@ namespace bumblebee{
 
 template <class T>
 void TemplatedGenerateSequence(Vector &result,idx_t count, int64_t start, int64_t increment) {
-    BB_ASSERT(result.getType() != ConstantType::STRING);
+    BB_ASSERT(result.getType() != PhysicalType::STRING);
     BB_ASSERT(count > 0);
     //TODO check min and max numeric overflow
     result.setVectorType(VectorType::FLAT_VECTOR);
@@ -38,7 +38,7 @@ void TemplatedGenerateSequence(Vector &result,idx_t count, int64_t start, int64_
 
 template <class T>
 void TemplatedGenerateSequence(Vector &result,idx_t count, int64_t start, int64_t offset, int64_t stride, int64_t end) {
-    BB_ASSERT(result.getType() != ConstantType::STRING);
+    BB_ASSERT(result.getType() != PhysicalType::STRING);
     BB_ASSERT(count > 0);
     BB_ASSERT(start < end);
     //TODO check min and max numeric overflow
@@ -63,34 +63,34 @@ void TemplatedGeneralGenerateSequence(Vector &result,idx_t count, int64_t start,
 template <bool HAS_END>
 void TemplatedGeneralSwitchGenerateSequence(Vector &result,idx_t count, int64_t start, int64_t offset, int64_t stride,  int64_t increment, int64_t end) {
     switch (result.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             TemplatedGeneralGenerateSequence<int8_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             TemplatedGeneralGenerateSequence<int16_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             TemplatedGeneralGenerateSequence<int32_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             TemplatedGeneralGenerateSequence<int64_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             TemplatedGeneralGenerateSequence<uint8_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             TemplatedGeneralGenerateSequence<uint16_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             TemplatedGeneralGenerateSequence<uint32_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             TemplatedGeneralGenerateSequence<uint64_t, HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             TemplatedGeneralGenerateSequence<float,HAS_END>(result,count, start, offset, stride, increment, end);
             break;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             TemplatedGeneralGenerateSequence<double,HAS_END>(result,count, start, offset, stride, increment, end);
             break;
         default:
@@ -112,7 +112,7 @@ void VectorOperations::generateSequence(Vector &result, idx_t count, int64_t sta
 template <class T>
 void TemplatedGenerateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start,
                                    int64_t increment) {
-    BB_ASSERT(result.getType() != ConstantType::STRING);
+    BB_ASSERT(result.getType() != PhysicalType::STRING);
     BB_ASSERT(count > 0);
     //TODO check min and max numeric overflow
 
@@ -128,7 +128,7 @@ void TemplatedGenerateSequence(Vector &result, idx_t count, const SelectionVecto
 template <class T>
 void TemplatedGenerateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start, int64_t offset,
                                        int64_t stride, int64_t end ) {
-    BB_ASSERT(result.getType() != ConstantType::STRING);
+    BB_ASSERT(result.getType() != PhysicalType::STRING);
     BB_ASSERT(count > 0);
     //TODO check min and max numeric overflow
 
@@ -153,34 +153,34 @@ template <class T, bool HAS_END>
 template <bool HAS_END>
 void TemplatedGeneralSwitchGenerateSequence(Vector &result, idx_t count, const SelectionVector &sel, int64_t start, int64_t offset, int64_t stride, int64_t increment, int64_t end ) {
     switch (result.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             TemplatedGeneralGenerateSelectionSequence<int8_t, HAS_END>(result, count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             TemplatedGeneralGenerateSelectionSequence<int16_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             TemplatedGeneralGenerateSelectionSequence<int32_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             TemplatedGeneralGenerateSelectionSequence<int64_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             TemplatedGeneralGenerateSelectionSequence<uint8_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             TemplatedGeneralGenerateSelectionSequence<uint16_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             TemplatedGeneralGenerateSelectionSequence<uint32_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             TemplatedGeneralGenerateSelectionSequence<uint64_t, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             TemplatedGeneralGenerateSelectionSequence<float, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             TemplatedGeneralGenerateSelectionSequence<double, HAS_END>(result,count, sel, start, offset, stride, increment, end);
             break;
         default:

@@ -33,7 +33,7 @@ protected:
 
     void createSortKeysAndCheckResult(vector<vector<Value>> &data, DataChunk& input, vector<OrderModifiers>& modifiers ) {
 
-        Vector result(STRING);
+        Vector result(PhysicalType::STRING);
         CreateSortKey::createSortKey(input, modifiers, result);
 
         // store the sort keys in a vector
@@ -97,7 +97,7 @@ protected:
 TEST_F(SortKeysTest, CreateSortKeysOneColAscTest) {
     vector<vector<Value>> data;
     addData(data, vector<int>{0,10,20,30});
-    vector<ConstantType> types = {UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::ASCENDING};
@@ -107,7 +107,7 @@ TEST_F(SortKeysTest, CreateSortKeysOneColAscTest) {
 TEST_F(SortKeysTest, CreateSortKeysOneColAscIntTest) {
     vector<vector<Value>> data;
     addData(data, vector<int>{0,10,20,30});
-    vector<ConstantType> types = {BIGINT};
+    vector<LogicalType> types = {LogicalTypeId::BIGINT};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::ASCENDING};
@@ -117,7 +117,7 @@ TEST_F(SortKeysTest, CreateSortKeysOneColAscIntTest) {
 TEST_F(SortKeysTest, CreateSortKeysOneColDescIntTest) {
     vector<vector<Value>> data;
     addData(data, vector<int>{0,10,20,30});
-    vector<ConstantType> types = {SMALLINT};
+    vector<LogicalType> types = {LogicalTypeId::SMALLINT};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::DESCENDING};
@@ -128,7 +128,7 @@ TEST_F(SortKeysTest, CreateSortKeysTwoColsDoubleDescIntAscTest) {
     vector<vector<Value>> data;
     addData(data, vector<double>{1.5, -2.0, 3.1415, 0.0});
     addData(data, vector<int>{10, 5, 20, 15});
-    vector<ConstantType> types = {DOUBLE, INTEGER};
+    vector<LogicalType> types = {LogicalTypeId::DOUBLE, LogicalTypeId::INTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::DESCENDING, OrderType::ASCENDING};
@@ -140,7 +140,7 @@ TEST_F(SortKeysTest, CreateSortKeysThreeColsFloatUintStrMixedTest) {
     addData(data, vector<float>{1.0f, 2.0f, 1.0f, 3.5f, 2.0f, 1.0f});
     addData(data, vector<unsigned int>{2, 1, 2, 0, 1, 2});
     addData(data, vector<string>{"b", "a", "a", "c", "b", "a"});
-    vector<ConstantType> types = {FLOAT, UINTEGER, STRING};
+    vector<LogicalType> types = {LogicalTypeId::FLOAT, LogicalTypeId::UINTEGER, LogicalTypeId::STRING};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::ASCENDING, OrderType::DESCENDING, OrderType::ASCENDING};
@@ -154,7 +154,8 @@ TEST_F(SortKeysTest, CreateSortKeysFiveColsMixedTypesTest) {
     addData(data, vector<double>{0.1, -1.0, 0.1, 2.0, 0.1});
     addData(data, vector<string>{"x", "x", "a", "y", "a"});
     addData(data, vector<unsigned int>{1, 2, 1, 0, 1}); // UINTEGER
-    vector<ConstantType> types = {BIGINT, SMALLINT, DOUBLE, STRING, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::BIGINT, LogicalTypeId::SMALLINT,
+        LogicalTypeId::DOUBLE, LogicalTypeId::STRING, LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::ASCENDING, OrderType::DESCENDING, OrderType::ASCENDING, OrderType::DESCENDING, OrderType::ASCENDING};
@@ -165,7 +166,7 @@ TEST_F(SortKeysTest, CreateSortKeysTwoColsStringDescUintAscTest) {
     vector<vector<Value>> data;
     addData(data, vector<string>{"apple", "banana", "apple", "zebra", "banana"});
     addData(data, vector<unsigned int>{5, 3, 5, 1, 4});
-    vector<ConstantType> types = {STRING, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::STRING, LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::DESCENDING, OrderType::ASCENDING};
@@ -177,7 +178,7 @@ TEST_F(SortKeysTest, CreateSortKeysThreeColsMixedOrderTypesTest) {
     addData(data, vector<float>{0.0f, -0.0f, 1.5f, 1.5f, 2.0f, -1.0f, 1.5f});
     addData(data, vector<double>{0.0, 0.0, 1.5, 1.4, 2.0, -1.0, 1.5});
     addData(data, vector<int>{0, 1, 2, 1, 3, 0, 2});
-    vector<ConstantType> types = {FLOAT, DOUBLE, INTEGER};
+    vector<LogicalType> types = {LogicalTypeId::FLOAT, LogicalTypeId::DOUBLE, LogicalTypeId::INTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::DESCENDING, OrderType::ASCENDING, OrderType::ASCENDING};
@@ -194,7 +195,7 @@ TEST_F(SortKeysTest, CreateSortKeysLongStringAscIntDescTest) {
         "0_middle_length_string_4"
     });
     addData(data, vector<int>{42, 7, 100, 55,55});
-    vector<ConstantType> types = {STRING, INTEGER};
+    vector<LogicalType> types = {PhysicalType::STRING, PhysicalType::INTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::ASCENDING, OrderType::DESCENDING};
@@ -210,7 +211,7 @@ TEST_F(SortKeysTest, CreateSortKeysLongStringDescUintAscTest) {
         "1_long_string_delta_defghijkl"
     });
     addData(data, vector<unsigned int>{10, 5, 20, 15});
-    vector<ConstantType> types = {STRING, UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::STRING, LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::DESCENDING, OrderType::ASCENDING};
@@ -224,7 +225,7 @@ TEST_F(SortKeysTest, CreateSortKeysLongUInteger) {
         4293053207,4293668640,4294747978,
         4279807690,4293053207,4286980034
     });
-    vector<ConstantType> types = {UINTEGER};
+    vector<LogicalType> types = {LogicalTypeId::UINTEGER};
     DataChunk chunk = generateDataChunk(types, data);
 
     vector<OrderModifiers> modifiers = {OrderType::DESCENDING};

@@ -29,7 +29,7 @@ public:
     // - only 2 columns (one for left and one for right)
     // - left col ref to a col in input data chunk
     // - right col ref to a col in predicate table
-    PhysicalNestedLoop(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    PhysicalNestedLoop(const vector<LogicalType> &types, vector<idx_t> &dcCols,
         vector<idx_t> &selectedCols, PredicateTables* pt, vector<Expression> &conditions);
 
     ~PhysicalNestedLoop() override;

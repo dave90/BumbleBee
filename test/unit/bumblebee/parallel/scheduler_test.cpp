@@ -54,7 +54,7 @@ protected:
 
 
 
-    vector<ConstantType> sourceTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<LogicalType> sourceTypes{LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT};
     vector<idx_t> cols_to_project = {0,2};
     ClientContext cc;
 

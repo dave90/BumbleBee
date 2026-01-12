@@ -25,7 +25,7 @@
 
 namespace bumblebee{
 
-void parseColumns(string& columns,vector<string>& colNames,vector<ConstantType>& colTypes) {
+void parseColumns(string& columns,vector<string>& colNames,vector<PhysicalType>& colTypes) {
 	colNames.clear();
 	colTypes.clear();
 
@@ -55,7 +55,7 @@ void parseColumns(string& columns,vector<string>& colNames,vector<ConstantType>&
 
 			colNames.push_back(name);
 			auto t = ctypeFromString(type);
-			if (t==UNKNOWN) {
+			if (t==PhysicalType::UNKNOWN) {
 				ErrorHandler::errorParsing("Error type "+ type+" is UNKNOWN.");
 			}
 			colTypes.push_back(ctypeFromString(type));
@@ -140,9 +140,9 @@ ReadCSVDataChunk ReadCSVData::getNextFileToRead() {
 
 static function_data_ptr_t readCSVBind(ClientContext &context,
                                        vector<Value> &inputs,
-                                       vector<ConstantType> & inputTypes,
+                                       vector<LogicalType> & inputTypes,
                                        std::unordered_map<string, Value> &parameters,
-                                       vector<ConstantType> &returnTypes,vector<string> &names,
+                                       vector<LogicalType> &returnTypes,vector<string> &names,
                                        vector<Expression>& filters) {
 	auto result = std::make_unique<ReadCSVData>();
 	auto &options = result->options_;
@@ -171,7 +171,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 		ErrorHandler::errorParsing("No files found that match the pattern: " + path);
 	}
 	vector<string> colNames;
-	vector<ConstantType> colTypes;
+	vector<PhysicalType> colTypes;
 
 	for (auto &kv : parameters) {
 		if (kv.first == "auto_detect") {
@@ -238,7 +238,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 	}
 
 	// build the map of col name and type
-	std::unordered_map<string, ConstantType> colMap;
+	std::unordered_map<string, PhysicalType> colMap;
 
 	BB_ASSERT(colTypes.size() == colNames.size());
 	for (idx_t i = 0;i<colNames.size();i++)
@@ -327,23 +327,23 @@ static void readCSVFunction(ClientContext &context, const FunctionData *bind_dat
 
 
 static void readCSVAddNamedParameters(PredFunction &table_function) {
-	table_function.namedParameters_["sep"] = ConstantType::STRING;
-	table_function.namedParameters_["delim"] = ConstantType::STRING;
-	table_function.namedParameters_["quote"] = ConstantType::STRING;
-	table_function.namedParameters_["escape"] = ConstantType::STRING;
-	table_function.namedParameters_["columns"] = ConstantType::STRING;
-	table_function.namedParameters_["header"] = ConstantType::UTINYINT;
-	table_function.namedParameters_["auto_detect"] = ConstantType::UTINYINT;
-	table_function.namedParameters_["sample_size"] = ConstantType::BIGINT;
-	table_function.namedParameters_["sample_chunks"] = ConstantType::BIGINT;
-	table_function.namedParameters_["all_varchar"] = ConstantType::UTINYINT;
-	table_function.namedParameters_["compression"] = ConstantType::STRING;
+	table_function.namedParameters_["sep"] = PhysicalType::STRING;
+	table_function.namedParameters_["delim"] = PhysicalType::STRING;
+	table_function.namedParameters_["quote"] = PhysicalType::STRING;
+	table_function.namedParameters_["escape"] = PhysicalType::STRING;
+	table_function.namedParameters_["columns"] = PhysicalType::STRING;
+	table_function.namedParameters_["header"] = PhysicalType::UTINYINT;
+	table_function.namedParameters_["auto_detect"] = PhysicalType::UTINYINT;
+	table_function.namedParameters_["sample_size"] = PhysicalType::BIGINT;
+	table_function.namedParameters_["sample_chunks"] = PhysicalType::BIGINT;
+	table_function.namedParameters_["all_varchar"] = PhysicalType::UTINYINT;
+	table_function.namedParameters_["compression"] = PhysicalType::STRING;
 }
 
 
 function_ptr_t ReadCsvFunc::getFunction() {
 	string name = "&read_csv";
-	function_ptr_t fun = function_ptr_t(new PredFunction( name, {STRING}, readCSVFunction, readCSVBind, readCSVInit, readCSVMaxThread, nullptr, nullptr));
+	function_ptr_t fun = function_ptr_t(new PredFunction( name, {PhysicalType::STRING}, readCSVFunction, readCSVBind, readCSVInit, readCSVMaxThread, nullptr, nullptr));
 	readCSVAddNamedParameters((PredFunction&)*fun);
 	return fun;
 }

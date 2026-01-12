@@ -51,10 +51,10 @@ protected:
         ptableRight = std::make_shared<PredicateTables>(&client_context, "b",3);
     }
 
-    vector<ConstantType> tLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    vector<ConstantType> tRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<PhysicalType> tLeft{PhysicalType::INTEGER, PhysicalType::UINTEGER, PhysicalType::BIGINT};
+    vector<PhysicalType> tRight{PhysicalType::UINTEGER, PhysicalType::BIGINT, PhysicalType::INTEGER};
 
-    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<PhysicalType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCapacity(count);
@@ -69,7 +69,7 @@ protected:
         return chunk;
     }
 
-    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
+    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<PhysicalType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i*STANDARD_VECTOR_SIZE);
             ptable->append(chunk);
@@ -99,7 +99,7 @@ TEST_F(PhysicalHJTest, HTBuildSimpleTest) {
     for (idx_t i = 0; i < ptableLeft->chunkCount(); ++i) {
         auto& chunk = ptableLeft->getChunk(i);
 
-        Vector hash(UBIGINT);
+        Vector hash(LogicalTypeId::HASH);
         chunk.hash(hash, keys);
         ht.addDataChunkSel(hash, chunk );
     }
@@ -170,7 +170,7 @@ TEST_F(PhysicalHJTest, HTBucketDistributionMatchesHashUnderConcurrency) {
     for (idx_t c = 0; c < ptableRight->chunkCount(); ++c) {
         threads.emplace_back([&, c]() {
             auto &chunk = ptableRight->getChunk(c);
-            Vector hash(UBIGINT);
+            Vector hash(LogicalTypeId::HASH);
             chunk.hash(hash, keys);
             ht.addDataChunkSel(hash, chunk);
         });
@@ -184,7 +184,7 @@ TEST_F(PhysicalHJTest, HTBucketDistributionMatchesHashUnderConcurrency) {
     vector<uint64_t> expected_bucket_sizes(buckets, 0);
     for (idx_t c = 0; c < ptableRight->chunkCount(); ++c) {
         auto &chunk = ptableRight->getChunk(c);
-        Vector hash(UBIGINT);
+        Vector hash(LogicalTypeId::HASH);
         chunk.hash(hash, keys);
         auto *h = FlatVector::getData<uint64_t>(hash);
         for (idx_t i = 0; i < chunk.getSize(); ++i) {
@@ -222,7 +222,7 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
     JoinHashTable ht(ptableRight->predicate_.get(), keys, payloads, buckets);
 
     // Add right chunk to the HT
-    Vector rhash(UBIGINT);
+    Vector rhash(LogicalTypeId::HASH);
     rchunk.hash(rhash, keys);
     ht.addDataChunkSel(rhash, rchunk);
 
@@ -235,7 +235,7 @@ TEST_F(PhysicalHJTest, HTProbeEqualCommonTypeSingleBucket) {
 
 
     // Prepare probe inputs
-    Vector lhash(UBIGINT);
+    Vector lhash(LogicalTypeId::HASH);
     lchunk.hash(lhash, keys);
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
@@ -281,14 +281,14 @@ TEST_F(PhysicalHJTest, HTProbeNoMatches) {
 
     JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, payloads, buckets);
 
-    Vector rhash(UBIGINT);
+    Vector rhash(LogicalTypeId::HASH);
     rchunk.hash(rhash, keys);
     ht.addDataChunkSel(rhash, rchunk);
 
     ht.initDirectory();
     ht.build(0, 0);
 
-    Vector lhash(UBIGINT);
+    Vector lhash(LogicalTypeId::HASH);
     lchunk.hash(lhash, keys);
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
@@ -314,8 +314,8 @@ TEST_F(PhysicalHJTest, HTBucketMaskingMatchesBitwiseAnd) {
     const idx_t buckets = 32;       // power of two
     JoinHashTable ht(ptableLeft->predicate_.get(), keys, payloads, buckets);
 
-    // Craft a vector of "hashes" directly (UBIGINT) and check calculateBucketVector()
-    Vector hash(UBIGINT, 16);
+    // Craft a vector of "hashes" directly (ConstantType::UBIGINT) and check calculateBucketVector()
+    Vector hash(LogicalTypeId::HASH, 16);
     auto *h = FlatVector::getData<uint64_t>(hash);
     for (idx_t i = 0; i < 16; ++i) {
         // distribute various bit patterns
@@ -369,7 +369,7 @@ TEST_F(PhysicalHJTest, HTProbeMultipleConditionsRefine) {
     JoinHashTable ht(ptableRight->predicate_.get(), build_keys, payloads, buckets);
 
     // Add to HT (right)
-    Vector rhash(UBIGINT);
+    Vector rhash(LogicalTypeId::HASH);
     rchunk.hash(rhash, build_keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
@@ -382,7 +382,7 @@ TEST_F(PhysicalHJTest, HTProbeMultipleConditionsRefine) {
     //   - col0 = i*0 == 0 for all rows
     //   - col2 = i*20 (left BIGINT), right.col2 is INTEGER in tRight -> i*20
     // So condition (2) becomes: 0 > (i*20), only true when i == 0.
-    Vector lhash(UBIGINT);
+    Vector lhash(LogicalTypeId::HASH);
     lchunk.hash(lhash,vector<idx_t>{1});
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
@@ -429,14 +429,14 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
     const idx_t buckets = 8;
     JoinHashTable ht(ptableRight.get()->predicate_.get(), keys, payloads, buckets);
 
-    Vector rhash(UBIGINT, N);
+    Vector rhash(LogicalTypeId::HASH, N);
     rchunk.hash(rhash, keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
     for (idx_t i = 0; i < buckets; ++i) ht.build(i, i);
 
     // Probe
-    Vector lhash(UBIGINT, N);
+    Vector lhash(LogicalTypeId::HASH, N);
     lchunk.hash(lhash, keys);
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
@@ -463,8 +463,8 @@ TEST_F(PhysicalHJTest, HTProbeRespectsBatchSizeAndCollectsAll) {
  */
 TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
     // left: (FLOAT, UINTEGER)   right: (UINTEGER, INTEGER)
-    vector<ConstantType> leftTypes  {ConstantType::FLOAT,   ConstantType::UINTEGER};
-    vector<ConstantType> rightTypes {ConstantType::UINTEGER, ConstantType::INTEGER};
+    vector<PhysicalType> leftTypes  {PhysicalType::FLOAT,   PhysicalType::UINTEGER};
+    vector<PhysicalType> rightTypes {PhysicalType::UINTEGER, PhysicalType::INTEGER};
 
     auto lchunk = createChunkWithValue(leftTypes,  64,0);
     auto rchunk = createChunkWithValue(rightTypes, 64,0);
@@ -476,7 +476,7 @@ TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
     const idx_t buckets = 1;
     JoinHashTable ht(ptableRight.get()->predicate_.get(), build_keys, payloads, buckets);
 
-    Vector rhash(UBIGINT);
+    Vector rhash(LogicalTypeId::HASH);
     rchunk.hash(rhash, build_keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
@@ -485,7 +485,7 @@ TEST_F(PhysicalHJTest, HTProbeRefineWithFloatVsIntegerCommonCast) {
     // Probe conditions:
     //  1) left.col1 (UINTEGER) == right.col0 (UINTEGER)  -> candidate set
     //  2) left.col0 (FLOAT)    <= right.col1 (INTEGER)   -> common-type cast to double
-    Vector lhash(UBIGINT);
+    Vector lhash(LogicalTypeId::HASH);
     lchunk.hash(lhash, /*probe uses the key from #1*/ vector<idx_t>{1});
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);
@@ -540,7 +540,7 @@ TEST_F(PhysicalHJTest, HTProbeWithMultipleKeys) {
     JoinHashTable ht(ptableRight->predicate_.get(), build_keys, payloads, buckets);
 
     // Hash on the two keys and build
-    Vector rhash(UBIGINT);
+    Vector rhash(LogicalTypeId::HASH);
     rchunk.hash(rhash, build_keys);
     ht.addDataChunkSel(rhash, rchunk);
     ht.initDirectory();
@@ -549,7 +549,7 @@ TEST_F(PhysicalHJTest, HTProbeWithMultipleKeys) {
     }
 
     // Probe: left's keys {0,1} against right's {2,0}
-    Vector lhash(UBIGINT);
+    Vector lhash(LogicalTypeId::HASH);
     lchunk.hash(lhash, {0, 2});
     SelectionVector lsel(STANDARD_VECTOR_SIZE);
     SelectionVector rsel(STANDARD_VECTOR_SIZE);

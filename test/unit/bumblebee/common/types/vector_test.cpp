@@ -33,7 +33,7 @@ TEST(VectorTest, ConstructFromValue) {
 }
 
 TEST(VectorTest, ConstructFlatVectorZeroInit) {
-    Vector vec(ConstantType::INTEGER, true, true, 10);
+    Vector vec(PhysicalType::INTEGER, true, true, 10);
     EXPECT_EQ(vec.getVectorType(), VectorType::FLAT_VECTOR);
     for (idx_t i = 0; i < 10; ++i) {
         EXPECT_EQ(vec.getValue(i), Value(0));
@@ -41,7 +41,7 @@ TEST(VectorTest, ConstructFlatVectorZeroInit) {
 }
 
 TEST(VectorTest, ConstructSequenceVector) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(5, 2);
     EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_VECTOR);
     for (idx_t i = 0; i < 5; ++i) {
@@ -50,7 +50,7 @@ TEST(VectorTest, ConstructSequenceVector) {
 }
 
 TEST(VectorTest, ConstructCircularSequenceVector) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(5,0, 1, 10); // 5 6 7 8 9 10 5 6 7 8 ...
     EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_CIRCULAR_VECTOR);
     std::cout <<vec.toString(10) << std::endl;
@@ -60,7 +60,7 @@ TEST(VectorTest, ConstructCircularSequenceVector) {
 }
 
 TEST(VectorTest, ConstructCircularSequenceVectorWithOffsetAndStride) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(5,4, 2, 10); // 7 7 8 8 9 9 10 10 5 5 6 6 ....
     EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_CIRCULAR_VECTOR);
     std::cout <<vec.toString(10) << std::endl;
@@ -70,7 +70,7 @@ TEST(VectorTest, ConstructCircularSequenceVectorWithOffsetAndStride) {
 }
 
 TEST(VectorTest, ConstructNegativeCircularSequenceVector) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(-4, 0, 3, 4); // -4 -4 -4 -3 -3 -3 -2 -2 -2 -1 -1 -1 ....
     EXPECT_EQ(vec.getVectorType(), VectorType::SEQUENCE_CIRCULAR_VECTOR);
     std::cout <<vec.toString(20) << std::endl;
@@ -81,7 +81,7 @@ TEST(VectorTest, ConstructNegativeCircularSequenceVector) {
 }
 
 TEST(VectorTest, MoveConstructor) {
-    Vector vec1(ConstantType::INTEGER, true);
+    Vector vec1(PhysicalType::INTEGER, true);
     vec1.setValue(0, Value(123));
     Vector vec2(std::move(vec1));
     EXPECT_EQ(vec2.getValue(0), Value(123));
@@ -90,7 +90,7 @@ TEST(VectorTest, MoveConstructor) {
 // ---------- Test slice & reference ----------
 
 TEST(VectorTest, SliceFlatVectorOffset) {
-    Vector vec(ConstantType::INTEGER);
+    Vector vec(PhysicalType::INTEGER);
     for (idx_t i = 0; i < 5; ++i) {
         vec.setValue(i, Value(int32_t(i)));
     }
@@ -99,7 +99,7 @@ TEST(VectorTest, SliceFlatVectorOffset) {
 }
 
 TEST(VectorTest, SliceWithSelectionVector) {
-    Vector vec(ConstantType::INTEGER);
+    Vector vec(PhysicalType::INTEGER);
     for (idx_t i = 0; i < 10; ++i) {
         vec.setValue(i, Value(int32_t(i * 10)));
     }
@@ -117,7 +117,7 @@ TEST(VectorTest, SliceWithSelectionVector) {
 
 
 TEST(VectorTest, SliceOfSliceSelectionVector) {
-    Vector vec(ConstantType::INTEGER);
+    Vector vec(PhysicalType::INTEGER);
     for (idx_t i = 0; i < 10; ++i) {
         vec.setValue(i, Value(int32_t(i * 10)));
     }
@@ -158,13 +158,13 @@ TEST(VectorTest, SliceOfSliceSelectionVector) {
 // ---------- Test value setting and retrieval ----------
 
 TEST(VectorTest, GetSetValuesInteger) {
-    Vector vec(ConstantType::INTEGER);
+    Vector vec(PhysicalType::INTEGER);
     vec.setValue(5, Value(77));
     EXPECT_EQ(vec.getValue(5), Value(77));
 }
 
 TEST(VectorTest, GetSetValuesString) {
-    Vector vec(ConstantType::STRING);
+    Vector vec(PhysicalType::STRING);
     vec.setValue(0, Value("hello"));
     EXPECT_EQ(vec.getValue(0), Value("hello"));
 }
@@ -192,7 +192,7 @@ TEST(VectorTest, NormalifyStringConstantVector) {
 
 TEST(VectorTest, NormalifyDictionaryVector) {
     // Create a flat vector with 5 values
-    Vector baseVec(ConstantType::INTEGER, 5);
+    Vector baseVec(PhysicalType::INTEGER, 5);
     for (idx_t i = 0; i < 5; ++i) {
         baseVec.setValue(i, Value(int32_t(i * 10)));
     }
@@ -215,7 +215,7 @@ TEST(VectorTest, NormalifyDictionaryVector) {
 }
 
 TEST(VectorTest, NormalifySequenceVector) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(10, 3);
     vec.normalify(4);
 
@@ -227,7 +227,7 @@ TEST(VectorTest, NormalifySequenceVector) {
 }
 
 TEST(VectorTest, NormalifyCircularSequenceVector) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(10, 0, 1,20); // 10 11 12 13 14 15 16 17 18 19 20 10 11 12 .....
     std::cout << vec.toString(20) << std::endl;
     vec.normalify(20);
@@ -242,7 +242,7 @@ TEST(VectorTest, NormalifyCircularSequenceVector) {
 }
 
 TEST(VectorTest, NormalifyCircularSequenceVectorWithOffset) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(10, 10, 1,20); // 20 10 11 12 13 ...
     std::cout << vec.toString(15) << std::endl;
     vec.normalify(15);
@@ -256,7 +256,7 @@ TEST(VectorTest, NormalifyCircularSequenceVectorWithOffset) {
 }
 
 TEST(VectorTest, NormalifySequenceWithSelection) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(100, 5);
 
     SelectionVector sel(3);
@@ -274,7 +274,7 @@ TEST(VectorTest, NormalifySequenceWithSelection) {
 }
 
 TEST(VectorTest, SliceAndNormalifyCircularSequenceWithOffset) {
-    Vector vec(ConstantType::BIGINT);
+    Vector vec(PhysicalType::BIGINT);
     vec.sequence(-3, 5, 3, -1);
     // -2 -1 -1 -1 -3 -3 -3 -2 -2 -2
 
@@ -298,7 +298,7 @@ TEST(VectorTest, SliceAndNormalifyCircularSequenceWithOffset) {
 }
 
 TEST(VectorTest, OrrifyFlatVector) {
-    Vector vec(ConstantType::INTEGER, 10);
+    Vector vec(PhysicalType::INTEGER, 10);
     for (idx_t i = 0; i < 3; ++i) {
         vec.setValue(i, Value(int32_t(i)));
     }
@@ -331,7 +331,7 @@ TEST(VectorTest, OrrifyConstVector) {
 
 TEST(VectorTest, OrrifyDictionaryVector) {
     // Create base vector with 3 values
-    Vector baseVec(ConstantType::INTEGER);
+    Vector baseVec(PhysicalType::INTEGER);
     baseVec.setValue(0, Value(100));
     baseVec.setValue(1, Value(200));
     baseVec.setValue(2, Value(300));
@@ -359,7 +359,7 @@ TEST(VectorTest, OrrifyDictionaryVector) {
 }
 
 TEST(VectorTest, OrrifyFlatVectorContents) {
-    Vector vec(ConstantType::INTEGER);
+    Vector vec(PhysicalType::INTEGER);
     vec.setValue(0, Value(11));
     vec.setValue(1, Value(22));
     vec.setValue(2, Value(33));
@@ -376,7 +376,7 @@ TEST(VectorTest, OrrifyFlatVectorContents) {
 
 TEST(VectorTest, OrrifyDictionaryWithSequenceChild) {
     // Create a SEQUENCE_VECTOR as the child
-    Vector seqVec(ConstantType::BIGINT);
+    Vector seqVec(PhysicalType::BIGINT);
     seqVec.sequence(100, 10);  // Values: 100, 110, 120, ...
 
     // Create a selection vector referencing indices in the sequence
@@ -426,7 +426,7 @@ TEST(VectorTest, OrrifyConstStringVector) {
 // ---------- Test auxiliary data ----------
 
 TEST(VectorTest, StringVectorHeapReference) {
-    Vector vec(ConstantType::STRING);
+    Vector vec(PhysicalType::STRING);
     string_t s = StringVector::addString(vec, "test");
     EXPECT_EQ(std::string(s.getDataUnsafe()), "test");
 }
@@ -434,7 +434,7 @@ TEST(VectorTest, StringVectorHeapReference) {
 // ---------- Test resize ----------
 
 TEST(VectorTest, ResizeData) {
-    Vector vec(ConstantType::INTEGER );
+    Vector vec(PhysicalType::INTEGER );
     vec.setValue(0, Value(10));
     vec.resize(1, 3);
     vec.setValue(1, Value(20));

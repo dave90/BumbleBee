@@ -70,17 +70,23 @@ protected:
         }
     };
 
-    virtual Vector generateVector(ConstantType type, vector<Value>& values );
+    template <class T>
+    string formatDecimal(int scale, T values );
+
+    template <class T>
+    vector<string> formatDecimalVector(int scale, vector<T>& values );
+
+    virtual Vector generateVector(LogicalType type, vector<Value>& values );
 
     template <class T>
     void setValuesVector(Vector &v, vector<T> values );
 
     template <class T>
-    Vector generateVector(ConstantType type, vector<T> values );
+    Vector generateVector(LogicalType type, vector<T> values );
 
-    virtual Vector generateVector(idx_t size, ConstantType type);
+    virtual Vector generateVector(idx_t size, LogicalType type);
 
-    virtual DataChunk generateDataChunk(vector<ConstantType>& types, vector<vector<Value>>& data);
+    virtual DataChunk generateDataChunk(vector<LogicalType>& types, vector<vector<Value>>& data);
 
     template <class T>
     void addData(vector<vector<Value>>& table, vector<T> data);
@@ -94,9 +100,9 @@ protected:
     template <class T>
     Value generateRandomNumericValue();
 
-    Value randomValue(ConstantType type, idx_t max_string_len = 128);
+    Value randomValue(PhysicalType type, idx_t max_string_len = 128);
 
-    DataChunk generateRandomDataChunk(vector<ConstantType> types);
+    DataChunk generateRandomDataChunk(vector<LogicalType> types);
 };
 
 template<class T>
@@ -107,9 +113,48 @@ void BumbleBaseTest::setValuesVector(Vector &v, vector<T> values) {
     }
 }
 
+
 template<class T>
-Vector BumbleBaseTest::generateVector(ConstantType type, vector<T> values) {
-    Vector v1(type,values.size());
+string BumbleBaseTest::formatDecimal(int scale, T value ) {
+    if (scale <= 0) {
+        return std::to_string(value);
+    }
+
+    std::string s = std::to_string(value);
+
+    // Handle negative numbers
+    bool negative = (s[0] == '-');
+    if (negative) {
+        s.erase(s.begin());
+    }
+
+    // Ensure enough digits for the decimal point
+    if (static_cast<int>(s.size()) <= scale) {
+        s.insert(0, scale - s.size() + 1, '0');
+    }
+
+    // Insert decimal point
+    s.insert(s.end() - scale, '.');
+
+    if (negative) {
+        s.insert(s.begin(), '-');
+    }
+
+    return s;
+}
+
+template<class T>
+vector<string> BumbleBaseTest::formatDecimalVector(int scale, vector<T>& values ) {
+    vector<string> result;
+    for (auto& v:values)
+        result.push_back(formatDecimal(scale,v));
+    return result;
+}
+
+
+template<class T>
+Vector BumbleBaseTest::generateVector(LogicalType type, vector<T> values) {
+    Vector v1(type, values.size());
     setValuesVector<T>(v1,values);
     return v1;
 }
@@ -132,7 +177,7 @@ Value BumbleBaseTest::generateRandomNumericValue() {
     return Value(dist(rng));
 }
 
-inline Vector BumbleBaseTest::generateVector(ConstantType type, vector<Value> &values) {
+inline Vector BumbleBaseTest::generateVector(LogicalType type, vector<Value> &values) {
     Vector v1(type,values.size());
     for (idx_t i = 0; i < values.size(); i++) {
         v1.setValue(i, values[i].cast(v1.getType()));
@@ -140,15 +185,15 @@ inline Vector BumbleBaseTest::generateVector(ConstantType type, vector<Value> &v
     return v1;
 }
 
-inline Vector BumbleBaseTest::generateVector(idx_t size, ConstantType type) {
+inline Vector BumbleBaseTest::generateVector(idx_t size, LogicalType type) {
     Vector result(type);
     for (idx_t i = 0; i < size; i++)
-        result.setValue(i, Value((uint64_t)i).cast(type) );
+        result.setValue(i, Value((uint64_t)i).cast(type.getPhysicalType()) );
 
     return result;
 }
 
-inline DataChunk BumbleBaseTest::generateDataChunk(vector<ConstantType> &types, vector<vector<Value>> &data) {
+inline DataChunk BumbleBaseTest::generateDataChunk(vector<LogicalType> &types, vector<vector<Value>> &data) {
     BB_ASSERT(types.size() == data.size());
     DataChunk chunk;
     chunk.initializeEmpty(types);
@@ -208,43 +253,43 @@ inline void BumbleBaseTest::compareChunks(DataChunk &chunk1, DataChunk &chunk2, 
     EXPECT_EQ(chunk1Str, chunk2Str);
 }
 
-inline Value BumbleBaseTest::randomValue(ConstantType type, idx_t max_string_len) {
+inline Value BumbleBaseTest::randomValue(PhysicalType type, idx_t max_string_len) {
 
     switch (type) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return generateRandomNumericValue<int8_t>();
 
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return generateRandomNumericValue<int16_t>();
 
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return generateRandomNumericValue<int32_t>();
 
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return generateRandomNumericValue<int64_t>();
 
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return generateRandomNumericValue<uint8_t>();
 
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return generateRandomNumericValue<uint16_t>();
 
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return generateRandomNumericValue<uint32_t>();
 
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return generateRandomNumericValue<uint64_t>();
 
-        case ConstantType::FLOAT: {
+        case PhysicalType::FLOAT: {
             // Keep float range reasonable to avoid infinities
             std::uniform_real_distribution<float> dist(-1.0e6f, 1.0e6f);
             return Value(dist(rng));
         }
-        case ConstantType::DOUBLE: {
+        case PhysicalType::DOUBLE: {
             std::uniform_real_distribution<double> dist(-1.0e12, 1.0e12);
             return Value(dist(rng));
         }
-        case ConstantType::STRING: {
+        case PhysicalType::STRING: {
             // Random length in [0, max_string_len]
             if (max_string_len == 0) {
                 // Empty string is valid
@@ -278,13 +323,13 @@ inline Value BumbleBaseTest::randomValue(ConstantType type, idx_t max_string_len
     }
 }
 
-inline DataChunk BumbleBaseTest::generateRandomDataChunk(vector<ConstantType> types) {
+inline DataChunk BumbleBaseTest::generateRandomDataChunk(vector<LogicalType> types) {
     DataChunk chunk;
     chunk.initialize(types);
 
     for (idx_t i = 0; i < STANDARD_VECTOR_SIZE; i++) {
         for (auto j = 0; j < types.size(); j++) {
-            Value v = randomValue(types[j]);
+            Value v = randomValue(types[j].getPhysicalType());
             chunk.setValue(j, i, v);
         }
     }

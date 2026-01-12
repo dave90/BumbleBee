@@ -27,6 +27,7 @@ const char NumericHelper::digits[] =
     "6061626364656667686970717273747576777879"
     "8081828384858687888990919293949596979899";
 
+
 const int64_t NumericHelper::POWERS_OF_TEN[] {1,
                                               10,
                                               100,

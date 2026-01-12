@@ -44,8 +44,8 @@ protected:
         ptable = std::make_shared<PredicateTables>(&client_context, "a",3);
     }
 
-    vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    vector<ConstantType> extraTestTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::BIGINT};
+    vector<LogicalType> testTypes{LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT};
+    vector<LogicalType> extraTestTypes{LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT, LogicalTypeId::BIGINT};
 
     DataChunk createChunkWithValue( idx_t count = 1, idx_t offset=0, bool extraCol = true) {
         DataChunk chunk;

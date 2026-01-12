@@ -88,11 +88,11 @@ public:
     constexpr static float LOAD_FACTOR = 0.5;
 
 
-    PRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
+    PRLHashTable(BufferManager& manager, const vector<LogicalType>& types, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
     PRLHashTable(BufferManager& manager);
     virtual ~PRLHashTable() {};
 
-    void initialize(const vector<ConstantType> &types, idx_t capacity,bool resizable);
+    void initialize(const vector<LogicalType> &types, idx_t capacity,bool resizable);
 
     PRLHashTable(const PRLHashTable &other) = delete;
     PRLHashTable(PRLHashTable &&other) noexcept = delete;
@@ -124,7 +124,7 @@ public:
     idx_t getSize() const;
     idx_t getCapacity()const;
     string toString(bool compact = true);
-    vector<ConstantType> getTypes() const;
+    vector<LogicalType> getTypes() const;
 
 protected:
 
@@ -143,7 +143,7 @@ protected:
 
 
     // Types of the columns in the hash table
-    vector<ConstantType> types_;
+    vector<LogicalType> types_;
     // Buffer manager of hash and data blocks
     BufferManager &bufferManager_;
     // Layout of the payload data in row layout

@@ -57,9 +57,9 @@ using function_data_ptr_t = std::unique_ptr<FunctionData>;
 class Function {
 
 public:
-    Function(const string &name, const vector<ConstantType> &arguments, ConstantType result);
+    Function(const string &name, const vector<LogicalType> &arguments, LogicalType result);
 
-    Function(const string &name, const vector<ConstantType> &arguments);
+    Function(const string &name, const vector<LogicalType> &arguments);
 
     Function(const Function &other);
 
@@ -74,8 +74,8 @@ public:
     friend bool operator!=(const Function &lhs, const Function &rhs);
 
     string name_;
-    vector<ConstantType> arguments_;
-    ConstantType result_;
+    vector<LogicalType> arguments_;
+    LogicalType result_;
 };
 
 using function_ptr_t = std::shared_ptr<Function>;

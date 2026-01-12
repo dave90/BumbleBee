@@ -20,6 +20,7 @@ include_directories(${CMAKE_SOURCE_DIR}/third_party)
 file(GLOB_RECURSE SRC_FILES
         ${PROJECT_SOURCE_DIR}/src/*.cpp
         ${PROJECT_SOURCE_DIR}/third_party/*.cpp
+        ${PROJECT_SOURCE_DIR}/third_party/*.cc
 )
 
 # Exclude main.cpp from the library

@@ -33,9 +33,9 @@ class VectorOperationsArithTest : public BumbleBaseTest {
 
 TEST_F(VectorOperationsArithTest, SumFlatVectors) {
     vector<int32_t> values = {1,2,3,4};
-    Vector v1 = generateVector(INTEGER, values);
-    Vector v2 = generateVector(INTEGER, values);
-    Vector v3(INTEGER);
+    Vector v1 = generateVector(PhysicalType::INTEGER, values);
+    Vector v2 = generateVector(PhysicalType::INTEGER, values);
+    Vector v3(PhysicalType::INTEGER);
 
     VectorOperations::sum(v1,v2,v3,values.size());
     // expected sum
@@ -48,9 +48,9 @@ TEST_F(VectorOperationsArithTest, SumFlatVectors) {
 TEST_F(VectorOperationsArithTest, DifferenceFlatVectors) {
     vector<int16_t> values1 = {10, 20, -30, 40};
     vector<int16_t> values2 = {1, 5, -10, 50};
-    Vector v1 = generateVector(SMALLINT, values1);
-    Vector v2 = generateVector(SMALLINT, values2);
-    Vector v3(SMALLINT);
+    Vector v1 = generateVector(PhysicalType::SMALLINT, values1);
+    Vector v2 = generateVector(PhysicalType::SMALLINT, values2);
+    Vector v3(PhysicalType::SMALLINT);
 
     VectorOperations::difference(v1, v2, v3, values1.size());
     for (idx_t i = 0; i < values1.size(); i++) {
@@ -61,9 +61,9 @@ TEST_F(VectorOperationsArithTest, DifferenceFlatVectors) {
 TEST_F(VectorOperationsArithTest, DotCrossTypeVectors) {
     vector<uint32_t> values1 = {10, 20, 30, 40};
     vector<float> values2 = {1.5f, -2.5f, 3.0f, 0.5f};
-    Vector v1 = generateVector(UINTEGER, values1);
-    Vector v2 = generateVector(FLOAT, values2);
-    Vector v3(DOUBLE); // result type must be wide enough (DOUBLE here)
+    Vector v1 = generateVector(PhysicalType::UINTEGER, values1);
+    Vector v2 = generateVector(PhysicalType::FLOAT, values2);
+    Vector v3(PhysicalType::DOUBLE); // result type must be wide enough (DOUBLE here)
 
     VectorOperations::dot(v1, v2, v3, values1.size());
     std::cout << v3.toString(4) << std::endl;
@@ -88,9 +88,9 @@ TEST_F(VectorOperationsArithTest, AndCrossTypeVectors) {
     // -1      -> -1
     vector<int16_t>  right_vals = {255, 3855, -3856, 1};
 
-    Vector v_left  = generateVector(UINTEGER, left_vals);
-    Vector v_right = generateVector(SMALLINT, right_vals);
-    Vector v_out(UINTEGER); // result wide enough and aligned with LEFT type
+    Vector v_left  = generateVector(PhysicalType::UINTEGER, left_vals);
+    Vector v_right = generateVector(PhysicalType::SMALLINT, right_vals);
+    Vector v_out(PhysicalType::UINTEGER); // result wide enough and aligned with LEFT type
 
     VectorOperations::lAnd(v_left, v_right, v_out, left_vals.size());
 
@@ -116,11 +116,11 @@ TEST_F(VectorOperationsArithTest, AndCrossTypeConstantVectors) {
     // 0x00FF  ->  255
     int16_t  right_vals = 255;
 
-    Vector v_left  = generateVector(UINTEGER, left_vals);
+    Vector v_left  = generateVector(PhysicalType::UINTEGER, left_vals);
     Vector v_right(right_vals);
     EXPECT_EQ(v_right.getVectorType() , VectorType::CONSTANT_VECTOR);
 
-    Vector v_out(UINTEGER); // result wide enough and aligned with LEFT type
+    Vector v_out(PhysicalType::UINTEGER); // result wide enough and aligned with LEFT type
 
     VectorOperations::lAnd(v_left, v_right, v_out, left_vals.size());
 

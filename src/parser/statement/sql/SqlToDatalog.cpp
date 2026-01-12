@@ -52,12 +52,12 @@ void SqlQueryNormalizer::normalize() {
 
 vector<string> getColsFromExtTable(sql::FromItem &item, ClientContext& context_) {
     BB_ASSERT(item.getType() == sql::EXTERNAL);
-    vector<ConstantType> types;
+    vector<LogicalType> types;
     for (auto& param: item.getInputValues())
-        types.push_back(param.getConstantType());
+        types.emplace_back(param.getPhysicalType());
     auto pfunc = (PredFunction*) context_.functionRegister_.getFunction(item.getExtTableName(), types ).get();
     vector<Expression> filters;
-    vector<ConstantType> returnTypes;
+    vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
     pfunc->bindFunction_(context_, item.getInputValues(), types, item.getNamedParameters(), returnTypes, names, filters);
     return names;

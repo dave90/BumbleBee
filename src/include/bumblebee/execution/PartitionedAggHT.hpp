@@ -89,7 +89,7 @@ public:
         return table_;
     }
 
-    vector<ConstantType> getTypes() {
+    vector<LogicalType> getTypes() {
         return types_;
     }
 
@@ -128,7 +128,7 @@ private:
     // Aggregates functions
     vector<AggregateFunction*> functions_;
 
-    vector<ConstantType> types_;
+    vector<LogicalType> types_;
 };
 
 using partitioned_agg_ht_ptr_t = std::unique_ptr<PartitionedAggHT>;

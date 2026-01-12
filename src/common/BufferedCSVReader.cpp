@@ -150,10 +150,10 @@ TextSearchShiftArray::TextSearchShiftArray(string search_term) : length_(search_
 }
 
 BufferedCSVReader::BufferedCSVReader(ClientContext &context, BufferedCSVReaderOptions options,
-    const vector<ConstantType> &requested_types, const std::vector<idx_t> &select_cols): BufferedCSVReader(*context.fileSystem_, options, requested_types, select_cols){}
+    const vector<PhysicalType> &requested_types, const std::vector<idx_t> &select_cols): BufferedCSVReader(*context.fileSystem_, options, requested_types, select_cols){}
 
 BufferedCSVReader::BufferedCSVReader(FileSystem &fs, BufferedCSVReaderOptions options,
-const vector<ConstantType> &requested_types, const std::vector<idx_t> &select_cols) : fs_(fs), options_(options), bufferSize_(0), position_(0) {
+const vector<PhysicalType> &requested_types, const std::vector<idx_t> &select_cols) : fs_(fs), options_(options), bufferSize_(0), position_(0) {
 	fileHandle_ = openCSV(options_);
 	initialize(requested_types);
 
@@ -186,7 +186,7 @@ void BufferedCSVReader::parseCSV(DataChunk &insertChunk) {
 	}
 }
 
-void BufferedCSVReader::initialize(const vector<ConstantType> &requested_types) {
+void BufferedCSVReader::initialize(const vector<PhysicalType> &requested_types) {
     prepareComplexParser();
     if (options_.autoDetect_) {
         types_ = sniffCSV(requested_types);
@@ -212,7 +212,7 @@ void BufferedCSVReader::initParseChunk(idx_t num_cols) {
 		parseChunk_.destroy();
 
 		// initialize the parse_chunk with a set of VARCHAR types
-		vector<ConstantType> varchar_types(num_cols, ConstantType::STRING);
+		vector<PhysicalType> varchar_types(num_cols, PhysicalType::STRING);
 		parseChunk_.initialize(varchar_types);
 	}
 
@@ -249,7 +249,7 @@ bool BufferedCSVReader::tryParseCSV(ParserMode parser_mode, DataChunk &insert_ch
 	}
 }
 
-vector<ConstantType> BufferedCSVReader::sniffCSV(const vector<ConstantType> &requested_types) {
+vector<PhysicalType> BufferedCSVReader::sniffCSV(const vector<PhysicalType> &requested_types) {
 
 	// #######
 	// ### dialect detection
@@ -269,13 +269,13 @@ vector<ConstantType> BufferedCSVReader::sniffCSV(const vector<ConstantType> &req
 	// ### type detection (initial)
 	// #######
 	// type candidates, ordered by descending specificity (~ from high to low)
-	vector<ConstantType> type_candidates = {
-	    ConstantType::STRING,
-	    ConstantType::DOUBLE,
-	    ConstantType::BIGINT,
+	vector<PhysicalType> type_candidates = {
+	    PhysicalType::STRING,
+	    PhysicalType::DOUBLE,
+	    PhysicalType::BIGINT,
 	};
 
-	vector<vector<ConstantType>> best_sql_types_candidates;
+	vector<vector<PhysicalType>> best_sql_types_candidates;
 	DataChunk best_header_row;
 	detectCandidateTypes(type_candidates, info_candidates, original_options, best_num_cols,
 	                     best_sql_types_candidates, best_header_row);
@@ -292,13 +292,13 @@ vector<ConstantType> BufferedCSVReader::sniffCSV(const vector<ConstantType> &req
 
 }
 
-bool BufferedCSVReader::tryCastValue(const Value &value, const ConstantType &sql_type) {
+bool BufferedCSVReader::tryCastValue(const Value &value, const PhysicalType &sql_type) {
 	Value new_value;
 	string error_message;
 	return value.tryCastAs(sql_type, new_value, &error_message);
 }
 
-bool BufferedCSVReader::tryCastVector(Vector &parse_chunk_col, idx_t size, const ConstantType &sql_type) {
+bool BufferedCSVReader::tryCastVector(Vector &parse_chunk_col, idx_t size, const PhysicalType &sql_type) {
 	if (parse_chunk_col.getType() == sql_type) {
 		return true;
 	}
@@ -731,7 +731,7 @@ void BufferedCSVReader::flush(DataChunk &insert_chunk) {
 		if (!selectCols_.empty() && !selectCols_[col_idx])
 			continue;
 
-		if (types_[col_idx] == ConstantType::STRING) {
+		if (types_[col_idx] == PhysicalType::STRING) {
 			// target type is varchar: no need to convert
 			// just test that all strings are valid utf-8 strings
 			auto parse_data = FlatVector::getData<string_t>(parseChunk_.data_[col_idx]);
@@ -843,7 +843,7 @@ file_handler_ptr_t BufferedCSVReader::openCSV(const BufferedCSVReaderOptions &op
 
 enum class QuoteRule : uint8_t { QUOTES_RFC = 0, QUOTES_OTHER = 1, NO_QUOTES = 2 };
 
-void BufferedCSVReader::detectDialect(const vector<ConstantType> &requested_types,
+void BufferedCSVReader::detectDialect(const vector<PhysicalType> &requested_types,
     BufferedCSVReaderOptions &original_options, vector<BufferedCSVReaderOptions> &info_candidates,
     idx_t &best_num_cols) {
     // set up the candidates we consider for delimiter and quote rules based on user input
@@ -952,20 +952,20 @@ void BufferedCSVReader::detectDialect(const vector<ConstantType> &requested_type
 	}
 }
 
-void BufferedCSVReader::detectCandidateTypes(const vector<ConstantType> &type_candidates,
+void BufferedCSVReader::detectCandidateTypes(const vector<PhysicalType> &type_candidates,
     const vector<BufferedCSVReaderOptions> &info_candidates, BufferedCSVReaderOptions &original_options,
-    idx_t best_num_cols, vector<vector<ConstantType>> &best_sql_types_candidates,
+    idx_t best_num_cols, vector<vector<PhysicalType>> &best_sql_types_candidates,
     DataChunk &best_header_row) {
 	BufferedCSVReaderOptions best_options;
 	idx_t min_varchar_cols = best_num_cols + 1;
 
 	for (auto &info_candidate : info_candidates) {
 		options_ = info_candidate;
-		vector<vector<ConstantType>> info_sql_types_candidates(options_.numCols_, type_candidates);
+		vector<vector<PhysicalType>> info_sql_types_candidates(options_.numCols_, type_candidates);
 
 		// set all sql_types to VARCHAR so we can do datatype detection based on VARCHAR values
 		types_.clear();
-		types_.assign(options_.numCols_, ConstantType::STRING);
+		types_.assign(options_.numCols_, PhysicalType::STRING);
 
 		// jump to beginning and skip potential header
 		jumpToBeginning(options_.skipRows_, true);
@@ -1008,7 +1008,7 @@ void BufferedCSVReader::detectCandidateTypes(const vector<ConstantType> &type_ca
 			// reset type detection, because first row could be header,
 			// but only do it if csv has more than one line (including header)
 			if (parseChunk_.getSize() > 0 && is_header_row) {
-				info_sql_types_candidates = vector<vector<ConstantType>>(options_.numCols_, type_candidates);
+				info_sql_types_candidates = vector<vector<PhysicalType>>(options_.numCols_, type_candidates);
 			}
 		}
 
@@ -1017,7 +1017,7 @@ void BufferedCSVReader::detectCandidateTypes(const vector<ConstantType> &type_ca
 			auto &col_type_candidates = info_sql_types_candidates[col];
 			// check number of varchar columns
 			const auto &col_type = col_type_candidates.back();
-			if (col_type == ConstantType::STRING) {
+			if (col_type == PhysicalType::STRING) {
 				varchar_cols++;
 			}
 		}
@@ -1038,7 +1038,7 @@ void BufferedCSVReader::detectCandidateTypes(const vector<ConstantType> &type_ca
 	options_ = best_options;
 }
 
-void BufferedCSVReader::detectHeader(const vector<vector<ConstantType>> &best_sql_types_candidates,
+void BufferedCSVReader::detectHeader(const vector<vector<PhysicalType>> &best_sql_types_candidates,
     const DataChunk &best_header_row) {
 	// information for header detection
 	bool first_row_consistent = true;
@@ -1092,13 +1092,13 @@ void BufferedCSVReader::detectHeader(const vector<vector<ConstantType>> &best_sq
 	}
 }
 
-vector<ConstantType> BufferedCSVReader::refineTypeDetection(const vector<ConstantType> &type_candidates,
-    const vector<ConstantType> &requested_types, vector<vector<ConstantType>> &best_sql_types_candidates) {
+vector<PhysicalType> BufferedCSVReader::refineTypeDetection(const vector<PhysicalType> &type_candidates,
+    const vector<PhysicalType> &requested_types, vector<vector<PhysicalType>> &best_sql_types_candidates) {
 	// for the type refine we set the SQL types to STRING for all columns
 	types_.clear();
-	types_.assign(options_.numCols_, ConstantType::STRING);
+	types_.assign(options_.numCols_, PhysicalType::STRING);
 
-	vector<ConstantType> detected_types;
+	vector<PhysicalType> detected_types;
 
 	// if data types were provided, exit here if number of columns does not match
 	if (!requested_types.empty()) {
@@ -1120,7 +1120,7 @@ vector<ConstantType> BufferedCSVReader::refineTypeDetection(const vector<Constan
 				continue;
 			}
 			for (idx_t col = 0; col < parseChunk_.columnCount(); col++) {
-				vector<ConstantType> &col_type_candidates = best_sql_types_candidates[col];
+				vector<PhysicalType> &col_type_candidates = best_sql_types_candidates[col];
 				while (col_type_candidates.size() > 1) {
 					const auto &sql_type = col_type_candidates.back();
 					if (tryCastVector(parseChunk_.data_[col], parseChunk_.getSize(), sql_type)) {
@@ -1151,7 +1151,7 @@ vector<ConstantType> BufferedCSVReader::refineTypeDetection(const vector<Constan
 
 		// set sql types
 		for (auto &best_sql_types_candidate : best_sql_types_candidates) {
-			ConstantType d_type = best_sql_types_candidate.back();
+			PhysicalType d_type = best_sql_types_candidate.back();
 			// if (best_sql_types_candidate.size() == type_candidates.size()) {
 			// 	d_type = ConstantType::STRING;
 			// }

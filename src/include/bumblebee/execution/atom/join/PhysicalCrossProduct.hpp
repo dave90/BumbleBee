@@ -25,7 +25,7 @@ namespace bumblebee{
 // Cross product simple implementation
 class PhysicalCrossProduct : public PhysicalAtom {
 public:
-    PhysicalCrossProduct(const vector<ConstantType> &types, vector<idx_t>& dcCols,vector<idx_t>& selectedCols, PredicateTables* pt);
+    PhysicalCrossProduct(const vector<LogicalType> &types, vector<idx_t>& dcCols,vector<idx_t>& selectedCols, PredicateTables* pt);
     ~PhysicalCrossProduct() override = default;
 
     string getName() const override;

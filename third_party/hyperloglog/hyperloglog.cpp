@@ -42,7 +42,7 @@
 
 
 
-namespace bumblebee_hll {
+namespace bumblebee {
 
 #define HLL_SPARSE_MAX_BYTES 3000
 

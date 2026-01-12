@@ -38,10 +38,10 @@ class AggRLHashTableTest : public ::testing::Test {
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
 
-    vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<PhysicalType> tLeft{PhysicalType::SMALLINT, PhysicalType::UINTEGER, PhysicalType::BIGINT};
     ClientContext clientContext;
 
-    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<PhysicalType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCapacity(count);
@@ -59,7 +59,7 @@ protected:
             vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE,
             bool resize = false) {
         DataChunk group, payload;
-        vector<ConstantType> groupTypes, payloadTypes;
+        vector<LogicalType> groupTypes, payloadTypes;
         for (auto g : groups)
             groupTypes.push_back(chunk.getTypes()[g]);
         for (auto p : payloads)
@@ -72,14 +72,14 @@ protected:
         payload.initialize(payloadTypes);
         group.reference(chunk, groups);
         payload.reference(chunk, payloads);
-        Vector hash(UBIGINT, group.getSize());
+        Vector hash(LogicalTypeId::HASH, group.getSize());
         group.hash(hash);
         ht->addChunk(hash, group, payload);
     }
 
 
     DataChunk probeToHT(agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
-        vector<ConstantType> groupTypes, payloadTypes;
+        vector<LogicalType> groupTypes, payloadTypes;
         for (auto g : groups)
             groupTypes.push_back(chunk.getTypes()[g]);
         for (auto f : functions)
@@ -91,7 +91,7 @@ protected:
         payload.initialize(payloadTypes);
         payload.setCardinality(group.getSize());
 
-        Vector hash(UBIGINT, group.getSize());
+        Vector hash(LogicalTypeId::HASH, group.getSize());
         group.hash(hash);
 
         SelectionVector sel(group.getSize());
@@ -115,7 +115,7 @@ TEST_F(AggRLHashTableTest, AggHTSimpleTest) {
     DataChunk payload = probeToHT(ht, chunk, groupIndexTypes, functions);
     // check that is all 0
     for (idx_t i = 0; i < payload.getSize(); i++)
-        EXPECT_EQ(payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>(), 0 );
+        EXPECT_EQ(payload.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>(), 0 );
 }
 
 
@@ -143,8 +143,8 @@ TEST_F(AggRLHashTableTest, AddChunk_DuplicateGroupsAggregatesCorrectlyNoDistinc)
     EXPECT_EQ(result.getSize(), chunk.getSize());
     for (idx_t i = 0; i < result.getSize(); ++i) {
         // Expected = 2 * (i * 10)
-        int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 }
@@ -196,8 +196,8 @@ TEST_F(AggRLHashTableTest, FetchAggregates_UnseenAndSeeGroup) {
     // check first 5 rows should be equal to the seen chunk
     for (idx_t i = 0; i < payload.getSize(); ++i) {
         // Expected = 2 * (i * 10)
-        int64_t expected = seenAndUnseen.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        int64_t got = payload.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t expected = seenAndUnseen.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        int64_t got = payload.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 }
@@ -219,7 +219,7 @@ TEST_F(AggRLHashTableTest, Scan_IteratesAllGroupsInBatchesAndBoundary) {
 
     // Prepare a result chunk with the same group types for scanning
     DataChunk out;
-    out.initialize({tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]});
+    out.initialize((vector<PhysicalType>){tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]});
 
     // Iterate from 0 until we've seen all groups
     idx_t visited = 0;
@@ -266,8 +266,8 @@ TEST_F(AggRLHashTableTest, AddChunk_DuplicateGroupsAggregatesCombine) {
     EXPECT_EQ(result.getSize(), chunk.getSize());
     for (idx_t i = 0; i < result.getSize(); ++i) {
         // Expected = 2 * (i * 10)
-        int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t expected = 2 * chunk.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 }
@@ -291,11 +291,11 @@ TEST_F(AggRLHashTableTest, AddChunk_NoGroups) {
 
     // fetch the results
     DataChunk result;
-    result.initialize({tLeft[payloadIndexTypes[0]]});
+    result.initialize((vector<PhysicalType>){tLeft[payloadIndexTypes[0]]});
     result.setCapacity(1);
     ht1->fetchAggregates(result);
     EXPECT_EQ(result.getSize(), 1);
     auto expected = 560 * 2; // sum twice of all values in third column 0, 20, 40, 60, 80, 100, 120, 140
-    EXPECT_EQ(result.getValue(0,0).cast(BIGINT).getNumericValue<int64_t>(), expected);
+    EXPECT_EQ(result.getValue(0,0).cast(PhysicalType::BIGINT).getNumericValue<int64_t>(), expected);
 
 }

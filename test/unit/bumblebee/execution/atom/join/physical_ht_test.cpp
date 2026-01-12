@@ -50,25 +50,25 @@ protected:
 
     // Left:  (INTEGER, UINTEGER, BIGINT)
     // Right: (UINTEGER, BIGINT,  INTEGER)
-    vector<ConstantType> typesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    vector<ConstantType> typesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<LogicalType> typesLeft{LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT};
+    vector<LogicalType> typesRight{LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT, LogicalTypeId::INTEGER};
 
     // Helper identical to the one in your NL tests (same data pattern)
-    DataChunk createChunkWithValue(vector<ConstantType> testTypes, idx_t count = 1, idx_t offset = 0) {
+    DataChunk createChunkWithValue(vector<LogicalType> testTypes, idx_t count = 1, idx_t offset = 0) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCardinality(count);
         for (idx_t i = 0; i < count; ++i) {
             for (idx_t j = 0; j < testTypes.size(); ++j) {
                 auto value = Value((int64_t)((i + offset) * 10 * j));
-                chunk.setValue(j, i, value.cast(testTypes[j]));
+                chunk.setValue(j, i, value.cast(testTypes[j].getPhysicalType()));
             }
         }
         chunk.setCardinality(count);
         return chunk;
     }
 
-    void populatePTable(std::shared_ptr<PredicateTables> ptable, vector<ConstantType> types,
+    void populatePTable(std::shared_ptr<PredicateTables> ptable, vector<LogicalType> types,
                         idx_t chunks = 10, idx_t elements = STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i * STANDARD_VECTOR_SIZE);
@@ -147,7 +147,7 @@ TEST_F(PhysicalHTJoinTest, EqualityJoin_EndToEnd) {
     // PROBE operator
     vector<idx_t> dccols = {3,4,5};     // where to place right-side projected cols (same pattern as NL tests)
     vector<idx_t> selcols = {0,1,2};    // select all right cols for output composition
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<idx_t> lkeys{1}; // left key is left col1
@@ -189,7 +189,7 @@ TEST_F(PhysicalHTJoinTest, EmptyRight_NoMatches) {
     // PROBE: l.col1 == r.col0
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<idx_t> lkeys{1};
@@ -227,7 +227,7 @@ TEST_F(PhysicalHTJoinTest, MultiChunkRight_BuildAndProbe) {
 
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<idx_t> lkeys{1};
@@ -264,7 +264,7 @@ TEST_F(PhysicalHTJoinTest, ProbeWithEmptyInput_ReturnsNeedMoreInput) {
     // PROBE setup
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<idx_t> lkeys{1};

@@ -30,14 +30,14 @@ idx_t GenIdData::getNextId(idx_t step) {
 
 static function_data_ptr_t genIdBind(ClientContext &context,
                                        vector<Value> &inputs,
-                                       vector<ConstantType> & inputTypes,
+                                       vector<LogicalType> & inputTypes,
                                        std::unordered_map<string, Value> &parameters,
-                                       vector<ConstantType> &returnTypes, vector<string> &names,
+                                       vector<LogicalType> &returnTypes, vector<string> &names,
                                        vector<Expression>& filters) {
 	auto result = std::make_unique<GenIdData>();
 
 	returnTypes.clear();
-	returnTypes.push_back(UBIGINT);
+	returnTypes.push_back(PhysicalType::UBIGINT);
 
 	return std::move(result);
 }
@@ -63,7 +63,7 @@ static void genIdFunction(ClientContext &context, const FunctionData *bind_data_
 	}
 	BB_ASSERT(output.getCapacity() >= size);
 	auto start = bind_data.getNextId(size);
-	Vector v(UBIGINT);
+	Vector v(PhysicalType::UBIGINT);
 	VectorOperations::generateSequence(v, size, start, 1);
 	output.data_[0].reference(v);
 	output.setCardinality(size);

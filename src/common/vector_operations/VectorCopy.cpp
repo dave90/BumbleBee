@@ -153,37 +153,37 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 
 	// now copy over the data
 	switch (source.getType()) {
-		case ConstantType::TINYINT:
+		case PhysicalType::TINYINT:
 			TemplatedCopyTargetSelSwitch<int8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			TemplatedCopyTargetSelSwitch<int16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			TemplatedCopyTargetSelSwitch<int32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			TemplatedCopyTargetSelSwitch<int64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			TemplatedCopyTargetSelSwitch<uint8_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			TemplatedCopyTargetSelSwitch<uint16_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			TemplatedCopyTargetSelSwitch<uint32_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			TemplatedCopyTargetSelSwitch<uint64_t>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			TemplatedCopyTargetSelSwitch<float>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			TemplatedCopyTargetSelSwitch<double>(source, sel, target, targetSel, sourceOffset, targetOffset, copyCount);
 			break;
-		case ConstantType::STRING:	{
+		case PhysicalType::STRING:	{
 			auto ldata = FlatVector::getData<string_t>(source);
 			auto tdata = FlatVector::getData<string_t>(target);
 			if (!targetSel)

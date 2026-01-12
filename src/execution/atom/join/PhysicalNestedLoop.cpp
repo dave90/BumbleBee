@@ -68,7 +68,7 @@ public:
 
 
 
-PhysicalNestedLoop::PhysicalNestedLoop(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalNestedLoop::PhysicalNestedLoop(const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredicateTables *pt,
     vector<Expression>& conditions): PhysicalAtom(types, dcCols, selectedCols), pt_(pt), conditions_(std::move(conditions)) {
 }
@@ -91,7 +91,7 @@ string PhysicalNestedLoop::toString() const {
     }
     result += "; ";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     result += "; ";
     for (auto& e : conditions_) {

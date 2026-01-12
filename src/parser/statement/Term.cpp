@@ -145,27 +145,27 @@ hash_t Term::hash() {
 
     // Constant or Variable
     switch (value_.ctype_) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return Hash<uint8_t>(value_.getValueUnsafe<uint8_t>());
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return Hash<uint16_t>(value_.getValueUnsafe<uint16_t>());
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return Hash<uint32_t>(value_.getValueUnsafe<uint32_t>());
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return Hash<uint64_t>(value_.getValueUnsafe<uint64_t>());
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return Hash<uint8_t>(value_.getValueUnsafe<uint8_t>());
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return Hash<uint16_t>(value_.getValueUnsafe<uint16_t>());
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return Hash<uint32_t>(value_.getValueUnsafe<uint32_t>());
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return Hash<uint64_t>(value_.getValueUnsafe<uint64_t>());
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return Hash<float>(value_.getValueUnsafe<float>());
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return Hash<double>(value_.getValueUnsafe<double>());
-        case ConstantType::STRING:
+        case PhysicalType::STRING:
             return Hash<string>(value_.getValueUnsafe<string>());
         default: return Hash(value_.getValueUnsafe<string>());
     }
@@ -176,9 +176,9 @@ TermType Term::getType() const{
     return type_;
 }
 
-ConstantType Term::getConstantType() {
+PhysicalType Term::getPhysicalType() {
     if ( type_ == RANGE)
-        return ConstantType::BIGINT;
+        return PhysicalType::BIGINT;
     BB_ASSERT(type_ == CONSTANT);
     return value_.ctype_;
 }
@@ -295,42 +295,42 @@ void Term::setConstantNumericTerm(Term &term, long long num) {
     // Check for signed types
     if (num >= CHAR_MIN && num <= CHAR_MAX) {
         term.value_.value_.tinyint = static_cast<int8_t>(num);
-        term.value_.ctype_ = ConstantType::TINYINT;
+        term.value_.ctype_ = PhysicalType::TINYINT;
         return;
     }
     if (num >= SHRT_MIN && num <= SHRT_MAX) {
         term.value_.value_.smallint = static_cast<int16_t>(num);
-        term.value_.ctype_ = ConstantType::SMALLINT;
+        term.value_.ctype_ = PhysicalType::SMALLINT;
         return ;
     }
     if (num >= INT_MIN && num <= INT_MAX) {
         term.value_.value_.integer = static_cast<int32_t>(num);
-        term.value_.ctype_ = ConstantType::INTEGER;
+        term.value_.ctype_ = PhysicalType::INTEGER;
         return ;
     }
     term.value_.value_.bigint = static_cast<int64_t>(num);
-    term.value_.ctype_ = ConstantType::BIGINT;
+    term.value_.ctype_ = PhysicalType::BIGINT;
 }
 
 void Term::setConstantNumericTerm(Term &term, unsigned long long value) {
     // Check for unsigned types and create the variable
     if (value <= UCHAR_MAX) {
         term.value_.value_.utinyint = static_cast<uint8_t>(value);
-        term.value_.ctype_ = ConstantType::UTINYINT;
+        term.value_.ctype_ = PhysicalType::UTINYINT;
         return ;
     }
     if (value <= USHRT_MAX) {
         term.value_.value_.usmallint = static_cast<uint16_t>(value);
-        term.value_.ctype_ = ConstantType::USMALLINT;
+        term.value_.ctype_ = PhysicalType::USMALLINT;
         return ;
     }
     if (value <= UINT_MAX) {
         term.value_.value_.uinteger = static_cast<uint32_t>(value);
-        term.value_.ctype_ = ConstantType::UINTEGER;
+        term.value_.ctype_ = PhysicalType::UINTEGER;
         return ;
     }
     term.value_.value_.ubigint = static_cast<uint64_t>(value);
-    term.value_.ctype_ = ConstantType::UBIGINT;
+    term.value_.ctype_ = PhysicalType::UBIGINT;
 }
 
 Term Term::createSmallestConstantNumericTerm(unsigned long long value) {

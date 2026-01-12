@@ -25,6 +25,7 @@
 #include <cmath>
 
 #include "bumblebee/common/NumericUtils.hpp"
+#include "bumblebee/common/types/Date.hpp"
 
 namespace bumblebee{
 
@@ -399,12 +400,22 @@ struct TryDoubleCast{
 // Cast Numeric -> String
 //===--------------------------------------------------------------------===//
 
+
 struct StringCast {
     template <class T>
     static inline string_t operation(T value, Vector& vector) {
         ErrorHandler::errorNotImplemented("Unimplemented type for string cast!");
     }
 };
+
+struct StringTryCast {
+	template <class T>
+	static inline string_t operation(T value, Vector& vector) {
+		if (NumericLimits<T>::maximum() == value) return string_t("");
+		return StringCast::operation(value, vector);
+	}
+};
+
 
 template<>
 string_t inline StringCast::operation(uint8_t value, Vector& vector) {
@@ -462,5 +473,101 @@ string_t inline StringCast::operation(double value, Vector& vector) {
     return StringVector::addString(vector, s);
 }
 
+
+struct StringCastFromDecimal {
+	template <class SRC>
+	static inline string_t operation(SRC input, uint8_t width, uint8_t scale, Vector &result) {
+        ErrorHandler::errorNotImplemented("Unimplemented type for StringCastFromDecimal cast!");
+		return {};
+	}
+};
+
+struct StringTryCastFromDecimal {
+	template <class SRC>
+	static inline string_t operation(SRC input, uint8_t width, uint8_t scale, Vector &result) {
+		if (NumericLimits<SRC>::maximum() == input) return string_t("");
+		return StringCastFromDecimal::operation(input, width, scale, result);
+	}
+};
+
+
+template <>
+inline string_t StringCastFromDecimal::operation(int16_t input, uint8_t width, uint8_t scale, Vector &result) {
+	return DecimalToString::format<int16_t, uint16_t>(input, scale, result);
+}
+template <>
+inline string_t StringCastFromDecimal::operation(int32_t input, uint8_t width, uint8_t scale, Vector &result) {
+	return DecimalToString::format<int32_t, uint32_t>(input, scale, result);
+}
+template <>
+inline string_t StringCastFromDecimal::operation(int64_t input, uint8_t width, uint8_t scale, Vector &result) {
+	return DecimalToString::format<int64_t, uint64_t>(input, scale, result);
+}
+
+struct StringCastFromDate {
+	template <class SRC>
+	static inline string_t operation(SRC input, Vector &result) {
+		ErrorHandler::errorNotImplemented("Unimplemented type for StringCastFromDate cast!");
+		return {};
+	}
+};
+
+template <>
+inline string_t StringCastFromDate::operation(date_t input, Vector &result) {
+	if (NumericLimits<date_t>::maximum() == input) return string_t("");
+
+	int32_t date[3];
+	Date::convert(input, date[0], date[1], date[2]);
+
+	idx_t year_length;
+	bool add_bc;
+	idx_t length = Date::length(date, year_length, add_bc);
+
+	string_t resultString = StringVector::emptyString(result, length);
+	auto data = resultString.getDataWriteable();
+
+	Date::format(data, date, year_length, add_bc);
+
+	return resultString;
+}
+
+
+struct StringCastFromTimestamp {
+template <class SRC>
+static inline string_t operation(SRC input, Vector &result) {
+	ErrorHandler::errorNotImplemented("Unimplemented type for StringCastFromDate cast!");
+	return {};
+}
+};
+
+template <>
+inline string_t StringCastFromTimestamp::operation(timestamp_t input, Vector &vector) {
+	if (NumericLimits<timestamp_t>::maximum() == input) return string_t("");
+
+	int32_t date_entry;
+	int64_t time_entry;
+	Timestamp::convert(input, date_entry, time_entry);
+
+	int32_t date[3], time[4];
+	Date::convert(date_entry, date[0], date[1], date[2]);
+	Timestamp::convert(time_entry, time[0], time[1], time[2], time[3]);
+
+	// format for timestamp is DATE TIME (separated by space)
+	idx_t year_length;
+	bool add_bc;
+	char micro_buffer[6];
+	idx_t date_length = Date::length(date, year_length, add_bc);
+	idx_t time_length = Timestamp::length(time, micro_buffer);
+	idx_t length = date_length + time_length + 1;
+
+	string_t result = StringVector::emptyString(vector, length);
+	auto data = result.getDataWriteable();
+
+	Date::format(data, date, year_length, add_bc);
+	data[date_length] = ' ';
+	Timestamp::format(data + date_length + 1, time_length, time, micro_buffer);
+
+	return result;
+}
 
 }

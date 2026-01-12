@@ -51,21 +51,21 @@ void fillChunk(DataChunk &chunk, unsigned cardinality, int base = 0) {
 
 TEST(DataChunkTests, InitializationInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     EXPECT_EQ(chunk.columnCount(), 2);
     EXPECT_EQ(chunk.getSize(), 0);
 }
 
 TEST(DataChunkTests, EmptyInitializationInt32) {
     DataChunk chunk;
-    chunk.initializeEmpty({ConstantType::INTEGER, ConstantType::BIGINT, ConstantType::STRING});
+    chunk.initializeEmpty((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::BIGINT, PhysicalType::STRING});
     EXPECT_EQ(chunk.columnCount(), 3);
     EXPECT_EQ(chunk.getSize(), 0);
 }
 
 TEST(DataChunkTests, SetAndGetValueInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::INTEGER, ConstantType::UTINYINT});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::UTINYINT});
     chunk.setCardinality(1);
     auto v = Value((int32_t)42);
     chunk.setValue(0, 0, v);
@@ -77,11 +77,11 @@ TEST(DataChunkTests, SetAndGetValueInt32) {
 
 TEST(DataChunkTests, ReferenceInt32) {
     DataChunk chunk1;
-    chunk1.initialize({ConstantType::INTEGER, ConstantType::UINTEGER});
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::UINTEGER});
     fillChunk(chunk1, 10);
 
     DataChunk chunk2;
-    chunk2.initialize({ConstantType::INTEGER, ConstantType::UINTEGER});
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::UINTEGER});
     chunk2.reference(chunk1);
 
     //update chunk1;  should be reflected also in chunk 2
@@ -96,11 +96,11 @@ TEST(DataChunkTests, ReferenceInt32) {
 TEST(DataChunkTests, AppendWithoutResizeInt32) {
     auto initCardinalityChunk1 = 10;
     DataChunk chunk1;
-    chunk1.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk1, initCardinalityChunk1);
 
     DataChunk chunk2;
-    chunk2.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk2, 10);
 
     // Append chunk2 in chunk1; then check that all the data in chunk1 is present in chunk2
@@ -116,11 +116,11 @@ TEST(DataChunkTests, AppendWithoutResizeInt32) {
 
 TEST(DataChunkTests, AppendWithSelectionVectorInt32) {
     DataChunk chunk1;
-    chunk1.initialize({ConstantType::INTEGER, ConstantType::UBIGINT});
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::UBIGINT});
     fillChunk(chunk1,10);
 
     DataChunk chunk2;
-    chunk2.initialize({ConstantType::INTEGER, ConstantType::UBIGINT});
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::UBIGINT});
     fillChunk(chunk2, 20);
 
     // selection vector of last 10 numbers in chunk2
@@ -142,11 +142,11 @@ TEST(DataChunkTests, AppendWithSelectionVectorInt32) {
 
 TEST(DataChunkTests, CopyDataChunkInt32) {
     DataChunk chunk1;
-    chunk1.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk1,100);
 
     DataChunk chunk2;
-    chunk2.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk2,100, 1000);
     // expected different value in chunk2 and hunk 1
     for (idx_t i = 0; i < chunk2.columnCount(); i++) {
@@ -168,7 +168,7 @@ TEST(DataChunkTests, CopyDataChunkInt32) {
 
 TEST(DataChunkTests, SliceAndNormalifyInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk, 20);
 
     // selection vector of last 10 numbers in chunk2
@@ -195,7 +195,7 @@ TEST(DataChunkTests, SliceAndNormalifyInt32) {
 
 TEST(DataChunkTests, ResetInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::BIGINT, ConstantType::BIGINT});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::BIGINT, PhysicalType::BIGINT});
     fillChunk(chunk, 1000);
     chunk.reset();
     EXPECT_EQ(chunk.getSize(), 0);
@@ -204,10 +204,10 @@ TEST(DataChunkTests, ResetInt32) {
 
 TEST(DataChunkTests, SplitInt32) {
     DataChunk chunk1;
-    chunk1.initialize({ConstantType::INTEGER, ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER, PhysicalType::INTEGER});
     // copy the chunk
     DataChunk originalChunk;
-    originalChunk.initialize({ConstantType::INTEGER, ConstantType::INTEGER, ConstantType::INTEGER});
+    originalChunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER, PhysicalType::INTEGER});
     originalChunk.setCardinality(100);
     fillChunk(originalChunk, 100);
     originalChunk.copy(chunk1);
@@ -231,18 +231,18 @@ TEST(DataChunkTests, SplitInt32) {
 
 TEST(DataChunkTests, HashInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::INTEGER, ConstantType::UINTEGER});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::UINTEGER});
     fillChunk(chunk,50);
 
-    Vector hash_vec1(ConstantType::UBIGINT);
+    Vector hash_vec1(LogicalTypeId::HASH);
     chunk.hash(hash_vec1);
-    EXPECT_EQ(hash_vec1.getType(), ConstantType::UBIGINT);
+    EXPECT_EQ(hash_vec1.getType(), PhysicalType::UBIGINT);
     EXPECT_EQ(hash_vec1.getVectorType(), VectorType::FLAT_VECTOR);
 
     // create a second vector hash it and compare wihth the first, result should be equal
-    Vector hash_vec2(ConstantType::UBIGINT);
+    Vector hash_vec2(LogicalTypeId::HASH);
     chunk.hash(hash_vec2);
-    EXPECT_EQ(hash_vec2.getType(), ConstantType::UBIGINT);
+    EXPECT_EQ(hash_vec2.getType(), PhysicalType::UBIGINT);
     EXPECT_EQ(hash_vec2.getVectorType(), VectorType::FLAT_VECTOR);
     for (idx_t i = 0; i < chunk.getSize(); i++) {
         EXPECT_EQ(hash_vec1.getValue(i), hash_vec2.getValue(i));
@@ -252,7 +252,7 @@ TEST(DataChunkTests, HashInt32) {
 
 TEST(DataChunkTests, OrrifyInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk,20);
 
     // selection vector of last 10 numbers in chunk2
@@ -277,7 +277,7 @@ TEST(DataChunkTests, OrrifyInt32) {
 
 TEST(DataChunkTests, OrrifyWithSelectionInt32) {
     DataChunk chunk;
-    chunk.initialize({ConstantType::INTEGER, ConstantType::INTEGER});
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
     fillChunk(chunk,10);
 
     auto data = chunk.orrify();

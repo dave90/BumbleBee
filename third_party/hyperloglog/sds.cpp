@@ -38,7 +38,7 @@
 #include <limits.h>
 #include "sds.h"
 
-namespace bumblebee_hll {
+namespace bumblebee {
 
 static inline int sdsHdrSize(char type) {
     switch(type&SDS_TYPE_MASK) {

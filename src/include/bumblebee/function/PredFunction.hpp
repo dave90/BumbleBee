@@ -31,9 +31,9 @@ using function_op_data_ptr_t =  std::unique_ptr<FunctionOperatorData> ;
 
 typedef function_data_ptr_t (*pred_function_bind_t)(ClientContext &context,
                                                           vector<Value> &inputs,
-                                                          vector<ConstantType> & inputTypes,
+                                                          vector<LogicalType> & inputTypes,
                                                           std::unordered_map<string, Value> &parameters,
-                                                          vector<ConstantType> &returnTypes, vector<string> &names,
+                                                          vector<LogicalType> &returnTypes, vector<string> &names,
                                                           vector<Expression>& filters);
 
 typedef function_op_data_ptr_t (*pred_function_init_t)(ClientContext &context, const FunctionData *bind_data);
@@ -50,7 +50,7 @@ typedef void (*pred_function_t)(ClientContext &context, const FunctionData *bind
 
 class PredFunction : public Function {
 public:
-    PredFunction(const string &name, const vector<ConstantType> &arguments,
+    PredFunction(const string &name, const vector<LogicalType> &arguments,
         pred_function_t function, pred_function_bind_t bind_function, pred_function_init_t init_function,
         pred_function_max_threads_t max_thread_function,pred_function_finalize_t finalize_function, pred_function_combine_t combine_function )
         : Function(name, arguments),
@@ -70,7 +70,7 @@ public:
     pred_function_combine_t combine_function_;
 
     // The named parameters of the function
-    std::unordered_map<string, ConstantType> namedParameters_;
+    std::unordered_map<string, PhysicalType> namedParameters_;
 };
 
 using pred_function_ptr_t = std::shared_ptr<PredFunction>;

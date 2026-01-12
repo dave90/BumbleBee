@@ -24,10 +24,10 @@ namespace bumblebee{
 
 class PhysicalExpression : public PhysicalAtom {
 public:
-    PhysicalExpression(Expression& expr, vector<ConstantType>& types);
-    PhysicalExpression(vector<Expression>& expr, vector<ConstantType>& types);
+    PhysicalExpression(Expression& expr, vector<LogicalType>& types);
+    PhysicalExpression(vector<Expression>& expr, vector<LogicalType>& types);
     // constant assignment of the expression (X = 100)
-    PhysicalExpression(idx_t col,Value& constantValue, vector<ConstantType>& types);
+    PhysicalExpression(idx_t col,Value& constantValue, vector<LogicalType>& types);
     ~PhysicalExpression() override;
 
     AtomResultType execute(ThreadContext& context, DataChunk &input, DataChunk &chunk, PhysicalAtomState &state) const override;
@@ -36,7 +36,7 @@ public:
 
 private:
     vector<Expression> expressions_;
-    bool constantAssignment_;
+    bool constantAssignment_{false};
     Value constantValue_;
 };
 

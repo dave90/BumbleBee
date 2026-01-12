@@ -73,16 +73,16 @@ public:
 	// Information of the columns used by this patom. Why it is not in struct? because
 	// not all the patoms needs all these information
 	// types of all the columns of the data chunks
-	vector<ConstantType> types_;
+	vector<LogicalType> types_;
 	// cols selected in the predicate tables
 	vector<idx_t> selectCols_;
 	// for each selected cols the cols index in the data chunk
 	vector<idx_t> dcCols_;
 	// because type_ contains the type of all the columns colsType_ contains the type of the interested columns
-	vector<ConstantType> dcColsType_;
+	vector<LogicalType> dcColsType_;
 
-	PhysicalAtom(const vector<ConstantType> &types,vector<idx_t>& dcCols,vector<idx_t>& selectedCols);
-	PhysicalAtom(const vector<ConstantType> &types);
+	PhysicalAtom(const vector<LogicalType> &types,vector<idx_t>& dcCols,vector<idx_t>& selectedCols);
+	PhysicalAtom(const vector<LogicalType> &types);
 	virtual ~PhysicalAtom() = default;
 
 	// Execute is called during the execution and accept input chunks and produce output chunks.
@@ -110,7 +110,7 @@ public:
 	virtual string getName() const;
 	virtual string toString() const;
 	// Return a vector of the types that will be returned by this patom
-	const vector<ConstantType> &getTypes()const;
+	const vector<LogicalType> &getTypes()const;
 	// Return the state of patom
 	virtual pstate_ptr_t getState() const;
 	virtual gpstate_ptr_t getGlobalState() const;

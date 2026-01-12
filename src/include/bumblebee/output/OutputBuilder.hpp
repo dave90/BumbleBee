@@ -31,14 +31,16 @@ enum OutputType:uint8_t {
 // Empty output builder
 struct NoneOutputBuilder {
     static inline void outputAtom(const Atom& atom) {}
-    static inline void outputAtoms(const DataChunk& chunk, Predicate * predicate) {}
+    static inline void outputAtoms(DataChunk& chunk, Predicate * predicate) {}
 };
 
 struct TextOutputBuilder {
     static inline void outputAtom(const Atom& atom) {
         std::cout << atom.toString() << "."<< std::endl;
     }
-    static void outputAtoms(const DataChunk& chunk, Predicate * predicate) ;
+    static void outputAtoms(DataChunk& chunk, Predicate * predicate) ;
+
+    DataChunk cached_;
 };
 
 // Class that handle the output
@@ -60,7 +62,7 @@ public:
         }
 
     }
-    void outputAtoms(const DataChunk& chunk, Predicate * predicate) {
+    void outputAtoms(DataChunk& chunk, Predicate * predicate) {
         switch(type_) {
             case TEXT: {
                 TextOutputBuilder::outputAtoms(chunk, predicate);

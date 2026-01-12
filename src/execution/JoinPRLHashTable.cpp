@@ -22,14 +22,14 @@
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
-JoinPRLHashTable::JoinPRLHashTable(BufferManager &manager, const vector<ConstantType> &types, const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns,idx_t capacity,
+JoinPRLHashTable::JoinPRLHashTable(BufferManager &manager, const vector<LogicalType> &types, const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns,idx_t capacity,
         bool resizable): PRLHashTable(manager),
     keyColumns_(key_columns),
     payloadColumns_(payload_columns) {
     // create the types where keys are in the beginning and after the payloads
     cols_ = keyColumns_;
     cols_.insert(cols_.end(), payloadColumns_.begin(), payloadColumns_.end());
-    vector<ConstantType> orderedTypes;
+    vector<LogicalType> orderedTypes;
     for (auto& idx: key_columns)
         orderedTypes.push_back(types[idx]);
     keyLayout_.initialize(orderedTypes); // init with keys cols
@@ -56,9 +56,9 @@ vector<idx_t> JoinPRLHashTable::getPayloads() {
 }
 
 void JoinPRLHashTable::addChunk(DataChunk &chunk) {
-    Vector hash(UBIGINT, chunk.getSize());
+    Vector hash(LogicalTypeId::HASH, chunk.getSize());
     chunk.hash(hash, keyColumns_);
-    Vector addresses(UBIGINT, chunk.getSize());
+    Vector addresses(LogicalTypeId::ADDRESS, chunk.getSize());
     DataChunk orderedChunk;
     orderedChunk.initializeEmpty(types_);
     // first the keys and after the payload cols
@@ -73,7 +73,7 @@ bool JoinPRLHashTable::checkKeysAndPayloads(const vector<idx_t>& keys, const vec
 void JoinPRLHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector &lhash,SelectionVector &lsel, SelectionVector &rsel, DataChunk &result) {
     BB_ASSERT(keyColumns_.size() == lchunk.columnCount());
     auto size = lchunk.getSize();
-    Vector addresses(UBIGINT, STANDARD_VECTOR_SIZE);
+    Vector addresses(LogicalTypeId::ADDRESS, STANDARD_VECTOR_SIZE);
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
 
     auto hashPtr = FlatVector::getData<uint64_t>(lhash);
@@ -121,13 +121,13 @@ void JoinPRLHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Ve
     idx_t noMatchCount;
     auto finalCount = RowOperations::equal(lchunk, vec_data.get(), keyLayout_, addresses, lsel,rsel,matchCount,nullptr, noMatchCount );
     // construct the result chunk
-    vector<ConstantType> payloadTypes;
+    vector<LogicalType> payloadTypes;
     for (idx_t i=0;i<payloadColumns_.size();++i)
         payloadTypes.push_back(types_[i]);
     result.initializeEmpty(payloadTypes);
     // fetch the payload columns
     for (idx_t idx=0; idx < payloadTypes.size(); ++idx) {
-        result.data_[idx].initialize(payloadTypes[idx], finalCount);
+        result.data_[idx].initialize(false, finalCount);
         idx_t offset = layout_.getOffsets()[keyColumns_.size() + idx];
         RowOperations::gather(addresses, rsel, result.data_[idx], FlatVector::INCREMENTAL_SELECTION_VECTOR,finalCount, offset);
     }
@@ -144,8 +144,8 @@ void JoinPRLHashTable::match(DataChunk &lchunk, Vector &lhash, SelectionVector &
     auto size = lchunk.getSize();
     auto vec_data = lchunk.orrify();
 
-    Vector addresses(UBIGINT, size);
-    Vector buckets(UBIGINT, size);
+    Vector addresses(LogicalTypeId::ADDRESS, size);
+    Vector buckets(PhysicalType::UBIGINT, size);
     Vector mask{Value(bitmask_)};
     VectorOperations::lAnd(lhash, mask, buckets, size);
     // row to compare
@@ -233,9 +233,9 @@ void JoinPRLHashTable::combine(PRLHashTable &other) {
     while (position < joinOth.entries_) {
         joinOth.scan(position, group);
 
-        Vector hash(UBIGINT, group.getSize());
+        Vector hash(LogicalTypeId::HASH, group.getSize());
         group.hash(hash, keys);
-        Vector addresses(UBIGINT, group.getSize());
+        Vector addresses(LogicalTypeId::ADDRESS, group.getSize());
         findOrCreateGroups(hash, group, addresses);
 
         position += minValue<idx_t>(STANDARD_VECTOR_SIZE, joinOth.entries_ - position);
@@ -275,7 +275,7 @@ void JoinPRLHashTable::castAndCombine(BufferManager &manager, std::unique_ptr<Jo
     auto t1 = h1->getTypes();
     auto t2 = h2.getTypes();
     BB_ASSERT(t1.size() == t2.size());
-    vector<ConstantType> commonTypes;
+    vector<LogicalType> commonTypes;
     for (idx_t i =0;i<t1.size();++i)
         commonTypes.push_back(getCommonType(t1[i], t2[i]));
 

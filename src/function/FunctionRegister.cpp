@@ -30,7 +30,7 @@ void FunctionRegister::registerFunction(function_ptr_t function) {
     funcmap_[function->name_][function->arguments_] = function;
 }
 
-function_ptr_t FunctionRegister::getFunction(const string& name, const vector<ConstantType>& arguments) {
+function_ptr_t FunctionRegister::getFunction(const string& name, const vector<LogicalType>& arguments) {
     if (!funcmap_.contains(name) )
         return nullptr;
     if (!funcmap_[name].contains(arguments))

@@ -54,15 +54,15 @@ struct Expression {
     // verify the expression
     bool verify() const;
     // Execute the right side of the expression (expected vector of all the columns of the data chunk)
-    inline Vector executeRight(vector_vector_t& allColumns, idx_t count, ConstantType resultType = UNKNOWN) const {
+    inline Vector executeRight(vector_vector_t& allColumns, idx_t count, LogicalType resultType = LogicalTypeId::UNKNOWN) const {
         return executeOperands(allColumns, right_, count, resultType);
     }
     // Execute the left side of the expression (expected vector of all the columns of the data chunk)
-    inline Vector executeLeft(vector_vector_t& allColumns, idx_t count, ConstantType resultType = UNKNOWN) const{
+    inline Vector executeLeft(vector_vector_t& allColumns, idx_t count, LogicalType resultType = LogicalTypeId::UNKNOWN) const{
         return executeOperands(allColumns, left_, count, resultType);
     }
     // Execute a operands and set the result in result vector
-    static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count, ConstantType resultType = UNKNOWN);
+    static Vector executeOperands(vector_vector_t& vectors, const Operands& op, idx_t count, LogicalType resultType = LogicalTypeId::UNKNOWN);
     // Generate a simplified expression with a binop and 2 cols (left and right)
     static Expression generateExpression(Binop op, idx_t leftCol, idx_t rightCol);
 

@@ -20,12 +20,13 @@
 
 namespace bumblebee{
 
-TopNHeap::TopNHeap(const vector<ConstantType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit): payloadTypes_(payloadTypes),
+TopNHeap::TopNHeap(const vector<LogicalType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit): payloadTypes_(payloadTypes),
     heapSize_(limit),
     dataToInsert_(STANDARD_VECTOR_SIZE){
     BB_ASSERT(limit <= STANDARD_VECTOR_SIZE);
-    heapData_.initialize({STRING});
-    keyStrings_.initialize({STRING});
+    vector<PhysicalType> types {PhysicalType::STRING};
+    heapData_.initialize(types);
+    keyStrings_.initialize(types);
     heapPayload_.initialize(payloadTypes);
 
     for (auto& colModifier: modifiers) {
@@ -37,7 +38,7 @@ TopNHeap::TopNHeap(const vector<ConstantType> &payloadTypes,const vector<ColModi
 }
 
 void TopNHeap::sink(DataChunk &input) {
-    BB_ASSERT(keyStrings_.columnCount() == 1 && keyStrings_.data_[0].getType() == STRING);
+    BB_ASSERT(keyStrings_.columnCount() == 1 && keyStrings_.data_[0].getType() == PhysicalType::STRING);
     BB_ASSERT(input.getSize() <= STANDARD_VECTOR_SIZE);
     // we need to normalify as we will copy only a subset of rows
     input.normalify();

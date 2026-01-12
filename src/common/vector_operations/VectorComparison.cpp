@@ -27,27 +27,27 @@ template <class OP>
 idx_t templatedSelectOperationSwitchEqualType(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
     BB_ASSERT(left.getType() == right.getType());
     switch (left.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return BinaryExecution::select<int8_t,int8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return BinaryExecution::select<int16_t,int16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return BinaryExecution::select<int32_t,int32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return BinaryExecution::select<int64_t,int64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return BinaryExecution::select<uint8_t,uint8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return BinaryExecution::select<uint16_t,uint16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return BinaryExecution::select<uint32_t,uint32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return BinaryExecution::select<uint64_t,uint64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return BinaryExecution::select<float,float,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return BinaryExecution::select<double,double,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return BinaryExecution::select<string_t,string_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
         }
         default:
@@ -70,18 +70,18 @@ idx_t templatedSelectOperationSwitchCommon(Vector &left, Vector &right, const Se
 
     // for int and uint collapse to int 64 bit
     // for decimal collapse to double
-    switch (commonType) {
-        case ConstantType::TINYINT:
-        case ConstantType::SMALLINT:
-        case ConstantType::INTEGER:
-        case ConstantType::UTINYINT:
-        case ConstantType::USMALLINT:
-        case ConstantType::UINTEGER:
-        case ConstantType::UBIGINT:
-        case ConstantType::BIGINT:
+    switch (commonType.getPhysicalType()) {
+        case PhysicalType::TINYINT:
+        case PhysicalType::SMALLINT:
+        case PhysicalType::INTEGER:
+        case PhysicalType::UTINYINT:
+        case PhysicalType::USMALLINT:
+        case PhysicalType::UINTEGER:
+        case PhysicalType::UBIGINT:
+        case PhysicalType::BIGINT:
             return BinaryExecution::select<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, int64_t, OP>>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::FLOAT:
-        case ConstantType::DOUBLE:
+        case PhysicalType::FLOAT:
+        case PhysicalType::DOUBLE:
             return BinaryExecution::select<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, double, OP>>(left, right, sel, count, trueSel, falseSel, falseCount);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -92,25 +92,25 @@ idx_t templatedSelectOperationSwitchCommon(Vector &left, Vector &right, const Se
 template <class LEFT_TYPE, class OP>
 idx_t templatedSelectOperationSwitchRight(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
     switch (right.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,float,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,double,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -120,28 +120,28 @@ idx_t templatedSelectOperationSwitchRight(Vector &left, Vector &right, const Sel
 template <class OP>
 idx_t templatedSelectOperationSwitchLeft(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
     // cannot compare string with different types
-    BB_ASSERT(left.getType() != ConstantType::STRING && right.getType() != ConstantType::STRING);
+    BB_ASSERT(left.getType() != PhysicalType::STRING && right.getType() != PhysicalType::STRING);
     // left type != right type
     switch (left.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return templatedSelectOperationSwitchRight<int8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return templatedSelectOperationSwitchRight<int16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return templatedSelectOperationSwitchRight<int32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return templatedSelectOperationSwitchRight<int64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return templatedSelectOperationSwitchRight<uint8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return templatedSelectOperationSwitchRight<uint16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return templatedSelectOperationSwitchRight<uint32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return templatedSelectOperationSwitchRight<uint64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return templatedSelectOperationSwitchRight<float,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return templatedSelectOperationSwitchRight<double,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");

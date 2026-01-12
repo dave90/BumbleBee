@@ -115,14 +115,14 @@ public:
 
     bool isConstantAssignment();
     bool isAggregateAssignment();
-    vector<ConstantType> getTermsCType();
+    vector<PhysicalType> getTermsPhysicalTypes();
     void replaceVariable(const string& var, const string& newVar);
     string getAggregateFunctionName();
 
     string getExternalFunctionName();
     std::unordered_map<string, Value>& getNamedParamters();
     vector<Value>& getInputValues();
-    vector<ConstantType> getInputValuesCType();
+    vector<LogicalType> getInputValuesType() const;
     void setPredicte(Predicate* predicate);
 
     inline const Value& getValue(idx_t idx) const {

@@ -72,27 +72,27 @@ void AggregateFunction::updateStates(Vector& input, data_ptr_t states, const Sel
     idx_t count) {
 
     switch (input.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return templatedUpdateState<int8_t>(input, states, sel, func, count);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return templatedUpdateState<int16_t>(input, states, sel, func, count);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return templatedUpdateState<int32_t>(input, states, sel, func, count);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return templatedUpdateState<int64_t>(input, states, sel, func, count);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return templatedUpdateState<uint8_t>(input, states, sel, func, count);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return templatedUpdateState<uint16_t>(input, states, sel, func, count);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return templatedUpdateState<uint32_t>(input, states, sel, func, count);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return templatedUpdateState<uint64_t>(input, states, sel, func, count);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return templatedUpdateState<float>(input, states, sel, func, count);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return templatedUpdateState<double>(input, states, sel, func, count);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return templatedUpdateState<string_t>(input, states, sel, func, count);
         }
         default:
@@ -121,27 +121,27 @@ void AggregateFunction::finalizeStates(Vector &result, data_ptr_t states, const 
     idx_t count) {
 
     switch (result.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return templatedFinalizeState<int8_t>(result, states, sel, func, count);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return templatedFinalizeState<int16_t>(result, states, sel, func, count);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return templatedFinalizeState<int32_t>(result, states, sel, func, count);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return templatedFinalizeState<int64_t>(result, states, sel, func, count);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return templatedFinalizeState<uint8_t>(result, states, sel, func, count);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return templatedFinalizeState<uint16_t>(result, states, sel, func, count);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return templatedFinalizeState<uint32_t>(result, states, sel, func, count);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return templatedFinalizeState<uint64_t>(result, states, sel, func, count);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return templatedFinalizeState<float>(result, states, sel, func, count);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return templatedFinalizeState<double>(result, states, sel, func, count);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return templatedFinalizeState<string_t>(result, states, sel, func, count);
         }
         default:
@@ -225,27 +225,27 @@ void AggregateFunction::updateStates(RowLayout &layout, Vector &addresses, Vecto
     BB_ASSERT(agg_idx < layout.getAggregates().size());
     auto aggr = *layout.getAggregates()[agg_idx];
     switch (input.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return templatedUpdateState<int8_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return templatedUpdateState<int16_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return templatedUpdateState<int32_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return templatedUpdateState<int64_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return templatedUpdateState<uint8_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return templatedUpdateState<uint16_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return templatedUpdateState<uint32_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return templatedUpdateState<uint64_t>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return templatedUpdateState<float>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return templatedUpdateState<double>(layout, aggr, addresses, input, count, agg_idx);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return templatedUpdateState<string_t>(layout, aggr, addresses, input, count, agg_idx);
         }
         default:
@@ -321,27 +321,27 @@ void templatedFinalizeState(AggregateFunction& aggr, Vector &addresses, Vector &
 
 void templatedFinalizeStateSwitch(AggregateFunction& aggr, Vector &addresses, Vector &result, idx_t count, idx_t aggr_offset ) {
     switch (result.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return templatedFinalizeState<int8_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return templatedFinalizeState<int16_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return templatedFinalizeState<int32_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return templatedFinalizeState<int64_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return templatedFinalizeState<uint8_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return templatedFinalizeState<uint16_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return templatedFinalizeState<uint32_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return templatedFinalizeState<uint64_t>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return templatedFinalizeState<float>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return templatedFinalizeState<double>( aggr, addresses, result, count, aggr_offset);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return templatedFinalizeState<string_t>( aggr, addresses, result, count, aggr_offset);
         }
         default:

@@ -21,7 +21,7 @@
 #include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee{
-AggregatePRLHashTable::AggregatePRLHashTable(BufferManager &manager, const vector<ConstantType> &types,
+AggregatePRLHashTable::AggregatePRLHashTable(BufferManager &manager, const vector<LogicalType> &types,
     idx_t capacity, bool resizable, const vector<AggregateFunction *> &functions): PRLHashTable(manager, types, capacity, resizable), functions_(functions) {
     layout_.initialize(types, functions);
     tupleSize_ = layout_.getRowWidth();
@@ -39,7 +39,7 @@ void AggregatePRLHashTable::addChunk(Vector &hash, DataChunk &groups, DataChunk 
 
     // now insert or find the groups
     // find the buckets for each row in the group
-    Vector addresses(UBIGINT, groups.getSize());
+    Vector addresses(LogicalTypeId::ADDRESS, groups.getSize());
     SelectionVector newGroupsSel(groups.getSize());
     idx_t newGroupCount = 0;
     findOrCreateGroups(hash, groups, addresses, newGroupCount, newGroupsSel);
@@ -59,7 +59,7 @@ void AggregatePRLHashTable::addChunk(Vector &hash, DataChunk &groups, DataChunk 
 void AggregatePRLHashTable::addChunk(DataChunk &payload) {
     if (payload.getSize()==0)return;
     // set the address of the first state
-    Vector addresses(UBIGINT, 1);
+    Vector addresses(PhysicalType::UBIGINT, 1);
     auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
 
     SelectionVector sel;
@@ -106,14 +106,14 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
 
     if (other.entries_ == 0)return;
 
-    Vector addresses(UBIGINT);
-    Vector hashes(UBIGINT);
+    Vector addresses(LogicalTypeId::ADDRESS);
+    Vector hashes(LogicalTypeId::HASH);
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
     auto hashesPtr = FlatVector::getData<uint64_t>(hashes);
     if (types_.size() == 0) {
         // no groups, so merge the first state
         BB_ASSERT(entries_ == 1);
-        Vector groupAddresses(UBIGINT, 1);
+        Vector groupAddresses(LogicalTypeId::ADDRESS, 1);
         auto groupAddressesPtr = FlatVector::getData<data_ptr_t>(groupAddresses);
         groupAddressesPtr[0] = payloadPtrs_.back();
         addressesPtr[0] = other.payloadPtrs_.back();
@@ -160,7 +160,7 @@ void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, Dat
         return;
     }
 
-    Vector addresses(UBIGINT, groups.getSize());
+    Vector addresses(LogicalTypeId::ADDRESS, groups.getSize());
     idx_t matchedGroups;
     findAddresses(hash, groups, sel, addresses, matchedGroups);
     result.setCardinality(matchedGroups);
@@ -181,7 +181,7 @@ void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, Vec
         return;
     }
 
-    Vector addresses(UBIGINT, groups.getSize());
+    Vector addresses(LogicalTypeId::ADDRESS, groups.getSize());
     idx_t matchedGroups;
     findAddresses(hash, groups, sel, addresses, matchedGroups);
     if (matchedGroups == 0) {
@@ -199,7 +199,7 @@ void AggregatePRLHashTable::fetchAggregates(DataChunk &result) {
         result.setCardinality(0);
         return;
     }
-    Vector addresses(UBIGINT, 1);
+    Vector addresses(LogicalTypeId::ADDRESS, 1);
     auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
     addrPtr[0] = payloadPtrs_.back();
 
@@ -217,7 +217,7 @@ void AggregatePRLHashTable::fetchAggregates(DataChunk &result) {
 }
 
 void AggregatePRLHashTable::fetchAggregates(Vector &result, idx_t aggIndex) {
-    Vector addresses(UBIGINT, 1);
+    Vector addresses(LogicalTypeId::ADDRESS, 1);
     auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
     addrPtr[0] = payloadPtrs_.back();
 

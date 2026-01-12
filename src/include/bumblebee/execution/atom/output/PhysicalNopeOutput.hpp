@@ -24,7 +24,7 @@ namespace bumblebee{
 // Physical output atom that do nothing
 class PhysicalNopeOutput : public  PhysicalAtom{
 public:
-    PhysicalNopeOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+    PhysicalNopeOutput(const vector<LogicalType> &types, vector<idx_t> &dcCols,
         vector<idx_t> &selectedCols)
         : PhysicalAtom(types, dcCols, selectedCols) {
     }

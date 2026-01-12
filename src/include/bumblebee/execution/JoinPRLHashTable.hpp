@@ -35,7 +35,7 @@ namespace bumblebee{
 class JoinPRLHashTable: public PRLHashTable {
 
 public:
-    JoinPRLHashTable(BufferManager &manager, const vector<ConstantType> &types,
+    JoinPRLHashTable(BufferManager &manager, const vector<LogicalType> &types,
         const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
 
 

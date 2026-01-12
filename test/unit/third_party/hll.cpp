@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 #include "hyperloglog/hyperloglog.h"
 
-using namespace bumblebee_hll;
+using namespace bumblebee;
 
 
 class HyperLogLogTest : public ::testing::Test {

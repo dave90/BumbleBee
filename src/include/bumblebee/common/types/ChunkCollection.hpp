@@ -29,7 +29,7 @@ public:
 	}
 
 	// Returns a list of types of the vectors of this data chunk
-	vector<ConstantType> getTypes() {
+	vector<LogicalType> getTypes() {
 	    return types_;
     }
 
@@ -123,7 +123,7 @@ public:
 	}
 
 	// cast data chunks
-	void cast(const vector<ConstantType> &newTypes) {
+	void cast(const vector<LogicalType> &newTypes) {
 		types_ = newTypes;
 		if (count_ == 0 )return;
 		for (auto& chunk : chunks_)
@@ -136,7 +136,7 @@ private:
 	// The set of data chunks in the collection
 	vector<data_chunk_ptr_t> chunks_;
 	// The types of the ChunkCollection
-	vector<ConstantType> types_;
+	vector<LogicalType> types_;
 };
 
 

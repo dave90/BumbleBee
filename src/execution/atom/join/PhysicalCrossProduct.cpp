@@ -63,7 +63,7 @@ public:
 };
 
 
-PhysicalCrossProduct::PhysicalCrossProduct(const vector<ConstantType> &types,
+PhysicalCrossProduct::PhysicalCrossProduct(const vector<LogicalType> &types,
     vector<idx_t>& dcCols,vector<idx_t>& selectedCols,
     PredicateTables *pt): PhysicalAtom(types, dcCols, selectedCols), pt_(pt) {
     BB_ASSERT(dcCols_.size() == selectCols_.size());
@@ -85,7 +85,7 @@ string PhysicalCrossProduct::toString() const {
     }
     result += "; ";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
 
     return result + ")";

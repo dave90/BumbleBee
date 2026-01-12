@@ -76,7 +76,7 @@ public:
         return keys;
     }
 
-    void setTypes(const vector<ConstantType>& types) {
+    void setTypes(const vector<LogicalType>& types) {
         types_ = types;
     }
 
@@ -87,7 +87,7 @@ public:
     // Get a value given a row and column index
     Value getValue(idx_t column, idx_t index);
     // Update the types of the pt and in case cast all the tables
-    bool updateTypes(const vector<ConstantType>& types);
+    bool updateTypes(const vector<LogicalType>& types);
 
     // Append a data chunk
     void append(DataChunk& chunk) {
@@ -98,7 +98,7 @@ public:
     }
 
     // Return the Constat types for each column
-    vector<ConstantType> getTypes();
+    vector<LogicalType> getTypes();
 
     // Return a join hash table with the same keys. If does not exist create it
     joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads);
@@ -106,12 +106,12 @@ public:
 
     // Return a join PRL hash table with the same keys and payloads.
     join_prl_ht_ptr_t& getJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
-    void createJoinPRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
+    void createJoinPRLHashTable(const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
     bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
 
     // Return a join Row Layout hash table with the same keys and payloads.
     rl_join_ht_ptr_t& getJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
-    void createJoinRLHashTable(const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
+    void createJoinRLHashTable(const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
     bool existJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
 
     bool existPartitionedPRLHashTable() const{
@@ -150,11 +150,11 @@ protected:
     void appendInChunkCollection(DataChunk& chunk);
     void appendInDistinctHT(DataChunk& chunk);
 
-    void castEntirePredicateTable(const vector<ConstantType> &newTypes);
+    void castEntirePredicateTable(const vector<LogicalType> &newTypes);
 
 
     // Types of the columns
-    vector<ConstantType> types_;
+    vector<LogicalType> types_;
 
     // Data Chunk collections of atoms (columnar version)
     ChunkCollection chunks_;

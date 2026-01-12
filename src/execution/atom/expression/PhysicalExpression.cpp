@@ -20,14 +20,14 @@
 
 namespace bumblebee{
 
-PhysicalExpression::PhysicalExpression(Expression& expr, vector<ConstantType>& types) : PhysicalAtom(types) {
+PhysicalExpression::PhysicalExpression(Expression& expr, vector<LogicalType>& types) : PhysicalAtom(types) {
     expressions_.push_back(std::move(expr));
 }
 
-PhysicalExpression::PhysicalExpression(vector<Expression> &expr, vector<ConstantType> &types):PhysicalAtom(types), expressions_(std::move(expr)) {
+PhysicalExpression::PhysicalExpression(vector<Expression> &expr, vector<LogicalType> &types):PhysicalAtom(types), expressions_(std::move(expr)) {
 }
 
-PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue, vector<ConstantType>& types) : PhysicalAtom(types), constantAssignment_(true), constantValue_(std::move(constantValue)) {
+PhysicalExpression::PhysicalExpression(idx_t col,Value &constantValue, vector<LogicalType>& types) : PhysicalAtom(types), constantAssignment_(true), constantValue_(std::move(constantValue)) {
     // put the col in the left side of the expression
     Expression expression;
     expression.left_.cols_.push_back(col);

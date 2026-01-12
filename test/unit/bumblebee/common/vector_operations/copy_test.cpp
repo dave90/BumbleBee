@@ -30,8 +30,8 @@ protected:
 
     void SetUp() override {
         // Initialize source and target vectors of INTEGER type
-        source = std::unique_ptr<Vector> (new Vector(ConstantType::INTEGER, TEST_COUNT));
-        target = std::unique_ptr<Vector> (new Vector(ConstantType::INTEGER, TEST_COUNT));
+        source = std::unique_ptr<Vector> (new Vector(PhysicalType::INTEGER, TEST_COUNT));
+        target = std::unique_ptr<Vector> (new Vector(PhysicalType::INTEGER, TEST_COUNT));
 
         auto data = FlatVector::getData<int32_t>(*source);
         for (idx_t i = 0; i < TEST_COUNT; ++i) {
@@ -100,7 +100,7 @@ TEST_F(VectorOperationsCopyTest, CopyFromConstantVector) {
 }
 
 TEST_F(VectorOperationsCopyTest, CopyFromSequenceVector) {
-    Vector sequence(ConstantType::INTEGER, TEST_COUNT);
+    Vector sequence(PhysicalType::INTEGER, TEST_COUNT);
     sequence.sequence(5, 3);  // values: 5, 8, 11, 14, 17
 
     VectorOperations::copy(sequence, *target, TEST_COUNT, 0, 0);
@@ -112,7 +112,7 @@ TEST_F(VectorOperationsCopyTest, CopyFromSequenceVector) {
 }
 
 TEST_F(VectorOperationsCopyTest, CopyFromDictionaryVector) {
-    Vector dict_vector(ConstantType::INTEGER, TEST_COUNT);
+    Vector dict_vector(PhysicalType::INTEGER, TEST_COUNT);
     auto data = FlatVector::getData<int32_t>(dict_vector);
     for (idx_t i = 0; i < TEST_COUNT; ++i) {
         data[i] = i + 100;

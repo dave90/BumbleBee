@@ -29,8 +29,8 @@ protected:
     static constexpr idx_t TEST_COUNT = 4;
 
     void SetUp() override {
-        input = std::make_unique<Vector>(ConstantType::INTEGER, TEST_COUNT);
-        hashes = std::make_unique<Vector>(ConstantType::UBIGINT, TEST_COUNT);
+        input = std::make_unique<Vector>(PhysicalType::INTEGER, TEST_COUNT);
+        hashes = std::make_unique<Vector>(PhysicalType::UBIGINT, TEST_COUNT);
 
         auto data = FlatVector::getData<int32_t>(*input);
         data[0] = 42;
@@ -72,7 +72,7 @@ TEST_F(VectorOperationsHashTest, HashWithSelectionVector) {
 }
 
 TEST_F(VectorOperationsHashTest, CombineHashWithFlatVectors) {
-    Vector extra(ConstantType::INTEGER, TEST_COUNT);
+    Vector extra(PhysicalType::INTEGER, TEST_COUNT);
     auto extra_data = FlatVector::getData<int32_t>(extra);
     for (idx_t i = 0; i < TEST_COUNT; ++i) {
         extra_data[i] = i + 100;
@@ -92,7 +92,7 @@ TEST_F(VectorOperationsHashTest, CombineHashWithFlatVectors) {
 
 TEST(VectorOperationsHashConstantTest, HashConstantVector) {
     Vector constantInput(Value(123));
-    Vector hashResult(ConstantType::UBIGINT);
+    Vector hashResult(LogicalTypeId::HASH);
 
     VectorOperations::hash(constantInput, hashResult, 1);
 
@@ -109,17 +109,18 @@ TEST(VectorOperationsHashConstantTest, HashNumericDifferentType) {
 
     Value val(123);
     Vector constantInput(val);
-    Vector expectedHashResult(ConstantType::UBIGINT);
+    Vector expectedHashResult(LogicalTypeId::HASH);
 
     VectorOperations::hash(constantInput, expectedHashResult, 1);
 
     auto expected_hash_val = *ConstantVector::getData<hash_t>(expectedHashResult);
 
-    vector<ConstantType> types = {SMALLINT, INTEGER, USMALLINT, UINTEGER, UBIGINT};
+    vector<PhysicalType> types = {PhysicalType::SMALLINT, PhysicalType::INTEGER, PhysicalType::USMALLINT,
+        PhysicalType::UINTEGER, PhysicalType::UBIGINT};
     for (auto type : types) {
         Vector vec(val.cast(type));
         EXPECT_EQ(vec.getType(), type);
-        Vector hashResult(ConstantType::UBIGINT);
+        Vector hashResult(LogicalTypeId::HASH);
         VectorOperations::hash(vec, hashResult, 1);
         auto hash_val = *ConstantVector::getData<hash_t>(hashResult);
         EXPECT_EQ(expected_hash_val, hash_val);

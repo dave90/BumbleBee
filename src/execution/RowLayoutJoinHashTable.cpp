@@ -22,21 +22,21 @@
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
-RowLayoutJoinHashTable::RowLayoutJoinHashTable(BufferManager &manager, const vector<ConstantType> &types, const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns,idx_t capacity,
+RowLayoutJoinHashTable::RowLayoutJoinHashTable(BufferManager &manager, const vector<LogicalType> &types, const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns,idx_t capacity,
         bool resizable): PRLHashTable(manager),
     keyColumns_(key_columns),
     payloadColumns_(payload_columns) {
     // create the types where keys are in the beginning and after the payloads
     cols_ = keyColumns_;
     cols_.insert(cols_.end(), payloadColumns_.begin(), payloadColumns_.end());
-    vector<ConstantType> orderedTypes;
+    vector<LogicalType> orderedTypes;
     for (auto& idx: key_columns)
         orderedTypes.push_back(types[idx]);
     keyLayout_.initialize(orderedTypes); // init with keys cols
     for (auto& idx: payload_columns)
         orderedTypes.push_back(types[idx]);
     // last column contains hash
-    orderedTypes.push_back(UBIGINT);
+    orderedTypes.push_back(LogicalTypeId::HASH);
 
     initialize(orderedTypes, capacity, resizable);
 }
@@ -98,7 +98,7 @@ void RowLayoutJoinHashTable::newBlocks(idx_t size, Vector& addresses) {
     BB_ASSERT(size == idx);
 }
 
-bool RowLayoutJoinHashTable::checksTypes(const vector<ConstantType>& predicateTypes) {
+bool RowLayoutJoinHashTable::checksTypes(const vector<LogicalType>& predicateTypes) {
     for (idx_t i = 0; i < cols_.size(); ++i) {
         if (types_[i] != predicateTypes[cols_[i]])
             return false;
@@ -113,9 +113,9 @@ void RowLayoutJoinHashTable::addChunk(DataChunk &chunk) {
     // only a chunk x block
     auto size = chunk.getSize();
     BB_ASSERT(size <= STANDARD_VECTOR_SIZE);
-    Vector hash(UBIGINT, size);
+    Vector hash(LogicalTypeId::HASH, size);
     chunk.hash(hash, keyColumns_);
-    Vector addresses(UBIGINT, size);
+    Vector addresses(LogicalTypeId::ADDRESS, size);
     DataChunk orderedChunk;
     orderedChunk.initializeEmpty(types_);
     // first the keys and after the payload cols
@@ -184,7 +184,7 @@ bool RowLayoutJoinHashTable::checkKeysAndPayloads(const vector<idx_t>& keys, con
 void RowLayoutJoinHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Vector &lhash,SelectionVector &lsel, SelectionVector &rsel, DataChunk &result) {
     BB_ASSERT(keyColumns_.size() == lchunk.columnCount());
     auto size = lchunk.getSize();
-    Vector addresses(UBIGINT, STANDARD_VECTOR_SIZE);
+    Vector addresses(LogicalTypeId::ADDRESS, STANDARD_VECTOR_SIZE);
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
 
     auto hashPtr = FlatVector::getData<uint64_t>(lhash);
@@ -232,13 +232,13 @@ void RowLayoutJoinHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchu
     idx_t noMatchCount;
     auto finalCount = RowOperations::equal(lchunk, vec_data.get(), keyLayout_, addresses, lsel,rsel,matchCount,nullptr, noMatchCount );
     // construct the result chunk
-    vector<ConstantType> payloadTypes;
+    vector<LogicalType> payloadTypes;
     for (idx_t i=0;i<payloadColumns_.size();++i)
         payloadTypes.push_back(types_[payloadColumns_[i]]);
     result.initializeEmpty(payloadTypes);
     // fetch the payload columns
     for (idx_t idx=0; idx < payloadTypes.size(); ++idx) {
-        result.data_[idx].initialize(payloadTypes[idx], finalCount);
+        result.data_[idx].initialize(false, finalCount);
         idx_t offset = layout_.getOffsets()[keyColumns_.size() + idx];
         RowOperations::gather(addresses, rsel, result.data_[idx], FlatVector::INCREMENTAL_SELECTION_VECTOR,finalCount, offset);
     }
@@ -303,8 +303,8 @@ void RowLayoutJoinHashTable::match(DataChunk &lchunk, Vector &lhash, SelectionVe
     auto size = lchunk.getSize();
     auto vec_data = lchunk.orrify();
 
-    Vector addresses(UBIGINT, size);
-    Vector buckets(UBIGINT, size);
+    Vector addresses(LogicalTypeId::ADDRESS, size);
+    Vector buckets(PhysicalType::UBIGINT, size);
     Vector mask{Value(bitmask_)};
     VectorOperations::lAnd(lhash, mask, buckets, size);
     // row to compare
@@ -353,13 +353,13 @@ void insert(RowLayoutJoinHashTable &h1, RowLayoutJoinHashTable &h2) {
     }
 }
 
-void RowLayoutJoinHashTable::cast(BufferManager &manager, std::unique_ptr<RowLayoutJoinHashTable> &h1, vector<ConstantType> predicateTypes) {
+void RowLayoutJoinHashTable::cast(BufferManager &manager, std::unique_ptr<RowLayoutJoinHashTable> &h1, vector<LogicalType> predicateTypes) {
     if (h1->checksTypes(predicateTypes)) return;
-    vector<ConstantType> newTypes;
+    vector<LogicalType> newTypes;
     for (idx_t i = 0; i < h1->cols_.size(); ++i) {
         newTypes.push_back(predicateTypes[h1->cols_[i]]);
     }
-    newTypes.push_back(UBIGINT); // last type is for the hash
+    newTypes.push_back(LogicalTypeId::HASH); // last type is for the hash
     auto newDht = rl_join_ht_ptr_t(new RowLayoutJoinHashTable(manager, newTypes, h1->keyColumns_, h1->payloadColumns_, h1->getCapacity(), h1->resizable_));
     insert( *h1, *newDht);
     h1 = std::move(newDht);
@@ -370,7 +370,7 @@ void RowLayoutJoinHashTable::castAndCombine(BufferManager &manager, std::unique_
     auto t1 = h1->getTypes();
     auto t2 = h2.getTypes();
     BB_ASSERT(t1.size() == t2.size());
-    vector<ConstantType> commonTypes;
+    vector<LogicalType> commonTypes;
     for (idx_t i =0;i<t1.size();++i)
         commonTypes.push_back(getCommonType(t1[i], t2[i]));
 

@@ -25,7 +25,7 @@ namespace bumblebee{
 RowLayout::RowLayout(): dataWidth_(0), aggrWidth_(0), rowWidth_(0){
 }
 
-void RowLayout::initialize(vector<ConstantType> types, Aggregates aggregates, bool align) {
+void RowLayout::initialize(vector<LogicalType> types, Aggregates aggregates, bool align) {
     offsets_.clear();
     types_ = std::move(types);
 
@@ -33,7 +33,7 @@ void RowLayout::initialize(vector<ConstantType> types, Aggregates aggregates, bo
     // Whether all columns are constant size.
     allConstant_ = true;
     for (const auto &type : types_) {
-        allConstant_ = allConstant_ && typeIsConstantSize(type);
+        allConstant_ = allConstant_ && typeIsConstantSize(type.getPhysicalType());
     }
 
     // This enables pointer swizzling for out-of-core computation.
@@ -48,7 +48,7 @@ void RowLayout::initialize(vector<ConstantType> types, Aggregates aggregates, bo
     // Data columns. No alignment required.
     for (const auto &type : types_) {
         offsets_.push_back(rowWidth_);
-        rowWidth_ += getCTypeSize(type);
+        rowWidth_ += getPhysicalTypeSize(type.getPhysicalType());
     }
 
     if (align) {
@@ -71,11 +71,11 @@ void RowLayout::initialize(vector<ConstantType> types, Aggregates aggregates, bo
     }
 }
 
-void RowLayout::initialize(vector<ConstantType> types, bool align) {
+void RowLayout::initialize(vector<LogicalType> types, bool align) {
     initialize(std::move(types),Aggregates(), align);
 }
 
 void RowLayout::initialize(Aggregates aggregates_p, bool align) {
-    initialize(vector<ConstantType>(),std::move(aggregates_p),align);
+    initialize(vector<LogicalType>(),std::move(aggregates_p),align);
 }
 }

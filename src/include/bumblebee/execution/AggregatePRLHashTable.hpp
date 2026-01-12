@@ -38,7 +38,7 @@ class AggregatePRLHashTable : public PRLHashTable{
 public:
     using agg_ht_ptr_t = std::unique_ptr<AggregatePRLHashTable>;
 
-    AggregatePRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity, bool resizable,
+    AggregatePRLHashTable(BufferManager &manager, const vector<LogicalType> &types, idx_t capacity, bool resizable,
         const vector<AggregateFunction *> &functions);
 
     ~AggregatePRLHashTable() override;

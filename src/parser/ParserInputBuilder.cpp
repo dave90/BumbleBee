@@ -336,9 +336,9 @@ void ParserInputBuilder::onTermDash() {
 
     Term& term = terms_parsered.back();
     term.setNegative(true);
-    if (term.getType() == CONSTANT && term.getConstantType() != ConstantType::STRING) {
+    if (term.getType() == CONSTANT && term.getPhysicalType() != PhysicalType::STRING) {
         // multiply the constant numeric value to -1
-        auto newValue = term.getValue().cast(BIGINT).getNumericValue<int64_t>() * -1;
+        auto newValue = term.getValue().cast(PhysicalType::BIGINT).getNumericValue<int64_t>() * -1;
         Term::setConstantNumericTerm(term, newValue);
         return;
     }
@@ -571,11 +571,11 @@ const std::string & ParserInputBuilder::getSafetyErrorMessage() {
 void ParserInputBuilder::onExtAtom(bool naf) {
     currentAtom = Atom::createExternalAtom(namedParameters_, inputValues_, externalFunctionName_, std::move(terms_parsered));
     // check if the external pred exist
-    if (!clientContext_.functionRegister_.getFunction(currentAtom.getExternalFunctionName(), currentAtom.getInputValuesCType())) {
+    if (!clientContext_.functionRegister_.getFunction(currentAtom.getExternalFunctionName(), currentAtom.getInputValuesType())) {
         foundASafetyError_ = true;
         safetyErrorMessage = "Error, external function "+currentAtom.getExternalFunctionName()+" with parameters [ ";
-        for (auto t: currentAtom.getInputValuesCType())
-            safetyErrorMessage += ctypeToString(t)+" ";
+        for (auto t: currentAtom.getInputValuesType())
+            safetyErrorMessage += t.toString()+" ";
         safetyErrorMessage += "] does not exist.";
         return;
     }
@@ -602,7 +602,7 @@ void ParserInputBuilder::onSemicolon() {
             for (idx_t i=0;i<terms_parsered.size();i=i+2) {
                 auto& key = terms_parsered[i].getValue();
                 auto& value = terms_parsered[i+1].getValue();
-                if (key.getConstantType() != STRING) {
+                if (key.getPhysicalType() != PhysicalType::STRING) {
                     safetyErrorMessage = "Error, key named parameter should be a string, received: "+key.toString();
                     foundASafetyError_ = true;
                     return;
@@ -807,7 +807,7 @@ void ParserInputBuilder::onSQLExtTableName(char* name) {
     for (idx_t i=0;i<terms_parsered.size();i=i+2) {
         auto& key = terms_parsered[i].getValue();
         auto& value = terms_parsered[i+1].getValue();
-        if (key.getConstantType() != STRING) {
+        if (key.getPhysicalType() != PhysicalType::STRING) {
             safetyErrorMessage = "Error, key named parameter should be a string, received: "+key.toString();
             foundASafetyError_ = true;
             return;
@@ -883,7 +883,7 @@ void ParserInputBuilder::onSQLCopy() {
     for (idx_t i=0;i<terms_parsered.size();i=i+2) {
         auto& key = terms_parsered[i].getValue();
         auto& value = terms_parsered[i+1].getValue();
-        if (key.getConstantType() != STRING) {
+        if (key.getPhysicalType() != PhysicalType::STRING) {
             safetyErrorMessage = "Error, key named parameter should be a string, received: "+key.toString();
             foundASafetyError_ = true;
             return;

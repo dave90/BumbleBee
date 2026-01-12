@@ -29,7 +29,7 @@ class GlobalChunkTopNHOutputState : public  GlobalPhysicalAtomState {
 public:
     TopNHeap globalHeap_;
 
-    GlobalChunkTopNHOutputState(PredicateTables* pt, const vector<ConstantType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit):
+    GlobalChunkTopNHOutputState(PredicateTables* pt, const vector<LogicalType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit):
         globalHeap_(payloadTypes, modifiers, limit), pt_(pt) {}
 
     void initPredicateTable() {
@@ -56,14 +56,14 @@ private:
 
 class ChunkTopNHOutputState : public  PhysicalAtomState {
 public:
-    ChunkTopNHOutputState( const vector<ConstantType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit):
+    ChunkTopNHOutputState( const vector<LogicalType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit):
         heap_(payloadTypes, modifiers, limit) {}
 
     TopNHeap heap_;
 };
 
 
-PhysicalTopNHOutput::PhysicalTopNHOutput(const vector<ConstantType> &types, vector<idx_t> &dcCols, PredicateTables *pt, const vector<ColModifier>& modifiers, idx_t limit)
+PhysicalTopNHOutput::PhysicalTopNHOutput(const vector<LogicalType> &types, vector<idx_t> &dcCols, PredicateTables *pt, const vector<ColModifier>& modifiers, idx_t limit)
     : PhysicalAtom(types), pt_(pt), modifiers_(modifiers), limit_(limit) {
     dcCols_ = std::move(dcCols);
     for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
@@ -88,7 +88,7 @@ string PhysicalTopNHOutput::toString() const {
     }
     result += ";";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     result += "; LIMIT: " + std::to_string(limit_) + "; ";
     for (auto c : modifiers_) {

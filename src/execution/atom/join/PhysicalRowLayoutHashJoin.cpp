@@ -56,13 +56,13 @@ public:
     GlobalRLJoinHTAtomState(): ht_(nullptr) {}
 };
 
-PhysicalRowLayoutHashJoin::PhysicalRowLayoutHashJoin(const ClientContext &context, const vector<ConstantType> &types,
+PhysicalRowLayoutHashJoin::PhysicalRowLayoutHashJoin(const ClientContext &context, const vector<LogicalType> &types,
     vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     vector<idx_t> lkeys, bool negative) : PhysicalAtom(types, dcCols,selectedCols),
     keys_(std::move(keys)), lkeys_(std::move(lkeys)),pt_(pt), context_(context), type_(PROBE), payloads_(std::move(payloads)), negative_(negative){
 }
 
-PhysicalRowLayoutHashJoin::PhysicalRowLayoutHashJoin(const ClientContext &context, const vector<ConstantType> &types,
+PhysicalRowLayoutHashJoin::PhysicalRowLayoutHashJoin(const ClientContext &context, const vector<LogicalType> &types,
     vector<idx_t> &dcCols, vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     PhysicalHashType type) : PhysicalAtom(types, dcCols,selectedCols),
     keys_(std::move(keys)),pt_(pt), context_(context), type_(type), payloads_(std::move(payloads)), negative_(false){
@@ -103,7 +103,7 @@ string PhysicalRowLayoutHashJoin::toString() const {
     }
     result += "; ";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     result += "; ";
 
@@ -129,7 +129,7 @@ void PhysicalRowLayoutHashJoin::executeProbe(PhysicalAtomState& state, DataChunk
 
     DataChunk lchunk;
     lchunk.initAndReference(input, lkeys_);
-    Vector hash(UBIGINT);
+    Vector hash(LogicalTypeId::HASH);
     lchunk.hash(hash);
     DataChunk result;
     SelectionVector lsel(STANDARD_VECTOR_SIZE),rsel(STANDARD_VECTOR_SIZE);
@@ -152,7 +152,7 @@ void PhysicalRowLayoutHashJoin::executeExist(PhysicalAtomState& state, DataChunk
 
     DataChunk lchunk;
     lchunk.initAndReference(input, lkeys_);
-    Vector hash(UBIGINT);
+    Vector hash(LogicalTypeId::HASH);
     lchunk.hash(hash);
     SelectionVector mSel(lchunk.getSize());
     SelectionVector nmSel(lchunk.getSize());

@@ -59,13 +59,13 @@ protected:
 TEST_F(ReadCSVSCanTest, SimpleCSVScanTest) {
     vector<Value> input;
     input.emplace_back(getCsvFilePath("username.csv"));
-    vector<ConstantType> inputTypes = {STRING};
+    vector<LogicalType> inputTypes = {LogicalTypeId::STRING};
     vector<Expression> filters;
     auto functionPtr = ReadCsvFunc::getFunction();
     PredFunction& predFunction = (PredFunction&) *functionPtr;
     std::unordered_map<string, Value> params;
     params.emplace("auto_detect", 1 );
-    vector<ConstantType> returnTypes;
+    vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
     auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
     EXPECT_EQ(predFunction.maxThreadFunction_(context, bind.get()), 1);
@@ -80,14 +80,14 @@ TEST_F(ReadCSVSCanTest, SimpleCSVScanTest) {
 TEST_F(ReadCSVSCanTest, MultiCSVScanTest) {
     vector<Value> input;
     input.emplace_back(getCsvFilePath("customers-10000.csv"));
-    vector<ConstantType> inputTypes = {STRING};
+    vector<LogicalType> inputTypes = {LogicalTypeId::STRING};
     vector<Expression> filters;
     auto functionPtr = ReadCsvFunc::getFunction();
     PredFunction& predFunction = (PredFunction&) *functionPtr;
     std::unordered_map<string, Value> params;
     params.emplace("auto_detect", 1 );
     params.emplace("header", 1 );
-    vector<ConstantType> returnTypes;
+    vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
     auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
@@ -111,14 +111,14 @@ TEST_F(ReadCSVSCanTest, MultiCSVScanTest) {
 TEST_F(ReadCSVSCanTest, MultiFilesCSVScanTest) {
     vector<Value> input;
     input.emplace_back(getCsvFilePath("customers/**/*.csv"));
-    vector<ConstantType> inputTypes = {STRING};
+    vector<LogicalType> inputTypes = {LogicalTypeId::STRING};
     vector<Expression> filters;
     auto functionPtr = ReadCsvFunc::getFunction();
     PredFunction& predFunction = (PredFunction&) *functionPtr;
     std::unordered_map<string, Value> params;
     params.emplace("auto_detect", 1 );
     params.emplace("header", 1 );
-    vector<ConstantType> returnTypes;
+    vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
     auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
@@ -143,14 +143,14 @@ TEST_F(ReadCSVSCanTest, MultiFilesCSVScanTest) {
 TEST_F(ReadCSVSCanTest, MultiFilesCSVDirScanTest) {
     vector<Value> input;
     input.emplace_back(getCsvFilePath("customers"));
-    vector<ConstantType> inputTypes = {STRING};
+    vector<LogicalType> inputTypes = {LogicalTypeId::STRING};
     vector<Expression> filters;
     auto functionPtr = ReadCsvFunc::getFunction();
     PredFunction& predFunction = (PredFunction&) *functionPtr;
     std::unordered_map<string, Value> params;
     params.emplace("auto_detect", 1 );
     params.emplace("header", 1 );
-    vector<ConstantType> returnTypes;
+    vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
     auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());

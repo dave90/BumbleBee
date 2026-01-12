@@ -22,7 +22,7 @@
 #include "bumblebee/common/Profiler.hpp"
 
 namespace bumblebee {
-PartitionedPRLHashTable::PartitionedPRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t partitions): bufferManager_(manager), partitionMutex_(partitions){
+PartitionedPRLHashTable::PartitionedPRLHashTable(BufferManager &manager, const vector<LogicalType> &types, idx_t partitions): bufferManager_(manager), partitionMutex_(partitions){
     auto t = types;
     initialize(t);
 }
@@ -30,7 +30,7 @@ PartitionedPRLHashTable::PartitionedPRLHashTable(BufferManager &manager, const v
 PartitionedPRLHashTable::PartitionedPRLHashTable(BufferManager &manager, idx_t partitions): bufferManager_(manager), partitionMutex_(partitions), shift_(0) {
 }
 
-void PartitionedPRLHashTable::initialize(const vector<ConstantType> &types) {
+void PartitionedPRLHashTable::initialize(const vector<LogicalType> &types) {
     types_ = types;
     entries_ = 0;
     shift_ = (sizeof(hash_t)*8) - std::bit_width(partitionMutex_.size()) + 1;
@@ -39,7 +39,7 @@ void PartitionedPRLHashTable::initialize(const vector<ConstantType> &types) {
     partitionHashIndex_.resize(partitionMutex_.size(), 0);
 }
 
-bool PartitionedPRLHashTable::equalTypes(const vector<ConstantType>& types) const {
+bool PartitionedPRLHashTable::equalTypes(const vector<LogicalType>& types) const {
     for (idx_t i =0;i<types.size();++i) {
         if (types[i] != types_[i])
             return false;
@@ -49,7 +49,7 @@ bool PartitionedPRLHashTable::equalTypes(const vector<ConstantType>& types) cons
 
 void PartitionedPRLHashTable::addChunk(DataChunk &chunk) {
     BB_ASSERT(chunk.getTypes() == getTypes());
-    Vector hash(UBIGINT, chunk.getSize());
+    Vector hash(LogicalTypeId::HASH, chunk.getSize());
     chunk.hash(hash);
     addChunk(hash, chunk);
 }
@@ -61,7 +61,7 @@ void PartitionedPRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
 }
 
 void PartitionedPRLHashTable::addChunk(DataChunk &chunk, idx_t& newCount, SelectionVector &newGroupSel) {
-    Vector hash(UBIGINT, chunk.getSize());
+    Vector hash(LogicalTypeId::HASH, chunk.getSize());
     chunk.hash(hash);
     addChunkInternal(hash, chunk, newCount, &newGroupSel );
 }
@@ -83,7 +83,7 @@ void PartitionedPRLHashTable::addChunkInternal(Vector &hash, DataChunk &chunk, i
     for (idx_t i=0;i<partitionMutex_.size();++i)
         partitionsInfo.emplace_back(size);
 
-    BB_ASSERT(hash.getType() == UBIGINT);
+    BB_ASSERT(hash.getType() == PhysicalType::UBIGINT);
     auto hashesPtr = FlatVector::getData<hash_t>(hash);
     for (idx_t i = 0; i < size; ++i) {
         auto h = hashesPtr[i];
@@ -95,7 +95,7 @@ void PartitionedPRLHashTable::addChunkInternal(Vector &hash, DataChunk &chunk, i
 
     // now let's add the partitions to the ht
     auto added = 0;
-    Vector pAddresses(UBIGINT, chunk.getSize());
+    Vector pAddresses(LogicalTypeId::ADDRESS, chunk.getSize());
     Vector pHash(hash);
     SelectionVector sel(chunk.getSize());
 
@@ -129,7 +129,7 @@ idx_t PartitionedPRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size)
     BB_ASSERT(result.getCapacity() >= size);
     BB_ASSERT(result.columnCount() <= types_.size());
     for (idx_t i = 0; i < result.columnCount(); ++i) {
-        BB_ASSERT(result.data_[i].getType() == types_[i]);
+        BB_ASSERT(result.data_[i].getLogicalType() == types_[i]);
         BB_ASSERT(result.data_[i].getVectorType() == VectorType::FLAT_VECTOR);
     }
 
@@ -229,11 +229,11 @@ string PartitionedPRLHashTable::toString(bool compact) {
     return result;
 }
 
-vector<ConstantType> PartitionedPRLHashTable::getTypes() const {
+vector<LogicalType> PartitionedPRLHashTable::getTypes() const {
     return types_;
 }
 
-void PartitionedPRLHashTable::setTypes(const std::vector<ConstantType> &types) {
+void PartitionedPRLHashTable::setTypes(const std::vector<LogicalType> &types) {
     types_ = types;
 }
 
@@ -262,7 +262,7 @@ void PartitionedPRLHashTable::castAndCombine(BufferManager &manager, std::unique
     auto t1 = h1->types_;
     auto t2 = h2.types_;
     BB_ASSERT(t1.size() == t2.size());
-    vector<ConstantType> commonTypes;
+    vector<LogicalType> commonTypes;
     for (idx_t i =0;i<t1.size();++i)
         commonTypes.push_back(getCommonType(t1[i], t2[i]));
 
@@ -299,12 +299,12 @@ void PartitionedPRLHashTable::castAndCombine(BufferManager &manager, std::unique
 }
 
 void PartitionedPRLHashTable::cast(BufferManager &manager, std::unique_ptr<PartitionedPRLHashTable> &h1,
-    const vector<ConstantType> &types) {
+    const vector<LogicalType> &types) {
     auto t2 = types;
 
     auto t1 = h1->types_;
     BB_ASSERT(t1.size() == t2.size());
-    vector<ConstantType> commonTypes;
+    vector<LogicalType> commonTypes;
     for (idx_t i =0;i<t1.size();++i)
         commonTypes.push_back(getCommonType(t1[i], t2[i]));
 

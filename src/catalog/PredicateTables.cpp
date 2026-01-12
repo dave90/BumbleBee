@@ -26,7 +26,7 @@
 #include "bumblebee/execution/RowLayoutJoinHashTable.hpp"
 
 namespace bumblebee{
-PredicateTables::PredicateTables(ClientContext* context_, const char* name, unsigned arity): context_(context_), predicate_(new Predicate(name, arity)), types_(arity, UNKNOWN) {
+PredicateTables::PredicateTables(ClientContext* context_, const char* name, unsigned arity): context_(context_), predicate_(new Predicate(name, arity)), types_(arity, PhysicalType::UNKNOWN) {
 }
 
 bool operator==(const PredicateTables &lhs, const PredicateTables &rhs) {
@@ -41,10 +41,10 @@ bool operator!=(const PredicateTables &lhs, const PredicateTables &rhs) {
 void PredicateTables::addFact(Atom &atom) {
     if (atom.containsArith())
         ErrorHandler::errorNotImplemented("Arith term in fact not implemented!");
-    auto types = atom.getTermsCType();
+    auto types = atom.getTermsPhysicalTypes();
     for (idx_t i = 0; i < types.size(); i++) {
-        if (types[i] == types_[i]) continue;
-        types_[i] = getCommonType(types_[i], types[i]);
+        if (types[i] == types_[i].getPhysicalType()) continue;
+        types_[i] = {getCommonType(types_[i], types[i])};
     }
 
     // track the types for each column
@@ -55,7 +55,7 @@ void PredicateTables::addFact(Atom &atom) {
     }
 }
 
-vector<ConstantType> PredicateTables::getTypes() {
+vector<LogicalType> PredicateTables::getTypes() {
     return types_;
 }
 
@@ -85,7 +85,7 @@ join_prl_ht_ptr_t & PredicateTables::getJoinPRLHashTable( const vector<idx_t> &k
     return prlHTables_.back();
 }
 
-void PredicateTables::createJoinPRLHashTable( const vector<ConstantType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload ) {
+void PredicateTables::createJoinPRLHashTable( const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload ) {
     if (existJoinPRLHashTable(keys, payload)) return;
     auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, keys, payload));
     prlHTables_.push_back(std::move(ht));
@@ -110,7 +110,7 @@ rl_join_ht_ptr_t & PredicateTables::getJoinRLHashTable(const vector<idx_t> &keys
     return rlHTables_.back();
 }
 
-void PredicateTables::createJoinRLHashTable(const vector<ConstantType> &types, const vector<idx_t> &keys,
+void PredicateTables::createJoinRLHashTable(const vector<LogicalType> &types, const vector<idx_t> &keys,
     const vector<idx_t> &payload) {
     if (existJoinRLHashTable(keys, payload)) return;
     auto ht = rl_join_ht_ptr_t(new RowLayoutJoinHashTable(*context_->bufferManager_, types, keys, payload));
@@ -209,12 +209,12 @@ void PredicateTables::loadFacts() {
     idx_t idx = 0;
     auto chunkCapacity = chunk->getCapacity();
     for (auto& fact : facts_) {
-        auto factTypes = fact.getTermsCType();
+        auto factTypes = fact.getTermsPhysicalTypes();
         // set all the columns
         for (auto col = 0;col < types.size();++col) {
-            if (types[col] != factTypes[col])
+            if (types[col].getPhysicalType() != factTypes[col])
                 // different column type cast it
-                chunk->setValue(col, idx, fact.getValue(col).cast(types[col]) );
+                chunk->setValue(col, idx, fact.getValue(col).cast(types[col].getPhysicalType()) );
             else
                 chunk->setValue(col, idx, fact.getValue(col) );
         }
@@ -238,7 +238,7 @@ void PredicateTables::loadFacts() {
 }
 
 
-vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const vector<ConstantType> &types) {
+vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const vector<LogicalType> &types) {
     vector<data_chunk_ptr_t>  chunks;
     data_chunk_ptr_t chunk = data_chunk_ptr_t(new DataChunk());
     // we will set by us the vector data ;)
@@ -253,7 +253,7 @@ vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const vector<ConstantTyp
         auto &term = terms[i];
         if (term.getType() != RANGE) {
             // constant column
-            Vector v(term.getValue().cast(types[i]));
+            Vector v(term.getValue().cast(types[i].getPhysicalType()));
             chunk->data_.push_back(std::move(v));
             continue;
         }
@@ -261,7 +261,7 @@ vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const vector<ConstantTyp
         auto& interval = term.getInterval();
         BB_ASSERT(interval.to > interval.from);
         // Set sequence type as BIGINT (64 bit) for handle big sequence
-        Vector v(ConstantType::BIGINT, nullptr);
+        Vector v(PhysicalType::BIGINT, nullptr);
         v.sequence(interval.from, 0,  (int64_t) cardinality , interval.to);
         cardinality = cardinality * (interval.to - interval.from + 1);
         chunk->data_.push_back(std::move(v));
@@ -297,7 +297,7 @@ vector<data_chunk_ptr_t> getChunksFromRange(Atom &atom, const vector<ConstantTyp
             CircularSequenceVector::getSequence(vectors[col], start,offset, stride, end);
             BB_ASSERT(offset == 0);
             offset = (int64_t)idx;
-            Vector newVec(ConstantType::BIGINT, nullptr);
+            Vector newVec(PhysicalType::BIGINT, nullptr);
             newVec.sequence(start, offset,  stride , end);
             schunk->data_.push_back(std::move(newVec));
         }
@@ -335,11 +335,11 @@ Value PredicateTables::getValue(idx_t column, idx_t index) {
     return chunks_.getValue(column, index);
 }
 
-bool PredicateTables::updateTypes(const vector<ConstantType> &types) {
+bool PredicateTables::updateTypes(const vector<LogicalType> &types) {
     BB_ASSERT(types.size() == getTypes().size());
     if (types == getTypes()) return false;
     // missmatch of types
-    vector<ConstantType> commonTypes;
+    vector<LogicalType> commonTypes;
     bool castPredicateTable = false;
     for (idx_t i =0;i<types.size();++i) {
         commonTypes.push_back(getCommonType(types[i], types_[i]));
@@ -351,7 +351,7 @@ bool PredicateTables::updateTypes(const vector<ConstantType> &types) {
     return castPredicateTable;
 }
 
-void PredicateTables::castEntirePredicateTable(const vector<ConstantType> &newTypes) {
+void PredicateTables::castEntirePredicateTable(const vector<LogicalType> &newTypes) {
     LOG_WARNING("Casting predicate tables of type %s. For better optimization, set the table types explicitly using directives.", predicate_->getName());
     BB_ASSERT(newTypes.size() == types_.size());
     chunks_.cast(newTypes);
@@ -371,7 +371,7 @@ void PredicateTables::appendInChunkCollection(DataChunk& chunk) {
     BB_ASSERT(!isDistinct());
     lock_guard guard(mutex_);
     BB_ASSERT(chunk.columnCount() == types_.size());
-    if (!types_.empty() && types_[0] == UNKNOWN) {
+    if (!types_.empty() && types_[0] == PhysicalType::UNKNOWN) {
         // set the types as the chunk types
         types_ = chunk.getTypes();
     }

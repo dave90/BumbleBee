@@ -197,9 +197,9 @@ void WriteCSVData::writeDataToFile(const string &file, const_data_ptr_t data, id
 
 static function_data_ptr_t writeCSVBind(ClientContext &context,
                                         vector<Value> &inputs,
-                                        vector<ConstantType> & inputTypes,
+                                        vector<LogicalType> & inputTypes,
                                         std::unordered_map<string, Value> &parameters,
-                                        vector<ConstantType> &returnTypes,vector<string> &names,
+                                        vector<LogicalType> &returnTypes,vector<string> &names,
                                         vector<Expression>& filters) {
 
 	auto result = std::make_unique<WriteCSVData>(*context.fileSystem_);
@@ -296,7 +296,7 @@ static function_op_data_ptr_t writeCSVInit(ClientContext &context, const Functio
 	result->file_ = bind_data.getFileToWrite();
 
 	// set all the cols as string
-	vector<ConstantType> types (bind_data.colNames_.size(), ConstantType::STRING);
+	vector<PhysicalType> types (bind_data.colNames_.size(), PhysicalType::STRING);
 	result->chunk_.initialize(types);
 
 	return std::move(result);
@@ -367,7 +367,7 @@ static void writeCSVFunction(ClientContext &context, const FunctionData *bind_da
 
 	data.chunk_.setCardinality(output.getSize());
 	for (idx_t col_idx = 0; col_idx < output.columnCount(); col_idx++) {
-		if (output.data_[col_idx].getType() == STRING) {
+		if (output.data_[col_idx].getType() == PhysicalType::STRING) {
 			// STRING, just create a reference
 			data.chunk_.data_[col_idx].reference(output.data_[col_idx]);
 		} else {
@@ -468,20 +468,20 @@ void writeCSVFinalize(ClientContext &context, const FunctionData *bind_data_p) {
 
 
 static void writeCSVAddNamedParameters(PredFunction &table_function) {
-	table_function.namedParameters_["sep"] = ConstantType::STRING;
-	table_function.namedParameters_["delim"] = ConstantType::STRING;
-	table_function.namedParameters_["quote"] = ConstantType::STRING;
-	table_function.namedParameters_["escape"] = ConstantType::STRING;
-	table_function.namedParameters_["columns"] = ConstantType::STRING;
-	table_function.namedParameters_["header"] = ConstantType::UTINYINT;
-	table_function.namedParameters_["partitions"] = ConstantType::STRING;
-	table_function.namedParameters_["single_file"] = ConstantType::UTINYINT;
+	table_function.namedParameters_["sep"] = PhysicalType::STRING;
+	table_function.namedParameters_["delim"] = PhysicalType::STRING;
+	table_function.namedParameters_["quote"] = PhysicalType::STRING;
+	table_function.namedParameters_["escape"] = PhysicalType::STRING;
+	table_function.namedParameters_["columns"] = PhysicalType::STRING;
+	table_function.namedParameters_["header"] = PhysicalType::UTINYINT;
+	table_function.namedParameters_["partitions"] = PhysicalType::STRING;
+	table_function.namedParameters_["single_file"] = PhysicalType::UTINYINT;
 }
 
 
 function_ptr_t WriteCsvFunc::getFunction() {
 	string name = "&write_csv";
-	function_ptr_t fun = function_ptr_t(new PredFunction( name, {STRING}, writeCSVFunction, writeCSVBind, writeCSVInit, nullptr, writeCSVFinalize, writeCSVCombine));
+	function_ptr_t fun = function_ptr_t(new PredFunction( name, {PhysicalType::STRING}, writeCSVFunction, writeCSVBind, writeCSVInit, nullptr, writeCSVFinalize, writeCSVCombine));
 	writeCSVAddNamedParameters((PredFunction&)*fun);
 	return fun;
 }

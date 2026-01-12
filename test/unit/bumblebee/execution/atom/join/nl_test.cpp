@@ -49,24 +49,24 @@ protected:
         ptableRight = std::make_shared<PredicateTables>(&client_context, "b",3);
     }
 
-    vector<ConstantType> typesLeft{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
-    vector<ConstantType> typesRight{ConstantType::UINTEGER, ConstantType::BIGINT, ConstantType::INTEGER};
+    vector<LogicalType> typesLeft{LogicalTypeId::INTEGER, LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT};
+    vector<LogicalType> typesRight{LogicalTypeId::UINTEGER, LogicalTypeId::BIGINT, LogicalTypeId::INTEGER};
 
-    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<LogicalType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCardinality(count);
         for (idx_t i = 0; i < count; ++i) {
             for (idx_t j = 0; j < testTypes.size(); ++j) {
                 auto value = Value((int64_t) ((i+offset)*10*j));
-                chunk.setValue(j, i, value.cast(testTypes[j]));
+                chunk.setValue(j, i, value.cast(testTypes[j].getPhysicalType()));
             }
         }
         chunk.setCardinality(count);
         return chunk;
     }
 
-    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<ConstantType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
+    void populatePTable(std::shared_ptr<PredicateTables> ptable ,vector<LogicalType> types, idx_t chunks = 10, idx_t elements=STANDARD_VECTOR_SIZE) {
         for (unsigned int i = 0; i < chunks; ++i) {
             DataChunk chunk = createChunkWithValue(types, elements, i*STANDARD_VECTOR_SIZE);
             ptable->append(chunk);
@@ -81,7 +81,7 @@ TEST_F(PhysicalNLTest, PhysicalNLSimpleTest) {
     populatePTable(ptableRight, typesRight, 1, 20);
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft; // Start with vec1
+    vector<LogicalType> resultType = typesLeft; // Start with vec1
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions;
@@ -120,7 +120,7 @@ TEST_F(PhysicalNLTest, EmptyLeftTableTest) {
 
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions;
@@ -147,7 +147,7 @@ TEST_F(PhysicalNLTest, NoMatchingRowsTest) {
 
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions;
@@ -176,7 +176,7 @@ TEST_F(PhysicalNLTest, MultiChunkJoinTest) {
 
     vector<idx_t> dccols = {3,4,5};
     vector<idx_t> selcols = {0,1,2};
-    vector<ConstantType> resultType = typesLeft;
+    vector<LogicalType> resultType = typesLeft;
     resultType.insert(resultType.end(), typesRight.begin(), typesRight.end());
 
     vector<Expression> conditions; // No predicate: Full cross product

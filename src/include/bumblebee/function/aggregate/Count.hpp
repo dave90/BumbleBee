@@ -61,51 +61,52 @@ struct CountOperation {
 class CountFunc {
 public:
     // get the function from the type
-    static function_ptr_t getFunction(ConstantType type) {
+    static function_ptr_t getFunction(LogicalType type) {
         string name = "#count";
-        switch (type) {
-            case ConstantType::TINYINT: {
-                auto func = AggregateFunction::unaryAggregate<CountState,int8_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+        switch (type.type()) {
+            case LogicalTypeId::TINYINT: {
+                auto func = AggregateFunction::unaryAggregate<CountState,int8_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::SMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<CountState,int16_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::SMALLINT:{
+                auto func = AggregateFunction::unaryAggregate<CountState,int16_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::INTEGER:{
-                auto func = AggregateFunction::unaryAggregate<CountState,int32_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::INTEGER:{
+                auto func = AggregateFunction::unaryAggregate<CountState,int32_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::BIGINT:{
-                auto func = AggregateFunction::unaryAggregate<CountState,int64_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::BIGINT:{
+                auto func = AggregateFunction::unaryAggregate<CountState,int64_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::UTINYINT:{
-                auto func = AggregateFunction::unaryAggregate<CountState,uint8_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::UTINYINT:{
+                auto func = AggregateFunction::unaryAggregate<CountState,uint8_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::USMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<CountState,uint16_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::USMALLINT:{
+                auto func = AggregateFunction::unaryAggregate<CountState,uint16_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::UINTEGER:{
-                auto func = AggregateFunction::unaryAggregate<CountState,uint32_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::UINTEGER:{
+                auto func = AggregateFunction::unaryAggregate<CountState,uint32_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::UBIGINT:{
-                auto func = AggregateFunction::unaryAggregate<CountState,uint64_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::HASH:
+            case LogicalTypeId::UBIGINT:{
+                auto func = AggregateFunction::unaryAggregate<CountState,uint64_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::FLOAT:{
-                auto func = AggregateFunction::unaryAggregate<CountState,float,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::FLOAT:{
+                auto func = AggregateFunction::unaryAggregate<CountState,float,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::DOUBLE:{
-                auto func = AggregateFunction::unaryAggregate<CountState,double,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::DOUBLE:{
+                auto func = AggregateFunction::unaryAggregate<CountState,double,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
-            case ConstantType::STRING:	{
-                auto func = AggregateFunction::unaryAggregate<CountState,string_t,uint64_t,CountOperation>(name, {type}, UBIGINT);
+            case LogicalTypeId::STRING:	{
+                auto func = AggregateFunction::unaryAggregate<CountState,string_t,uint64_t,CountOperation>(name, {type}, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
 
@@ -117,7 +118,9 @@ public:
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {
-        vector<ConstantType> supportedTypes = {TINYINT, SMALLINT, INTEGER, BIGINT, UTINYINT, USMALLINT, UINTEGER, UBIGINT, DOUBLE, FLOAT, STRING};
+        vector<LogicalType> supportedTypes = {LogicalTypeId::TINYINT, LogicalTypeId::SMALLINT,
+            LogicalTypeId::INTEGER, LogicalTypeId::BIGINT, LogicalTypeId::UTINYINT, LogicalTypeId::USMALLINT, LogicalTypeId::UINTEGER,
+            LogicalTypeId::UBIGINT, LogicalTypeId::HASH, LogicalTypeId::DOUBLE, LogicalTypeId::FLOAT, LogicalTypeId::STRING};
         for (auto& c: supportedTypes) {
             funcRegister.registerFunction(getFunction(c));
         }

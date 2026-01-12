@@ -95,13 +95,13 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 		idx_t entry_sizes[locations_size];
 		std::fill_n(entry_sizes, count, sizeof(uint32_t)); // all entry size start with 4 byte size (heap  size)
 		for (idx_t col_no = 0; col_no < types.size(); col_no++) {
-			if (typeIsConstantSize(types[col_no])) {
+			if (typeIsConstantSize(types[col_no].getPhysicalType())) {
 				continue;
 			}
 
 			auto &col = col_data[col_no];
-			switch (types[col_no]) {
-			case STRING:
+			switch (types[col_no].getPhysicalType()) {
+			case PhysicalType::STRING:
 				computeStringEntrySizes(col, entry_sizes, sel, count);
 				break;
 			default:
@@ -129,38 +129,38 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 		auto &col = col_data[col_no];
 		auto col_offset = offsets[col_no];
 
-		switch (types[col_no]) {
-			case ConstantType::TINYINT:
+		switch (types[col_no].getPhysicalType()) {
+			case PhysicalType::TINYINT:
 				templatedScatter<int8_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::SMALLINT:
+			case PhysicalType::SMALLINT:
 				templatedScatter<int16_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::INTEGER:
+			case PhysicalType::INTEGER:
 				templatedScatter<int32_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::BIGINT:
+			case PhysicalType::BIGINT:
 				templatedScatter<int64_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::UTINYINT:
+			case PhysicalType::UTINYINT:
 				templatedScatter<uint8_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::USMALLINT:
+			case PhysicalType::USMALLINT:
 				templatedScatter<uint16_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::UINTEGER:
+			case PhysicalType::UINTEGER:
 				templatedScatter<uint32_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::UBIGINT:
+			case PhysicalType::UBIGINT:
 				templatedScatter<uint64_t>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::FLOAT:
+			case PhysicalType::FLOAT:
 				templatedScatter<float>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::DOUBLE:
+			case PhysicalType::DOUBLE:
 				templatedScatter<double>(col, rows, sel, count, col_offset, col_no);
 				break;
-			case ConstantType::STRING:	{
+			case PhysicalType::STRING:	{
 				scatterStringVector(col, rows, data_locations, sel, count, col_offset, col_no);
 				break;
 			}

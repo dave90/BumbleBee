@@ -46,7 +46,7 @@ struct ReadCSVData : public FunctionData {
     vector<idx_t> cols_;
 
     // The expected types to read of ALL the columns
-    vector<ConstantType> types_;
+    vector<PhysicalType> types_;
     // The initial reader (if any): this is used when automatic detection is used during binding.
     buffered_csv_reader_ptr_t initialReader_;
 

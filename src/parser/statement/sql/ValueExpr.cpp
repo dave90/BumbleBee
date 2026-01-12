@@ -27,7 +27,7 @@ ValuePrimary::ValuePrimary(Value &value): value_(std::move(value)), isConstant_(
 ValuePrimary::ValuePrimary(QualifiedName &qualifier): qualifier_(std::move(qualifier)) {
 }
 
-ValuePrimary::ValuePrimary(const ValuePrimary &other): value_(other.value_.cast(other.value_.getConstantType())),
+ValuePrimary::ValuePrimary(const ValuePrimary &other): value_(other.value_.cast(other.value_.getPhysicalType())),
                                                        qualifier_(other.qualifier_),
                                                        isConstant_(other.isConstant_){
 }
@@ -40,7 +40,7 @@ ValuePrimary::ValuePrimary(ValuePrimary &&other) noexcept: value_(std::move(othe
 ValuePrimary & ValuePrimary::operator=(const ValuePrimary &other) {
     if (this == &other)
         return *this;
-    value_ = other.value_.cast(other.value_.getConstantType());
+    value_ = other.value_.cast(other.value_.getPhysicalType());
     qualifier_ = other.qualifier_;
     isConstant_ = other.isConstant_;
     return *this;

@@ -41,7 +41,7 @@ void DataChunk::setValue(idx_t col, idx_t index, const Value &val) {
     return data_[col].setValue(index, val);
 }
 
-void DataChunk::reference(DataChunk &chunk) {
+void DataChunk::reference(const DataChunk &chunk) {
     BB_ASSERT(columnCount() >= chunk.columnCount());
     setCapacity(chunk);
     setCardinality(chunk);
@@ -62,13 +62,18 @@ void DataChunk::reference(DataChunk &chunk, const vector<idx_t>& cols) {
 }
 
 void DataChunk::initAndReference(DataChunk &chunk, const vector<idx_t> &cols) {
-    vector<ConstantType> types;
+    vector<LogicalType> types;
     for (idx_t i=0;i<cols.size();++i) {
         BB_ASSERT(i < chunk.getTypes().size());
         types.push_back(chunk.getTypes()[i]);
     }
     initializeEmpty(types);
     reference(chunk, cols);
+}
+
+void DataChunk::initAndReference(DataChunk &chunk) {
+    initializeEmpty(chunk.getTypes());
+    reference(chunk);
 }
 
 std::unique_ptr<DataChunk> DataChunk::clone() {
@@ -78,7 +83,7 @@ std::unique_ptr<DataChunk> DataChunk::clone() {
     return chunk;
 }
 
-void DataChunk::initialize(const vector<ConstantType> &types) {
+void DataChunk::initialize(const vector<PhysicalType> &types) {
     BB_ASSERT(data_.empty());
     capacity_ = STANDARD_VECTOR_SIZE;
     for (idx_t i = 0; i < types.size(); ++i) {
@@ -86,7 +91,23 @@ void DataChunk::initialize(const vector<ConstantType> &types) {
     }
 }
 
-void DataChunk::initializeEmpty(const vector<ConstantType> &types) {
+void DataChunk::initialize(const vector<LogicalType> &types) {
+    BB_ASSERT(data_.empty());
+    capacity_ = STANDARD_VECTOR_SIZE;
+    for (idx_t i = 0; i < types.size(); ++i) {
+        data_.emplace_back(types[i]);
+    }
+}
+
+void DataChunk::initializeEmpty(const vector<PhysicalType> &types) {
+    BB_ASSERT(data_.empty());
+    capacity_ = STANDARD_VECTOR_SIZE;
+    for (idx_t i = 0; i < types.size(); ++i) {
+        data_.emplace_back(types[i], nullptr);
+    }
+}
+
+void DataChunk::initializeEmpty(const vector<LogicalType> &types) {
     BB_ASSERT(data_.empty());
     capacity_ = STANDARD_VECTOR_SIZE;
     for (idx_t i = 0; i < types.size(); ++i) {
@@ -234,7 +255,7 @@ void DataChunk::reset() {
 }
 
 void DataChunk::hash(Vector &result) {
-    BB_ASSERT(result.getType() == ConstantType::UBIGINT);
+    BB_ASSERT(result.getType() == PhysicalType::UBIGINT);
     if (columnCount() == 0) return;
     VectorOperations::hash(data_[0], result, getSize());
     for (idx_t i = 1; i < columnCount(); i++) {
@@ -243,7 +264,7 @@ void DataChunk::hash(Vector &result) {
 }
 
 void DataChunk::hash(Vector &result, const vector<idx_t> &cols) {
-    BB_ASSERT(result.getType() == ConstantType::UBIGINT);
+    BB_ASSERT(result.getType() == PhysicalType::UBIGINT);
     BB_ASSERT(cols.size() > 0);
     BB_ASSERT(cols[0] < columnCount());
     VectorOperations::hash(data_[cols[0]], result, getSize());
@@ -253,14 +274,16 @@ void DataChunk::hash(Vector &result, const vector<idx_t> &cols) {
     }
 }
 
-vector<ConstantType> DataChunk::getTypes() const{
-    vector<ConstantType> types;
+vector<LogicalType> DataChunk::getTypes() const{
+    vector<LogicalType> types;
     types.reserve(data_.size());
     for (auto&v : data_) {
-        types.push_back(v.getType());
+        types.push_back(v.getLogicalType());
     }
     return types;
 }
+
+
 
 std::string DataChunk::toString() const {
     string result = "Chunk - [" + std::to_string(columnCount()) + " Columns]\n";
@@ -274,10 +297,10 @@ void DataChunk::verify() {
     // TODO
 }
 
-void DataChunk::cast(const vector<ConstantType>& types) {
+void DataChunk::cast(const vector<LogicalType>& types) {
     BB_ASSERT(data_.size() == types.size());
     for (idx_t i = 0; i < columnCount(); i++) {
-        if (data_[i].getType() == types[i]) continue;
+        if (data_[i].getLogicalTypeId() == types[i].type()) continue;
 
         Vector newVec(types[i], getCapacity());
         LOG_DEBUG("Casting vector %s to %s.", ctypeToString(data_[i].getType()).c_str(), ctypeToString(newVec.getType()).c_str() );
@@ -288,12 +311,12 @@ void DataChunk::cast(const vector<ConstantType>& types) {
 
 void DataChunk::cast(DataChunk &result) {
     BB_ASSERT(data_.size() == result.columnCount());
+    auto types = result.getTypes();
     for (idx_t i = 0; i < columnCount(); i++) {
-        if (data_[i].getType() == result.getTypes()[i]) {
+        if (data_[i].getLogicalTypeId() == types[i].type()) {
             result.data_[i].reference(data_[i]);
             continue;
         }
-
         LOG_DEBUG("Casting vector %s to %s.", ctypeToString(data_[i].getType()).c_str(), ctypeToString(result.data_[i].getType()).c_str() );
         VectorOperations::cast(data_[i], result.data_[i], getSize());
     }

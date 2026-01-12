@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 
-namespace bumblebee_hll {
+namespace bumblebee {
 
 // NOLINTBEGIN
 

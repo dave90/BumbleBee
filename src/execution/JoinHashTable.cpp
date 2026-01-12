@@ -82,7 +82,7 @@ struct InitHashJoin {
         idx_t lsize, idx_t &lpos, idx_t &rpos,
         SelectionVector& lsel, SelectionVector& rsel, idx_t currentMatch) {
         BB_ASSERT(right.getVectorType() == VectorType::FLAT_VECTOR);
-        BB_ASSERT(buckets.getType() == UBIGINT);
+        BB_ASSERT(buckets.getType() == PhysicalType::UBIGINT);
 
         VectorData left_data, bucket_data, hash_data;
         left.orrify(lsize, left_data);
@@ -129,7 +129,7 @@ struct RefineHashJoin {
     static idx_t operation( Vector& left, Vector& right, Vector& lhash, Vector& buckets, directory_t& directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector& lsel, SelectionVector& rsel, idx_t currentMatch) {
         BB_ASSERT(right.getVectorType() == VectorType::FLAT_VECTOR);
-        BB_ASSERT(buckets.getType() == UBIGINT);
+        BB_ASSERT(buckets.getType() == PhysicalType::UBIGINT);
 
         VectorData left_data, bucket_data, hash_data;
         left.orrify(lsize, left_data);
@@ -156,27 +156,27 @@ idx_t hashJoinEqualTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector
                                                  idx_t currentMatch) {
     BB_ASSERT(left.getType() == right.getType());
     switch (left.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return NLTYPE::template operation<int8_t,int8_t, OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return NLTYPE::template operation<int16_t,int16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return NLTYPE::template operation<int32_t,int32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return NLTYPE::template operation<int64_t,int64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return NLTYPE::template operation<uint8_t,uint8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return NLTYPE::template operation<uint16_t,uint16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return NLTYPE::template operation<uint32_t,uint32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return NLTYPE::template operation<uint64_t,uint64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return NLTYPE::template operation<float,float,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return NLTYPE::template operation<double,double,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return NLTYPE::template operation<string_t,string_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         }
         default:
@@ -201,18 +201,18 @@ idx_t hashJoinCommonTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vecto
 
     // for int and uint collapse to int 64 bit
     // for decimal collapse to double
-    switch (commonType) {
-        case ConstantType::TINYINT:
-        case ConstantType::SMALLINT:
-        case ConstantType::INTEGER:
-        case ConstantType::UTINYINT:
-        case ConstantType::USMALLINT:
-        case ConstantType::UINTEGER:
-        case ConstantType::UBIGINT:
-        case ConstantType::BIGINT:
+    switch (commonType.getPhysicalType()) {
+        case PhysicalType::TINYINT:
+        case PhysicalType::SMALLINT:
+        case PhysicalType::INTEGER:
+        case PhysicalType::UTINYINT:
+        case PhysicalType::USMALLINT:
+        case PhysicalType::UINTEGER:
+        case PhysicalType::UBIGINT:
+        case PhysicalType::BIGINT:
             return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, int64_t, OP>>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
-        case ConstantType::DOUBLE:
+        case PhysicalType::FLOAT:
+        case PhysicalType::DOUBLE:
             return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, double, OP>>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -225,25 +225,25 @@ idx_t hashJoinRightTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector
                                              idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                              idx_t currentMatch) {
     switch (right.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,float,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return hashJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,double,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -257,28 +257,28 @@ idx_t hashJoinLeftTypeSwitch(Vector &left, Vector &right, Vector &lhash, Vector 
                                              idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                              idx_t currentMatch) {
     // cannot compare string with different types
-    BB_ASSERT(left.getType() != ConstantType::STRING && right.getType() != ConstantType::STRING);
+    BB_ASSERT(left.getType() != PhysicalType::STRING && right.getType() != PhysicalType::STRING);
     // left type != right type
     switch (left.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return hashJoinRightTypeSwitch<NLTYPE,int8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return hashJoinRightTypeSwitch<NLTYPE,int16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return hashJoinRightTypeSwitch<NLTYPE,int32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return hashJoinRightTypeSwitch<NLTYPE,int64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return hashJoinRightTypeSwitch<NLTYPE,uint8_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return hashJoinRightTypeSwitch<NLTYPE,uint16_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return hashJoinRightTypeSwitch<NLTYPE,uint32_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return hashJoinRightTypeSwitch<NLTYPE,uint64_t,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return hashJoinRightTypeSwitch<NLTYPE,float,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return hashJoinRightTypeSwitch<NLTYPE,double,OP>(left, right, lhash, buckets, directory, lsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -322,7 +322,7 @@ idx_t hashJoinComparisonSwitch(Vector &left, Vector &right, Vector &lhash, Vecto
 }
 
 uint16_t bloomFilter16BitVector(Vector& hash, SelectionVector& sel, idx_t size) {
-    BB_ASSERT(hash.getType() == UBIGINT);
+    BB_ASSERT(hash.getType() == PhysicalType::UBIGINT);
     VectorData vdata;
     hash.orrify(size, vdata);
     auto * data = (uint64_t*) vdata.data_;
@@ -335,7 +335,7 @@ uint16_t bloomFilter16BitVector(Vector& hash, SelectionVector& sel, idx_t size) 
 }
 
 uint64_t bloomFilterBitVector(idx_t bloomSize, Vector& hash, SelectionVector& sel, idx_t size) {
-    BB_ASSERT(hash.getType() == UBIGINT);
+    BB_ASSERT(hash.getType() == PhysicalType::UBIGINT);
     uint64_t bloom ;
     switch (bloomSize) {
         case 16:
@@ -400,12 +400,12 @@ Vector JoinHashTable::calculateBucketVector(Vector &hash, idx_t size) {
 }
 
 void JoinHashTable::addDataChunkSel(Vector& hash, DataChunk &chunk) {
-    BB_ASSERT(hash.getType() == UBIGINT);
+    BB_ASSERT(hash.getType() == PhysicalType::UBIGINT);
 
     // calculate the bucket vector
     Vector buckets = calculateBucketVector(hash, chunk.getSize());
     BB_ASSERT(buckets.getVectorType() == VectorType::FLAT_VECTOR);
-    BB_ASSERT(buckets.getType() == UBIGINT);
+    BB_ASSERT(buckets.getType() == PhysicalType::UBIGINT);
     std::unordered_map<idx_t, vector<idx_t>> bucketSelection;
 
 
@@ -483,7 +483,7 @@ void JoinHashTable::build(idx_t bucket, vector<vector_data_mngr_ptr_t>& stringVe
             if (!usedCols_[j]) continue; // avoid to copy column that we do not use
             auto& sourceVector = dc.data_[j];
             Vector targetVector(chunkone_.data_[j]);
-            if (targetVector.getType() == STRING) {
+            if (targetVector.getType() == PhysicalType::STRING) {
                 // change the data aux vector to the input vector to avoid collision
                 BB_ASSERT(j < stringVectorsDataMngr.size());
                 BB_ASSERT(stringVectorsDataMngr[j]);
@@ -509,7 +509,7 @@ void JoinHashTable::build(idx_t start, idx_t end) {
     // create the string data manager to be merged at the end of the build phase
     vector<vector_data_mngr_ptr_t> stringVectorsDataMngr;
     for (idx_t i=0;i<chunkone_.columnCount();++i) {
-        if (chunkone_.data_[i].getType() == STRING) {
+        if (chunkone_.data_[i].getType() == PhysicalType::STRING) {
             if (stringVectorsDataMngr.empty())
                 stringVectorsDataMngr.resize(chunkone_.columnCount());
             stringVectorsDataMngr[i] = vector_data_mngr_ptr_t(new StringDataMngr());
@@ -529,7 +529,7 @@ void JoinHashTable::build(idx_t start, idx_t end) {
 
 void JoinHashTable::mergeStringDataMngr(vector<vector_data_mngr_ptr_t>& stringDataMngrs) {
     for (idx_t i = 0; i < chunkone_.columnCount(); i++) {
-        if (chunkone_.data_[i].getType() != STRING) continue;
+        if (chunkone_.data_[i].getType() != PhysicalType::STRING) continue;
         lock_guard lock(mutex_[i]);
         BB_ASSERT(i < stringDataMngrs.size());
         BB_ASSERT(stringDataMngrs[i]);
@@ -595,7 +595,7 @@ idx_t JoinHashTable::probe(idx_t &lpos, idx_t &rpos, DataChunk &lchunk, Vector &
     auto& rchunk = chunkone_;
     // calculate the bucket vector
     Vector buckets = calculateBucketVector(lhash, lchunk.getSize());
-    BB_ASSERT(buckets.getType() == UBIGINT);
+    BB_ASSERT(buckets.getType() == PhysicalType::UBIGINT);
 
 
     if (lpos >= lchunk.getSize() || rpos >= rchunk.getSize()) {

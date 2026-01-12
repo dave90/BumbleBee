@@ -51,7 +51,7 @@ struct TopNEntry {
 class TopNHeap {
 public:
 
-    TopNHeap(const vector<ConstantType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit);
+    TopNHeap(const vector<LogicalType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit);
 
     // add the chunk in the heap
     void sink(DataChunk& input);
@@ -72,7 +72,7 @@ public:
         return sortCols_;
     }
 
-    vector<ConstantType> & getPayloadTypes() {
+    vector<LogicalType> & getPayloadTypes() {
         return payloadTypes_;
     }
 
@@ -116,10 +116,10 @@ private:
     }
 
     vector<TopNEntry> heap_;
-    vector<ConstantType> payloadTypes_;
+    vector<LogicalType> payloadTypes_;
     vector<OrderModifiers> modifiers_;
     vector<idx_t> sortCols_;
-    vector<ConstantType> sortColTypes_;
+    vector<LogicalType> sortColTypes_;
     idx_t heapSize_;
 
     DataChunk heapData_;

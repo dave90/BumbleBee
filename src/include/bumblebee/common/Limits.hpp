@@ -21,8 +21,6 @@
 
 namespace bumblebee{
 
-
-
 template <class T>
 struct NumericLimits {
 	static T minimum();

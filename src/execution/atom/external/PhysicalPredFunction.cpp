@@ -35,7 +35,7 @@ public:
     function_op_data_ptr_t functionOpData_;
 };
 
-PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredFunction *pred_function,
     function_data_ptr_t &bind_data): PhysicalAtom(types, dcCols, selectedCols),
                                            context_(context),
@@ -43,7 +43,7 @@ PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<
                                            bindData_(std::move(bind_data)) {
 }
 
-PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types,
+PhysicalPredFunction::PhysicalPredFunction(ClientContext &context, const vector<LogicalType> &types,
 vector<idx_t> &dcCols, PredFunction *pred_function, function_data_ptr_t &bind_data):
                                         PhysicalAtom(types),
                                        context_(context),
@@ -84,7 +84,7 @@ string PhysicalPredFunction::toString() const {
     }
     result += "; ";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     return result + ")";
 }
@@ -105,7 +105,7 @@ AtomResultType PhysicalPredFunction::getData(ThreadContext &context, DataChunk &
 
     if (!cstate.isInitialized_) {
         // calculate the types of the chunk
-        vector<ConstantType> types;
+        vector<LogicalType> types;
         for (auto col:selectCols_)
             types.push_back(types_[col]);
         cstate.cachedChunk_.initialize(types);

@@ -98,7 +98,7 @@ public:
 	bool isNegative();
 	void setNegative(bool n);
 	TermType getType() const;
-	ConstantType getConstantType();
+	PhysicalType getPhysicalType();
 	void setType(TermType type);
 	bool isGround();
 	void getVariables(set_term_variable_t& vars);

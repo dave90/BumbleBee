@@ -109,7 +109,7 @@ void executeOperator(Vector& left, Vector& right, Vector& result, idx_t count, O
     }
 }
 
-Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &op, idx_t count, ConstantType resultType){
+Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &op, idx_t count, LogicalType resultType){
     if (op.cols_.size() == 1) {
         Vector result(allColumns[op.cols_[0]]);
         return result;
@@ -120,17 +120,17 @@ Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &
         vectors.emplace_back(allColumns[c]);
     }
     // Find the result type of the final vector if is not passed
-    if (resultType == UNKNOWN) {
+    if (resultType == PhysicalType::UNKNOWN) {
         for (auto c: op.cols_) {
             resultType = getCommonType(resultType, allColumns[c].getType());
             // we need bump the common type as operation can overflow the data
-            resultType = getBumpedType(resultType);
+            resultType = getBumpedType(resultType.getPhysicalType());
         }
         // if result type is unsigned, and we have subtraction
         // set result type as bigint
         bool diff = std::find(op.operators_.begin(), op.operators_.end(), MINUS) != op.operators_.end();
-        if (diff && isUnsigned(resultType))
-            resultType = BIGINT;
+        if (diff && isUnsigned(resultType.getPhysicalType()))
+            resultType = PhysicalType::BIGINT;
     }
 
     BB_ASSERT(op.operators_.size() + 1 == vectors.size());

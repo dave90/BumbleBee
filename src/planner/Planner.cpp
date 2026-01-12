@@ -50,7 +50,7 @@ void Planner::setHeadTypes(rules_vector_t &rules) {
 
     PhysicalOptimizer optimizer(context_, recursiveRules_);
     // head types for each rule, if empty the rule will be skipped
-    vector<std::unordered_map<Predicate *, vector<ConstantType>>> headTypes;
+    vector<std::unordered_map<Predicate *, vector<LogicalType>>> headTypes;
     for (auto& rule: rules) {
         headTypes.push_back(optimizer.getHeadTypes(rule));
         optimizer.clear();
@@ -59,9 +59,9 @@ void Planner::setHeadTypes(rules_vector_t &rules) {
     bool castAll = false;
     for (idx_t i=0;i<headTypes.size(); ++i) {
         for (auto& [pred, types]: headTypes[i]) {
-            BB_ASSERT(!containsVector(types, UNKNOWN));
+            BB_ASSERT(!containsVector(types, {LogicalTypeId::UNKNOWN}));
             auto &pt = context_.defaultSchema_.getPredicateTable(pred);
-            if (containsVector(pt->getTypes(), UNKNOWN)) {
+            if (containsVector(pt->getTypes(), {LogicalTypeId::UNKNOWN})) {
                 // first time we populate the pt
                 BB_ASSERT(!pt->getCount());
                 pt->setTypes(types);
@@ -78,7 +78,7 @@ void Planner::setHeadTypes(rules_vector_t &rules) {
         auto predicates = rules[i].getPredicates();
         for (auto& pred: predicates) {
             auto &pt = context_.defaultSchema_.getPredicateTable(pred);
-            BB_ASSERT(!containsVector(pt->getTypes(), UNKNOWN));
+            BB_ASSERT(!containsVector(pt->getTypes(), {LogicalTypeId::UNKNOWN}));
             auto commonTypes = getGeneralBumpedType(pt->getTypes());
             pt->updateTypes(commonTypes);
         }

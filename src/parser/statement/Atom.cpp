@@ -231,12 +231,12 @@ bool Atom::isAggregateAssignment() {
     return false;
 }
 
-vector<ConstantType> Atom::getTermsCType() {
-    vector<ConstantType> types;
+vector<PhysicalType> Atom::getTermsPhysicalTypes() {
+    vector<PhysicalType> types;
     types.reserve(terms_.size());
     for (auto& term : terms_) {
         if (term.getType() == TermType::NONE_TERM) continue;
-        types.push_back(term.getConstantType());
+        types.push_back(term.getPhysicalType());
     }
     return types;
 }
@@ -264,10 +264,10 @@ vector<Value> & Atom::getInputValues() {
     return inputValues_;
 }
 
-vector<ConstantType> Atom::getInputValuesCType() {
-    vector<ConstantType> types;
+vector<LogicalType> Atom::getInputValuesType() const{
+    vector<LogicalType> types;
     for (auto& v:inputValues_)
-        types.push_back(v.getConstantType());
+        types.push_back(v.getPhysicalType());
     return types;
 }
 
@@ -471,10 +471,10 @@ Atom Atom::clone() const {
         case EXTERNAL: {
             std::unordered_map<string, Value> namedParameters;
             for (auto& param : namedParameters_)
-                namedParameters.insert(std::make_pair(param.first, param.second.cast(param.second.getConstantType())));
+                namedParameters.insert(std::make_pair(param.first, param.second.cast(param.second.getPhysicalType())));
             vector<Value> inputValues;
             for (auto& val: inputValues_)
-                inputValues.emplace_back(std::move(val.cast(val.getConstantType())))
+                inputValues.emplace_back(std::move(val.cast(val.getPhysicalType())))
             ;
             auto externalFunctionName = externalFunctionName_;
             return createExternalAtom(namedParameters, inputValues, externalFunctionName, std::move(terms));

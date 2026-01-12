@@ -174,37 +174,37 @@ void templatedConstructSortKey(SortKeyVectorData &vector_data, SortKeyConstructI
 static void constructSortKey(SortKeyVectorData &vectorData, SortKeyConstructInfo &info) {
     auto& vector = vectorData.vector_;
     switch (vector.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             templatedConstructSortKey<SortKeyConstantOperator<int8_t>>(vectorData, info);
             break;
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             templatedConstructSortKey<SortKeyConstantOperator<int16_t>>(vectorData, info);
             break;
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             templatedConstructSortKey<SortKeyConstantOperator<int32_t>>(vectorData, info);
             break;
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             templatedConstructSortKey<SortKeyConstantOperator<int64_t>>(vectorData, info);
             break;
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             templatedConstructSortKey<SortKeyConstantOperator<uint8_t>>(vectorData, info);
             break;
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             templatedConstructSortKey<SortKeyConstantOperator<uint16_t>>(vectorData, info);
             break;
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             templatedConstructSortKey<SortKeyConstantOperator<uint32_t>>(vectorData, info);
             break;
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             templatedConstructSortKey<SortKeyConstantOperator<uint64_t>>(vectorData, info);
             break;
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             templatedConstructSortKey<SortKeyConstantOperator<float>>(vectorData, info);
             break;
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             templatedConstructSortKey<SortKeyConstantOperator<double>>(vectorData, info);
             break;
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             templatedConstructSortKey<SortKeyStringOperator>(vectorData, info);
             break;
         }
@@ -242,11 +242,11 @@ static void getSortKeyLength(SortKeyVectorData &data, SortKeyLengthInfo &result)
     // top-level method
     auto type = data.vector_.getType();
     if (typeIsConstantSize(type)) {
-        result.constant_ += getCTypeSize(type);
+        result.constant_ += getPhysicalTypeSize(type);
         return;
     }
 
-    BB_ASSERT(data.vector_.getType() == ConstantType::STRING);
+    BB_ASSERT(data.vector_.getType() == PhysicalType::STRING);
     switch (data.vector_.getVectorType()) {
         case VectorType::CONSTANT_VECTOR:
             getSortKeyVariableLengthConstant(data.vector_, data.size_, result.variable_.data());
@@ -265,7 +265,7 @@ static void getSortKeyLength(SortKeyVectorData &data, SortKeyLengthInfo &result)
 }
 
 static void prepareSortData(Vector &result, idx_t size, SortKeyLengthInfo &keyLengths, data_ptr_t *dataPtr) {
-    BB_ASSERT(result.getType() == STRING);
+    BB_ASSERT(result.getType() == PhysicalType::STRING);
 
     auto result_data = FlatVector::getData<string_t>(result);
     for (idx_t r = 0; r < size; r++) {

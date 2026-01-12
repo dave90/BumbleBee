@@ -26,13 +26,13 @@ namespace bumblebee{
 // Create the optimal physical operators for the execution of the Rules
 class PhysicalOptimizer {
     using cols_vector_t = vector<vector<idx_t>> ;
-    using type_vector_t = vector<vector<ConstantType>>;
+    using type_vector_t = vector<vector<LogicalType>>;
 public:
     explicit PhysicalOptimizer(ClientContext &context, bool recursiveRules = false);
 
     virtual ~PhysicalOptimizer() = default;
 
-    virtual std::unordered_map<Predicate*, vector<ConstantType>> getHeadTypes(Rule& rule);
+    virtual std::unordered_map<Predicate*, vector<LogicalType>> getHeadTypes(Rule& rule);
     virtual prule_ptr_vector_t optimize(Rule& rule);
     virtual void clear();
 
@@ -48,13 +48,13 @@ private:
     void findColsAndTypesBuiltin(Atom& atom);
     void findColsAndTypesExternalAtom(Atom &atom, idx_t index);
 
-    void bindExternalAtom(idx_t index, Atom& atom, vector<ConstantType>& returnTypes, vector<string>& names);
+    void bindExternalAtom(idx_t index, Atom& atom, vector<LogicalType>& returnTypes, vector<string>& names);
 
     // return true if the rule can be not evaluated
     bool canBeSkipped(Rule& rule);
 
     // generate the patoms for the builtin atoms
-    void generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<ConstantType> types,patom_ptr_vector_t& patoms);
+    void generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<LogicalType> types,patom_ptr_vector_t& patoms);
     // generate the join patoms, vars is the variables seen so far in the rule used to calculate the join keys
     void generatePhysicalJoin(const set_term_variable_t& vars, idx_t i, Rule& rule,patom_ptr_vector_t& patoms, prule_ptr_vector_t& prules, idx_t& priority);
 
@@ -80,11 +80,11 @@ private:
     cols_vector_t selectedCols_;
     // types for all the column, are the same for all the atoms. Atoms that use a subset of columns will
     // filter using cols_ field
-    vector<ConstantType> types_;
+    vector<LogicalType> types_;
     // Map of variable -> index in the data chunk
     std::unordered_map<std::string, idx_t> colsMap_;
     // Map of variable -> data type
-    std::unordered_map<std::string, ConstantType> typesMap_;
+    std::unordered_map<std::string, LogicalType> typesMap_;
     // skip atom map, if true does not create physical atoms
     std::unordered_map<idx_t, bool> skipAtom_;
     // bind data for the external atoms

@@ -93,7 +93,7 @@ public:
 };
 
 
-PhysicalChunkOutput::PhysicalChunkOutput(ClientContext& context, const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalChunkOutput::PhysicalChunkOutput(ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     PredicateTables *pt): PhysicalAtom(types), pt_(pt), context_(context) {
     dcCols_ = std::move(dcCols);
     for (auto c : dcCols_)dcColsType_.push_back(types_[c]);
@@ -118,7 +118,7 @@ string PhysicalChunkOutput::toString() const {
     }
     result += ";";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     return result + ")";
 

@@ -31,14 +31,14 @@ class PredicateTablesTester : public PredicateTables {
 public:
     PredicateTablesTester(ClientContext* context, const char* name, unsigned arity)
         : PredicateTables(context, name, arity) {
-        types_ = vector<ConstantType>(arity, UNKNOWN);
+        types_ = vector<LogicalType>(arity, PhysicalType::UNKNOWN);
     }
 
-    void callUpdateTypes(vector<ConstantType> newTypes) {
+    void callUpdateTypes(vector<LogicalType> newTypes) {
         updateTypes(newTypes);
     }
 
-    const vector<ConstantType>& getTypes() const {
+    const vector<LogicalType>& getTypes() const {
         return types_;
     }
 
@@ -81,38 +81,38 @@ vector<vector<int>> generateCartesianProduct(const IntervalTerm& a, const Interv
     return result;
 }
 TEST_F(PredicateTablesTest, NoChange) {
-    vector<ConstantType> newTypes = {UNKNOWN, UNKNOWN, UNKNOWN};
+    vector<LogicalType> newTypes = {PhysicalType::UNKNOWN, PhysicalType::UNKNOWN, PhysicalType::UNKNOWN};
     table->callUpdateTypes(newTypes);
     EXPECT_EQ(table->getTypes(), newTypes);
 }
 
 TEST_F(PredicateTablesTest, PromoteUnknown) {
-    vector<ConstantType> newTypes = {TINYINT, SMALLINT, BIGINT};
+    vector<LogicalType> newTypes = {PhysicalType::TINYINT, PhysicalType::SMALLINT, PhysicalType::BIGINT};
     table->callUpdateTypes(newTypes);
     EXPECT_EQ(table->getTypes(), newTypes);
 }
 
 TEST_F(PredicateTablesTest, PromoteSmallerSize) {
-    table->callUpdateTypes({SMALLINT, SMALLINT, SMALLINT});
-    table->callUpdateTypes({INTEGER, INTEGER, UINTEGER});
-    EXPECT_EQ(table->getTypes()[0], INTEGER);
-    EXPECT_EQ(table->getTypes()[1], INTEGER);
-    EXPECT_EQ(table->getTypes()[2], BIGINT);
+    table->callUpdateTypes({PhysicalType::SMALLINT, PhysicalType::SMALLINT, PhysicalType::SMALLINT});
+    table->callUpdateTypes({PhysicalType::INTEGER, PhysicalType::INTEGER, PhysicalType::UINTEGER});
+    EXPECT_EQ(table->getTypes()[0], PhysicalType::INTEGER);
+    EXPECT_EQ(table->getTypes()[1], PhysicalType::INTEGER);
+    EXPECT_EQ(table->getTypes()[2], PhysicalType::BIGINT);
 }
 
 TEST_F(PredicateTablesTest, MixedSignednessSameSize) {
-    table->callUpdateTypes({UINTEGER, FLOAT, UINTEGER});
-    table->callUpdateTypes({INTEGER, UINTEGER, SMALLINT});
-    EXPECT_EQ(table->getTypes()[0], BIGINT);  // bumped
-    EXPECT_EQ(table->getTypes()[1], DOUBLE);
-    EXPECT_EQ(table->getTypes()[2], BIGINT);  // bumped
+    table->callUpdateTypes({PhysicalType::UINTEGER, PhysicalType::FLOAT, PhysicalType::UINTEGER});
+    table->callUpdateTypes({PhysicalType::INTEGER, PhysicalType::UINTEGER, PhysicalType::SMALLINT});
+    EXPECT_EQ(table->getTypes()[0], PhysicalType::BIGINT);  // bumped
+    EXPECT_EQ(table->getTypes()[1], PhysicalType::DOUBLE);
+    EXPECT_EQ(table->getTypes()[2], PhysicalType::BIGINT);  // bumped
 }
 
 TEST_F(PredicateTablesTest, FloatToDoublePromotion) {
     table = std::make_unique<PredicateTablesTester>(&context, "test", 1);
-    table->callUpdateTypes({FLOAT});
-    table->callUpdateTypes({DOUBLE});
-    EXPECT_EQ(table->getTypes()[0], DOUBLE);
+    table->callUpdateTypes({PhysicalType::FLOAT});
+    table->callUpdateTypes({PhysicalType::DOUBLE});
+    EXPECT_EQ(table->getTypes()[0], PhysicalType::DOUBLE);
 }
 
 
@@ -150,9 +150,9 @@ TEST_F(PredicateTablesTest, TestAddFactsDifferentCType) {
     std::cout << table->getChunk(0).toString() << std::endl;
     EXPECT_EQ(table->getCount(), 2);
     auto types = table->getTypes();
-    EXPECT_EQ(types[0], SMALLINT);
-    EXPECT_EQ(types[1], INTEGER);
-    EXPECT_EQ(types[2], BIGINT);
+    EXPECT_EQ(types[0], PhysicalType::SMALLINT);
+    EXPECT_EQ(types[1], PhysicalType::INTEGER);
+    EXPECT_EQ(types[2], PhysicalType::BIGINT);
 }
 
 

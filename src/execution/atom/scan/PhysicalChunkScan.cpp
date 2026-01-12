@@ -92,7 +92,7 @@ public:
     bool isInitialized_{false};
 };
 
-PhysicalChunkScan::PhysicalChunkScan(const vector<ConstantType> &types, vector<idx_t>& dcCols,vector<idx_t> &selectedCols, PredicateTables *pt) :
+PhysicalChunkScan::PhysicalChunkScan(const vector<LogicalType> &types, vector<idx_t>& dcCols,vector<idx_t> &selectedCols, PredicateTables *pt) :
     PhysicalAtom(types,dcCols, selectedCols) {
     pt_ = pt;
     // expected dcCols increment array
@@ -124,7 +124,7 @@ string PhysicalChunkScan::toString() const {
     }
     result += "; ";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     return result + ")";
 }

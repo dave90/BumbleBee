@@ -30,6 +30,7 @@ class Value {
 
     friend class Vector;
     friend class Term;
+	friend class NumericStatistics;
 
 public:
     Value();
@@ -65,37 +66,37 @@ public:
 
 	Value clone() const;
 
-	ConstantType getConstantType() const;
-	void setConstantType(ConstantType type);
+	PhysicalType getPhysicalType() const;
+	void setConstantType(PhysicalType type);
 	std::string toString()const;
 	// Create a new Value casted base on type
-	Value cast(ConstantType type)const;
+	Value cast(PhysicalType type)const;
 
-	bool tryCastAs(ConstantType type, Value & newValue, string* error) const;
+	bool tryCastAs(PhysicalType type, Value & newValue, string* error) const;
 
 	// template
 	template <class T>
 	T getNumericValue() const{
 		switch (ctype_) {
-			case ConstantType::TINYINT:
+			case PhysicalType::TINYINT:
 				return static_cast<T>(value_.tinyint);
-			case ConstantType::SMALLINT:
+			case PhysicalType::SMALLINT:
 				return static_cast<T>(value_.smallint);
-			case ConstantType::INTEGER:
+			case PhysicalType::INTEGER:
 				return static_cast<T>(value_.integer);
-			case ConstantType::BIGINT:
+			case PhysicalType::BIGINT:
 				return static_cast<T>(value_.bigint);
-			case ConstantType::UTINYINT:
+			case PhysicalType::UTINYINT:
 				return static_cast<T>(value_.utinyint);
-			case ConstantType::USMALLINT:
+			case PhysicalType::USMALLINT:
 				return static_cast<T>(value_.usmallint);
-			case ConstantType::UINTEGER:
+			case PhysicalType::UINTEGER:
 				return static_cast<T>(value_.uinteger);
-			case ConstantType::UBIGINT:
+			case PhysicalType::UBIGINT:
 				return static_cast<T>(value_.ubigint);
-			case ConstantType::FLOAT:
+			case PhysicalType::FLOAT:
 				return static_cast<T>(value_.float_);
-			case ConstantType::DOUBLE:
+			case PhysicalType::DOUBLE:
 				return static_cast<T>(value_.double_);
 			default:
 				;
@@ -113,9 +114,12 @@ public:
 		return this;
 	}
 
-	static Value cast(ConstantType type, data_ptr_t data);
+	static Value cast(PhysicalType type, data_ptr_t data);
 
-
+	// Create the lowest possible value of a given type (numeric only)
+	static Value minimumValue(const PhysicalType &type);
+	// Create the highest possible value of a given type (numeric only)
+	static Value maximumValue(const PhysicalType &type);
 private:
 
 	// Numeric Values
@@ -134,7 +138,7 @@ private:
 	// String value
 	string stringValue_{};
 	// If constant the constant type
-	ConstantType ctype_{INTEGER};
+	PhysicalType ctype_{PhysicalType::INTEGER};
 
 };
 

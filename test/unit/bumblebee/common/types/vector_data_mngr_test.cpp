@@ -44,13 +44,13 @@ TEST(VectorDataMngrTest, SetDataReplacesPointer) {
 }
 
 TEST(VectorDataMngrTest, FactoryCreatesStandardVector) {
-    auto vec = VectorDataMngr::createStandardVector(ConstantType::BIGINT, 5);
+    auto vec = VectorDataMngr::createStandardVector(PhysicalType::BIGINT, 5);
     EXPECT_EQ(vec->getType(), VectorDataMngrType::STANDARD_DATA_MNGR);
     EXPECT_NE(vec->getData(), nullptr);
 }
 
 TEST(VectorDataMngrTest, FactoryCreatesConstantVector) {
-    auto vec = VectorDataMngr::createConstantVector(ConstantType::BIGINT);
+    auto vec = VectorDataMngr::createConstantVector(PhysicalType::BIGINT);
     EXPECT_EQ(vec->getType(), VectorDataMngrType::STANDARD_DATA_MNGR);
     EXPECT_NE(vec->getData(), nullptr);
 }

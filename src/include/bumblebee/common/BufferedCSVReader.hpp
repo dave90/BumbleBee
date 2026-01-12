@@ -100,13 +100,13 @@ class BufferedCSVReader {
 
 public:
 	BufferedCSVReader(ClientContext &context, BufferedCSVReaderOptions options,
-	                  const vector<ConstantType> &requested_types = vector<ConstantType>(), const std::vector<idx_t> &select_cols = vector<idx_t>() );
+	                  const vector<PhysicalType> &requested_types = vector<PhysicalType>(), const std::vector<idx_t> &select_cols = vector<idx_t>() );
 	BufferedCSVReader(FileSystem &fs, BufferedCSVReaderOptions options,
-					  const vector<ConstantType> &requested_types = vector<ConstantType>(), const std::vector<idx_t> &select_cols = vector<idx_t>());
+					  const vector<PhysicalType> &requested_types = vector<PhysicalType>(), const std::vector<idx_t> &select_cols = vector<idx_t>());
 
 	FileSystem &fs_;
 	BufferedCSVReaderOptions options_;
-	vector<ConstantType> types_;
+	vector<PhysicalType> types_;
 	vector<string> colNames_;
 	file_handler_ptr_t fileHandle_;
 	bool plainFileSource_ = false;
@@ -152,7 +152,7 @@ public:
 
 private:
 	// Initialize Parser
-	void initialize(const vector<ConstantType> &requested_types);
+	void initialize(const vector<PhysicalType> &requested_types);
 	// Initializes the parse_chunk with varchar columns and aligns info with new number of cols
 	void initParseChunk(idx_t num_cols);
 	// Initializes the TextSearchShiftArrays for complex parser
@@ -164,11 +164,11 @@ private:
 	// Extract a single DataChunk from the CSV file and stores it in insert_chunk
 	bool tryParseCSV(ParserMode mode, DataChunk &insert_chunk, string &error_message);
 	// Sniffs CSV dialect and determines skip rows, header row, column types and column names
-	vector<ConstantType> sniffCSV(const vector<ConstantType> &requested_types);
+	vector<PhysicalType> sniffCSV(const vector<PhysicalType> &requested_types);
 	// Try to cast a string value to the specified sql type
-	bool tryCastValue(const Value &value, const ConstantType &sql_type);
+	bool tryCastValue(const Value &value, const PhysicalType &sql_type);
 	// Try to cast a vector of values to the specified sql type
-	bool tryCastVector(Vector &parse_chunk_col, idx_t size, const ConstantType &sql_type);
+	bool tryCastVector(Vector &parse_chunk_col, idx_t size, const PhysicalType &sql_type);
 	// Skips skip_rows, reads header row from input stream
 	void skipRowsAndReadHeader(idx_t skip_rows, bool skip_header);
 	// Jumps back to the beginning of input stream and resets necessary internal states
@@ -197,20 +197,20 @@ private:
 	file_handler_ptr_t openCSV(const BufferedCSVReaderOptions &options);
 
 	// First phase of auto detection: detect CSV dialect (i.e. delimiter, quote rules, etc)
-	void detectDialect(const vector<ConstantType> &requested_types, BufferedCSVReaderOptions &original_options,
+	void detectDialect(const vector<PhysicalType> &requested_types, BufferedCSVReaderOptions &original_options,
 	                   vector<BufferedCSVReaderOptions> &info_candidates, idx_t &best_num_cols);
 	// Second phase of auto detection: detect candidate types for each column
-	void detectCandidateTypes(const vector<ConstantType> &type_candidates,
+	void detectCandidateTypes(const vector<PhysicalType> &type_candidates,
 	                          const vector<BufferedCSVReaderOptions> &info_candidates,
 	                          BufferedCSVReaderOptions &original_options, idx_t best_num_cols,
-	                          vector<vector<ConstantType>> &best_sql_types_candidates,
+	                          vector<vector<PhysicalType>> &best_sql_types_candidates,
 	                          DataChunk &best_header_row);
 	// Third phase of auto detection: detect header of CSV file
-	void detectHeader(const vector<vector<ConstantType>> &best_sql_types_candidates, const DataChunk &best_header_row);
+	void detectHeader(const vector<vector<PhysicalType>> &best_sql_types_candidates, const DataChunk &best_header_row);
 	// Fourth phase of auto detection: refine the types of each column and select which types to use for each column
-	vector<ConstantType> refineTypeDetection(const vector<ConstantType> &type_candidates,
-	                                        const vector<ConstantType> &requested_types,
-	                                        vector<vector<ConstantType>> &best_sql_types_candidates);
+	vector<PhysicalType> refineTypeDetection(const vector<PhysicalType> &type_candidates,
+	                                        const vector<PhysicalType> &requested_types,
+	                                        vector<vector<PhysicalType>> &best_sql_types_candidates);
 };
 
 using buffered_csv_reader_ptr_t = std::unique_ptr<BufferedCSVReader>;

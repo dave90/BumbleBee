@@ -50,7 +50,7 @@ protected:
     Vector createAddresses(idx_t size, RowLayout& layout) {
         auto tuple_size = layout.getRowWidth();
         auto tuples_per_block = Storage::BLOCK_SIZE / tuple_size;
-        Vector addresses(UBIGINT, size);
+        Vector addresses(LogicalTypeId::ADDRESS, size);
         auto addresses_ptr = FlatVector::getData<data_ptr_t>(addresses);
         for (idx_t i = 0; i < size; i++) {
             if (payload_page_offset == tuples_per_block || payload_hds.empty()) {
@@ -70,7 +70,7 @@ protected:
 TEST_F(RowOperationsTest, TestRowOpOneCols) {
     vector<vector<Value>> data;
     addData(data, vector<int>{0,10,20,30});
-    vector<ConstantType> types = {INTEGER};
+    vector<LogicalType> types = {PhysicalType::INTEGER};
 
     DataChunk chunk = generateDataChunk(types, data);
     RowLayout layout;
@@ -91,7 +91,8 @@ TEST_F(RowOperationsTest, TestRowOpOneCols) {
     // compare with address vector ( all values should not match)
     SelectionVector noMatchSel(chunk.getSize());
     DataChunk addresesChunk;
-    addresesChunk.initializeEmpty({UBIGINT});
+    vector<PhysicalType> htypes = {PhysicalType::UBIGINT};
+    addresesChunk.initializeEmpty(htypes);
     addresesChunk.data_[0].reference(addresses);
     for (idx_t i = 0; i < chunk.getSize(); i++) matchSel.setIndex(i,i);
     count = RowOperations::equal(addresesChunk, addresesChunk.orrify().get(), layout, addresses, matchSel, addresesChunk.getSize(),&noMatchSel, no_match_count);
@@ -110,7 +111,7 @@ TEST_F(RowOperationsTest, TestRowOpOneCols) {
 
 
 TEST_F(RowOperationsTest, TestRowOpMultiCols) {
-    vector<ConstantType> types = {UTINYINT, USMALLINT, INTEGER};
+    vector<LogicalType> types = {PhysicalType::UTINYINT, PhysicalType::USMALLINT, PhysicalType::INTEGER};
     vector<vector<Value>> data;
     int N = 50000;
     for (idx_t i = 0; i < types.size(); i++) {
@@ -153,7 +154,7 @@ TEST_F(RowOperationsTest, TestRowOpMultiCols) {
 
 
 TEST_F(RowOperationsTest, TestRowOpString) {
-    vector<ConstantType> types = {STRING};
+    vector<LogicalType> types = {PhysicalType::STRING};
     vector<vector<Value>> data;
     int N = 1000;
     for (idx_t i = 0; i < types.size(); i++) {

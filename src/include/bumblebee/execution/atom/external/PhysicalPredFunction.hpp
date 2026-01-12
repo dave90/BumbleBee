@@ -25,10 +25,10 @@ namespace bumblebee{
 
 class PhysicalPredFunction : public PhysicalAtom {
 public:
-    PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types, vector<idx_t> &dcCols, vector<idx_t> &selectedCols,
+    PhysicalPredFunction(ClientContext &context, const vector<LogicalType> &types, vector<idx_t> &dcCols, vector<idx_t> &selectedCols,
          PredFunction *pred_function, function_data_ptr_t &bind_data);
 
-    PhysicalPredFunction(ClientContext &context, const vector<ConstantType> &types,vector<idx_t> &dcCols,
+    PhysicalPredFunction(ClientContext &context, const vector<LogicalType> &types,vector<idx_t> &dcCols,
         PredFunction *pred_function, function_data_ptr_t &bind_data);
 
     ~PhysicalPredFunction() override;

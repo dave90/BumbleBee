@@ -34,7 +34,7 @@ class ChunkCollectionTest : public ::testing::Test {
 protected:
     ChunkCollection collection;
 
-    vector<ConstantType> testTypes{ConstantType::INTEGER, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<PhysicalType> testTypes{PhysicalType::INTEGER, PhysicalType::UINTEGER, PhysicalType::BIGINT};
 
     DataChunk createChunkWithValue( idx_t count = 1) {
         DataChunk chunk;
@@ -209,7 +209,7 @@ TEST_F(ChunkCollectionTest, CopyCell) {
     auto chunk1 = createChunkWithValue(10);
     collection.append(chunk1);
     std::cout << collection.toString() << std::endl;
-    Vector target(ConstantType::UINTEGER);
+    Vector target(PhysicalType::UINTEGER);
     collection.copyCell(1, 5, target, 0);
     std::cout<<target.toString(10)<<std::endl;
     EXPECT_EQ(target.getValue(0), Value((uint32_t)50));

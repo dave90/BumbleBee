@@ -106,27 +106,27 @@ idx_t nestedLoopJoinEqualTypeSwitch(Vector &left, Vector &right, idx_t lsize, id
                                      idx_t currentMatch) {
     BB_ASSERT(left.getType() == right.getType());
     switch (left.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return NLTYPE::template operation<int8_t,int8_t, OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return NLTYPE::template operation<int16_t,int16_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return NLTYPE::template operation<int32_t,int32_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return NLTYPE::template operation<int64_t,int64_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return NLTYPE::template operation<uint8_t,uint8_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return NLTYPE::template operation<uint16_t,uint16_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return NLTYPE::template operation<uint32_t,uint32_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return NLTYPE::template operation<uint64_t,uint64_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return NLTYPE::template operation<float,float,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return NLTYPE::template operation<double,double,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::STRING:	{
+        case PhysicalType::STRING:	{
             return NLTYPE::template operation<string_t,string_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
         }
         default:
@@ -151,18 +151,18 @@ idx_t nestedLoopJoinCommonTypeSwitch(Vector &left, Vector &right, idx_t lsize, i
 
     // for int and uint collapse to int 64 bit
     // for decimal collapse to double
-    switch (commonType) {
-        case ConstantType::TINYINT:
-        case ConstantType::SMALLINT:
-        case ConstantType::INTEGER:
-        case ConstantType::UTINYINT:
-        case ConstantType::USMALLINT:
-        case ConstantType::UINTEGER:
-        case ConstantType::UBIGINT:
-        case ConstantType::BIGINT:
+    switch (commonType.getPhysicalType()) {
+        case PhysicalType::TINYINT:
+        case PhysicalType::SMALLINT:
+        case PhysicalType::INTEGER:
+        case PhysicalType::UTINYINT:
+        case PhysicalType::USMALLINT:
+        case PhysicalType::UINTEGER:
+        case PhysicalType::UBIGINT:
+        case PhysicalType::BIGINT:
             return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, int64_t, OP>>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
-        case ConstantType::DOUBLE:
+        case PhysicalType::FLOAT:
+        case PhysicalType::DOUBLE:
             return NLTYPE::template operation<LEFT_TYPE,RIGHT_TYPE, ComparisonCommonCast<LEFT_TYPE, RIGHT_TYPE, double, OP>>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -175,25 +175,25 @@ idx_t nestedLoopJoinRightTypeSwitch(Vector &left, Vector &right, idx_t lsize, id
                                          idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                          idx_t currentMatch) {
     switch (right.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int8_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int16_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int32_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,int64_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint8_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint16_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint32_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,uint64_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,float,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return nestedLoopJoinCommonTypeSwitch<NLTYPE,LEFT_TYPE,double,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
@@ -207,28 +207,28 @@ idx_t nestedLoopJoinLeftTypeSwitch(Vector &left, Vector &right, idx_t lsize, idx
                                          idx_t &rpos, SelectionVector &lsel, SelectionVector &rsel,
                                          idx_t currentMatch) {
     // cannot compare string with different types
-    BB_ASSERT(left.getType() != ConstantType::STRING && right.getType() != ConstantType::STRING);
+    BB_ASSERT(left.getType() != PhysicalType::STRING && right.getType() != PhysicalType::STRING);
     // left type != right type
     switch (left.getType()) {
-        case ConstantType::TINYINT:
+        case PhysicalType::TINYINT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,int8_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::SMALLINT:
+        case PhysicalType::SMALLINT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,int16_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::INTEGER:
+        case PhysicalType::INTEGER:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,int32_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::BIGINT:
+        case PhysicalType::BIGINT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,int64_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UTINYINT:
+        case PhysicalType::UTINYINT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,uint8_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::USMALLINT:
+        case PhysicalType::USMALLINT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,uint16_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UINTEGER:
+        case PhysicalType::UINTEGER:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,uint32_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::UBIGINT:
+        case PhysicalType::UBIGINT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,uint64_t,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::FLOAT:
+        case PhysicalType::FLOAT:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,float,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
-        case ConstantType::DOUBLE:
+        case PhysicalType::DOUBLE:
             return nestedLoopJoinRightTypeSwitch<NLTYPE,double,OP>(left, right, lsize, rsize, lpos, rpos, lsel, rsel, currentMatch);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");

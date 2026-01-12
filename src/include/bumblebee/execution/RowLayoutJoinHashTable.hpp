@@ -35,11 +35,11 @@ namespace bumblebee{
 class RowLayoutJoinHashTable: public PRLHashTable {
 
 public:
-    RowLayoutJoinHashTable(BufferManager &manager, const vector<ConstantType> &types,
+    RowLayoutJoinHashTable(BufferManager &manager, const vector<LogicalType> &types,
         const vector<idx_t> &key_columns, const vector<idx_t> &payload_columns, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
 
     // Compare the types of the ht with the types of predicate
-    bool checksTypes(const vector<ConstantType>& predicateTypes);
+    bool checksTypes(const vector<LogicalType>& predicateTypes);
 
     // Add a given data to HT
     void addChunk(DataChunk& payload) override;
@@ -82,7 +82,7 @@ private:
 public:
     // Combine h1 with h2 using the common types. Results are in h1
     static void castAndCombine(BufferManager &manager, std::unique_ptr<RowLayoutJoinHashTable> &h1, RowLayoutJoinHashTable &h2);
-    static void cast(BufferManager &manager, std::unique_ptr<RowLayoutJoinHashTable> &h1, vector<ConstantType> predicateTypes);
+    static void cast(BufferManager &manager, std::unique_ptr<RowLayoutJoinHashTable> &h1, vector<LogicalType> predicateTypes);
 
 };
 

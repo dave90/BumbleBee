@@ -35,9 +35,9 @@ public:
     RowLayout();
 
     // Initializes the RowLayout with the specified types and aggregates to an empty RowLayout
-    void initialize(vector<ConstantType> types_p, Aggregates aggregates, bool align = true);
+    void initialize(vector<LogicalType> types_p, Aggregates aggregates, bool align = true);
     // Initializes the RowLayout with the specified types to an empty RowLayout
-    void initialize(vector<ConstantType> types, bool align = true);
+    void initialize(vector<LogicalType> types, bool align = true);
     // Initializes the RowLayout with the specified aggregates to an empty RowLayout
     void initialize(Aggregates aggregates_p, bool align = true);
     // Returns the number of data columns
@@ -45,7 +45,7 @@ public:
         return types_.size();
     }
     // Returns a list of the column types for this data chunk
-    inline const vector<ConstantType> &getTypes() const {
+    inline const vector<LogicalType> &getTypes() const {
         return types_;
     }
     // Returns the number of aggregates
@@ -86,7 +86,7 @@ public:
 
 private:
     // The types of the data columns
-    vector<ConstantType> types_;
+    vector<LogicalType> types_;
     // The aggregate functions
     Aggregates aggregates_;
     // The width of the data portion

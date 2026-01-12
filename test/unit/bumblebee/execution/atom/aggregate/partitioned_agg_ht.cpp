@@ -37,10 +37,10 @@ class PartitionedAggHTTest : public ::testing::Test {
     // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
 
-    vector<ConstantType> tLeft{ConstantType::SMALLINT, ConstantType::UINTEGER, ConstantType::BIGINT};
+    vector<LogicalType> tLeft{PhysicalType::SMALLINT, PhysicalType::UINTEGER, PhysicalType::BIGINT};
     ClientContext context;
 
-    DataChunk createChunkWithValue( vector<ConstantType> testTypes, idx_t count = 1, idx_t offset=0 ) {
+    DataChunk createChunkWithValue( vector<LogicalType> testTypes, idx_t count = 1, idx_t offset=0 ) {
         DataChunk chunk;
         chunk.initialize(testTypes);
         chunk.setCapacity(count);
@@ -48,7 +48,7 @@ protected:
         for (idx_t i = 0; i < count; ++i) {
             for (idx_t j = 0; j < testTypes.size(); ++j) {
                 auto value = Value((int64_t) ((i+offset)*10*j));
-                chunk.setValue(j, i, value.cast(testTypes[j]));
+                chunk.setValue(j, i, value.cast(testTypes[j].getPhysicalType()));
             }
         }
         chunk.setCardinality(count);
@@ -60,7 +60,7 @@ protected:
         if (!ht)
             ht = distinct_ht_ptr_t(new PRLHashTable(*context.bufferManager_, tLeft, capacity, resize));
 
-        Vector hash(UBIGINT, chunk.getSize());
+        Vector hash(LogicalTypeId::HASH, chunk.getSize());
         chunk.hash(hash);
         ht->addChunk(hash, chunk);
     }
@@ -73,7 +73,7 @@ protected:
     }
 
     DataChunk probeToHT(agg_ht_ptr_t& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
-        vector<ConstantType> groupTypes, payloadTypes;
+        vector<LogicalType> groupTypes, payloadTypes;
         for (auto g : groups)
             groupTypes.push_back(chunk.getTypes()[g]);
         for (auto f : functions)
@@ -85,7 +85,7 @@ protected:
         payload.initialize(payloadTypes);
         payload.setCardinality(group.getSize());
 
-        Vector hash(UBIGINT, group.getSize());
+        Vector hash(LogicalTypeId::HASH, group.getSize());
         group.hash(hash);
 
         SelectionVector sel(group.getSize());
@@ -130,8 +130,8 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDist
     EXPECT_EQ(result.getSize(), chunk.getSize());
     for (idx_t i = 0; i < result.getSize(); ++i) {
         // Expected =  (i * 10)
-        int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
-        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 }
@@ -155,7 +155,7 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
     for (idx_t i = 0; i < N; ++i) {
         int64_t v = static_cast<int64_t>(100);
         for (idx_t j = 0; j < tLeft.size(); ++j) {
-            chunk.setValue(j, i, Value(v*j).cast(tLeft[j])); // make all columns identical
+            chunk.setValue(j, i, Value(v*j).cast(tLeft[j].getPhysicalType())); // make all columns identical
         }
     }
     chunk.setCardinality(N);
@@ -181,7 +181,7 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
     // values should be 200 as all the values are duplicates
     for (idx_t i = 0; i < result.getSize(); ++i) {
         int64_t expected = 200;
-        int64_t got = result.data_[0].getValue(i).cast(BIGINT).getNumericValue<int64_t>();
+        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
         EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
     }
 

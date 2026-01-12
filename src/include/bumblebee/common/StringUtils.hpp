@@ -41,6 +41,25 @@ public:
     static void removeQuote(string& str);
     static bool startsWith(string str, string prefix);
     static string trim(const string& str);
+
+
+    template <typename... Args>
+    static std::string format(std::string_view fmt, Args&&... args) {
+        try {
+            // store the args such that we can pass lvalue and rvalue args
+            auto stored = std::tuple<std::decay_t<Args>...>(std::forward<Args>(args)...);
+            return std::apply(
+                [&](auto&... a) {
+                    return std::vformat(fmt, std::make_format_args(a...));
+                },
+                stored
+            );
+        } catch (const std::format_error& e) {
+            ErrorHandler::errorGeneric(std::string("Format error: ") + e.what());
+            return {};
+        }
+    }
+
 };
 
 

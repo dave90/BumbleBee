@@ -77,11 +77,12 @@ public:
 	void setValue(idx_t col, idx_t index, const Value &val);
 
 	// Set the DataChunk to reference another data chunk
-	void reference(DataChunk &chunk);
+	void reference(const DataChunk &chunk);
 	// Set the DataChunk to reference another data chunk only on columns defined in cols
 	void reference(DataChunk &chunk, const vector<idx_t>& cols);
 	// call first the initialize and then reference the columns
 	void initAndReference(DataChunk &chunk, const vector<idx_t>& cols);
+	void initAndReference(DataChunk &chunk);
 
 	// Create a new pointer data chunk that reference to this data chunk
 	std::unique_ptr<DataChunk> clone();
@@ -90,9 +91,11 @@ public:
 	// This will create one vector of the specified type for each type in the
 	// types list. The vector will be referencing vector to the data owned by
 	// the DataChunk.
-	void initialize(const vector<ConstantType> &types);
+	void initialize(const vector<PhysicalType> &types);
+	void initialize(const vector<LogicalType> &types);
 	// Initializes an empty DataChunk with the given types. The vectors will *not* have any data allocated for them.
-	void initializeEmpty(const vector<ConstantType> &types);
+	void initializeEmpty(const vector<PhysicalType> &types);
+	void initializeEmpty(const vector<LogicalType> &types);
 	// Append the other DataChunk to this one. The column count and types of
 	// the two DataChunks have to match exactly. Throws an exception if there
 	// is not enough space in the chunk and resize is not allowed.
@@ -134,7 +137,7 @@ public:
 
 
 	// Returns a list of types of the vectors of this data chunk
-	vector<ConstantType> getTypes() const;
+	vector<LogicalType> getTypes() const;
 
 	// Converts this DataChunk to a printable string representation
 	std::string toString() const;
@@ -145,7 +148,7 @@ public:
 
 	// cast the data chunk based on the input types
 	// this method COPY data (use it if necessary)
-	void cast(const vector<ConstantType>& types);
+	void cast(const vector<LogicalType>& types);
 	void cast(DataChunk& result);
 
 private:

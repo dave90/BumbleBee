@@ -28,9 +28,9 @@ namespace bumblebee{
 // - executor for probe phase
 class PhysicalRowLayoutHashJoin : public PhysicalAtom {
 public:
-    PhysicalRowLayoutHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads,
+    PhysicalRowLayoutHashJoin(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads,
     vector<idx_t> lkeys, bool negative);
-    PhysicalRowLayoutHashJoin(const ClientContext& context, const vector<ConstantType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads, PhysicalHashType type);
+    PhysicalRowLayoutHashJoin(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t>& dcCols, vector<idx_t>& selectedCols, PredicateTables* pt, vector<idx_t> keys, vector<idx_t> payloads, PhysicalHashType type);
     ~PhysicalRowLayoutHashJoin() override;
 
     bool isSink() const override;

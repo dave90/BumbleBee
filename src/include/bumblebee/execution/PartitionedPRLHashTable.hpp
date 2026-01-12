@@ -38,7 +38,7 @@ public:
     // The hash table load factor, when a resize is triggered
     constexpr static float LOAD_FACTOR = 0.5;
 
-    PartitionedPRLHashTable(BufferManager& manager, const vector<ConstantType>& types, idx_t partitions = HT_PARTITIONS);
+    PartitionedPRLHashTable(BufferManager& manager, const vector<LogicalType>& types, idx_t partitions = HT_PARTITIONS);
     PartitionedPRLHashTable(BufferManager& manager, idx_t partitions = HT_PARTITIONS);
     virtual ~PartitionedPRLHashTable() {};
 
@@ -48,9 +48,9 @@ public:
     PartitionedPRLHashTable & operator=(const PartitionedPRLHashTable &other) = delete;
     PartitionedPRLHashTable & operator=(PartitionedPRLHashTable &&other) noexcept = delete;
 
-    void initialize(const vector<ConstantType> &types);
+    void initialize(const vector<LogicalType> &types);
 
-    bool equalTypes(const vector<ConstantType>& types) const;
+    bool equalTypes(const vector<LogicalType>& types) const;
 
     // Add a given data to HT
     void addChunk(Vector& hash, DataChunk& chunk);
@@ -66,16 +66,16 @@ public:
     idx_t getSize() const;
     vector<idx_t> getPartitionsSize() const;
     string toString(bool compact = true);
-    vector<ConstantType> getTypes() const;
+    vector<LogicalType> getTypes() const;
 
-    void setTypes(const std::vector<ConstantType> & vector);
+    void setTypes(const std::vector<LogicalType> & vector);
 
 protected:
     void addChunkInternal(Vector &hash, DataChunk &chunk, idx_t &newGroupsCount, SelectionVector *newGroupSel);
 
 
     // Types of the columns in the hash table
-    vector<ConstantType> types_;
+    vector<LogicalType> types_;
     // Buffer manager of hash and data blocks
     BufferManager &bufferManager_;
 
@@ -98,7 +98,7 @@ public:
     // Combine h1 with h2 using the common types. Results are in h1
     static void castAndCombine(BufferManager &manager, std::unique_ptr<PartitionedPRLHashTable> &h1, PartitionedPRLHashTable &h2);
 
-    static void cast(BufferManager &manager, std::unique_ptr<PartitionedPRLHashTable> &h1, const vector<ConstantType> &types);
+    static void cast(BufferManager &manager, std::unique_ptr<PartitionedPRLHashTable> &h1, const vector<LogicalType> &types);
 };
 
 using partitioned_prl_ht_ptr_t = std::unique_ptr<PartitionedPRLHashTable>;

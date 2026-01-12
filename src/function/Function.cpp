@@ -20,12 +20,12 @@
 #include "bumblebee/function/Function.hpp"
 
 namespace bumblebee {
-Function::Function(const string &name, const vector<ConstantType> &arguments, ConstantType result): name_(name),
+Function::Function(const string &name, const vector<LogicalType> &arguments, LogicalType result): name_(name),
     arguments_(arguments),
     result_(result) {
 }
 
-Function::Function(const string &name, const vector<ConstantType> &arguments) : Function(name, arguments, UNKNOWN) {
+Function::Function(const string &name, const vector<LogicalType> &arguments) : Function(name, arguments, LogicalTypeId::UNKNOWN) {
 }
 
 Function::Function(const Function &other): name_(other.name_),

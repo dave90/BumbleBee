@@ -32,43 +32,43 @@ protected:
 
 TEST_F(VectorOperationsCastTest, BasicCast) {
     vector<int> data = {0,10,20,30};
-    ConstantType sourceType = INTEGER;
-    ConstantType resultType = BIGINT;
+    PhysicalType sourceType = PhysicalType::INTEGER;
+    PhysicalType resultType = PhysicalType::BIGINT;
     Vector input = generateVector(sourceType, data);
     EXPECT_EQ(input.getType(), sourceType);
     Vector result(resultType, data.size());
 
     VectorOperations::cast(input,result,data.size());
     for (idx_t i = 0; i < data.size(); i++) {
-        EXPECT_EQ(result.getValue(i).cast(BIGINT).getNumericValue<int64_t>(), ( (int64_t) data[i]) );
+        EXPECT_EQ(result.getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>(), ( (int64_t) data[i]) );
     }
 }
 
 TEST_F(VectorOperationsCastTest, UintToIntCast) {
     vector<int> data = {0,10,20,30};
-    ConstantType sourceType = USMALLINT;
-    ConstantType resultType = SMALLINT;
+    PhysicalType sourceType = PhysicalType::USMALLINT;
+    PhysicalType resultType = PhysicalType::SMALLINT;
     Vector input = generateVector(sourceType, data);
     EXPECT_EQ(input.getType(), sourceType);
     Vector result(resultType, data.size());
 
     VectorOperations::cast(input,result,data.size());
     for (idx_t i = 0; i < data.size(); i++) {
-        EXPECT_EQ(result.getValue(i).cast(BIGINT).getNumericValue<int64_t>(), ( (int64_t) data[i]) );
+        EXPECT_EQ(result.getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>(), ( (int64_t) data[i]) );
     }
 }
 
 TEST_F(VectorOperationsCastTest, IntToFloatCast) {
     vector<int> data = {0,10,20,30};
-    ConstantType sourceType = USMALLINT;
-    ConstantType resultType = FLOAT;
+    PhysicalType sourceType = PhysicalType::USMALLINT;
+    PhysicalType resultType = PhysicalType::FLOAT;
     Vector input = generateVector(sourceType, data);
     EXPECT_EQ(input.getType(), sourceType);
     Vector result(resultType, data.size());
 
     VectorOperations::cast(input,result,data.size());
     for (idx_t i = 0; i < data.size(); i++) {
-        EXPECT_EQ(result.getValue(i).cast(DOUBLE).getNumericValue<double>(), ( (double) data[i]) );
+        EXPECT_EQ(result.getValue(i).cast(PhysicalType::DOUBLE).getNumericValue<double>(), ( (double) data[i]) );
     }
 }
 
@@ -76,8 +76,8 @@ TEST_F(VectorOperationsCastTest, IntToFloatCast) {
 
 TEST_F(VectorOperationsCastTest, TryCastBigIntIntoSmall) {
     vector<uint64_t> data = {0,10,20,30};
-    ConstantType sourceType = UBIGINT;
-    ConstantType resultType = USMALLINT;
+    PhysicalType sourceType = PhysicalType::UBIGINT;
+    PhysicalType resultType = PhysicalType::USMALLINT;
     Vector input1 = generateVector(sourceType, data);
     EXPECT_EQ(input1.getType(), sourceType);
     Vector result1(resultType, data.size());
@@ -102,8 +102,8 @@ TEST_F(VectorOperationsCastTest, TryCastBigIntIntoSmall) {
 
 TEST_F(VectorOperationsCastTest, TryCastBigIntIntoString) {
     vector<uint64_t> data = {0,10,20,30,100000};
-    ConstantType sourceType = UBIGINT;
-    ConstantType resultType = STRING;
+    PhysicalType sourceType = PhysicalType::UBIGINT;
+    PhysicalType resultType = PhysicalType::STRING;
     Vector input1 = generateVector(sourceType, data);
     EXPECT_EQ(input1.getType(), sourceType);
     Vector result1(resultType, data.size());
@@ -120,8 +120,8 @@ TEST_F(VectorOperationsCastTest, TryCastBigIntIntoString) {
 
 TEST_F(VectorOperationsCastTest, TryCastStringIntoBigInt) {
     vector<string> data = {"0","10","20","30","100002340"};
-    ConstantType sourceType = STRING;
-    ConstantType resultType = BIGINT;
+    PhysicalType sourceType = PhysicalType::STRING;
+    PhysicalType resultType = PhysicalType::BIGINT;
     Vector input1 = generateVector(sourceType, data);
     EXPECT_EQ(input1.getType(), sourceType);
     Vector result1(resultType, data.size());
@@ -141,4 +141,23 @@ TEST_F(VectorOperationsCastTest, TryCastStringIntoBigInt) {
     EXPECT_EQ(r, false);
     EXPECT_GE(error->size(), 0);
 
+}
+
+
+TEST_F(VectorOperationsCastTest, TryCastDecimalIntoString) {
+    vector<uint64_t> data = {2,11,20,30,100000,1};
+    auto scale = 2;
+    LogicalType sourceType = LogicalType::createDecimal(9, scale);
+    PhysicalType resultType = PhysicalType::STRING;
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType.getPhysicalType());
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    auto expected = formatDecimalVector(scale, data);
+    for (idx_t i = 0; i < expected.size(); i++) {
+        EXPECT_EQ(result1.getValue(i).toString(), expected[i] );
+    }
 }

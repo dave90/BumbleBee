@@ -45,7 +45,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-namespace bumblebee_hll {
+namespace bumblebee {
 
 
 typedef char *sds;

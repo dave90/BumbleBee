@@ -87,27 +87,27 @@ static void templatedMatchOpSwitchCommon(Vector &vec, VectorData &col, const idx
 							 SelectionVector &sel,SelectionVector *row_sel, idx_t &count, idx_t col_no, SelectionVector *no_match,
 							 idx_t &no_match_count) {
 	auto col_offset = layout.getOffsets()[col_no];
-	auto commonType = getCommonType(vec.getType(), layout.getTypes()[col_no]);
+	auto commonType = getCommonType(vec.getType(), layout.getTypes()[col_no].getPhysicalType());
 
 	// for int and uint collapse to int 64 bit
 	// for decimal collapse to double
-	switch (commonType) {
-		case ConstantType::TINYINT:
-		case ConstantType::SMALLINT:
-		case ConstantType::INTEGER:
-		case ConstantType::UTINYINT:
-		case ConstantType::USMALLINT:
-		case ConstantType::UINTEGER:
-		case ConstantType::UBIGINT:
-		case ConstantType::BIGINT: {
+	switch (commonType.getPhysicalType()) {
+		case PhysicalType::TINYINT:
+		case PhysicalType::SMALLINT:
+		case PhysicalType::INTEGER:
+		case PhysicalType::UTINYINT:
+		case PhysicalType::USMALLINT:
+		case PhysicalType::UINTEGER:
+		case PhysicalType::UBIGINT:
+		case PhysicalType::BIGINT: {
 			if (!HAS_ROW_SEL)
 				templatedMatchType<ROW_TYPE,VEC_TYPE, ComparisonCommonCast<ROW_TYPE, VEC_TYPE, int64_t, OP>, NO_MATCH_SEL>(col, rows, sel, count, col_offset, col_no, no_match, no_match_count);
 			else
 				templatedMatchTypeSelection<ROW_TYPE,VEC_TYPE, ComparisonCommonCast<ROW_TYPE, VEC_TYPE, int64_t, OP>, NO_MATCH_SEL>(col, rows, sel, *row_sel, count, col_offset, col_no, no_match, no_match_count);
 
 			break;
-		}case ConstantType::FLOAT:
-		case ConstantType::DOUBLE:
+		}case PhysicalType::FLOAT:
+		case PhysicalType::DOUBLE:
 			if (!HAS_ROW_SEL)
 				templatedMatchType<ROW_TYPE,VEC_TYPE, ComparisonCommonCast<ROW_TYPE, VEC_TYPE, double, OP>, NO_MATCH_SEL>(col, rows, sel, count, col_offset, col_no, no_match, no_match_count);
 			else
@@ -125,25 +125,25 @@ static void templatedMatchOpSwitchVec(Vector &vec, VectorData &col, const idx_t 
 							 idx_t &no_match_count) {
 
 	switch (vec.getType()) {
-		case ConstantType::TINYINT:
+		case PhysicalType::TINYINT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, int8_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, int16_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, int32_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, int64_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, uint8_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, uint16_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, uint32_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, uint64_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, float,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			return templatedMatchOpSwitchCommon<ROW_TYPE, double,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
 
 		default:
@@ -157,31 +157,31 @@ template <class OP, bool NO_MATCH_SEL, bool HAS_ROW_SEL>
 static void templatedMatchOpSwitchRow(Vector &vec, VectorData &col, const idx_t vcount, const RowLayout &layout, Vector &rows,
                              SelectionVector &sel,SelectionVector *row_sel, idx_t &count, idx_t col_no, SelectionVector *no_match,
                              idx_t &no_match_count) {
-	BB_ASSERT(vec.getType() != ConstantType::STRING && layout.getTypes()[col_no] != ConstantType::STRING);
+	BB_ASSERT(vec.getType() != PhysicalType::STRING && layout.getTypes()[col_no] != PhysicalType::STRING);
 
 	if (count == 0) {
 		return;
 	}
-	switch (layout.getTypes()[col_no]) {
-		case ConstantType::TINYINT:
+	switch (layout.getTypes()[col_no].getPhysicalType()) {
+		case PhysicalType::TINYINT:
 			return templatedMatchOpSwitchVec<int8_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			return templatedMatchOpSwitchVec<int16_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			return templatedMatchOpSwitchVec<int32_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			return templatedMatchOpSwitchVec<int64_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			return templatedMatchOpSwitchVec<uint8_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			return templatedMatchOpSwitchVec<uint16_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			return templatedMatchOpSwitchVec<uint32_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			return templatedMatchOpSwitchVec<uint64_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			return templatedMatchOpSwitchVec<float,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			return templatedMatchOpSwitchVec<double,OP,NO_MATCH_SEL,HAS_ROW_SEL>(vec, col, vcount, layout, rows, sel, row_sel, count, col_no, no_match, no_match_count);
 
 		default:
@@ -208,28 +208,28 @@ static void templatedMatchOp(Vector &vec, VectorData &col, const idx_t vcount, c
 		return;
 	}
 	auto col_offset = layout.getOffsets()[col_no];
-	switch (layout.getTypes()[col_no]) {
-		case ConstantType::TINYINT:
+	switch (layout.getTypes()[col_no].getPhysicalType()) {
+		case PhysicalType::TINYINT:
 			return templatedMatchTypeEqualType<int8_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::SMALLINT:
+		case PhysicalType::SMALLINT:
 			return templatedMatchTypeEqualType<int16_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::INTEGER:
+		case PhysicalType::INTEGER:
 			return templatedMatchTypeEqualType<int32_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::BIGINT:
+		case PhysicalType::BIGINT:
 			return templatedMatchTypeEqualType<int64_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::UTINYINT:
+		case PhysicalType::UTINYINT:
 			return templatedMatchTypeEqualType<uint8_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::USMALLINT:
+		case PhysicalType::USMALLINT:
 			return templatedMatchTypeEqualType<uint16_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::UINTEGER:
+		case PhysicalType::UINTEGER:
 			return templatedMatchTypeEqualType<uint32_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::UBIGINT:
+		case PhysicalType::UBIGINT:
 			return templatedMatchTypeEqualType<uint64_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::FLOAT:
+		case PhysicalType::FLOAT:
 			return templatedMatchTypeEqualType<float,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::DOUBLE:
+		case PhysicalType::DOUBLE:
 			return templatedMatchTypeEqualType<double,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
-		case ConstantType::STRING:
+		case PhysicalType::STRING:
 			return templatedMatchTypeEqualType<string_t,OP,NO_MATCH_SEL,HAS_ROW_SEL>(col, rows, sel, row_sel, count, col_offset, col_no, no_match, no_match_count);
 
 		default:

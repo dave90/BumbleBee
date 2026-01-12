@@ -78,7 +78,7 @@ private:
 };
 
 
-PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalHashJoin::PhysicalHashJoin(const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols,
     PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads, vector<idx_t> lkeys,
     vector<Expression>& conditions)
@@ -91,7 +91,7 @@ PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx
         lkeys_(std::move(lkeys)){
 }
 
-PhysicalHashJoin::PhysicalHashJoin(const vector<ConstantType> &types, vector<idx_t> &dcCols,
+PhysicalHashJoin::PhysicalHashJoin(const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredicateTables *pt, vector<idx_t> keys, vector<idx_t> payloads,
     PhysicalHashType type):PhysicalAtom(types, dcCols, selectedCols),
     pt_(pt),
@@ -123,7 +123,7 @@ string PhysicalHashJoin::toString() const {
     }
     result += "; ";
     for (auto c : dcColsType_) {
-        result += ctypeToString(c) + ", ";
+        result += c.toString() + ", ";
     }
     result += "; ";
 
@@ -167,7 +167,7 @@ AtomResultType PhysicalHashJoin::execute(ThreadContext &context, DataChunk &inpu
     }
 
     auto& lchunk = input;
-    Vector hash(UBIGINT);
+    Vector hash(LogicalTypeId::HASH);
     lchunk.hash(hash, lkeys_);
 
     auto& rchunk = cstate.ht_.getDataChunk();
@@ -261,7 +261,7 @@ AtomResultType PhysicalHashJoin::sink(ThreadContext &context, DataChunk &input, 
 
     // filter the columns
     auto pchunk = projectColumns(input);
-    Vector hash(UBIGINT);
+    Vector hash(LogicalTypeId::HASH);
     pchunk.hash(hash, keys_);
 
     cgstate.ht_.addDataChunkSel(hash, pchunk);

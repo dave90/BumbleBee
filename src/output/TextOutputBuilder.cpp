@@ -17,12 +17,44 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "bumblebee/common/NumericUtils.hpp"
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
 #include "bumblebee/output/OutputBuilder.hpp"
 
 namespace bumblebee {
+//
+// template <class SIGNED,class UNSIGNED>
+// string formatDecimal(SIGNED value, int scale) {
+//     DecimalToString converter;
+//     int len = converter.decimalLength<SIGNED, UNSIGNED>(value, scale);
+//     char str[len];
+//     converter.formatDecimal<SIGNED,UNSIGNED>(value, scale, str, len);
+//     return str;
+// }
+//
+// string formatDecimalValue(const Value& val, const LogicalType& type) {
+//     DecimalToString converter;
+//     int precision, scale;
+//     type.getDecimalWidhtAndScale(precision, scale);
+//     switch (type.getPhysicalType()) {
+//         case PhysicalType::SMALLINT:
+//             return formatDecimal<int16_t, uint16_t>(val.getNumericValue<int16_t>(), scale);
+//         case PhysicalType::INTEGER:
+//             return formatDecimal<int32_t, uint32_t>(val.getNumericValue<int16_t>(), scale);
+//         case PhysicalType::BIGINT:
+//             return formatDecimal<int64_t, uint64_t>(val.getNumericValue<int16_t>(), scale);
+//         default:
+//             ErrorHandler::errorNotImplemented("Error print DECIMAL type, precision not supported");
+//     }
+//     return "";
+// }
 
-void printVal(const Value& val, string& line) {
-    if (val.getConstantType() != STRING)
+void printVal(const Value& val, string& line, const LogicalType& type) {
+    // if (type.type() == LogicalTypeId::DECIMAL) {
+    //     // Convert to decimal
+    //     line.append(formatDecimalValue(val, type));
+    // }
+    if (type.getPhysicalType() != PhysicalType::STRING)
         line.append(val.toString());
     else {
         // quote the string
@@ -32,24 +64,36 @@ void printVal(const Value& val, string& line) {
     }
 }
 
-void TextOutputBuilder::outputAtoms(const DataChunk &chunk, Predicate *predicate) {
+void TextOutputBuilder::outputAtoms(DataChunk &chunk, Predicate *predicate) {
     auto arity = predicate->getArity();
     std::string line;
     line.reserve(OUTPUT_BUFFER_SIZE);
 
-    for (idx_t row = 0; row < chunk.getSize();++row) {
+    DataChunk stringChunk;
+    vector<LogicalType> types (chunk.columnCount(), LogicalTypeId::STRING);
+    stringChunk.initializeEmpty(types);
+    for (auto i=0;i<chunk.columnCount();++i) {
+        if (chunk.data_[i].getType() == PhysicalType::STRING)
+            stringChunk.data_[i].reference(chunk.data_[i]);
+        else {
+            // cast it
+            stringChunk.data_[i].initialize(false, chunk.getSize());
+            VectorOperations::cast( chunk.data_[i], stringChunk.data_[i], chunk.getSize());
+        }
+    }
+    stringChunk.setCardinality(chunk.getSize());
+
+    for (idx_t row = 0; row < stringChunk.getSize();++row) {
         line.clear();
         line.append(predicate->getName());
         line.push_back('(');
-        auto firstVal = chunk.getValue(0, row);
-        printVal(firstVal, line);
-
+        auto firstVal = stringChunk.getValue(0, row);
+        printVal(firstVal, line,  chunk.data_[0].getLogicalType()); // pass the original value
 
         for (idx_t col = 1; col < arity; ++col) {
             line.push_back(',');
-            auto val = chunk.getValue(col, row);
-            printVal(val, line);
-
+            auto val = stringChunk.getValue(col, row);
+            printVal(val, line, chunk.data_[col].getLogicalType()); // pass the original value
         }
         line.append(").\n");
         std::cout.write(line.data(), static_cast<std::streamsize>(line.size()));

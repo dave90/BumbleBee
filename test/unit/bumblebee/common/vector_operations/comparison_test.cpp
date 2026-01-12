@@ -34,8 +34,8 @@ protected:
 
 TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectors) {
     vector<int32_t> values = {1,2,3,4};
-    Vector v1 = generateVector(INTEGER, values);
-    Vector v2 = generateVector(INTEGER, values);
+    Vector v1 = generateVector(PhysicalType::INTEGER, values);
+    Vector v2 = generateVector(PhysicalType::INTEGER, values);
 
     auto match = VectorOperations::equals(v1,v2,nullptr,values.size(), nullptr);
     // expected all match
@@ -55,8 +55,8 @@ TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectors) {
 
 TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectorsWithSel) {
     vector<int32_t> values = {1,2,3,4};
-    Vector v1 = generateVector(INTEGER, values);
-    Vector v2 = generateVector(INTEGER, values);
+    Vector v1 = generateVector(PhysicalType::INTEGER, values);
+    Vector v2 = generateVector(PhysicalType::INTEGER, values);
 
 
     SelectionVector sel(STANDARD_VECTOR_SIZE);
@@ -74,8 +74,8 @@ TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectorsWithSel) {
 
 TEST_F(VectorOperationsComparisonTest, CompareNotEqualFlatVectors) {
     vector<int32_t> values = {1,2,3,4};
-    Vector v1 = generateVector(INTEGER, values);
-    Vector v2 = generateVector(INTEGER, values);
+    Vector v1 = generateVector(PhysicalType::INTEGER, values);
+    Vector v2 = generateVector(PhysicalType::INTEGER, values);
 
     auto match = VectorOperations::notEquals(v1,v2,nullptr,values.size(), nullptr);
     // expected all match
@@ -85,8 +85,8 @@ TEST_F(VectorOperationsComparisonTest, CompareNotEqualFlatVectors) {
 TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectorsDifferentTypes) {
     vector<int32_t> values1 = {1,2,3,4};
     vector<uint16_t> values2 = {1,2,3,4};
-    Vector v1 = generateVector(INTEGER, values1);
-    Vector v2 = generateVector(USMALLINT, values2);
+    Vector v1 = generateVector(PhysicalType::INTEGER, values1);
+    Vector v2 = generateVector(PhysicalType::USMALLINT, values2);
 
     auto match = VectorOperations::equals(v1,v2,nullptr,values1.size(), nullptr);
     // expected all match
@@ -96,8 +96,8 @@ TEST_F(VectorOperationsComparisonTest, CompareEqualFlatVectorsDifferentTypes) {
 TEST_F(VectorOperationsComparisonTest, SignedVsUnsignedComparison) {
     vector<int32_t> signed_values = {-1, 0, 1, 4};
     vector<uint32_t> unsigned_values = {0, 0, 1, 3};
-    Vector v1 = generateVector(INTEGER, signed_values);
-    Vector v2 = generateVector(UINTEGER, unsigned_values);
+    Vector v1 = generateVector(PhysicalType::INTEGER, signed_values);
+    Vector v2 = generateVector(PhysicalType::UINTEGER, unsigned_values);
 
     SelectionVector sel(STANDARD_VECTOR_SIZE);
     auto match = VectorOperations::greaterThan(v1, v2, nullptr, signed_values.size(), &sel);
@@ -108,8 +108,8 @@ TEST_F(VectorOperationsComparisonTest, SignedVsUnsignedComparison) {
 TEST_F(VectorOperationsComparisonTest, FloatVsIntegerComparison) {
     vector<float> float_values = {1.0f, 2.5f, 3.0f, 4.1f};
     vector<int32_t> int_values = {1, 3, 2, 4};
-    Vector v1 = generateVector(FLOAT, float_values);
-    Vector v2 = generateVector(INTEGER, int_values);
+    Vector v1 = generateVector(PhysicalType::FLOAT, float_values);
+    Vector v2 = generateVector(PhysicalType::INTEGER, int_values);
 
     auto match = VectorOperations::lessThanEquals(v1, v2, nullptr, float_values.size(), nullptr);
     EXPECT_EQ(match, 2); // all except last: 4.1 > 4 and 3.0 > 2
@@ -118,8 +118,8 @@ TEST_F(VectorOperationsComparisonTest, FloatVsIntegerComparison) {
 TEST_F(VectorOperationsComparisonTest, MixedTypesEdgeValues) {
     vector<int8_t> values1 = {0, INT8_MAX, 100, INT8_MAX};
     vector<uint16_t> values2 = {0, 0, 100, 200};
-    Vector v1 = generateVector(TINYINT, values1);
-    Vector v2 = generateVector(USMALLINT, values2);
+    Vector v1 = generateVector(PhysicalType::TINYINT, values1);
+    Vector v2 = generateVector(PhysicalType::USMALLINT, values2);
 
     SelectionVector sel(STANDARD_VECTOR_SIZE);
     auto match = VectorOperations::greaterThan(v1, v2, nullptr, values1.size(), &sel);
@@ -129,8 +129,8 @@ TEST_F(VectorOperationsComparisonTest, MixedTypesEdgeValues) {
 
 TEST_F(VectorOperationsComparisonTest, CompareEqualStringVectors) {
     vector<const char*> values = {"apple", "banana", "miao", "meowmeowmeowmeowmeowmeow"};
-    Vector v1 = generateVector(STRING, values);
-    Vector v2 = generateVector(STRING, values);
+    Vector v1 = generateVector(PhysicalType::STRING, values);
+    Vector v2 = generateVector(PhysicalType::STRING, values);
 
     auto match = VectorOperations::equals(v1, v2, nullptr, values.size(), nullptr);
     EXPECT_EQ(match, values.size());
@@ -147,8 +147,8 @@ TEST_F(VectorOperationsComparisonTest, CompareLessThanStringVectors) {
     vector<const char*> v1_values = {"ant", "bat", "miao", "dog"};
     vector<const char*> v2_values = {"apple", "banana", "meow", "donkey"};
 
-    Vector v1 = generateVector(STRING, v1_values);
-    Vector v2 = generateVector(STRING, v2_values);
+    Vector v1 = generateVector(PhysicalType::STRING, v1_values);
+    Vector v2 = generateVector(PhysicalType::STRING, v2_values);
 
     SelectionVector sel(STANDARD_VECTOR_SIZE);
     auto match = VectorOperations::lessThan(v1, v2, nullptr, v1_values.size(), &sel);

@@ -24,7 +24,7 @@
 #include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee{
-PRLHashTable::PRLHashTable(BufferManager &manager, const vector<ConstantType> &types, idx_t capacity,
+PRLHashTable::PRLHashTable(BufferManager &manager, const vector<LogicalType> &types, idx_t capacity,
     bool resizable) : bufferManager_(manager){
     initialize( types,  capacity,resizable);
 }
@@ -32,7 +32,7 @@ PRLHashTable::PRLHashTable(BufferManager &manager, const vector<ConstantType> &t
 PRLHashTable::PRLHashTable(BufferManager &manager): bufferManager_(manager) {
 }
 
-void PRLHashTable::initialize(const vector<ConstantType> &types, idx_t capacity, bool resizable) {
+void PRLHashTable::initialize(const vector<LogicalType> &types, idx_t capacity, bool resizable) {
     capacity_ = 0;
     types_ = types;
     resizable_ = resizable;
@@ -55,13 +55,13 @@ void PRLHashTable::initialize(const vector<ConstantType> &types, idx_t capacity,
 }
 
 void PRLHashTable::addChunk(Vector &hash, DataChunk &chunk) {
-    Vector addresses(UBIGINT, chunk.getSize());
+    Vector addresses(LogicalTypeId::ADDRESS, chunk.getSize());
 
     findOrCreateGroups(hash, chunk, addresses);
 }
 
 void PRLHashTable::addChunk(DataChunk &chunk) {
-    Vector hash(UBIGINT, chunk.getSize());
+    Vector hash(LogicalTypeId::HASH, chunk.getSize());
     chunk.hash(hash);
     addChunk(hash, chunk);
 }
@@ -74,7 +74,7 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
 
     auto remaining = entries_ - offset;
     auto toScan = minValue(size, remaining);
-    Vector addresses(UBIGINT, toScan);
+    Vector addresses(LogicalTypeId::ADDRESS, toScan);
     auto addrsPtr = FlatVector::getData<data_ptr_t>(addresses);
     auto chunkIdx = offset / tuplesPerBlock_;
     auto chunkOffset = (offset % tuplesPerBlock_) * tupleSize_;
@@ -93,7 +93,7 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
 
     // now fetch the vectors
     for (id_t i = 0;i<result.columnCount();++i) {
-        BB_ASSERT(result.data_[i].getType() == types_[i]);
+        BB_ASSERT(result.data_[i].getLogicalType() == types_[i]);
         BB_ASSERT(result.data_[i].getVectorType() == VectorType::FLAT_VECTOR);
         RowOperations::gather(addresses, FlatVector::INCREMENTAL_SELECTION_VECTOR,
             result.data_[i], FlatVector::INCREMENTAL_SELECTION_VECTOR, toScan,
@@ -139,7 +139,7 @@ void PRLHashTable::combine(PRLHashTable &other) {
 }
 
 struct PRLPartitionInfo {
-    explicit PRLPartitionInfo (): groupAddresses_(UBIGINT, STANDARD_VECTOR_SIZE), hashes_(UBIGINT, STANDARD_VECTOR_SIZE), size_(0) {
+    explicit PRLPartitionInfo (): groupAddresses_(PhysicalType::UBIGINT, STANDARD_VECTOR_SIZE), hashes_(PhysicalType::UBIGINT, STANDARD_VECTOR_SIZE), size_(0) {
         addressesPtr_ = FlatVector::getData<data_ptr_t>(groupAddresses_);
         hashesPtr_ = FlatVector::getData<uint64_t>(hashes_);
     };
@@ -224,15 +224,15 @@ string PRLHashTable::toString(bool compact) {
         for (idx_t i=0;i<layout_.getTypes().size();++i) {
             auto colOffset = layout_.getOffsets()[i];
             auto col = ptr +colOffset;
-            result += " - "+Value::cast(types_[i], col).toString();
+            result += " - "+Value::cast(types_[i].getPhysicalType(), col).toString();
         }
         for (idx_t i=0;i<layout_.getAggregates().size();++i) {
             auto colOffset = layout_.getOffsets()[layout_.columnCount()+i];
             auto col = ptr +colOffset;
-            auto sizeResult = getCTypeSize(layout_.getAggregates()[i]->result_);
+            auto sizeResult = getPhysicalTypeSize(layout_.getAggregates()[i]->result_.getPhysicalType());
             auto resultData = std::unique_ptr<data_t[]>(new data_t[sizeResult]);
             layout_.getAggregates()[i]->finalize_(col, resultData.get());
-            result += " - "+Value::cast(layout_.getAggregates()[i]->result_, resultData.get()).toString();
+            result += " - "+Value::cast(layout_.getAggregates()[i]->result_.getPhysicalType(), resultData.get()).toString();
             // address = std::format("{}", static_cast<void*>(col));
             // result += " - "+address;
         }
@@ -242,7 +242,7 @@ string PRLHashTable::toString(bool compact) {
     return result;
 }
 
-vector<ConstantType> PRLHashTable::getTypes() const {
+vector<LogicalType> PRLHashTable::getTypes() const {
     return types_;
 }
 
@@ -295,10 +295,10 @@ void PRLHashTable::newBlock() {
 }
 
 Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count, SelectionVector* newGroupSel, idx_t& newGroupsCount) {
-    BB_ASSERT(addresses.getType() == UBIGINT);
-    BB_ASSERT(hashes.getType() == UBIGINT);
+    BB_ASSERT(addresses.getType() == PhysicalType::UBIGINT);
+    BB_ASSERT(hashes.getType() == PhysicalType::UBIGINT);
 
-    Vector groupAddresses(UBIGINT);
+    Vector groupAddresses(LogicalTypeId::ADDRESS);
     if (count == 0) return groupAddresses;
 
     DataChunk groups;
@@ -311,7 +311,7 @@ Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count, Select
                               FlatVector::INCREMENTAL_SELECTION_VECTOR, count, colOffset);
     }
 
-    Vector hash(UBIGINT);
+    Vector hash(LogicalTypeId::HASH);
     groups.hash(hash);
 
 
@@ -336,12 +336,12 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
 
     BB_ASSERT(!createGroups || entries_ + size <= capacity_ );
     BB_ASSERT(groups.columnCount() == types_.size());
-    BB_ASSERT(hash.getType() == UBIGINT);
+    BB_ASSERT(hash.getType() == PhysicalType::UBIGINT);
 
     hash.normalify(size);
     auto groupsHashPtr = FlatVector::getData<uint64_t>(hash);
     // compute the buckets
-    Vector buckets(UBIGINT, size);
+    Vector buckets(PhysicalType::UBIGINT, size);
 
     auto val = Value(bitmask_);
     Vector mask(val);
@@ -350,7 +350,7 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
     buckets.normalify(size);
     auto bucketsPtr = FlatVector::getData<uint64_t>(buckets);
 
-    BB_ASSERT(addresses.getType() == UBIGINT);
+    BB_ASSERT(addresses.getType() == PhysicalType::UBIGINT);
     addresses.normalify(size);
     auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
 
