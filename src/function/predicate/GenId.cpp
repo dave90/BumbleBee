@@ -33,7 +33,7 @@ static function_data_ptr_t genIdBind(ClientContext &context,
                                        vector<LogicalType> & inputTypes,
                                        std::unordered_map<string, Value> &parameters,
                                        vector<LogicalType> &returnTypes, vector<string> &names,
-                                       vector<Expression>& filters) {
+                                       TableFilterSet& filters) {
 	auto result = std::make_unique<GenIdData>();
 
 	returnTypes.clear();
@@ -70,13 +70,19 @@ static void genIdFunction(ClientContext &context, const FunctionData *bind_data_
 	output.setCapacity(size);
 }
 
-function_ptr_t GenIdFunc::getFunction() {
-	string name = "&gen_id";
+string GenIdFunc::getName() {
+	return "&gen_id";
+}
+
+
+function_ptr_t GenIdFunc::createFunction(const vector<LogicalType> &type) {
+	string name = getName();
 	function_ptr_t fun = function_ptr_t(new PredFunction( name, {}, genIdFunction, genIdBind, genIdInit, nullptr, nullptr, nullptr));
 	return fun;
 }
 
 void GenIdFunc::registerFunction(FunctionRegister &funcRegister) {
-	funcRegister.registerFunction(getFunction());
+	std::unique_ptr<FunctionGenerator> fg = std::make_unique<GenIdFunc>();
+	funcRegister.registerFunctionGen(fg);
 }
 }

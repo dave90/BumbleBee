@@ -57,9 +57,13 @@ public:
 
 class TableFilterSet {
 public:
+    TableFilterSet() = default;
+    TableFilterSet(TableFilterSet &&other) noexcept = default;
+    TableFilterSet & operator=(TableFilterSet &&other) noexcept = default;
+
     std::unordered_map<idx_t, std::unique_ptr<TableFilter>> filters_;
 
-    void pushFilter(idx_t table_index, std::unique_ptr<TableFilter> filter);
+    void pushFilter(idx_t column_index, std::unique_ptr<TableFilter> filter);
 
     bool equals(TableFilterSet &other) {
         if (filters_.size() != other.filters_.size()) {
@@ -87,5 +91,5 @@ public:
     }
 };
 
-
+using table_filter_set_ptr_t = std::unique_ptr<TableFilterSet>;
 }

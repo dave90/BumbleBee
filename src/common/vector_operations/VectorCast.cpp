@@ -27,14 +27,26 @@ namespace bumblebee {
 
 struct VectorTryCastData {
     VectorTryCastData(Vector &result_p, string *error_message_p)
-        : result(result_p), error_message(error_message_p) {
+        : result_(result_p), errorMessage_(error_message_p) {
     }
 
-    Vector &result;
-    string *error_message;
-    bool all_converted = true;
+    Vector &result_;
+    string *errorMessage_;
+    bool allConverted_ = true;
 };
 
+
+
+struct DecimalCastInput {
+    DecimalCastInput(Vector &result_p, int width_p, int scale_p)
+        : result_(result_p), width_(width_p), scale_(scale_p) {
+    }
+
+    Vector &result_;
+    int width_;
+    int scale_;
+    bool allConverted_ = true;
+};
 
 struct HandleVectorCastError {
     template <class RESULT_TYPE>
@@ -58,7 +70,7 @@ struct VectorTryCastOperator {
         }
         auto data = (VectorTryCastData *)dataptr;
         // TODO better error messsage
-        return HandleVectorCastError::operation<RESULT_TYPE>("Error during conversion!", data->error_message, data->all_converted);
+        return HandleVectorCastError::operation<RESULT_TYPE>("Error during conversion!", data->errorMessage_, data->allConverted_);
     }
 };
 
@@ -67,7 +79,29 @@ struct VectorStringCastOperator {
     template <class INPUT_TYPE, class RESULT_TYPE>
     static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
         auto result = (VectorTryCastData *)dataptr;
-        return OP::template operation<INPUT_TYPE>(input, result->result);
+        return OP::template operation<INPUT_TYPE>(input, result->result_);
+    }
+};
+
+
+struct StringCastFromDecimalOperator {
+    template <class INPUT_TYPE, class RESULT_TYPE>
+    static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
+        auto data = (DecimalCastInput *)dataptr;
+        return StringTryCastFromDecimal::operation<INPUT_TYPE>(input, data->width_, data->scale_, data->result_);
+    }
+};
+
+struct DecimalCastOperator {
+    template <class INPUT_TYPE, class RESULT_TYPE>
+    static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
+        auto data = (DecimalCastInput *)dataptr;
+        if (data->scale_ < 0) {
+            return (RESULT_TYPE)std::llround((long double)input / (long double)NumericHelper::POWERS_OF_TEN[abs(data->scale_)]);
+        } if (data->scale_ > 0) {
+            return (RESULT_TYPE)std::llround((long double)input * (long double)NumericHelper::POWERS_OF_TEN[data->scale_]);
+        }
+        return (RESULT_TYPE)input;
     }
 };
 
@@ -76,58 +110,68 @@ template <class SRC, class DST, class OP>
 bool vectorCastLoop(Vector &source, Vector &result, idx_t count, string *errorMessage) {
     VectorTryCastData input(result, errorMessage);
     UnaryExecution::genericExecute<SRC, DST, VectorTryCastOperator<OP>>(source, result, count, &input);
-    return input.all_converted;
+    return input.allConverted_;
 }
 
 template <class SRC, class DST, class OP>
 bool vectorStringCastLoop(Vector &source, Vector &result, idx_t count, string *errorMessage) {
     VectorTryCastData input(result, errorMessage);
     UnaryExecution::genericExecute<SRC, DST, VectorStringCastOperator<OP>>(source, result, count, &input);
-    return input.all_converted;
+    return input.allConverted_;
+}
+
+template <class SRC, class DST>
+bool vectorDecimalCastLoop(Vector &source, Vector &result, idx_t count, string *errorMessage) {
+    int sourceScale = (source.getLogicalTypeId() == LogicalTypeId::DECIMAL)
+                                ?source.getLogicalType().getDecimalData().scale_
+                                :0;
+    int scale = result.getLogicalType().getDecimalData().scale_ - sourceScale;
+    DecimalCastInput input(result, result.getLogicalType().getDecimalData().width_, scale);
+    UnaryExecution::genericExecute<SRC, DST, DecimalCastOperator>(source, result, count, &input);
+    return input.allConverted_;
 }
 
 
 template <class SRC>
 bool numericCastSwitch(Vector &source, Vector &result, idx_t count, string *errorMessage) {
 
-    switch (result.getType()) {
-        case PhysicalType::TINYINT:
+    switch (result.getLogicalTypeId()) {
+        case LogicalTypeId::TINYINT:
             return vectorCastLoop<SRC, int8_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::SMALLINT:
+        case LogicalTypeId::SMALLINT:
             return vectorCastLoop<SRC, int16_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::INTEGER:
+        case LogicalTypeId::INTEGER:
             return vectorCastLoop<SRC, int32_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::UTINYINT:
+        case LogicalTypeId::UTINYINT:
             return vectorCastLoop<SRC, uint8_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::USMALLINT:
+        case LogicalTypeId::USMALLINT:
             return vectorCastLoop<SRC, uint16_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::UINTEGER:
+        case LogicalTypeId::UINTEGER:
             return vectorCastLoop<SRC, uint32_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::UBIGINT:
+        case LogicalTypeId::UBIGINT:
             return vectorCastLoop<SRC, uint64_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::BIGINT:
+        case LogicalTypeId::BIGINT:
             return vectorCastLoop<SRC, int64_t, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::FLOAT:
+        case LogicalTypeId::FLOAT:
             return vectorCastLoop<SRC, float, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::DOUBLE:
+        case LogicalTypeId::DOUBLE:
             return vectorCastLoop<SRC, double, NumericTryCast>(source, result, count, errorMessage);
-
-        case PhysicalType::STRING:
+        case LogicalTypeId::STRING:
             return vectorStringCastLoop<SRC, string_t, StringTryCast>(source, result, count, errorMessage);
-
-
+        case LogicalTypeId::DECIMAL: {
+            switch (result.getType()) {
+                case PhysicalType::SMALLINT:
+                    return vectorDecimalCastLoop<SRC, int16_t>(source, result, count, errorMessage);
+                case PhysicalType::INTEGER:
+                    return vectorDecimalCastLoop<SRC, int32_t>(source, result, count, errorMessage);
+                case PhysicalType::BIGINT:
+                    return vectorDecimalCastLoop<SRC, int64_t>(source, result, count, errorMessage);
+                default:
+                    ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
+            }
+        }
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
-
         return false;
     }
 }
@@ -173,50 +217,32 @@ bool stringCastSwitch(Vector &source, Vector &result, idx_t count, string *error
     return false;
 }
 
-struct DecimalCastInput {
-    DecimalCastInput(Vector &result_p, uint8_t width_p, uint8_t scale_p)
-        : result(result_p), width(width_p), scale(scale_p) {
-    }
 
-    Vector &result;
-    uint8_t width;
-    uint8_t scale;
-};
-
-
-struct StringCastFromDecimalOperator {
-    template <class INPUT_TYPE, class RESULT_TYPE>
-    static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
-        auto data = (DecimalCastInput *)dataptr;
-        return StringTryCastFromDecimal::operation<INPUT_TYPE>(input, data->width, data->scale, data->result);
-    }
-};
-
+template<class INPUT_TYPE>
 static bool decimalCastSwitch(Vector &source, Vector &result, idx_t count, string *errorMessage) {
+    BB_ASSERT(source.getLogicalTypeId() == LogicalTypeId::DECIMAL);
+
 	// now switch on the result type
 	switch (result.getLogicalTypeId()) {
 	    case LogicalTypeId::STRING: {
 		    auto source_type = source.getLogicalType();
-		    int width, scale;
-	        source_type.getDecimalWidhtAndScale(width, scale);
-		    DecimalCastInput input(result, width, scale);
-		    switch (source_type.getPhysicalType()) {
-		    case PhysicalType::SMALLINT:
-			    UnaryExecution::genericExecute<int16_t, string_t, StringCastFromDecimalOperator>(source, result, count,
-			                                                                                    (void *)&input);
-			    break;
-		    case PhysicalType::INTEGER:
-			    UnaryExecution::genericExecute<int32_t, string_t, StringCastFromDecimalOperator>(source, result, count,
-			                                                                                    (void *)&input);
-			    break;
-		    case PhysicalType::BIGINT:
-			    UnaryExecution::genericExecute<int64_t, string_t, StringCastFromDecimalOperator>(source, result, count,
-			                                                                                    (void *)&input);
-			    break;
-		    default:
-                ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
-		    }
+	        auto& decimalData = source.getLogicalType().getDecimalData();
+		    DecimalCastInput input(result, decimalData.width_, decimalData.scale_);
+	        UnaryExecution::genericExecute<INPUT_TYPE, string_t, StringCastFromDecimalOperator>(source, result, count, (void *)&input);
 		    return true;
+	    }
+	    case LogicalTypeId::DECIMAL: {
+	        switch (result.getType()) {
+	            case PhysicalType::SMALLINT:
+                    return vectorDecimalCastLoop<INPUT_TYPE, int16_t>(source, result, count, errorMessage);
+	            case PhysicalType::INTEGER:
+                    return vectorDecimalCastLoop<INPUT_TYPE, int32_t>(source, result, count, errorMessage);
+	            case PhysicalType::BIGINT:
+                    return vectorDecimalCastLoop<INPUT_TYPE, int64_t>(source, result, count, errorMessage);
+	            default:
+	                ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
+	        }
+	        return false;
 	    }
 	default:
         ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
@@ -229,7 +255,7 @@ struct StringCastFromDateOperator {
     template <class INPUT_TYPE, class RESULT_TYPE>
     static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
         auto data = (VectorTryCastData *)dataptr;
-        return StringCastFromDate::operation<INPUT_TYPE>(input, data->result);
+        return StringCastFromDate::operation<INPUT_TYPE>(input, data->result_);
     }
 };
 
@@ -252,7 +278,7 @@ struct StringCastFromTimestampOperator {
     template <class INPUT_TYPE, class RESULT_TYPE>
     static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
         auto data = (VectorTryCastData *)dataptr;
-        return StringCastFromTimestamp::operation<INPUT_TYPE>(input, data->result);
+        return StringCastFromTimestamp::operation<INPUT_TYPE>(input, data->result_);
     }
 };
 
@@ -272,14 +298,14 @@ static bool timestampCastSwitch(Vector &source, Vector &result, idx_t count, str
 
 
 void VectorOperations::cast(Vector &source, Vector &result, idx_t count) {
-    if (source.getType() != result.getType())
+    if (source.getLogicalType() != result.getLogicalType())
         tryCast(source, result, count, nullptr);
     else
         copy(source, result, count, 0, 0);
 }
 
 bool VectorOperations::tryCast(Vector &source, Vector &result, idx_t count, string *errorMessage) {
-    BB_ASSERT(source.getType() != result.getType());
+    BB_ASSERT(source.getLogicalType() != result.getLogicalType());
 
     switch (source.getLogicalTypeId()) {
         case LogicalTypeId::TINYINT:
@@ -307,8 +333,22 @@ bool VectorOperations::tryCast(Vector &source, Vector &result, idx_t count, stri
             return numericCastSwitch<double>(source, result, count, errorMessage);
         case LogicalTypeId::STRING:
             return stringCastSwitch(source, result, count, errorMessage);
-        case LogicalTypeId::DECIMAL:
-            return decimalCastSwitch(source, result, count, errorMessage);
+        case LogicalTypeId::DECIMAL: {
+            switch (source.getType()) {
+                case PhysicalType::SMALLINT:
+                    return decimalCastSwitch<int16_t>(source, result, count, errorMessage);
+                    break;
+                case PhysicalType::INTEGER:
+                    return decimalCastSwitch<int32_t>(source, result, count, errorMessage);
+                    break;
+                case PhysicalType::BIGINT:
+                    return decimalCastSwitch<int64_t>(source, result, count, errorMessage);
+                    break;
+                default:
+                    ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
+            }
+            break;
+        }
         case LogicalTypeId::DATE:
             return dateCastSwitch(source, result, count, errorMessage);
         case LogicalTypeId::TIMESTAMP:

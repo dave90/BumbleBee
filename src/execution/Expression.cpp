@@ -89,19 +89,19 @@ bool Expression::verify() const{
 
 void executeOperator(Vector& left, Vector& right, Vector& result, idx_t count, Operator op) {
     switch (op) {
-        case PLUS:
+        case Operator::PLUS:
             VectorOperations::sum(left, right, result, count);
             break;
-        case MINUS:
+        case Operator::MINUS:
             VectorOperations::difference(left, right, result, count);
             break;
-        case TIMES:
+        case Operator::TIMES:
             VectorOperations::dot(left, right, result, count);
             break;
-        case DIV:
+        case Operator::DIV:
             VectorOperations::division(left, right, result, count);
             break;
-        case MODULO:
+        case Operator::MODULO:
             VectorOperations::modulo(left, right, result, count);
             break;
         default:
@@ -119,52 +119,57 @@ Vector Expression::executeOperands(vector_vector_t& allColumns, const Operands &
     for (auto c: op.cols_) {
         vectors.emplace_back(allColumns[c]);
     }
-    // Find the result type of the final vector if is not passed
-    if (resultType == PhysicalType::UNKNOWN) {
-        for (auto c: op.cols_) {
-            resultType = getCommonType(resultType, allColumns[c].getType());
-            // we need bump the common type as operation can overflow the data
-            resultType = getBumpedType(resultType.getPhysicalType());
-        }
-        // if result type is unsigned, and we have subtraction
-        // set result type as bigint
-        bool diff = std::find(op.operators_.begin(), op.operators_.end(), MINUS) != op.operators_.end();
-        if (diff && isUnsigned(resultType.getPhysicalType()))
-            resultType = PhysicalType::BIGINT;
-    }
 
     BB_ASSERT(op.operators_.size() + 1 == vectors.size());
-    Vector resultVec(resultType, true, true );
     if (op.operators_.size() == 1) {
+        if (resultType == LogicalTypeId::UNKNOWN) {
+            resultType = getCommonType(vectors[0].getLogicalType(), vectors[1].getLogicalType(), op.operators_[0]);
+            resultType = getBumpedLogicalType(resultType);
+        }
+        Vector resultVec(resultType );
         executeOperator(vectors[0], vectors[1], resultVec, count, op.operators_[0]);
         return resultVec;
     }
 
-    Vector lastTermVec(resultType);
-    VectorOperations::cast(vectors[0], lastTermVec, count);
+    Vector lastTermVec(vectors[0]);
+    Vector resultVec(vectors[0].getLogicalType(), true, true );
 
-    Vector temp(resultType);
     for (idx_t i=0;i<op.operators_.size();++i) {
         auto& nextVec = vectors[i+1];
         if ( op.operators_[i] == Operator::PLUS || op.operators_[i] == Operator::MINUS ) {
             // lower priority operators
+            auto tempType = getCommonType(resultVec.getLogicalType(), lastTermVec.getLogicalType(), op.operators_[i]);
+            tempType = getBumpedLogicalType(tempType);
+            Vector temp(tempType);
             executeOperator(resultVec, lastTermVec, temp, count, Operator::PLUS);
-            resultVec.swap(temp);
+            resultVec.reference(temp);
+            lastTermVec.reference(nextVec);
 
-            VectorOperations::cast(nextVec, lastTermVec, count);
             if (op.operators_[i] == Operator::MINUS)  {
                 // multiply -1
-                Vector v((int8_t)-1);
-                executeOperator(lastTermVec, v, temp, count, Operator::TIMES);
-                lastTermVec.swap(temp);
+                tempType = lastTermVec.getLogicalType();
+                if (isUnsigned(tempType))
+                    tempType = getSignedBumpedType(tempType);
+                Vector temp2(tempType);
+                VectorOperations::negate(lastTermVec, temp2, count);
+                lastTermVec.reference(temp2);
             }
         }else {
+            auto tempType = getCommonType(lastTermVec.getLogicalType(), nextVec.getLogicalType(), op.operators_[i]);
+            tempType = getBumpedLogicalType(tempType);
+            Vector temp(tempType);
+
             executeOperator(lastTermVec, nextVec, temp, count, op.operators_[i]);
-            lastTermVec.swap(temp);
+            lastTermVec.reference(temp);
         }
     }
+    if (resultType == LogicalTypeId::UNKNOWN) {
+        resultType = getCommonType(resultVec.getLogicalType(), lastTermVec.getLogicalType(), Operator::PLUS);
+        resultType = getBumpedLogicalType(resultType);
+    }
+    Vector temp(resultType);
     executeOperator(resultVec, lastTermVec, temp, count, Operator::PLUS);
-    resultVec.swap(temp);
+    resultVec.reference(temp);
 
     return resultVec;
 }
@@ -193,7 +198,7 @@ idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel,
 
 
 void Expression::executeBinop(Vector& left,Vector& right,SelectionVector& sel, idx_t count,
-        SelectionVector& trueSel,SelectionVector& falseSel, idx_t& falseCount) const{
+        SelectionVector& trueSel,SelectionVector& falseSel, idx_t& falseCount) const {
 
     BB_ASSERT(op_ != ASSIGNMENT && op_ != NONE_OP);
     switch (op_) {
@@ -226,6 +231,41 @@ Expression Expression::generateExpression(Binop op, idx_t leftCol, idx_t rightCo
     right.cols_.push_back(rightCol);
     Expression exp(op, left, right);
     return exp;
+}
+
+
+LogicalType Expression::getResultType(vector<LogicalType> types, vector<Operator> ops) {
+    if (types.empty()) return LogicalTypeId::UNKNOWN;
+    if (types.size() == 1) return types[0];
+    BB_ASSERT(types.size() == ops.size() + 1);
+    if (types.size() == 2) {
+        auto resultType = getCommonType(types[0], types[1], ops[0]);
+        return getBumpedLogicalType(resultType);
+    }
+
+    LogicalType lastTermType(types[0]);
+    LogicalType resultType(types[0]);
+    for (idx_t i=0;i<ops.size();++i) {
+        auto& nextType = types[i+1];
+        if ( ops[i] == Operator::PLUS || ops[i] == Operator::MINUS ) {
+            // lower priority operators
+            resultType = getCommonType(resultType, lastTermType, ops[i]);
+            resultType = getBumpedLogicalType(resultType);
+            lastTermType = nextType;
+
+            if (ops[i] == Operator::MINUS)  {
+                // multiply -1
+                if (isUnsigned(lastTermType))
+                    lastTermType = getSignedBumpedType(lastTermType);
+            }
+        }else {
+            lastTermType = getCommonType(lastTermType, nextType, ops[i]);
+            lastTermType = getBumpedLogicalType(lastTermType);
+        }
+    }
+    resultType = getCommonType(resultType, lastTermType, Operator::PLUS);
+    resultType = getBumpedLogicalType(resultType);
+    return resultType;
 }
 
 }

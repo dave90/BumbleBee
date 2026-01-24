@@ -135,20 +135,19 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
             // expected ARITH (no constant or range)
             BB_ASSERT(right.getType() == ARITH);
             // push the variables in the same order in the arith
-            for (auto& t: right.getTerms()) {
+            int idx = 0;
+            vector<LogicalType> types;
+            for (idx_t i=0;i<right.getTerms().size();++i) {
+                auto& t = right.getTerms()[i];
                 BB_ASSERT(t.getType() == VARIABLE);
+                types.push_back(typesMap_[t.getVariable()]);
                 vars.push_back(t.getVariable());
-                if (resultType == PhysicalType::UNKNOWN) {
-                    resultType = typesMap_[t.getVariable()];
-                    continue;
-                }
-                resultType = getCommonType(resultType, typesMap_[t.getVariable()]);
-                resultType = getBumpedType(resultType.getPhysicalType());
             }
+            resultType = Expression::getResultType(types, right.getOperators());
         }
         // if we have a diff and is unsigned set to signed
-        bool diff = std::find(right.getOperators().begin(), right.getOperators().end(), MINUS) != right.getOperators().end();
-        if (diff && isUnsigned(resultType.getPhysicalType()))
+        bool diff = std::find(right.getOperators().begin(), right.getOperators().end(), Operator::MINUS) != right.getOperators().end();
+        if (diff && isUnsigned(resultType))
             resultType = PhysicalType::BIGINT;
 
         BB_ASSERT(left.getType() == VARIABLE);
@@ -267,7 +266,7 @@ void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalT
         BB_ASSERT(term.getType() == VARIABLE);
         names.push_back(term.getVariable());
     }
-    vector<Expression> filters;
+    TableFilterSet filters;
     auto bind = func->bindFunction_(context_, atom.getInputValues(), inputTypes, atom.getNamedParamters(), returnTypes, names,filters );
     externalBindData_[index] = std::move(bind);
 }

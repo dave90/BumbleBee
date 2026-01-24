@@ -1,0 +1,1 @@
+SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh)as sum , AVG(ResolutionWidth) as avg FROM './files/parquet/mini_hits.parquet' WHERE SearchPhrase <> '' GROUP BY WatchID, ClientIP ORDER BY c DESC, ClientIP DESC, avg LIMIT 3

@@ -113,7 +113,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentTest) {
 TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
     // assign the second column to first column
     idx_t count = 100;
-    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1,2,3,4,2}, {MINUS, PLUS, TIMES, DIV} );
+    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1,2,3,4,2}, {Operator::MINUS, Operator::PLUS, Operator::TIMES, Operator::DIV} );
     // Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1,2,3}, {PLUS, PLUS} );
 
     PhysicalExpression pe(expr, testTypes);
@@ -143,7 +143,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
 TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpPrecedence1) {
     // v1 + v2 * v3 - v4  (should be v1 + (v2 * v3) - v4)
     idx_t count = 100;
-    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 4}, {PLUS, TIMES, MINUS});
+    Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 4}, {Operator::PLUS, Operator::TIMES, Operator::MINUS});
 
     PhysicalExpression pe(expr, testTypes);
     auto gstate = pe.getGlobalState();
@@ -172,7 +172,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpPrecedence2) {
     // v1 * v2 + v3 / v4 - v2  (should be (v1 * v2) + (v3 / v4) - v2)
     idx_t count = 100;
     Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 4, 2},
-                                         {TIMES, PLUS, DIV, MINUS});
+                                         {Operator::TIMES, Operator::PLUS, Operator::DIV, Operator::MINUS});
 
     PhysicalExpression pe(expr, testTypes);
     auto gstate = pe.getGlobalState();
@@ -201,7 +201,7 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpPrecedence3) {
     // v1 - v2 * v3 + v1 / v4  (should be v1 - (v2 * v3) + (v1 / v4))
     idx_t count = 100;
     Expression expr = generateExpression(ASSIGNMENT, {0}, {}, {1, 2, 3, 1, 4},
-                                         {MINUS, TIMES, PLUS, DIV});
+                                         {Operator::MINUS, Operator::TIMES, Operator::PLUS, Operator::DIV});
 
     PhysicalExpression pe(expr, testTypes);
     auto gstate = pe.getGlobalState();

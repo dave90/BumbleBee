@@ -190,6 +190,7 @@ public:
 	static string extractBaseName(const string &path);
 	// Return true if is a csv file
 	static bool isCSVFile(const string& path);
+	static bool isParquetFile(const string& path);
 
 
 };

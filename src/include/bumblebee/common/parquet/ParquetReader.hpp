@@ -85,8 +85,9 @@ public:
 
 	Allocator &allocator_;
 	string fileName_;
-	vector<LogicalType> returnTypes_;
-	vector<string> names_;
+	vector<LogicalType> returnTypes_; // all columns return type
+	vector<string> names_; // all column names
+	std::unordered_map<string, idx_t> colNormalizedIdx_; // column names normalized -> index
 	std::shared_ptr<ParquetFileMetadataCache> metadata_;
 	ParquetOptions parquetOptions_;
 
@@ -94,6 +95,7 @@ public:
 	void initializeScan(ParquetReaderScanState &state, vector<idx_t> column_ids, vector<idx_t> groups_to_read,
 	                    TableFilterSet *table_filters);
 	void scan(ParquetReaderScanState &state, DataChunk &output);
+	string getAvailableColumns() const;
 
 	idx_t numRows();
 	idx_t numRowGroups();
@@ -114,7 +116,6 @@ private:
 	const bumblebee::format::RowGroup &getGroup(ParquetReaderScanState &state);
 	void prepareRowGroupBuffer(ParquetReaderScanState &state, idx_t out_col_idx);
 	LogicalType deriveLogicalType(const SchemaElement &s_ele);
-	PhysicalType derivePhysicalType(const SchemaElement &s_ele);
 
 	template <typename... Args>
 	void formatException(const string fmt_str, Args... params) {
@@ -130,6 +131,6 @@ private:
 template <class T>
 using child_list_t = std::vector<std::pair<std::string, T>>;
 
-
+using parquet_reader_ptr_t = std::unique_ptr<ParquetReader>;
 
 }

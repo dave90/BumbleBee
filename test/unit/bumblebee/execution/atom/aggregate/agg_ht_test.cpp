@@ -106,7 +106,7 @@ TEST_F(AggRLHashTableTest, AggHTSimpleTest) {
     vector<idx_t> payloadIndexTypes = {0};
     DataChunk chunk = createChunkWithValue(tLeft, 10);
 
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector functions = {(AggregateFunction*)aggFunc.get()};
     agg_ht_ptr ht;
     addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
@@ -123,7 +123,7 @@ TEST_F(AggRLHashTableTest, AddChunk_DuplicateGroupsAggregatesCorrectlyNoDistinc)
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Build the chunk with 8 rows
@@ -154,7 +154,7 @@ TEST_F(AggRLHashTableTest, FetchAggregates_UnseenGroupReturnsZeroAndCreatesEntry
     // Build an HT with groups for i in [0..9], then probe with a *new* group (offset=100)
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2}; // SUM over BIGINT
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Base table with 10 groups
@@ -175,7 +175,7 @@ TEST_F(AggRLHashTableTest, FetchAggregates_UnseenAndSeeGroup) {
     // Build an HT with groups for i in [0..9], then probe with a *new* group (offset=100)
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2}; // SUM over BIGINT
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Base table with 10 groups
@@ -206,7 +206,7 @@ TEST_F(AggRLHashTableTest, Scan_IteratesAllGroupsInBatchesAndBoundary) {
     // Create many unique groups then walk them via scan().
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {0}; // payload not relevant for scan
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Make 50 unique rows => 50 groups
@@ -241,7 +241,7 @@ TEST_F(AggRLHashTableTest, AddChunk_DuplicateGroupsAggregatesCombine) {
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Build the chunk with 8 rows
@@ -277,7 +277,7 @@ TEST_F(AggRLHashTableTest, AddChunk_NoGroups) {
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {};
     vector<idx_t> payloadIndexTypes = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Build the chunk with 8 rows

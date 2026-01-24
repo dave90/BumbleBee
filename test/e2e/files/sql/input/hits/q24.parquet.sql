@@ -1,0 +1,6 @@
+%@sql
+SELECT SEARCHPHRASE, EVENTTIME
+FROM "./files/parquet/mini_hits.parquet"
+WHERE SEARCHPHRASE <> ""
+ORDER BY EVENTTIME
+LIMIT 10

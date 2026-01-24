@@ -19,6 +19,7 @@
 #pragma once
 #include "Function.hpp"
 #include "bumblebee/ClientContext.hpp"
+#include "bumblebee/planner/filter/TableFilter.hpp"
 
 namespace bumblebee{
 
@@ -34,7 +35,7 @@ typedef function_data_ptr_t (*pred_function_bind_t)(ClientContext &context,
                                                           vector<LogicalType> & inputTypes,
                                                           std::unordered_map<string, Value> &parameters,
                                                           vector<LogicalType> &returnTypes, vector<string> &names,
-                                                          vector<Expression>& filters);
+                                                          TableFilterSet& filters);
 
 typedef function_op_data_ptr_t (*pred_function_init_t)(ClientContext &context, const FunctionData *bind_data);
 
@@ -61,6 +62,7 @@ public:
           finalize_function_(finalize_function),
           combine_function_(combine_function){
     }
+
 
     pred_function_t function_;
     pred_function_bind_t bindFunction_;

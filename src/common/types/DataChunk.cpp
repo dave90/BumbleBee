@@ -303,7 +303,7 @@ void DataChunk::cast(const vector<LogicalType>& types) {
         if (data_[i].getLogicalTypeId() == types[i].type()) continue;
 
         Vector newVec(types[i], getCapacity());
-        LOG_DEBUG("Casting vector %s to %s.", ctypeToString(data_[i].getType()).c_str(), ctypeToString(newVec.getType()).c_str() );
+        LOG_DEBUG("Casting vector %s to %s.", physicalTypeToString(data_[i].getType()).c_str(), physicalTypeToString(newVec.getType()).c_str() );
         VectorOperations::cast(data_[i], newVec, getSize());
         data_[i].reference(newVec);
     }
@@ -317,7 +317,7 @@ void DataChunk::cast(DataChunk &result) {
             result.data_[i].reference(data_[i]);
             continue;
         }
-        LOG_DEBUG("Casting vector %s to %s.", ctypeToString(data_[i].getType()).c_str(), ctypeToString(result.data_[i].getType()).c_str() );
+        LOG_DEBUG("Casting vector %s to %s.", physicalTypeToString(data_[i].getType()).c_str(), physicalTypeToString(result.data_[i].getType()).c_str() );
         VectorOperations::cast(data_[i], result.data_[i], getSize());
     }
 }

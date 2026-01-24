@@ -754,6 +754,7 @@ void ParserInputBuilder::onSQLPredicateValueExpr() {
 }
 
 void ParserInputBuilder::onSQLPredicateValueExprOp() {
+    if (foundASafetyError_) return;
     if (valueExpr_.getValues().empty()) {
         BB_ASSERT(!sqlValuePrimary_.empty());
 
@@ -829,9 +830,11 @@ void ParserInputBuilder::onSQLExtTableNameString(char* name) {
     StringUtils::removeQuote(table);
     if (FileSystem::isCSVFile(table)) {
         externalFunctionName_ = "&read_csv";
-    } else {
+    } else if (FileSystem::isParquetFile(table))
+        externalFunctionName_ = "&read_parquet";
+    else {
         foundASafetyError_ = true;
-        safetyErrorMessage = "Error, external table: "+table+" not supported. Please specify a supported table type.";
+        safetyErrorMessage = "Error, external table: "+table+" not supported. Please specify a supported table type (csv or parquet).";
         return;
     }
     inputValues_.emplace_back(table);

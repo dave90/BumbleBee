@@ -22,6 +22,8 @@
 #include "../../BumbleBaseTest.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 #include "bumblebee/common/Assert.hpp"
+#include "bumblebee/common/NumericUtils.hpp"
+#include "bumblebee/common/types/Decimal.hpp"
 
 using namespace bumblebee;
 
@@ -159,5 +161,102 @@ TEST_F(VectorOperationsCastTest, TryCastDecimalIntoString) {
     auto expected = formatDecimalVector(scale, data);
     for (idx_t i = 0; i < expected.size(); i++) {
         EXPECT_EQ(result1.getValue(i).toString(), expected[i] );
+    }
+}
+
+
+TEST_F(VectorOperationsCastTest, TryCastIntegerIntoDecimal) {
+    vector<uint64_t> data = {2,11,20,30,100000,1};
+    auto scale = 2;
+    LogicalType sourceType = LogicalTypeId::INTEGER;
+    LogicalType resultType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, scale);
+    BB_ASSERT(resultType.getPhysicalType() == PhysicalType::BIGINT);
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType.getPhysicalType());
+
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    for (idx_t i = 0; i < data.size(); i++) {
+        auto scaledData = result1.getValue(i).getNumericValue<int64_t>() / NumericHelper::POWERS_OF_TEN[scale];
+        EXPECT_EQ(scaledData, data[i] );
+    }
+}
+
+
+TEST_F(VectorOperationsCastTest, TryCastDoubleIntoDecimal) {
+    vector<double> data = {2,11.04,20.009,30.123,100000,1.99999};
+    vector<string> expectedData = {"2.00","11.04","20.01","30.12","100000.00","2.00"};
+    auto scale = 2;
+    LogicalType sourceType = LogicalTypeId::DOUBLE;
+    LogicalType resultType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, scale);
+    BB_ASSERT(resultType.getPhysicalType() == PhysicalType::BIGINT);
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType.getPhysicalType());
+
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    Vector result2(LogicalTypeId::STRING, data.size());
+    VectorOperations::tryCast(result1,result2,data.size(), error.get());
+
+    for (idx_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(result2.getValue(i).toString(), expectedData[i] );
+    }
+}
+
+
+TEST_F(VectorOperationsCastTest, TryCastDecimalIntoDecimal1) {
+    vector<int32_t> data = {2,11,111,100000};
+    vector<string> expectedData = {"0.0200","0.1100","1.1100","1000.0000"};
+
+    auto scale = 2;
+    auto resultScale = 4;
+    LogicalType sourceType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT32, scale);
+    LogicalType resultType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, resultScale);
+    BB_ASSERT(resultType.getPhysicalType() == PhysicalType::BIGINT);
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType.getPhysicalType());
+
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    Vector result2(LogicalTypeId::STRING, data.size());
+    VectorOperations::tryCast(result1,result2,data.size(), error.get());
+
+    for (idx_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(result2.getValue(i).toString(), expectedData[i] );
+    }
+}
+
+
+TEST_F(VectorOperationsCastTest, TryCastDecimalIntoDecimal2) {
+    vector<int32_t> data = {2,11,111,100000};
+    vector<string> expectedData = {"0.00","0.00","0.01","10.00"};
+
+    auto scale = 4;
+    auto resultScale = 2;
+    LogicalType sourceType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT32, scale);
+    LogicalType resultType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, resultScale);
+    BB_ASSERT(resultType.getPhysicalType() == PhysicalType::BIGINT);
+    Vector input1 = generateVector(sourceType, data);
+    EXPECT_EQ(input1.getType(), sourceType.getPhysicalType());
+
+    Vector result1(resultType, data.size());
+    std::unique_ptr<string> error = std::make_unique<string>();
+    bool r = VectorOperations::tryCast(input1,result1,data.size(), error.get());
+    EXPECT_EQ(r, true);
+    EXPECT_EQ(error->size(), 0);
+    Vector result2(LogicalTypeId::STRING, data.size());
+    VectorOperations::tryCast(result1,result2,data.size(), error.get());
+
+    for (idx_t i = 0; i < data.size(); i++) {
+        EXPECT_EQ(result2.getValue(i).toString(), expectedData[i] );
     }
 }

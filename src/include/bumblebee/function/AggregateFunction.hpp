@@ -115,7 +115,7 @@ public:
             stateFinalize<RESULT_TYPE, STATE<RESULT_TYPE>, OP<INPUT_TYPE,RESULT_TYPE>>);
     }
 
-private:
+protected:
     template <class STATE>
     static idx_t stateSize() {
         return sizeof(STATE);

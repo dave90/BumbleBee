@@ -34,10 +34,10 @@ struct GenIdData : public FunctionData {
 
 
 
-class GenIdFunc {
+class GenIdFunc : public FunctionGenerator {
 public:
-    // get the function from the type
-    static function_ptr_t getFunction();
+    string getName() override;
+    function_ptr_t createFunction(const vector<LogicalType> &type) override;
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister);

@@ -25,7 +25,7 @@
 namespace bumblebee{
 PartitionedAggHT::PartitionedAggHT(ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
     const vector<AggregateFunction*>& functions, idx_t partitions)
-    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions), partitionEntries_(partitions) {
+    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions), partitionEntries_(partitions){
     BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2
     BB_ASSERT(payloadCols_.size() == functions_.size());
     shift_ = (sizeof(hash_t)*8) - std::bit_width(partitions_) + 1;

@@ -60,6 +60,7 @@ public:
 
 	void offsets(uint32_t *offsets, uint8_t *defines, uint64_t num_values, parquet_filter_t &filter,
 	             idx_t result_offset, Vector &result) override {
+		BB_ASSERT(result.getVectorType() == VectorType::FLAT_VECTOR);
 		auto result_ptr = FlatVector::getData<VALUE_TYPE>(result);
 
 		idx_t offset_idx = 0;

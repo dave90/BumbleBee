@@ -108,6 +108,10 @@ private:
     agg_ht_ptr_t table_;
     // vector of distinct HT
     vector<vector<distinct_ht_ptr_t>> partitionsVec_;
+    // statistics of entries for each partition
+    vector<atomic<idx_t>> partitionEntries_;
+    // mutex of the partitioned HT
+    mutex mutex_;
     // Aggregate HT for each partition
     vector<agg_ht_ptr_t> partitionsAggVec_;
     // number of partitions
@@ -116,10 +120,6 @@ private:
     idx_t shift_;
     // if the table_ is ready
     bool ready_;
-    // mutex of the partitioned HT
-    mutex mutex_;
-    // statistics of entries for each partition
-    vector<atomic<idx_t>> partitionEntries_;
 
     // Aggregate Group columns
     vector<idx_t> groupCols_;

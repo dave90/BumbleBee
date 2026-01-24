@@ -39,83 +39,7 @@ static string generateColumnName(const idx_t total_cols, const idx_t col_number,
 }
 
 
-// Helper function for UTF-8 aware space trimming
-static string trimWhitespace(const string &col_name) {
-	utf8proc_int32_t codepoint;
-	auto str = reinterpret_cast<const utf8proc_uint8_t *>(col_name.c_str());
-	idx_t size = col_name.size();
-	// Find the first character that is not left trimmed
-	idx_t begin = 0;
-	while (begin < size) {
-		auto bytes = utf8proc_iterate(str + begin, size - begin, &codepoint);
-		BB_ASSERT(bytes > 0);
-		if (utf8proc_category(codepoint) != UTF8PROC_CATEGORY_ZS) {
-			break;
-		}
-		begin += bytes;
-	}
 
-	// Find the last character that is not right trimmed
-	idx_t end;
-	end = begin;
-	for (auto next = begin; next < col_name.size();) {
-		auto bytes = utf8proc_iterate(str + next, size - next, &codepoint);
-		BB_ASSERT(bytes > 0);
-		next += bytes;
-		if (utf8proc_category(codepoint) != UTF8PROC_CATEGORY_ZS) {
-			end = next;
-		}
-	}
-
-	// return the trimmed string
-	return col_name.substr(begin, end - begin);
-}
-
-
-
-static string normalizeColumnName(const string &col_name) {
-	// normalize UTF8 characters to NFKD
-	auto nfkd = utf8proc_NFKD((const utf8proc_uint8_t *)col_name.c_str(), col_name.size());
-	const string col_name_nfkd = string((const char *)nfkd, strlen((const char *)nfkd));
-	free(nfkd);
-
-	// only keep ASCII characters 0-9 a-z A-Z and replace spaces with regular whitespace
-	string col_name_ascii = "";
-	for (idx_t i = 0; i < col_name_nfkd.size(); i++) {
-		if (col_name_nfkd[i] == '_' || (col_name_nfkd[i] >= '0' && col_name_nfkd[i] <= '9') ||
-			(col_name_nfkd[i] >= 'A' && col_name_nfkd[i] <= 'Z') ||
-			(col_name_nfkd[i] >= 'a' && col_name_nfkd[i] <= 'z')) {
-			col_name_ascii += col_name_nfkd[i];
-			} else if (StringUtils::characterIsSpace(col_name_nfkd[i])) {
-				col_name_ascii += " ";
-			}
-	}
-
-	// trim whitespace and replace remaining whitespace by _
-	string col_name_trimmed = trimWhitespace(col_name_ascii);
-	string col_name_cleaned = "";
-	bool in_whitespace = false;
-	for (idx_t i = 0; i < col_name_trimmed.size(); i++) {
-		if (col_name_trimmed[i] == ' ') {
-			if (!in_whitespace) {
-				col_name_cleaned += "_";
-				in_whitespace = true;
-			}
-		} else {
-			col_name_cleaned += col_name_trimmed[i];
-			in_whitespace = false;
-		}
-	}
-
-	// don't leave string empty; if not empty, make lowercase
-	if (col_name_cleaned.empty()) {
-		col_name_cleaned = "_";
-	}
-	// make upper case
-	col_name_cleaned = StringUtils::upper(col_name_cleaned);
-
-	return col_name_cleaned;
-}
 
 
 TextSearchShiftArray::TextSearchShiftArray() : length_(0){
@@ -1068,8 +992,7 @@ void BufferedCSVReader::detectHeader(const vector<vector<PhysicalType>> &best_sq
 				col_name = generateColumnName(options_.numCols_, col);
 			}
 
-			col_name = normalizeColumnName(col_name);
-			// col_name = trimWhitespace(col_name);
+			col_name = StringUtils::normalizeColumnName(col_name);
 
 			// avoid duplicate header names
 			const string col_name_raw = col_name;

@@ -250,15 +250,16 @@ void ParquetReader::initializeSchema(const vector<PhysicalType> &expected_types_
 			if (initial_filename_p.empty()) {
 				formatException("column \"%d\" in parquet file is of type %s, could not auto cast to "
 				                      "expected type %s for this column",
-				                      col_idx, ctypeToString(type_pair.second.getPhysicalType()),  ctypeToString(expected_types_p[col_idx]));
+				                      col_idx, physicalTypeToString(type_pair.second.getPhysicalType()),  physicalTypeToString(expected_types_p[col_idx]));
 			} else {
 				formatException("schema mismatch in Parquet glob: column \"%d\" in parquet file is of type "
 				                      "%s, but in the original file \"%s\" this column is of type \"%s\"",
-				                      col_idx, ctypeToString(type_pair.second.getPhysicalType()), initial_filename_p,
-				                      ctypeToString(expected_types_p[col_idx]));
+				                      col_idx, physicalTypeToString(type_pair.second.getPhysicalType()), initial_filename_p,
+				                      physicalTypeToString(expected_types_p[col_idx]));
 			}
 		} else {
 			names_.push_back(type_pair.first);
+			colNormalizedIdx_[StringUtils::normalizeColumnName(type_pair.first)] = col_idx;
 			returnTypes_.push_back(type_pair.second);
 		}
 		col_idx++;
@@ -395,6 +396,15 @@ void ParquetReader::scan(ParquetReaderScanState &state, DataChunk &result) {
 		}
 		result.reset();
 	}
+}
+
+string ParquetReader::getAvailableColumns() const {
+	string result = "";
+	for (auto& [col,_]:colNormalizedIdx_)
+		result +=  col + ", ";
+	result.pop_back();
+	result.pop_back();
+	return result;
 }
 
 bool ParquetReader::scanInternal(ParquetReaderScanState &state, DataChunk &result) {

@@ -1,0 +1,1 @@
+SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM './files/parquet/mini_hits.parquet' WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10

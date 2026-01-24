@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "bumblebee/common/types/Decimal.hpp"
 #include "bumblebee/function/AggregateFunction.hpp"
 #include "bumblebee/function/Function.hpp"
 #include "bumblebee/function/FunctionRegister.hpp"
@@ -61,55 +62,72 @@ struct MinOperation {
     }
 };
 
-class MinFunc {
+class MinFunc : public FunctionGenerator {
 public:
+    string getName() override {
+        return "#min";
+    }
+
     // get the function from the type
-    static function_ptr_t getFunction(LogicalType type) {
-        string name = "#min";
-        switch (type.type()) {
+    function_ptr_t createFunction(const vector<LogicalType>& type) override {
+        BB_ASSERT(type.size() == 1);
+        string name = getName();
+        switch (type[0].type()) {
             case LogicalTypeId::TINYINT: {
-                auto func = AggregateFunction::unaryAggregate<MinState,int8_t,int64_t,MinOperation>(name, {type},LogicalTypeId:: BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int8_t,int64_t,MinOperation>(name, type,LogicalTypeId:: BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::SMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<MinState,int16_t,int64_t,MinOperation>(name, {type},LogicalTypeId:: BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int16_t,int64_t,MinOperation>(name, type,LogicalTypeId:: BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::INTEGER:{
-                auto func = AggregateFunction::unaryAggregate<MinState,int32_t,int64_t,MinOperation>(name, {type},LogicalTypeId:: BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int32_t,int64_t,MinOperation>(name, type,LogicalTypeId:: BIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::DECIMAL:{
+                auto func = AggregateFunction::unaryAggregate<MinState,int64_t,int64_t,MinOperation>(name, type, LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, type[0].getDecimalData().scale_));
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::BIGINT:{
-                auto func = AggregateFunction::unaryAggregate<MinState,int64_t,int64_t,MinOperation>(name, {type},LogicalTypeId:: BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,int64_t,int64_t,MinOperation>(name, type,LogicalTypeId:: BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::UTINYINT:{
-                auto func = AggregateFunction::unaryAggregate<MinState,uint8_t,uint64_t,MinOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint8_t,uint64_t,MinOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::USMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<MinState,uint16_t,uint64_t,MinOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint16_t,uint64_t,MinOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::UINTEGER:{
-                auto func = AggregateFunction::unaryAggregate<MinState,uint32_t,uint64_t,MinOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint32_t,uint64_t,MinOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::HASH:
             case LogicalTypeId::UBIGINT:{
-                auto func = AggregateFunction::unaryAggregate<MinState,uint64_t,uint64_t,MinOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MinState,uint64_t,uint64_t,MinOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::FLOAT:{
-                auto func = AggregateFunction::unaryAggregate<MinState,float,float,MinOperation>(name, {type}, LogicalTypeId::FLOAT);
+                auto func = AggregateFunction::unaryAggregate<MinState,float,float,MinOperation>(name, type, LogicalTypeId::FLOAT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::DOUBLE:{
-                auto func = AggregateFunction::unaryAggregate<MinState,double,double,MinOperation>(name, {type}, LogicalTypeId::DOUBLE);
+                auto func = AggregateFunction::unaryAggregate<MinState,double,double,MinOperation>(name, type, LogicalTypeId::DOUBLE);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::STRING:	{
-                auto func = AggregateFunction::unaryAggregate<MinState,string_t,string_t,MinOperation>(name, {type}, LogicalTypeId::STRING);
+                auto func = AggregateFunction::unaryAggregate<MinState,string_t,string_t,MinOperation>(name, type, LogicalTypeId::STRING);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::DATE:	{
+                auto func = AggregateFunction::unaryAggregate<MinState,date_t,date_t,MinOperation>(name, type, LogicalTypeId::DATE);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::TIMESTAMP:	{
+                auto func = AggregateFunction::unaryAggregate<MinState,timestamp_t,timestamp_t,MinOperation>(name, type, LogicalTypeId::TIMESTAMP);
                 return function_ptr_t(new AggregateFunction(func));
             }
 
@@ -121,12 +139,8 @@ public:
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {
-        vector<LogicalType> supportedTypes = {LogicalTypeId::TINYINT, LogicalTypeId::SMALLINT, LogicalTypeId::INTEGER,
-            LogicalTypeId::BIGINT, LogicalTypeId::UTINYINT, LogicalTypeId::USMALLINT, LogicalTypeId::UINTEGER, LogicalTypeId::UBIGINT, LogicalTypeId::HASH,
-            LogicalTypeId::DOUBLE, LogicalTypeId::FLOAT, LogicalTypeId::STRING};
-        for (auto& c: supportedTypes) {
-            funcRegister.registerFunction(getFunction(c));
-        }
+        std::unique_ptr<FunctionGenerator> fg = std::make_unique<MinFunc>();
+        funcRegister.registerFunctionGen(fg);
     }
 };
 

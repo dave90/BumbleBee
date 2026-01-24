@@ -56,7 +56,7 @@ vector<string> getColsFromExtTable(sql::FromItem &item, ClientContext& context_)
     for (auto& param: item.getInputValues())
         types.emplace_back(param.getPhysicalType());
     auto pfunc = (PredFunction*) context_.functionRegister_.getFunction(item.getExtTableName(), types ).get();
-    vector<Expression> filters;
+    TableFilterSet filters;
     vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
     pfunc->bindFunction_(context_, item.getInputValues(), types, item.getNamedParameters(), returnTypes, names, filters);

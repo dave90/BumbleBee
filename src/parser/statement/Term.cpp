@@ -275,18 +275,18 @@ Operator Term::getOperator(char sop) {
     Operator op;
     switch (sop) {
         case '+':
-            return PLUS;
+            return Operator::PLUS;
         case '-':
-            return MINUS;
+            return Operator::MINUS;
         case '/':
-            return DIV;
+            return Operator::DIV;
         case '*':
-            return TIMES;
+            return Operator::TIMES;
         case '%':
-            return MODULO;
+            return Operator::MODULO;
     }
     ErrorHandler::errorNotImplemented("Invalid operator conversion from char");
-    return PLUS;
+    return Operator::PLUS;
 }
 
 

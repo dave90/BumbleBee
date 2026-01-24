@@ -69,7 +69,7 @@ protected:
 
     string getInputCsvFilePath(const string& filename) {
         std::filesystem::path TEST_FILE_PATH = __FILE__;
-        std::filesystem::path dataFilePath = TEST_FILE_PATH.parent_path() / "data" / "input" /filename;
+        std::filesystem::path dataFilePath = TEST_FILE_PATH.parent_path() / "data" / "input" / "csv" / filename;
         return dataFilePath.c_str();
     }
 
@@ -227,8 +227,8 @@ protected:
         input.emplace_back(getOutputCsvFilePath(folder));
 
         vector<LogicalType> inputTypes = {LogicalTypeId::STRING};
-        vector<Expression> filters;
-        auto functionPtr = WriteCsvFunc::getFunction();
+        TableFilterSet filters;
+        auto functionPtr = WriteCsvFunc().getFunction({});
         func = functionPtr;
         PredFunction& predFunction = (PredFunction&) *functionPtr;
         vector<LogicalType> returnTypes = chunks[0]->getTypes();
@@ -253,8 +253,8 @@ protected:
         vector<Value> input;
         input.emplace_back(getOutputCsvFilePath(outFolderOrFile));
         vector<LogicalType> inputTypes = { LogicalTypeId::STRING };
-        vector<Expression> filters;
-        auto functionPtr = WriteCsvFunc::getFunction();
+        TableFilterSet filters;
+        auto functionPtr = WriteCsvFunc().getFunction({});
         auto& pred = static_cast<PredFunction&>(*functionPtr);
         auto returnTypes = chunks[0]->getTypes();
         auto map = params.toMap();

@@ -18,6 +18,7 @@
  */
 #include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.hpp"
 
+#include "bumblebee/common/Log.hpp"
 
 
 namespace bumblebee{
@@ -249,7 +250,7 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     // used for total aggregations (no groups)
     if (groupCols_.empty()) {
         // no group to fetch, call directly the fetchAggregate with the result chunk
-        Vector result(chunk.data_[dcCols_[0]].getType(), 1);
+        Vector result(chunk.data_[dcCols_[0]].getLogicalType(), 1);
         aht_->fetchAggregates(result, payloadInternalCol);
         BB_ASSERT(result.getVectorType() == VectorType::CONSTANT_VECTOR);
         // reference in the return chunk

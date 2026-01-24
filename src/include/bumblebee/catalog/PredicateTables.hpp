@@ -104,11 +104,6 @@ public:
     joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads);
     bool existJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads);
 
-    // Return a join PRL hash table with the same keys and payloads.
-    join_prl_ht_ptr_t& getJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
-    void createJoinPRLHashTable(const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
-    bool existJoinPRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
-
     // Return a join Row Layout hash table with the same keys and payloads.
     rl_join_ht_ptr_t& getJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload );
     void createJoinRLHashTable(const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
@@ -172,11 +167,9 @@ protected:
 
     // hash tables data structures
     vector<joinht_ptr_t> jhtables_;
-    // PRL hash tables
-    vector<join_prl_ht_ptr_t> prlHTables_;
-    // Partitioned PRL hash table
+    // Partitioned PRL hash table (distinct table)
     partitioned_prl_ht_ptr_t partitionedPRLHT_;
-    // Row Layout hash tables
+    // Row Layout hash tables (for joins)
     vector<rl_join_ht_ptr_t> rlHTables_;
     // partitioned aggregate hash table (for aggregates)
     partitioned_agg_ht_ptr_t partitionedAggHT_;

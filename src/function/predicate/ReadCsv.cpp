@@ -22,10 +22,12 @@
 #include <sstream>
 
 #include "bumblebee/common/Limits.hpp"
+#include "bumblebee/common/StringUtils.hpp"
 
 namespace bumblebee{
 
-void parseColumns(string& columns,vector<string>& colNames,vector<PhysicalType>& colTypes) {
+
+void parseCsvColumns(string &columns, vector<string> &colNames, vector<PhysicalType> &colTypes) {
 	colNames.clear();
 	colTypes.clear();
 
@@ -54,27 +56,13 @@ void parseColumns(string& columns,vector<string>& colNames,vector<PhysicalType>&
 			trim(type);
 
 			colNames.push_back(name);
-			auto t = ctypeFromString(type);
+			auto t = physicalTypeFromString(type);
 			if (t==PhysicalType::UNKNOWN) {
 				ErrorHandler::errorParsing("Error type "+ type+" is UNKNOWN.");
 			}
-			colTypes.push_back(ctypeFromString(type));
+			colTypes.push_back(physicalTypeFromString(type));
 		}
 	}
-}
-
-static bool hasGlob(const string &str) {
-	for (idx_t i = 0; i < str.size(); i++) {
-		switch (str[i]) {
-			case '*':
-			case '?':
-			case '[':
-				return true;
-			default:
-				break;
-		}
-	}
-	return false;
 }
 
 idx_t ReadCSVData::getMaxThread() {
@@ -143,7 +131,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
                                        vector<LogicalType> & inputTypes,
                                        std::unordered_map<string, Value> &parameters,
                                        vector<LogicalType> &returnTypes,vector<string> &names,
-                                       vector<Expression>& filters) {
+                                       TableFilterSet& filters) {
 	auto result = std::make_unique<ReadCSVData>();
 	auto &options = result->options_;
 
@@ -153,7 +141,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 	string folder = inputs[0].toString();
 	string path = folder;
 	auto &fs = *context.fileSystem_;
-	if (!hasGlob(folder)) {
+	if (!StringUtils::hasGlob(folder)) {
 		auto fileExist = fs.fileExists(folder);
 		// is not a glob, check if is a directory
 		if (!fileExist && !fs.directoryExists(folder))
@@ -162,7 +150,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 		if (!fileExist) {
 			// is a directory add the *.csv to the file pattern
 			auto separator = context.fileSystem_->getFileSeparator();
-			path = folder + separator + "**" + separator + "*.csv";
+			path = folder + separator + "**" + separator + "*" + result->extension_;
 		}
 	}
 
@@ -205,7 +193,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 		} else if (kv.first == "columns") {
 			auto columns = kv.second.toString();
 			// parse the columns
-			parseColumns(columns, colNames, colTypes);
+			parseCsvColumns(columns, colNames, colTypes);
 		} else if (kv.first == "compression") {
 			options.compression_ = kv.second.toString();
 		}
@@ -239,16 +227,20 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 
 	// build the map of col name and type
 	std::unordered_map<string, PhysicalType> colMap;
+	string allColumns;
 
 	BB_ASSERT(colTypes.size() == colNames.size());
-	for (idx_t i = 0;i<colNames.size();i++)
+	for (idx_t i = 0;i<colNames.size();i++) {
 		colMap[colNames[i]] = colTypes[i];
-
+		allColumns += colNames[i] + ", ";
+	}
+	allColumns.pop_back();
+	allColumns.pop_back();
 
 	// check all the names are in col name and build returnTypes
 	for (auto& name: names) {
 		if (!colMap.contains(name))
-			ErrorHandler::errorParsing("Column " + name + " does not exist.");
+			ErrorHandler::errorParsing("Column " + name + " does not exist. Available columns: ["+allColumns+"]");
 		returnTypes.push_back(colMap[name]);
 	}
 
@@ -340,16 +332,21 @@ static void readCSVAddNamedParameters(PredFunction &table_function) {
 	table_function.namedParameters_["compression"] = PhysicalType::STRING;
 }
 
+string ReadCsvFunc::getName() {
+	return "&read_csv";
+}
 
-function_ptr_t ReadCsvFunc::getFunction() {
-	string name = "&read_csv";
+
+function_ptr_t ReadCsvFunc::createFunction(const vector<LogicalType> &type) {
+	string name = getName();
 	function_ptr_t fun = function_ptr_t(new PredFunction( name, {PhysicalType::STRING}, readCSVFunction, readCSVBind, readCSVInit, readCSVMaxThread, nullptr, nullptr));
 	readCSVAddNamedParameters((PredFunction&)*fun);
 	return fun;
 }
 
 void ReadCsvFunc::registerFunction(FunctionRegister &funcRegister) {
-	funcRegister.registerFunction(getFunction());
+	std::unique_ptr<FunctionGenerator> fg = std::make_unique<ReadCsvFunc>();
+	funcRegister.registerFunctionGen(fg);
 }
 
 

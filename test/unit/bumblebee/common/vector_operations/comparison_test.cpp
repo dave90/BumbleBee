@@ -21,6 +21,7 @@
 
 #include "../../BumbleBaseTest.hpp"
 #include "bumblebee/common/Constants.hpp"
+#include "bumblebee/common/types/Decimal.hpp"
 #include "bumblebee/common/types/Vector.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
@@ -156,3 +157,16 @@ TEST_F(VectorOperationsComparisonTest, CompareLessThanStringVectors) {
     EXPECT_EQ(match, 2); // "ant" < "apple", "bat" > "banana", "miao" > "meow", "dog" > "donkey"
 }
 
+TEST_F(VectorOperationsComparisonTest, SignedVsDecimalComparison) {
+    vector<int32_t> signed_values = {-1, 0, 1, 4};
+    vector<int64_t> decimal_values = {0, 100, 10, 1002};
+    Vector v1 = generateVector(PhysicalType::INTEGER, signed_values);
+    Vector v2 = generateVector(LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, 2), decimal_values);
+
+    SelectionVector sel(STANDARD_VECTOR_SIZE);
+    auto match1 = VectorOperations::greaterThan(v1, v2, nullptr, signed_values.size(), &sel);
+    std::cout << sel.toString(match1) << std::endl;
+    auto match2 = VectorOperations::lessThan(v2, v1, nullptr, signed_values.size(), &sel);
+    std::cout << sel.toString(match2) << std::endl;
+    BB_ASSERT(match1 == match2);
+}

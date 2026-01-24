@@ -24,7 +24,7 @@ namespace bumblebee{
 
 struct UnaryOperatorWrapper {
 	template <class OP, class INPUT_TYPE, class RESULT_TYPE>
-	static inline RESULT_TYPE Operation(INPUT_TYPE input, idx_t idx, void *dataptr) {
+	static inline RESULT_TYPE operation(INPUT_TYPE input, idx_t idx, void *dataptr) {
 		return OP::template operation<INPUT_TYPE, RESULT_TYPE>(input);
 	}
 };

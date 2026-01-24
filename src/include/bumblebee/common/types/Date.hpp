@@ -19,6 +19,7 @@
 #pragma once
 #include "BumbleString.hpp"
 #include "Timestamp.hpp"
+#include "bumblebee/common/StringUtils.hpp"
 
 namespace bumblebee{
 
@@ -53,12 +54,17 @@ public:
 	constexpr static const int32_t DAYS_PER_YEAR_INTERVAL = 146097;
 
 public:
+	static bool parseDoubleDigit(const char *buf, idx_t len, idx_t &pos, int32_t &result);
+	static bool isLeapYear(int32_t year);
+	static bool isValid(int32_t year, int32_t month, int32_t day);
+	static bool tryFromDate(int32_t year, int32_t month, int32_t day, date_t &result);
+	static int64_t epoch(int32_t date);
+
+	static bool tryConvertDate(const char *buf, idx_t len, idx_t &pos, date_t &result, bool strict);
+
 	static void convert(int32_t d, int32_t &year, int32_t &month, int32_t &day);
 	static idx_t length(int32_t date[], idx_t &year_length, bool &add_bc);
 	static void format(char *data, int32_t date[], idx_t year_length, bool add_bc);
-
-	static int64_t epoch(int32_t date);
-
 private:
 	static void extractYearOffset(int32_t &n, int32_t &year, int32_t &year_offset);
 };

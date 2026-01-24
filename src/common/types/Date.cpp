@@ -190,6 +190,181 @@ void Date::format(char *data, int32_t date[], idx_t year_length, bool add_bc) {
     }
 }
 
+bool Date::parseDoubleDigit(const char *buf, idx_t len, idx_t &pos, int32_t &result) {
+    if (pos < len && StringUtils::characterIsDigit(buf[pos])) {
+        result = buf[pos++] - '0';
+        if (pos < len && StringUtils::characterIsDigit(buf[pos])) {
+            result = (buf[pos++] - '0') + result * 10;
+        }
+        return true;
+    }
+    return false;
+}
+
+bool Date::isLeapYear(int32_t year) {
+    return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+}
+
+bool Date::isValid(int32_t year, int32_t month, int32_t day) {
+    if (month < 1 || month > 12) {
+        return false;
+    }
+    if (day < 1) {
+        return false;
+    }
+    if (year <= DATE_MIN_YEAR) {
+        if (year < DATE_MIN_YEAR) {
+            return false;
+        } else if (year == DATE_MIN_YEAR) {
+            if (month < DATE_MIN_MONTH || (month == DATE_MIN_MONTH && day < DATE_MIN_DAY)) {
+                return false;
+            }
+        }
+    }
+    if (year >= DATE_MAX_YEAR) {
+        if (year > DATE_MAX_YEAR) {
+            return false;
+        } else if (year == DATE_MAX_YEAR) {
+            if (month > DATE_MAX_MONTH || (month == DATE_MAX_MONTH && day > DATE_MAX_DAY)) {
+                return false;
+            }
+        }
+    }
+    return Date::isLeapYear(year) ? day <= Date::LEAP_DAYS[month] : day <= Date::NORMAL_DAYS[month];
+}
+
+bool Date::tryFromDate(int32_t year, int32_t month, int32_t day, date_t &result) {
+    int32_t n = 0;
+    if (!isValid(year, month, day)) {
+        return false;
+    }
+    n += isLeapYear(year) ? Date::CUMULATIVE_LEAP_DAYS[month - 1] : Date::CUMULATIVE_DAYS[month - 1];
+    n += day - 1;
+    if (year < 1970) {
+        int32_t diff_from_base = 1970 - year;
+        int32_t year_index = 400 - (diff_from_base % 400);
+        int32_t fractions = diff_from_base / 400;
+        n += Date::CUMULATIVE_YEAR_DAYS[year_index];
+        n -= Date::DAYS_PER_YEAR_INTERVAL;
+        n -= fractions * Date::DAYS_PER_YEAR_INTERVAL;
+    } else if (year >= 2370) {
+        int32_t diff_from_base = year - 2370;
+        int32_t year_index = diff_from_base % 400;
+        int32_t fractions = diff_from_base / 400;
+        n += Date::CUMULATIVE_YEAR_DAYS[year_index];
+        n += Date::DAYS_PER_YEAR_INTERVAL;
+        n += fractions * Date::DAYS_PER_YEAR_INTERVAL;
+    } else {
+        n += Date::CUMULATIVE_YEAR_DAYS[year - 1970];
+    }
+    result = n;
+    return true;
+}
+
+bool Date::tryConvertDate(const char *buf, idx_t len, idx_t &pos, date_t &result, bool strict) {
+    pos = 0;
+    if (len == 0) {
+        return false;
+    }
+
+    int32_t day = 0;
+    int32_t month = -1;
+    int32_t year = 0;
+    bool yearneg = false;
+    int sep;
+
+    // skip leading spaces
+    while (pos < len && StringUtils::characterIsSpace(buf[pos])) {
+        pos++;
+    }
+
+    if (pos >= len) {
+        return false;
+    }
+    if (buf[pos] == '-') {
+        yearneg = true;
+        pos++;
+        if (pos >= len) {
+            return false;
+        }
+    }
+    if (!StringUtils::characterIsDigit(buf[pos])) {
+        return false;
+    }
+    // first parse the year
+    for (; pos < len && StringUtils::characterIsDigit(buf[pos]); pos++) {
+        if (year >= 100000000) {
+            return false;
+        }
+        year = (buf[pos] - '0') + year * 10;
+    }
+    if (yearneg) {
+        year = -year;
+    }
+
+    if (pos >= len) {
+        return false;
+    }
+
+    // fetch the separator
+    sep = buf[pos++];
+    if (sep != ' ' && sep != '-' && sep != '/' && sep != '\\') {
+        // invalid separator
+        return false;
+    }
+
+    // parse the month
+    if (!Date::parseDoubleDigit(buf, len, pos, month)) {
+        return false;
+    }
+
+    if (pos >= len) {
+        return false;
+    }
+
+    if (buf[pos++] != sep) {
+        return false;
+    }
+
+    if (pos >= len) {
+        return false;
+    }
+
+    // now parse the day
+    if (!Date::parseDoubleDigit(buf, len, pos, day)) {
+        return false;
+    }
+
+    // check for an optional trailing " (BC)""
+    if (len - pos >= 5 && StringUtils::characterIsSpace(buf[pos]) && buf[pos + 1] == '(' &&
+        StringUtils::characterToLower(buf[pos + 2]) == 'b' && StringUtils::characterToLower(buf[pos + 3]) == 'c' &&
+        buf[pos + 4] == ')') {
+        if (yearneg || year == 0) {
+            return false;
+        }
+        year = -year + 1;
+        pos += 5;
+    }
+
+    // in strict mode, check remaining string for non-space characters
+    if (strict) {
+        // skip trailing spaces
+        while (pos < len && StringUtils::characterIsSpace((unsigned char)buf[pos])) {
+            pos++;
+        }
+        // check position. if end was not reached, non-space chars remaining
+        if (pos < len) {
+            return false;
+        }
+    } else {
+        // in non-strict mode, check for any direct trailing digits
+        if (pos < len && StringUtils::characterIsDigit((unsigned char)buf[pos])) {
+            return false;
+        }
+    }
+    return tryFromDate(year, month, day, result);
+}
+
 int64_t Date::epoch(int32_t date) {
     return ((int64_t)date) * Timestamp::SECS_PER_DAY;
 }

@@ -301,15 +301,24 @@ string FileSystem::extractBaseName(const string &path) {
     return vec[0];
 }
 
-bool FileSystem::isCSVFile(const string& path) {
-    // Check if path length is at least 4 characters (".csv")
-    if (path.length() < 4) return false;
+
+bool isExtensionFile(const string& path, const string& extension) {
+    // Check if path length is at least 4 characters (".extension")
+    if (path.length() < extension.length()) return false;
 
     // Convert to lowercase for case-insensitive comparison
     string lowerPath = StringUtils::lower(path);
 
-    // Check if it ends with ".csv"
-    return lowerPath.compare(lowerPath.length() - 4, 4, ".csv") == 0;
+    // Check if it ends with ".extension"
+    return lowerPath.compare(lowerPath.length() - extension.size(), extension.size(), extension) == 0;
+}
+
+bool FileSystem::isCSVFile(const string& path) {
+    return isExtensionFile(path, ".csv");
+}
+
+bool FileSystem::isParquetFile(const string &path) {
+    return isExtensionFile(path, ".parquet");
 }
 
 void FileSystem::setWorkingDirectory(const string &path) {

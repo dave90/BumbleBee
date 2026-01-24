@@ -103,6 +103,8 @@ protected:
     Value randomValue(PhysicalType type, idx_t max_string_len = 128);
 
     DataChunk generateRandomDataChunk(vector<LogicalType> types);
+
+
 };
 
 template<class T>

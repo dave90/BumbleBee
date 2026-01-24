@@ -57,7 +57,7 @@ public:
 TEST_F(AggFuncTest, InitRowSumStateTest ) {
 
     vector<LogicalType> args = {LogicalTypeId::SMALLINT};
-    auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
+    auto aggFunction = (AggregateFunction&) *SumFunc().getFunction({args[0]}).get();
     idx_t count = 10;
 
     vector<LogicalType> types = {LogicalTypeId::SMALLINT, LogicalTypeId::SMALLINT};
@@ -83,7 +83,7 @@ TEST_F(AggFuncTest, InitRowSumStateTest ) {
 TEST_F(AggFuncTest, UpdateRowSumStateTest ) {
 
     vector<LogicalType> args = {LogicalTypeId::SMALLINT};
-    auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
+    auto aggFunction = (AggregateFunction&) *SumFunc().getFunction({args[0]}).get();
     idx_t n = 10;
 
     // init the data
@@ -117,7 +117,7 @@ TEST_F(AggFuncTest, UpdateRowSumStateTest ) {
 
 TEST_F(AggFuncTest, FinalizeRowSumStateTest ) {
     vector<LogicalType> args = {LogicalTypeId::SMALLINT};
-    auto aggFunction = (AggregateFunction&) *SumFunc::getFunction(args[0]).get();
+    auto aggFunction = (AggregateFunction&) *SumFunc().getFunction({args[0]}).get();
     idx_t n = 20;
 
     // init the data

@@ -1,9 +1,11 @@
 ## TODOLIST
 - block parenthesis in sql ad datalog
+- check vector getType and logical types
 - parquet
+- Query a partition
 - Specify predicate tables types
 - Refactor aggregates and avoid distinct
-- Decimal in vector operation (logical type switch instead of physical)
+- Decimal date and timestamp in vector operation (logical type switch instead of physical)
 - NUL values in operations
 
 ## Next

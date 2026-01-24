@@ -20,6 +20,7 @@
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 #include "bumblebee/common/vector_operations/BinaryExecution.hpp"
 #include  "bumblebee/common/operator/ComparisonOperators.hpp"
+#include "bumblebee/common/types/Date.hpp"
 
 namespace bumblebee {
 
@@ -64,6 +65,47 @@ template<class LEFT_TYPE, class RIGHT_TYPE, class COMMON_TYPE, class OP>
     }
 };
 
+template<class OP, bool INVERSE>
+struct StringDateCast {
+    static inline bool operation(const string_t& left, date_t right) {
+        date_t dateLeft;
+        idx_t pos;
+        if (!Date::tryConvertDate(left.c_str(), left.length(), pos, dateLeft, true)) {
+            string dateString = left.c_str();
+            ErrorHandler::errorParsing("Error parsing string to date: "+dateString);
+        }
+        if (INVERSE)
+            return OP::operation(right, dateLeft);
+        return OP::operation(dateLeft, right);
+    }
+};
+
+template <class OP>
+idx_t templatedSelectOperationDecimal(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
+    // we need to cast the other vector as decimal
+    Vector lSelVector(left);
+    Vector rSelVector(right);
+    if (sel) {
+        lSelVector.slice(*sel, count);
+        rSelVector.slice(*sel, count);
+    }
+    if (lSelVector.getLogicalTypeId() == LogicalTypeId::DECIMAL) {
+        BB_ASSERT(rSelVector.getLogicalTypeId() != LogicalTypeId::DECIMAL);
+        string errorMsg;
+        Vector castVec(lSelVector.getLogicalType()); // same type of the decimal type
+        if (!VectorOperations::tryCast(rSelVector, castVec, count, &errorMsg))
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+        return templatedSelectOperationSwitchEqualType<OP>(lSelVector, castVec, nullptr, count, trueSel, falseSel, falseCount);
+    }
+    BB_ASSERT(rSelVector.getLogicalTypeId() == LogicalTypeId::DECIMAL);
+    string errorMsg;
+    Vector castVec(rSelVector.getLogicalType()); // same type of the decimal type
+    if (!VectorOperations::tryCast(lSelVector, castVec, count, &errorMsg))
+        ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+    return templatedSelectOperationSwitchEqualType<OP>(castVec, rSelVector, nullptr, count, trueSel, falseSel, falseCount);
+}
+
+
 template <class LEFT_TYPE, class RIGHT_TYPE,  class OP>
 idx_t templatedSelectOperationSwitchCommon(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
     auto commonType = getCommonType(left.getType(), right.getType());
@@ -91,27 +133,32 @@ idx_t templatedSelectOperationSwitchCommon(Vector &left, Vector &right, const Se
 
 template <class LEFT_TYPE, class OP>
 idx_t templatedSelectOperationSwitchRight(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
-    switch (right.getType()) {
-        case PhysicalType::TINYINT:
+    switch (right.getLogicalTypeId()) {
+        case LogicalTypeId::TINYINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::SMALLINT:
+        case LogicalTypeId::SMALLINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::INTEGER:
+        case LogicalTypeId::INTEGER:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::BIGINT:
+        case LogicalTypeId::BIGINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,int64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::UTINYINT:
+        case LogicalTypeId::BOOLEAN:
+        case LogicalTypeId::UTINYINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::USMALLINT:
+        case LogicalTypeId::USMALLINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::UINTEGER:
+        case LogicalTypeId::UINTEGER:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::UBIGINT:
+        case LogicalTypeId::HASH:
+        case LogicalTypeId::ADDRESS:
+        case LogicalTypeId::UBIGINT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,uint64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::FLOAT:
+        case LogicalTypeId::FLOAT:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,float,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::DOUBLE:
+        case LogicalTypeId::DOUBLE:
             return templatedSelectOperationSwitchCommon<LEFT_TYPE,double,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
+        case LogicalTypeId::DECIMAL:
+            return templatedSelectOperationDecimal<OP>(left, right, sel, count, trueSel, falseSel, falseCount);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }
@@ -119,30 +166,49 @@ idx_t templatedSelectOperationSwitchRight(Vector &left, Vector &right, const Sel
 }
 template <class OP>
 idx_t templatedSelectOperationSwitchLeft(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
-    // cannot compare string with different types
-    BB_ASSERT(left.getType() != PhysicalType::STRING && right.getType() != PhysicalType::STRING);
     // left type != right type
-    switch (left.getType()) {
-        case PhysicalType::TINYINT:
+    switch (left.getLogicalTypeId()) {
+        case LogicalTypeId::TINYINT:
             return templatedSelectOperationSwitchRight<int8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::SMALLINT:
+        case LogicalTypeId::SMALLINT:
             return templatedSelectOperationSwitchRight<int16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::INTEGER:
+        case LogicalTypeId::INTEGER:
             return templatedSelectOperationSwitchRight<int32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::BIGINT:
+        case LogicalTypeId::BIGINT:
             return templatedSelectOperationSwitchRight<int64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::UTINYINT:
+        case LogicalTypeId::BOOLEAN:
+        case LogicalTypeId::UTINYINT:
             return templatedSelectOperationSwitchRight<uint8_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::USMALLINT:
+        case LogicalTypeId::USMALLINT:
             return templatedSelectOperationSwitchRight<uint16_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::UINTEGER:
+        case LogicalTypeId::UINTEGER:
             return templatedSelectOperationSwitchRight<uint32_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::UBIGINT:
+        case LogicalTypeId::HASH:
+        case LogicalTypeId::ADDRESS:
+        case LogicalTypeId::UBIGINT:
             return templatedSelectOperationSwitchRight<uint64_t,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::FLOAT:
+        case LogicalTypeId::FLOAT:
             return templatedSelectOperationSwitchRight<float,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
-        case PhysicalType::DOUBLE:
+        case LogicalTypeId::DOUBLE:
             return templatedSelectOperationSwitchRight<double,OP>(left, right, sel, count, trueSel, falseSel, falseCount);
+        case LogicalTypeId::STRING: {
+            switch (right.getLogicalTypeId()) {
+                case LogicalTypeId::DATE:
+                    return BinaryExecution::select<string_t, date_t, StringDateCast<OP, false>>(left, right, sel, count, trueSel, falseSel, falseCount);
+                default:
+                    ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+            }
+        }
+        case LogicalTypeId::DATE: {
+            switch (right.getLogicalTypeId()) {
+                case LogicalTypeId::STRING:
+                    return BinaryExecution::select<string_t, date_t, StringDateCast<OP, true>>(right, left, sel, count, trueSel, falseSel, falseCount);
+                default:
+                    ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+            }
+        }
+        case LogicalTypeId::DECIMAL:
+            return templatedSelectOperationDecimal<OP>(left, right, sel, count, trueSel, falseSel, falseCount);
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
     }

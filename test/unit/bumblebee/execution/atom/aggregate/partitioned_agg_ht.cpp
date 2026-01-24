@@ -100,7 +100,7 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDist
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Build the chunk with 8 rows
@@ -143,7 +143,7 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
     // We will group by cols [0 and 1]
     vector<idx_t> groups = {0,1};
     vector<idx_t> payloads = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloads[0]]); // Sum over BIGINT
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]}); // Sum over BIGINT
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     const idx_t N = 12;
@@ -192,7 +192,7 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
 TEST_F(PartitionedAggHTTest, Partition_Shift62) {
     vector<idx_t> groupIndexTypes = {0,2};
     vector<idx_t> payloadIndexTypes = {2};
-    auto aggFunc = SumFunc::getFunction(tLeft[payloadIndexTypes[0]]);
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     DataChunk chunk = createChunkWithValue(tLeft, 16);

@@ -17,7 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "bumblebee/common/ErrorHandler.hpp"
 #include "bumblebee/common/types/BumbleString.hpp"
 
 namespace bumblebee{

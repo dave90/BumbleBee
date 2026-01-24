@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <string>
 #include "bumblebee/common/Vector.hpp"
+#include "types/Assert.hpp"
 
 namespace bumblebee {
 
@@ -92,33 +93,52 @@ enum class LogicalTypeId: uint16_t  {
     UNKNOWN = 999
 };
 
-LogicalTypeId cTypeToLogicalType(PhysicalType type);
-PhysicalType logicalTypeToCType(LogicalTypeId type);
+LogicalTypeId physicalTypeToLogicalType(PhysicalType type);
+PhysicalType logicalTypeToPhysicalType(LogicalTypeId type);
+
+struct LogicalTypeExtraData {
+    virtual bool equals(const LogicalTypeExtraData& other) const = 0;
+};
+struct LogicalTypeDecimalData : public LogicalTypeExtraData {
+    LogicalTypeDecimalData() = default;
+    LogicalTypeDecimalData(int width, int scale): width_(width),scale_(scale) {}
+
+    bool equals(const LogicalTypeExtraData& other) const override {
+        if (typeid(*this) != typeid(other)) return false;
+        auto& o = static_cast<const LogicalTypeDecimalData&>(other);
+        return width_ == o.width_ && scale_ == o.scale_;
+    }
+    int width_{0};
+    int scale_{0};
+};
+using logical_type_date_ptr_t = std::shared_ptr<LogicalTypeExtraData>;
 
 class LogicalType  {
 public:
-    LogicalType(LogicalTypeId type): type_(type), ctype_(logicalTypeToCType(type)) {}
-    LogicalType(PhysicalType type): ctype_(type), type_(cTypeToLogicalType(type)) {};
+    LogicalType(LogicalTypeId type);
+    LogicalType(PhysicalType type): ctype_(type), type_(physicalTypeToLogicalType(type)) {};
     LogicalType():type_(LogicalTypeId::UNKNOWN), ctype_(PhysicalType::UNKNOWN) {};
     LogicalType(const LogicalType& other) = default;
     PhysicalType getPhysicalType() const;
     LogicalTypeId type() const{return type_;};
     std::string toString() const;
-    void getDecimalWidhtAndScale(int& width, int& scale) const;
+    const LogicalTypeDecimalData& getDecimalData() const{
+        BB_ASSERT(type_ == LogicalTypeId::DECIMAL);
+        return (LogicalTypeDecimalData&)*data_;
+    }
 
     static LogicalType createDecimal(int width, int scale);
     static LogicalType createDate();
     static LogicalType createTimestamp();
-    bool operator==(const LogicalType &other) const {
-        return type_ == other.type_;
-    };
+
+    friend bool operator==(const LogicalType &lhs, const LogicalType &rhs);
+    friend bool operator!=(const LogicalType &lhs, const LogicalType &rhs);
 
 private:
-    // Data for decimal type
-    int width_{0};
-    int scale_{0};
     PhysicalType ctype_;
     LogicalTypeId type_;
+    // Data for complex type
+    logical_type_date_ptr_t data_;
 };
 
 
@@ -140,20 +160,24 @@ constexpr bool operator!=(LogicalTypeId a, PhysicalType b) noexcept {
 struct VectorLogicTypeHash {
     std::size_t operator()(const vector<LogicalType>& vec) const {
         std::size_t seed = 0;
-        for (auto v : vec) {
+        for (auto& v : vec) {
             // A simple hash combination: shift and xor
             seed ^= std::hash<uint8_t>{}(static_cast<uint8_t>(v.type())) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         }
         return seed;
     }
+    bool operator()(const vector<LogicalType>& vec1, const vector<LogicalType>& vec2) const {
+        return vec1 == vec2;
+    }
 };
 
-enum Operator {
+enum class Operator : uint8_t {
     PLUS=0,
     MINUS=1,
     DIV=2,
     TIMES=3,
-    MODULO=4
+    MODULO=4,
+    NONE=5
 };
 
 
@@ -188,21 +212,22 @@ using sel_t = uint32_t;
 using string = std::string;
 
 idx_t getPhysicalTypeSize(PhysicalType type);
-bool isUnsigned(PhysicalType type);
-PhysicalType getBumpedType(PhysicalType type);
-PhysicalType getGeneralBumpedType(PhysicalType type);
+bool isUnsigned(const LogicalType& type);
+LogicalType getBumpedLogicalType(LogicalType type);
+LogicalType getGeneralBumpedType(LogicalType type);
 vector<LogicalType> getGeneralBumpedType(const vector<LogicalType>& type);
-PhysicalType getSignedBumpedType(PhysicalType type);
+LogicalType getSignedBumpedType(const LogicalType& type);
 // Determines the dominant constant type between two types, resolving UNKNOWN values,
 // adjusting for signedness differences, and returning the type with the larger size.
-LogicalType getCommonType(LogicalType t1, LogicalType t2);
+LogicalType getCommonType(LogicalType t1, LogicalType t2, Operator op = Operator::NONE);
 char getOperatorChar(Operator op);
 Operator getCharOperator(char op);
 string getBinopStr(Binop binop);
 Binop getFlippedBinop(Binop binop);
-string ctypeToString(PhysicalType type);
+string physicalTypeToString(PhysicalType type);
 string logicalTypeToString(LogicalTypeId type);
-PhysicalType ctypeFromString(const string& typeStr);
+PhysicalType physicalTypeFromString(const string& typeStr);
+LogicalType logicalTypeFromString(const string& typeStr);
 Binop getFlippedBinop(Binop op);
 idx_t nextPowerOfTwo(idx_t n);
 bool typeIsConstantSize(PhysicalType type);

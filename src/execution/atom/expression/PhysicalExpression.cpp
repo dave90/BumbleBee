@@ -79,7 +79,7 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
         BB_ASSERT(colToAssign < types_.size());
         auto result = expression.executeRight(vectors, input.getSize(), types_[colToAssign] );
         chunk.reference(input);
-        BB_ASSERT(types_[colToAssign] == result.getType());
+        BB_ASSERT(types_[colToAssign] == result.getLogicalType());
 
         chunk.data_[expression.left_.cols_[0]].reference(result);
         context.profiler_.endPhysicalAtom(chunk);

@@ -1,0 +1,1 @@
+SELECT SearchEngineID, ClientIP, COUNT(*) AS c, SUM(IsRefresh) as sum, AVG(ResolutionWidth) as avg FROM 'downloads/mini_hits.parquet' WHERE SearchPhrase <> '' GROUP BY SearchEngineID, ClientIP ORDER BY c DESC, ClientIP LIMIT 10

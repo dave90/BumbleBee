@@ -116,14 +116,26 @@ SELECT *
         epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
 FROM 'downloads/hits.parquet' USING SAMPLE 3%;
 
-COPY
-(
-SELECT *
-FROM hits
-) TO 'downloads/mini_hits.csv'
 
 COPY
 (
 SELECT *
 FROM hits
-) TO 'downloads/mini_hits.parquet'
+) TO 'downloads/mini_hits.csv';
+
+DELETE FROM hits;
+
+INSERT INTO hits BY NAME
+SELECT *
+           REPLACE (
+        make_date(EventDate) AS EventDate,
+        epoch_ms(EventTime * 1000) AS EventTime,
+        epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+        epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
+FROM 'downloads/hits.parquet' USING SAMPLE 30%;
+
+COPY
+(
+SELECT *
+FROM hits
+) TO 'downloads/mini_hits.parquet';

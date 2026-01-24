@@ -21,21 +21,20 @@
 #include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee{
-void FunctionRegister::registerFunction(function_ptr_t function) {
+
+void FunctionRegister::registerFunctionGen(function_gen_ptr_t& function) {
 
     // check if it is already present
-    if (funcmap_.contains( function->name_) && funcmap_[function->name_].contains(function->arguments_))
+    if (funcmap_.contains( function->getName()))
         return;
 
-    funcmap_[function->name_][function->arguments_] = function;
+    funcmap_[function->getName()] = std::move(function);
 }
 
 function_ptr_t FunctionRegister::getFunction(const string& name, const vector<LogicalType>& arguments) {
     if (!funcmap_.contains(name) )
         return nullptr;
-    if (!funcmap_[name].contains(arguments))
-        return nullptr;
 
-    return funcmap_[name][arguments];
+    return funcmap_[name]->getFunction(arguments);
 }
 }

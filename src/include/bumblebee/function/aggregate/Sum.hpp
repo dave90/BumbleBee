@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include "bumblebee/common/types/Decimal.hpp"
 #include "bumblebee/function/Function.hpp"
 #include "bumblebee/function/FunctionRegister.hpp"
 
@@ -57,51 +58,60 @@ struct SumOperation {
     }
 };
 
-class SumFunc {
+class SumFunc : public FunctionGenerator {
 public:
+    string getName() override {
+        return "#sum";
+    }
+
     // get the function from the type
-    static function_ptr_t getFunction(LogicalType type) {
-        string name = "#sum";
-        switch (type.type()) {
+    function_ptr_t createFunction(const vector<LogicalType>& type) override {
+        BB_ASSERT(type.size() == 1);
+        string name = getName();
+        switch (type[0].type()) {
             case LogicalTypeId::TINYINT: {
-                auto func = AggregateFunction::unaryAggregate<SumState,int8_t,int64_t,SumOperation>(name, {type}, PhysicalType::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,int8_t,int64_t,SumOperation>(name, type, PhysicalType::BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::SMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int16_t,int64_t,SumOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,int16_t,int64_t,SumOperation>(name, type, LogicalTypeId::BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::INTEGER:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int32_t,int64_t,SumOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,int32_t,int64_t,SumOperation>(name, type, LogicalTypeId::BIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::DECIMAL:{
+                auto func = AggregateFunction::unaryAggregate<SumState,int64_t,int64_t,SumOperation>(name, type, LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, type[0].getDecimalData().scale_));
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::BIGINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,int64_t,int64_t,SumOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,int64_t,int64_t,SumOperation>(name, type, LogicalTypeId::BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::UTINYINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint8_t,uint64_t,SumOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,uint8_t,uint64_t,SumOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::USMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint16_t,uint64_t,SumOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,uint16_t,uint64_t,SumOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::UINTEGER:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint32_t,uint64_t,SumOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,uint32_t,uint64_t,SumOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::HASH:
             case LogicalTypeId::UBIGINT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,uint64_t,uint64_t,SumOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<SumState,uint64_t,uint64_t,SumOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::FLOAT:{
-                auto func = AggregateFunction::unaryAggregate<SumState,float,float,SumOperation>(name, {type}, LogicalTypeId::FLOAT);
+                auto func = AggregateFunction::unaryAggregate<SumState,float,float,SumOperation>(name, type, LogicalTypeId::FLOAT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::DOUBLE:{
-                auto func = AggregateFunction::unaryAggregate<SumState,double,double,SumOperation>(name, {type}, LogicalTypeId::DOUBLE);
+                auto func = AggregateFunction::unaryAggregate<SumState,double,double,SumOperation>(name, type, LogicalTypeId::DOUBLE);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::STRING:	{
@@ -116,12 +126,8 @@ public:
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {
-        vector<LogicalType> supportedTypes = {LogicalTypeId::TINYINT, LogicalTypeId::SMALLINT, LogicalTypeId::INTEGER, LogicalTypeId::BIGINT,
-            LogicalTypeId::UTINYINT, LogicalTypeId::USMALLINT, LogicalTypeId::UINTEGER, LogicalTypeId::UBIGINT, LogicalTypeId::HASH, LogicalTypeId::DOUBLE,
-            LogicalTypeId::FLOAT};
-        for (auto& c: supportedTypes) {
-            funcRegister.registerFunction(getFunction(c));
-        }
+        std::unique_ptr<FunctionGenerator> fg = std::make_unique<SumFunc>();
+        funcRegister.registerFunctionGen(fg);
     }
 };
 

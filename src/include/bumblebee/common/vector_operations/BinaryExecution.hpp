@@ -21,62 +21,46 @@
 #include "bumblebee/common/types/Vector.hpp"
 
 namespace bumblebee {
+
+
+struct GenericBinaryWrapper {
+	template <class OP, class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE>
+	static inline RESULT_TYPE operation(LEFT_TYPE left, RIGHT_TYPE right, idx_t idx, void *dataptr) {
+		return OP::operation(left, right, idx, dataptr);
+	}
+};
+
+struct BinaryWrapper {
+	template <class OP, class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE>
+	static inline RESULT_TYPE operation(LEFT_TYPE left, RIGHT_TYPE right, idx_t idx, void *dataptr) {
+		return OP::operation(left, right);
+	}
+};
+
 // Contains binary operations between two Vectors
 // Execute is for operation that generate new data (+, -, * etc.)
 // Select filter data ( >, < , <= etc.)
 struct BinaryExecution {
 
 protected:
-	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP,
-	          bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
-	static void executeFlatLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
-	                            RESULT_TYPE *__restrict result_data, idx_t count) {
 
-		for (idx_t i = 0; i < count; i++) {
-			auto lentry = ldata[LEFT_CONSTANT ? 0 : i];
-			auto rentry = rdata[RIGHT_CONSTANT ? 0 : i];
-			result_data[i] = OP::operation(lentry, rentry);
-		}
 
-	}
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP,
-			  bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
-	static void executeFlat(Vector &left, Vector &right, Vector &result, idx_t count) {
-		BB_ASSERT(!LEFT_CONSTANT || !RIGHT_CONSTANT );
-		result.setVectorType(VectorType::FLAT_VECTOR);
-		auto result_data = FlatVector::getData<RESULT_TYPE>(result);
-		auto ldata = FlatVector::getData<LEFT_TYPE>(left);
-		auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
-		executeFlatLoop<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT>(ldata, rdata, result_data, count);
-	}
-
-	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
-	static void executeConstant(Vector &left, Vector &right, Vector &result) {
-		result.setVectorType(VectorType::CONSTANT_VECTOR);
-
-		auto ldata = ConstantVector::getData<LEFT_TYPE>(left);
-		auto rdata = ConstantVector::getData<RIGHT_TYPE>(right);
-		auto result_data = ConstantVector::getData<RESULT_TYPE>(result);
-
-		*result_data = OP::operation(*ldata, *rdata);
-	}
-
-	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
-	static void ExecuteGenericLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP>
+	static void executeGenericLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
 								   RESULT_TYPE *__restrict result_data, const SelectionVector *__restrict lsel,
-								   const SelectionVector *__restrict rsel, idx_t count) {
+								   const SelectionVector *__restrict rsel, idx_t count, void* dataptr) {
 
 		for (idx_t i = 0; i < count; i++) {
 			auto lentry = ldata[lsel->getIndex(i)];
 			auto rentry = rdata[rsel->getIndex(i)];
-			result_data[i] = OP::operation(lentry, rentry);
+			result_data[i] = OPWRAPPER::template operation<OP, LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE>(lentry, rentry, i, dataptr);
 		}
 
 	}
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
-	static void executeGeneric(Vector &left, Vector &right, Vector &result, idx_t count) {
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP>
+	static void executeGeneric(Vector &left, Vector &right, Vector &result, idx_t count, void* dataptr) {
 		VectorData ldata, rdata;
 
 		left.orrify(count, ldata);
@@ -84,26 +68,64 @@ protected:
 
 		result.setVectorType(VectorType::FLAT_VECTOR);
 		auto result_data = FlatVector::getData<RESULT_TYPE>(result);
-		ExecuteGenericLoop<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP>(
-			(LEFT_TYPE *)ldata.data_, (RIGHT_TYPE *)rdata.data_, result_data, ldata.sel_, rdata.sel_, count);
+		executeGenericLoop<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(
+			(LEFT_TYPE *)ldata.data_, (RIGHT_TYPE *)rdata.data_, result_data, ldata.sel_, rdata.sel_, count, dataptr);
 	}
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
-	static void executeSwitch(Vector &left, Vector &right, Vector &result, idx_t count) {
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP,
+			  bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
+	static void executeFlatLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
+								RESULT_TYPE *__restrict result_data, idx_t count, void *dataptr) {
+
+		for (idx_t i = 0; i < count; i++) {
+			auto lentry = ldata[LEFT_CONSTANT ? 0 : i];
+			auto rentry = rdata[RIGHT_CONSTANT ? 0 : i];
+			result_data[i] = OPWRAPPER::template operation<OP, LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE>(lentry, rentry, i, dataptr);
+		}
+	}
+
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP,
+			  bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
+	static void executeFlat(Vector &left, Vector &right, Vector &result, idx_t count, void* dataptr) {
+		BB_ASSERT(!LEFT_CONSTANT || !RIGHT_CONSTANT );
+		result.setVectorType(VectorType::FLAT_VECTOR);
+		auto result_data = FlatVector::getData<RESULT_TYPE>(result);
+		auto ldata = FlatVector::getData<LEFT_TYPE>(left);
+		auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
+		executeFlatLoop<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP, LEFT_CONSTANT, RIGHT_CONSTANT>(ldata, rdata, result_data, count, dataptr);
+	}
+
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP>
+	static void executeConstant(Vector &left, Vector &right, Vector &result, void* dataptr) {
+		result.setVectorType(VectorType::CONSTANT_VECTOR);
+
+		auto ldata = ConstantVector::getData<LEFT_TYPE>(left);
+		auto rdata = ConstantVector::getData<RIGHT_TYPE>(right);
+		auto result_data = ConstantVector::getData<RESULT_TYPE>(result);
+
+		*result_data = OPWRAPPER::template operation<OP, LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE>(*ldata, *rdata, 0, dataptr);
+	}
+
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP>
+	static inline void executeStandard(Vector &left, Vector &right, Vector &result, idx_t count, void *dataptr) {
 		auto left_vector_type = left.getVectorType();
 		auto right_vector_type = right.getVectorType();
 		if (left_vector_type == VectorType::CONSTANT_VECTOR && right_vector_type == VectorType::CONSTANT_VECTOR) {
-			executeConstant<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP>(left, right, result);
+			executeConstant<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(left, right, result, dataptr);
 		} else if (left_vector_type == VectorType::FLAT_VECTOR && right_vector_type == VectorType::CONSTANT_VECTOR) {
-			executeFlat<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP, false, true>(left, right, result, count);
+			executeFlat<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP, false, true>(left, right, result,
+																							  count, dataptr);
 		} else if (left_vector_type == VectorType::CONSTANT_VECTOR && right_vector_type == VectorType::FLAT_VECTOR) {
-			executeFlat<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP, true, false>(left, right, result, count);
+			executeFlat<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP, true, false>(left, right, result,
+																							  count, dataptr);
 		} else if (left_vector_type == VectorType::FLAT_VECTOR && right_vector_type == VectorType::FLAT_VECTOR) {
-			executeFlat<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP, false, false>(left, right, result, count);
+			executeFlat<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP, false, false>(left, right, result,
+																							   count, dataptr);
 		} else {
-			executeGeneric<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP>(left, right, result, count);
+			executeGeneric<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(left, right, result, count, dataptr);
 		}
 	}
+
 
 protected:
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
@@ -248,8 +270,13 @@ public:
 	// - OP must define a static method `operation(a, b)` implementing the desired operation (e.g., addition, multiplication).
 	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
 	static void execute(Vector &left, Vector &right, Vector &result, idx_t count) {
-		executeSwitch<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP>(left, right, result, count);
+		executeStandard<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, BinaryWrapper, OP>(left, right, result, count, nullptr);
 	}
+	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
+	static void genericExecute(Vector &left, Vector &right, Vector &result, idx_t count, void *dataptr) {
+		executeStandard<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, GenericBinaryWrapper, OP>(left, right, result, count, dataptr);
+	}
+
 
 	// Applies a binary comparison operation (defined by the OP template) between two input vectors,
 	// returning the number of elements that satisfy the condition. Optionally outputs the indices of matching rows.

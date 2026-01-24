@@ -28,6 +28,17 @@ FROM range(1, 101) t(i)
     ) TO 'data_zstd.parquet'
 (FORMAT PARQUET, CODEC 'ZSTD');
 
+-- decimal
+COPY (
+SELECT
+    i::DECIMAL(18,2)               AS col1,
+    (i - 200)::DECIMAL(18,2) AS col2,
+    (i % 10)::DECIMAL(18,2)  AS col3,
+    ('row_' || i::VARCHAR)   AS col4
+FROM range(1, 101) t(i)
+    ) TO 'data_decimal.parquet'
+(FORMAT PARQUET);
+
 -- Null
 COPY (
 SELECT

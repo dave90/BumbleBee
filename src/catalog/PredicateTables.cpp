@@ -76,30 +76,6 @@ bool PredicateTables::existJoinHashTable(const vector<idx_t>& keys, const vector
 }
 
 
-join_prl_ht_ptr_t & PredicateTables::getJoinPRLHashTable( const vector<idx_t> &keys, const vector<idx_t> &payload) {
-    BB_ASSERT(existJoinPRLHashTable(keys, payload));
-    for (auto&ht: prlHTables_)
-        if (ht->checkKeysAndPayloads(keys, payload))
-            return ht;
-
-    return prlHTables_.back();
-}
-
-void PredicateTables::createJoinPRLHashTable( const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload ) {
-    if (existJoinPRLHashTable(keys, payload)) return;
-    auto ht = join_prl_ht_ptr_t(new JoinPRLHashTable(*context_->bufferManager_, types, keys, payload));
-    prlHTables_.push_back(std::move(ht));
-}
-
-
-bool PredicateTables::existJoinPRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) const{
-    for (auto&ht: prlHTables_)
-        if (ht->checkKeysAndPayloads(keys, payload))
-            return true;
-
-    return false;
-}
-
 rl_join_ht_ptr_t & PredicateTables::getJoinRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) {
     for (auto&ht: rlHTables_)
         if (ht->checkKeysAndPayloads(keys, payload))
@@ -132,7 +108,7 @@ partitioned_prl_ht_ptr_t&  PredicateTables::getPartitionedPRLHashTable() {
 }
 
 
-    partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
+partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
                                                                                const vector<AggregateFunction *> &aggregateFunctions) {
     if (partitionedAggHT_) return partitionedAggHT_;
     partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(*context_, groups, payloads, aggregateFunctions));

@@ -200,7 +200,7 @@ static function_data_ptr_t writeCSVBind(ClientContext &context,
                                         vector<LogicalType> & inputTypes,
                                         std::unordered_map<string, Value> &parameters,
                                         vector<LogicalType> &returnTypes,vector<string> &names,
-                                        vector<Expression>& filters) {
+                                        TableFilterSet& filters) {
 
 	auto result = std::make_unique<WriteCSVData>(*context.fileSystem_);
 
@@ -478,16 +478,20 @@ static void writeCSVAddNamedParameters(PredFunction &table_function) {
 	table_function.namedParameters_["single_file"] = PhysicalType::UTINYINT;
 }
 
+string WriteCsvFunc::getName() {
+	return "&write_csv";
+}
 
-function_ptr_t WriteCsvFunc::getFunction() {
-	string name = "&write_csv";
+function_ptr_t WriteCsvFunc::createFunction(const vector<LogicalType> &type) {
+	string name =getName();
 	function_ptr_t fun = function_ptr_t(new PredFunction( name, {PhysicalType::STRING}, writeCSVFunction, writeCSVBind, writeCSVInit, nullptr, writeCSVFinalize, writeCSVCombine));
 	writeCSVAddNamedParameters((PredFunction&)*fun);
 	return fun;
 }
 
 void WriteCsvFunc::registerFunction(FunctionRegister &funcRegister) {
-	funcRegister.registerFunction(getFunction());
+	std::unique_ptr<FunctionGenerator> fg = std::make_unique<WriteCsvFunc>();
+	funcRegister.registerFunctionGen(fg);
 }
 
 }

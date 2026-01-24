@@ -61,55 +61,71 @@ struct MaxOperation {
     }
 };
 
-class MaxFunc {
+class MaxFunc : public FunctionGenerator{
 public:
+    string getName() override {
+        return "#max";
+    }
+
     // get the function from the type
-    static function_ptr_t getFunction(LogicalType type) {
-        string name = "#max";
-        switch (type.type()) {
+    function_ptr_t createFunction(const vector<LogicalType>& type) override {
+        string name = getName();
+        switch (type[0].type()) {
             case LogicalTypeId::TINYINT: {
-                auto func = AggregateFunction::unaryAggregate<MaxState,int8_t,int64_t,MaxOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,int8_t,int64_t,MaxOperation>(name, type, LogicalTypeId::BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::SMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,int16_t,int64_t,MaxOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,int16_t,int64_t,MaxOperation>(name, type, LogicalTypeId::BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::INTEGER:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,int32_t,int64_t,MaxOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,int32_t,int64_t,MaxOperation>(name, type, LogicalTypeId::BIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::DECIMAL:{
+                auto func = AggregateFunction::unaryAggregate<MaxState,int64_t,int64_t,MaxOperation>(name, type, LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, type[0].getDecimalData().scale_));
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::BIGINT:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,int64_t,int64_t,MaxOperation>(name, {type}, LogicalTypeId::BIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,int64_t,int64_t,MaxOperation>(name, type, LogicalTypeId::BIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::UTINYINT:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,uint8_t,uint64_t,MaxOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,uint8_t,uint64_t,MaxOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::USMALLINT:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,uint16_t,uint64_t,MaxOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,uint16_t,uint64_t,MaxOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::UINTEGER:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,uint32_t,uint64_t,MaxOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,uint32_t,uint64_t,MaxOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::HASH:
             case LogicalTypeId::UBIGINT:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,uint64_t,uint64_t,MaxOperation>(name, {type}, LogicalTypeId::UBIGINT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,uint64_t,uint64_t,MaxOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::FLOAT:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,float,float,MaxOperation>(name, {type}, LogicalTypeId::FLOAT);
+                auto func = AggregateFunction::unaryAggregate<MaxState,float,float,MaxOperation>(name, type, LogicalTypeId::FLOAT);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::DOUBLE:{
-                auto func = AggregateFunction::unaryAggregate<MaxState,double,double,MaxOperation>(name, {type}, LogicalTypeId::DOUBLE);
+                auto func = AggregateFunction::unaryAggregate<MaxState,double,double,MaxOperation>(name, type, LogicalTypeId::DOUBLE);
                 return function_ptr_t(new AggregateFunction(func));
             }
             case LogicalTypeId::STRING:	{
-                auto func = AggregateFunction::unaryAggregate<MaxState,string_t,string_t,MaxOperation>(name, {type}, LogicalTypeId::STRING);
+                auto func = AggregateFunction::unaryAggregate<MaxState,string_t,string_t,MaxOperation>(name, type, LogicalTypeId::STRING);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::DATE:	{
+                auto func = AggregateFunction::unaryAggregate<MaxState,date_t,date_t,MaxOperation>(name, type, LogicalTypeId::DATE);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::TIMESTAMP:	{
+                auto func = AggregateFunction::unaryAggregate<MaxState,timestamp_t,timestamp_t,MaxOperation>(name, type, LogicalTypeId::TIMESTAMP);
                 return function_ptr_t(new AggregateFunction(func));
             }
 
@@ -121,13 +137,8 @@ public:
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {
-        vector<LogicalTypeId> supportedTypes = {LogicalTypeId::TINYINT, LogicalTypeId::SMALLINT,
-            LogicalTypeId::INTEGER, LogicalTypeId::BIGINT, LogicalTypeId::UTINYINT, LogicalTypeId::USMALLINT,
-            LogicalTypeId::UINTEGER, LogicalTypeId::UBIGINT, LogicalTypeId::DOUBLE, LogicalTypeId::FLOAT,
-            LogicalTypeId::STRING};
-        for (auto& c: supportedTypes) {
-            funcRegister.registerFunction(getFunction(c));
-        }
+        std::unique_ptr<FunctionGenerator> fg = std::make_unique<MaxFunc>();
+        funcRegister.registerFunctionGen(fg);
     }
 };
 

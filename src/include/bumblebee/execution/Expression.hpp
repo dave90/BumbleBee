@@ -66,6 +66,7 @@ struct Expression {
     // Generate a simplified expression with a binop and 2 cols (left and right)
     static Expression generateExpression(Binop op, idx_t leftCol, idx_t rightCol);
 
+    static LogicalType getResultType(vector<LogicalType> types, vector<Operator> ops);
 };
 
 
