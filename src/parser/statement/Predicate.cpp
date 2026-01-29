@@ -106,10 +106,27 @@ hash_t PredicateMapEntry::PEHash::operator()(const PredicateMapEntry &entry) con
 }
 
 
-string Predicate::buildAggregateInternalPredicate(idx_t suffixCounter, const vector<idx_t> &groups, const vector<idx_t> &payloads,
-    const vector<string> &funcNames) {
+Predicate::AggregatePredicateInfo::AggregatePredicateInfo(idx_t suffixCounter, vector<idx_t> &groups,
+    vector<idx_t> &payloads, vector<string> &funcNames, bool distinct): suffixCounter_(suffixCounter),
+                                                                        groups_(std::move(groups)),
+                                                                        payloads_(std::move(payloads)),
+                                                                        funcNames_(std::move(funcNames)),
+                                                                        distinct_(distinct) {
+}
+
+string Predicate::buildAggregateInternalPredicate(const AggregatePredicateInfo& info) {
+
+    idx_t suffixCounter = info.suffixCounter_;
+    auto &groups = info.groups_;
+    auto& payloads = info.payloads_;
+    auto &funcNames = info.funcNames_;
+    auto distinct = info.distinct_;
+
     std::ostringstream oss;
     oss << INTERNAL_PREDICATE_AGG_PREFIX<<suffixCounter;
+
+    if (distinct)
+        oss << "_" << "DISTINCT";
 
     // Append function names
     for (const auto& fn : funcNames) {
@@ -135,8 +152,7 @@ string Predicate::buildAggregateInternalPredicate(idx_t suffixCounter, const vec
     return oss.str();
 }
 
-void Predicate::parseAggregateInternalPredicate(const string &predName, vector<idx_t> &groups, vector<idx_t> &payloads,
-    vector<string> &funcNames) {
+Predicate::AggregatePredicateInfo Predicate::parseAggregateInternalPredicate(const string &predName) {
     std::istringstream iss(predName);
     std::string token;
 
@@ -146,10 +162,22 @@ void Predicate::parseAggregateInternalPredicate(const string &predName, vector<i
         parts.push_back(token);
     }
 
+
+    size_t i = 1;
+    auto distinct = false;
+    if (parts[i] == "DISTINCT") {
+        distinct = true;
+        ++i;
+    }
+
     enum Section { FUNCS, GROUPS, PAYLOADS };
     Section section = FUNCS;
 
-    for (size_t i = 1; i < parts.size(); ++i) { // skip prefix (#AGG)
+    vector<idx_t> groups;
+    vector<idx_t> payloads;
+    vector<string> funcNames;
+
+    for (; i < parts.size(); ++i) { // skip prefix (#AGG)
         const auto& part = parts[i];
 
         if (part == "GROUPS") {
@@ -172,5 +200,6 @@ void Predicate::parseAggregateInternalPredicate(const string &predName, vector<i
                 break;
         }
     }
+    return {0, groups, payloads, funcNames, distinct};
 }
 }

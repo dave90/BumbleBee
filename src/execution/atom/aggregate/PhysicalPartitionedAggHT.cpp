@@ -65,14 +65,13 @@ private:
 
 PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
-    const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
-    PhysicalHashType type): PhysicalAtom(types, dcCols, selectedCols),
+    const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions): PhysicalAtom(types, dcCols, selectedCols),
                                 context_(context),
                                 pt_(pt),
                                 groupCols_(group_cols),
                                 payloadCols_(payload_cols),
                                 aggregateFunctions_(aggregate_functions),
-                                type_(type),
+                                type_(COLLECT),
                                 aht_(nullptr){
     for (auto& i: groupCols_)
         groupColsTypes_.push_back(types_[i]);
@@ -97,10 +96,6 @@ idx_t PhysicalPartitionedAggHT::getMaxThreads() const {
     BB_ASSERT(pt_->existPartitionedAggHashTable());
     auto& pht = pt_->getPartitionedAggHashTable();
     return pht->getNumPartitionsNotEmpty(); // max parallelism 1 partition x thread
-}
-
-bool PhysicalPartitionedAggHT::isSource() const {
-    return type_ == BUILD;
 }
 
 bool PhysicalPartitionedAggHT::isSink() const {
@@ -139,35 +134,12 @@ pstate_ptr_t PhysicalPartitionedAggHT::getState() const {
 }
 
 gpstate_ptr_t PhysicalPartitionedAggHT::getGlobalState() const {
-    auto& paht = pt_->createPartitionedAggHashTable(groupCols_, payloadCols_, aggregateFunctions_);
+    auto& paht = pt_->getPartitionedAggHashTable();
+    BB_ASSERT(paht);
     BB_ASSERT(!paht->isReady()); // during build or collect we do not expect is ready
     return gpstate_ptr_t(new GlobalAggHTJoinAtomState(*paht));
 }
 
-
-AtomResultType PhysicalPartitionedAggHT::getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
-    GlobalPhysicalAtomState &gstate) const {
-    context.profiler_.startPhysicalAtom(this);
-    auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
-    // build the partitioned hash table
-    idx_t start, end;
-    auto process = cgstate.getNextpartitionToProcess(start, end);
-    if (!process) {
-        chunk.setCardinality(0);
-        context.profiler_.endPhysicalAtom(chunk);
-        return AtomResultType::FINISHED;
-    }
-    for (idx_t i=start; i<=end; ++i) {
-        if (cgstate.pht_.getPartitionSize(i) == 0)continue;
-        cgstate.pht_.aggregatePartition(i);
-    }
-    // merge the partitions
-    cgstate.pht_.combinePartitions(start, end);
-
-    chunk.setCardinality(0);
-    context.profiler_.endPhysicalAtom(chunk);
-    return AtomResultType::FINISHED;
-}
 
 AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
@@ -175,47 +147,13 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
     auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
     auto& cstate = (PartitionedAggHTJoinAtomState&)state;
 
-    // init ht if null
-    if (!cstate.ht_) {
-        cstate.ht_ = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, dcColsType_, HT_INIT_CAPACITY,  false));
-    }
-    if (input.getSize() == 0) {
-        context.profiler_.endPhysicalAtom(input);
-        return AtomResultType::NEED_MORE_INPUT;
-    }
-    if ((((float)input.getSize() + (float)cstate.ht_->getSize() ) / (float)cstate.ht_->getCapacity()) > PRLHashTable::LOAD_FACTOR ) {
-        // flush the ht to partitioned agg table
-        cgstate.pht_.partitionHT(cstate.ht_);
-        cstate.ht_ = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, dcColsType_,HT_INIT_CAPACITY, false));
-    }
-
     DataChunk sinput = projectColumns(input);
-    Vector hash(LogicalTypeId::HASH, input.getSize());
-    sinput.hash(hash);
-    cstate.ht_->addChunk(hash, sinput);
+    cgstate.pht_.addChunk(sinput);
+
     context.profiler_.endPhysicalAtom(input);
     return AtomResultType::HAVE_MORE_OUTPUT;
 }
 
-void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState &state,
-    GlobalPhysicalAtomState &gstate) const {
-    context.profiler_.startPhysicalAtom(this);
-    DataChunk input;
-
-    auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
-    auto& cstate = (PartitionedAggHTJoinAtomState&)state;
-
-    if (!cstate.ht_ || cstate.ht_->getSize() == 0) {
-        cstate.ht_ = nullptr;
-        context.profiler_.endPhysicalAtom(input);
-        return;
-    }
-    input.setCapacity(cstate.ht_->getSize());
-    input.setCardinality(cstate.ht_->getSize());
-    cgstate.pht_.partitionHT(cstate.ht_);
-    cstate.ht_ = nullptr;
-    context.profiler_.endPhysicalAtom(input);
-}
 
 void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const {
     auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
@@ -224,9 +162,6 @@ void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAt
     if (type_ == COLLECT) {
         // populate the type columns of the predicate table
         pt_->setTypes(cgstate.pht_.getTypes());
-    }
-    if (type_ == BUILD) {
-        // create the final aggregate hash table
         cgstate.pht_.finalize();
     }
     context.profiler_.endPhysicalAtomFinalize();

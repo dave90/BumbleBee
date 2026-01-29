@@ -263,6 +263,7 @@ void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalT
     auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesType()).get();
     auto inputTypes = atom.getInputValuesType();
     for (auto& term:atom.getTerms()) {
+        if (term.isAnonymous()) continue;
         BB_ASSERT(term.getType() == VARIABLE);
         names.push_back(term.getVariable());
     }
@@ -331,23 +332,21 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
     bool payloadFound = false;
     {
         vector<AggregateFunction*> aggFunctions;
-        vector<idx_t> groups, payloads;
-        vector<string> funcNames;
-        Predicate::parseAggregateInternalPredicate(pt->predicate_->getName(), groups, payloads, funcNames);
-        BB_ASSERT(payloads.size() == funcNames.size());
+        auto aggInfo = Predicate::parseAggregateInternalPredicate(pt->predicate_->getName());
+        BB_ASSERT(aggInfo.payloads_.size() == aggInfo.funcNames_.size());
         vector<LogicalType> arguments;
-        for (auto p:payloads) {
+        for (auto p:aggInfo.payloads_) {
             BB_ASSERT(p < pt->getTypes().size());
             BB_ASSERT(pt->getTypes()[p] != PhysicalType::UNKNOWN);
             arguments.push_back(pt->getTypes()[p]);
         }
         // get the aggregate function
-        for (idx_t i = 0; i < funcNames.size(); i++) {
-            auto funcName = funcNames[i];
+        for (idx_t i = 0; i < aggInfo.funcNames_.size(); i++) {
+            auto funcName = aggInfo.funcNames_[i];
             auto function = context_.functionRegister_.getFunction(funcName, {arguments[i]});
             BB_ASSERT(function);
             aggFunctions.push_back((AggregateFunction*) function.get());
-            if (payloads[i] == internalPayloadIndex && funcName == atom.getAggregateFunctionName()) {
+            if (aggInfo.payloads_[i] == internalPayloadIndex && funcName == atom.getAggregateFunctionName()) {
                 // we are looking for this payload
                 payload = i;
                 payloadFound = true;
@@ -630,7 +629,7 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     patoms.push_back(std::move(nj));
 }
 
-void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules, idx_t priority) {
+void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules, patom_ptr_t& source, idx_t priority) {
     prule_ptr_vector_t value;
     BB_ASSERT(rule.getHead().size() == 1);
     auto& headAtom = rule.getHead()[0];
@@ -649,36 +648,29 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
     if (predicateName.starts_with(Predicate::INTERNAL_PREDICATE_AGG_PREFIX)) {
         // is the internal aggregate builds, set as patom the partitioned agg ht and
         // generate another rule for the build of agg ht
-        vector<idx_t> groups, payloads;
-        vector<string> funcNames;
-        Predicate::parseAggregateInternalPredicate(predicateName, groups, payloads, funcNames);
-        BB_ASSERT(payloads.size() == funcNames.size());
+
+        auto aggInfo = Predicate::parseAggregateInternalPredicate(predicateName);
+        BB_ASSERT(aggInfo.payloads_.size() == aggInfo.funcNames_.size());
         vector<LogicalType> arguments;
-        for (auto p:payloads) {
+        for (auto p:aggInfo.payloads_) {
             BB_ASSERT(p < headCols.size());
             arguments.push_back(types[headCols[p]]);
         }
         // get the aggregate function
         vector<AggregateFunction*> aggFunctions;
-        for (idx_t i = 0; i < funcNames.size(); i++) {
-            auto funcName = funcNames[i];
+        for (idx_t i = 0; i < aggInfo.funcNames_.size(); i++) {
+            auto funcName = aggInfo.funcNames_[i];
             auto function = context_.functionRegister_.getFunction(funcName, {arguments[i]});
             BB_ASSERT(function);
             aggFunctions.push_back((AggregateFunction*) function.get());
         }
+        // get source cardinality
+        auto estimatedSourceCardinality = source->getMaxThreads() * MORSEL_SIZE;
+        ptSink->createPartitionedAggHashTable(aggInfo.groups_, aggInfo.payloads_, aggFunctions, estimatedSourceCardinality);
+        if (aggInfo.distinct_)
+            ptSink->getPartitionedAggHashTable()->setDistinct();
         vector<idx_t> selCols;
-        sink = patom_ptr_t(new PhysicalPartitionedAggHT(context_, types, headCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::COLLECT  ));
-
-        // now create also the build rule with priority +1
-        vector<idx_t> dcCols;
-        // does not need dcCols and sel cols
-        auto source = patom_ptr_t(new PhysicalPartitionedAggHT(context_, types, dcCols,selCols,ptSink.get(),groups,payloads, aggFunctions, PhysicalHashType::BUILD  ));
-        auto nopeSink = patom_ptr_t(new PhysicalNopeOutput(types, dcCols, selCols ));
-
-        vector<patom_ptr_t> empty;
-        // set priority of builder current +1
-        prule_ptr_t pruleBuild(new PhysicalRule(source, nopeSink, empty, priority+1));
-        prules.push_back(std::move(pruleBuild));
+        sink = patom_ptr_t(new PhysicalPartitionedAggHT(context_, types, headCols,selCols,ptSink.get(),aggInfo.groups_,aggInfo.payloads_, aggFunctions));
 
         return;
     }
@@ -754,7 +746,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         atom.getVariables(vars);
     }
 
-    generateOutputPhysicalAtom(rule, sink, schema, prules, priority);
+    generateOutputPhysicalAtom(rule, sink, schema, prules, source, priority);
 
     prule_ptr_t prule(new PhysicalRule(source, sink, patoms, priority));
     prules.push_back(prule);

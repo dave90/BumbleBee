@@ -148,6 +148,8 @@ protected:
 	bool foundASafetyError_{false};
 	Binop binop_{NONE_OP};
 	Binop secondBinop_{NONE_OP};
+	Binop aggBinop_{NONE_OP};
+	Binop aggSecondBinop_{NONE_OP};
 	AggregateFunctionType aggregateFunction_{NONE};
 
 	vector<Term> terms_parsered;

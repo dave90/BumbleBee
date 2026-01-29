@@ -446,6 +446,7 @@ void ParserInputBuilder::onAggregateLowerGuard() {
         currentRuleIsUnsafe_ = true;
     guard_terms[0] = std::move(terms_parsered.back());
     terms_parsered.pop_back();
+    aggBinop_ = binop_;
 }
 
 void ParserInputBuilder::onAggregateUpperGuard() {
@@ -458,6 +459,7 @@ void ParserInputBuilder::onAggregateUpperGuard() {
     binop_ = NONE_OP;
     guard_terms[1] = std::move(terms_parsered.back());
     terms_parsered.pop_back();
+    aggSecondBinop_ = secondBinop_;
 }
 
 void ParserInputBuilder::onAggregateFunction(char *functionSymbol) {
@@ -499,9 +501,9 @@ void ParserInputBuilder::onAggregateElement() {
 void ParserInputBuilder::onAggregate(bool naf) {
     if(foundASafetyError_) return;
 
-    currentAtom = Atom::createAggregateAtom(aggregateFunction_, binop_, secondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms));
-    binop_ = NONE_OP;
-    secondBinop_ = NONE_OP;
+    currentAtom = Atom::createAggregateAtom(aggregateFunction_, aggBinop_, aggSecondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms));
+    aggBinop_ = NONE_OP;
+    aggSecondBinop_ = NONE_OP;
     guard_terms.clear();
     agg_atoms.clear();
     agg_terms_parsered.clear();

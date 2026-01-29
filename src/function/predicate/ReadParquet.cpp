@@ -56,6 +56,8 @@ idx_t ReadParquetData::getMaxThread() {
 	return filesToProcess_.size();
 }
 
+
+
 ReadParquetDataChunk  ReadParquetData::getNextChunksToRead() {
 	auto index = nextFileToProcess_.fetch_add(1);
 	if (index >= filesToProcess_.size()) {
@@ -97,30 +99,39 @@ static function_data_ptr_t readParquetBind(ClientContext &context,
 		ErrorHandler::errorParsing("No files found that match the pattern: " + path);
 	}
 
+	string columnsMappingParam;
 
 	for (auto &kv : parameters) {
 		if (kv.first == "binary_as_string") {
 			result->options_.binaryAsString_ = kv.second.getValueUnsafe<uint8_t>();
 		}
+		if (kv.first == "columns_mapping") {
+			columnsMappingParam = kv.second.toString();
+		}
+
 	}
 
-	ParquetReader reader(context, result->files_[0], result->options_);
+
+	result->reader_ = parquet_reader_ptr_t(new ParquetReader(context, result->files_[0], result->options_));
 	if (names.size() == 1 && names[0] == "*") {
 		// select all the available columns
 		names.clear();
-		for (auto& name:reader.names_) {
+		for (auto& name:result->reader_->names_) {
 			names.push_back(StringUtils::normalizeColumnName(name));
 		}
 	}
+	auto columnMapping = StringUtils::parseColMapping(columnsMappingParam, names);
+
 	returnTypes.clear();
 	result->cols_.clear();
 	// check all the names are in col name and build returnTypes
 	for (auto& name: names) {
-		if (!reader.colNormalizedIdx_.contains(name))
-			ErrorHandler::errorParsing("Column " + name + " does not exist. Avaliable columns: ["+reader.getAvailableColumns()+"]");
-		auto col = reader.colNormalizedIdx_[name];
+		auto realName = columnMapping[name];
+		if (!result->reader_->colNormalizedIdx_.contains(realName))
+			ErrorHandler::errorParsing("Column " + realName + " does not exist. Avaliable columns: ["+result->reader_->getAvailableColumns()+"]");
+		auto col = result->reader_->colNormalizedIdx_[realName];
 		result->cols_.push_back(col);
-		returnTypes.push_back(reader.returnTypes_[col]);
+		returnTypes.push_back(result->reader_->returnTypes_[col]);
 	}
 
 	if (!filters.filters_.empty()) {
@@ -159,35 +170,35 @@ static void readParquetFunction(ClientContext &context, const FunctionData *bind
 
 	if (data.finished_) return;
 
-	if (!data.reader_) {
+	auto& reader = bind_data.reader_;
+	if (!data.initialized_) {
 		BB_ASSERT(data.filesToProcess_.file_ < bind_data.files_.size());
 		auto file = bind_data.files_[data.filesToProcess_.file_];
 		vector<idx_t> groups;
 		for (idx_t i=data.filesToProcess_.groupStart_;i<=data.filesToProcess_.groupEnd_;++i)
 			groups.push_back(i);
 
-		data.reader_ = parquet_reader_ptr_t(new ParquetReader(context, file, bind_data.options_));
 		// set the non-needed columns to COLUMN_IDENTIFIER_ROW_ID
 		vector<idx_t> colIdx;
 		std::unordered_set colsSet(bind_data.cols_.begin(), bind_data.cols_.end());
-		for (idx_t i=0;i<data.reader_->names_.size();++i) {
+		for (idx_t i=0;i<reader->names_.size();++i) {
 			if (colsSet.contains(i))
 				colIdx.emplace_back(i);
 			else
 				colIdx.push_back(COLUMN_IDENTIFIER_ROW_ID);
 		}
-		data.reader_->initializeScan(data.readerState_, colIdx, groups, bind_data.filters_.get());
-		data.readChunk_.initialize(data.reader_->returnTypes_);
+		reader->initializeScan(data.readerState_, colIdx, groups, bind_data.filters_.get());
+		data.readChunk_.initialize(reader->returnTypes_);
+		data.initialized_ = true;
 	}
 
-	data.reader_->scan(data.readerState_, data.readChunk_);
+	reader->scan(data.readerState_, data.readChunk_);
 
 	output.reference(data.readChunk_, bind_data.cols_);
 
 	if (output.getSize() == 0 ) {
 		// exhausted
 		data.finished_ = true;
-		data.reader_ = nullptr;
 		data.readChunk_.data_.clear();
 	}else {
 		data.readChunk_.reset();

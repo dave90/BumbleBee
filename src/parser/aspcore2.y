@@ -45,6 +45,7 @@ bool queryFound=false;
 
 %token <string> SYMBOLIC_CONSTANT NUMBER VARIABLE STRING DIRECTIVE_NAME DIRECTIVE_VALUE
 %token <string> AGGR_COUNT AGGR_MAX AGGR_MIN AGGR_SUM AGGR_AVG
+%token <string> ID
 
 
 %token ERROR NEWLINE
@@ -494,6 +495,11 @@ factor
 basic_term : ground_term
        | variable_term
        | functional_term
+       | ID
+       {
+           director.getBuilder()->onAggregateVariableTerm($1);
+           delete[] $1;
+       }
        ;
 
 ground_term

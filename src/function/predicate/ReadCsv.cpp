@@ -65,6 +65,8 @@ void parseCsvColumns(string &columns, vector<string> &colNames, vector<PhysicalT
 	}
 }
 
+
+
 idx_t ReadCSVData::getMaxThread() {
 	// if we have multi files each thread read a file
 
@@ -77,6 +79,7 @@ idx_t ReadCSVData::getMaxThread() {
 	// we have only one file to read
 	BB_ASSERT(initialReader_);
 	auto fileSizeBytes = initialReader_->fileSize_;
+	filesToProcess_.clear();
 	if (fileSizeBytes < CSV_MULTITHREAD_THRESHOLD_BYTES) {
 		// for small files let's use only one thread
 		filesToProcess_.emplace_back(0,0,0);
@@ -92,6 +95,7 @@ idx_t ReadCSVData::getMaxThread() {
 		return 1;
 	}
 	// calculate the bytes in STANDARD_VECTOR_SIZE rows
+	fh->seek(0);
 	auto line = fh->readLine(); // read first line (in case of header)
 	idx_t bytesInChunk = 0;
 	for (idx_t i = 0; i < STANDARD_VECTOR_SIZE; i++) {
@@ -160,6 +164,7 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 	}
 	vector<string> colNames;
 	vector<PhysicalType> colTypes;
+	string columnsMappingParam;
 
 	for (auto &kv : parameters) {
 		if (kv.first == "auto_detect") {
@@ -196,6 +201,8 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 			parseCsvColumns(columns, colNames, colTypes);
 		} else if (kv.first == "compression") {
 			options.compression_ = kv.second.toString();
+		} else if (kv.first == "columns_mapping") {
+			columnsMappingParam = kv.second.toString();
 		}
 	}
 
@@ -225,6 +232,9 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 		names = result->initialReader_->colNames_;
 	}
 
+	// parse column mapping (maps variable names to actual column names)
+	auto columnMapping = StringUtils::parseColMapping(columnsMappingParam, names);
+
 	// build the map of col name and type
 	std::unordered_map<string, PhysicalType> colMap;
 	string allColumns;
@@ -239,16 +249,19 @@ static function_data_ptr_t readCSVBind(ClientContext &context,
 
 	// check all the names are in col name and build returnTypes
 	for (auto& name: names) {
-		if (!colMap.contains(name))
-			ErrorHandler::errorParsing("Column " + name + " does not exist. Available columns: ["+allColumns+"]");
-		returnTypes.push_back(colMap[name]);
+		auto realName = columnMapping[name];
+		if (!colMap.contains(realName))
+			ErrorHandler::errorParsing("Column " + realName + " does not exist. Available columns: ["+allColumns+"]");
+		returnTypes.push_back(colMap[realName]);
 	}
 
 
 	result->cols_.clear();
-	for (auto& name: names) {
+	for (idx_t idx = 0; idx < names.size(); idx++) {
+		auto& name = names[idx];
+		auto realName = columnMapping[name];
 		for (idx_t i = 0;i<colNames.size();i++)
-			if (name == colNames[i])
+			if (realName == colNames[i])
 				result->cols_.push_back(i);
 	}
 

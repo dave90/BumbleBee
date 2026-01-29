@@ -109,9 +109,9 @@ partitioned_prl_ht_ptr_t&  PredicateTables::getPartitionedPRLHashTable() {
 
 
 partitioned_agg_ht_ptr_t&  PredicateTables::createPartitionedAggHashTable( const vector<idx_t> &groups, const vector<idx_t> &payloads,
-                                                                               const vector<AggregateFunction *> &aggregateFunctions) {
+                                                                               const vector<AggregateFunction *> &aggregateFunctions, idx_t estimatedSourceCardinality) {
     if (partitionedAggHT_) return partitionedAggHT_;
-    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(*context_, groups, payloads, aggregateFunctions));
+    partitionedAggHT_ = partitioned_agg_ht_ptr_t(new PartitionedAggHT(*context_, groups, payloads, aggregateFunctions, estimatedSourceCardinality));
     return partitionedAggHT_;
 }
 

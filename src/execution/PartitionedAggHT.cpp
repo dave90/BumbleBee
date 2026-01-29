@@ -24,42 +24,20 @@
 
 namespace bumblebee{
 PartitionedAggHT::PartitionedAggHT(ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
-    const vector<AggregateFunction*>& functions, idx_t partitions)
-    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols), functions_(functions), partitionEntries_(partitions){
+    const vector<AggregateFunction*>& functions,idx_t estimatedSourceCardinality, idx_t partitions)
+    : context_(context), ready_(false), partitions_(partitions), groupCols_(groupCols), payloadCols_(payloadCols),
+        functions_(functions), partitionEntries_(partitions), partitionsMutex_(partitions), estimatedInputCardinality_(estimatedSourceCardinality){
     BB_ASSERT(partitions_ != 0 && (partitions_ & (partitions_ - 1)) == 0); // partitions_ should be power of 2
     BB_ASSERT(payloadCols_.size() == functions_.size());
     shift_ = (sizeof(hash_t)*8) - std::bit_width(partitions_) + 1;
-    partitionsAggVec_.resize(partitions_);
+    pAggHts_.resize(partitions_);
+    pDistinctHts_.resize(partitions_);
     for (idx_t i = 0; i < partitions_; i++)
         partitionEntries_[i].store(0);
 }
 
-
-void PartitionedAggHT::partitionHT(distinct_ht_ptr_t& ht) {
-    if (ht->getSize() == 0) return;
-
-
-    vector<distinct_ht_ptr_t> partitions;
-    partitions.resize(partitions_);
-    vector<LogicalType> types = ht->getTypes();
-    ht->partition(partitions, shift_);
-    // log the statistics
-    for (idx_t i = 0; i < partitions_; i++) {
-        auto& ht = partitions[i];
-        if (!ht)continue;
-        partitionEntries_[i] += ht->getSize();
-    }
-    // lock the vector
-    lock_guard guard(mutex_);
-    if (types_.empty()) {
-        types_ = types;
-    }
-    // push the partitions in the vector
-    partitionsVec_.push_back(std::move(partitions));
-}
-
 void PartitionedAggHT::finalize() {
-    for (auto& aht: partitionsAggVec_) {
+    for (auto& aht: pAggHts_) {
         if (!aht) continue;
         if (!table_) {
             // init the final table
@@ -73,91 +51,108 @@ void PartitionedAggHT::finalize() {
     ready_ = true;
 }
 
-void PartitionedAggHT::aggregatePartition(idx_t partition) {
-    BB_ASSERT(partition < partitions_);
-    if (partitionsVec_.empty()) return;
-    distinct_ht_ptr_t dht = nullptr;;
-    for (idx_t i=0;i < partitionsVec_.size(); i++) {
-        BB_ASSERT(partition < partitionsVec_[i].size());
-        auto &ht = partitionsVec_[i][partition];
-        if (!ht) continue;
-        if (!dht) {
-            dht = std::move(ht);
-            partitionsVec_[i][partition] = nullptr;
-            continue;
-        }
-        // combine larger with smallest
-        if (dht->getSize() > ht->getSize())
-            dht->combine(*ht);
-        else {
-            ht->combine(*dht);
-            dht = std::move(ht);
-        }
 
-        // clear the memory
-        partitionsVec_[i][partition] = nullptr;
+
+struct PartitionInfo {
+    PartitionInfo (idx_t size): sel_(size), size_(0){
+    };
+
+    SelectionVector sel_;
+    idx_t size_;
+};
+
+
+void PartitionedAggHT::initialize(DataChunk &chunk) {
+    lock_guard lock(mutex_);
+    if (!initialized_) {
+        types_ = chunk.getTypes();
+        for (idx_t i = 0; i < payloadCols_.size(); i++) {
+            auto col = payloadCols_[i];
+            BB_ASSERT(col < types_.size());
+            payloadColsType_.push_back(types_[col]);
+        }
+        for (auto& col: groupCols_) {
+            BB_ASSERT(col < types_.size());
+            groupColsType_.push_back(types_[col]);
+        }
     }
-    if (!dht) return; // no data for the partition
-    auto dhtCapacity = dht->getCapacity();
-    auto& pht = partitionsAggVec_[partition];
-    auto types = dht->getTypes();
-    vector<LogicalType> groupColsType;
-    for (auto& col: groupCols_) {
-        BB_ASSERT(col < types.size());
-        groupColsType.push_back(types[col]);
-    }
-    partitionsAggVec_[partition] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType, dhtCapacity, true, functions_));
-    vector<LogicalType> payloadTypeCols;
-    for (idx_t i = 0; i < payloadCols_.size(); i++) {
-        auto col = payloadCols_[i];
-        BB_ASSERT(col < types.size());
-        payloadTypeCols.push_back(types[col]);
+    initialized_ = true;
+}
+
+void PartitionedAggHT::addChunk(DataChunk &chunk) {
+    Vector hash(LogicalTypeId::HASH, chunk.getSize());
+    chunk.hash(hash);
+
+    // first find the partitions
+    vector<PartitionInfo> partitionsInfo;
+    auto size = chunk.getSize();
+    for (idx_t i=0;i<partitions_;++i)
+        partitionsInfo.emplace_back(size);
+
+    BB_ASSERT(hash.getType() == PhysicalType::UBIGINT);
+    auto hashesPtr = FlatVector::getData<hash_t>(hash);
+    for (idx_t i = 0; i < size; ++i) {
+        auto h = hashesPtr[i];
+        auto partition = h >> shift_;
+        BB_ASSERT(partition < partitionsInfo.size());
+        auto &info = partitionsInfo[partition];
+        info.sel_.setIndex(info.size_++, i);
     }
 
-    idx_t position = 0;
+    // check if we need to initialize the partitions vec
+    if (!initialized_) {
+        initialize(chunk);
+    }
+    BB_ASSERT(getTypes() == chunk.getTypes());
+
+    Vector paddresses(LogicalTypeId::ADDRESS, chunk.getSize());
+    SelectionVector sel(chunk.getSize());
     DataChunk groups, payloads;
-    groups.initializeEmpty(pht->getTypes());
-    payloads.initializeEmpty(payloadTypeCols);
-    DataChunk result;
-    result.initialize(types);
-    Vector hash(LogicalTypeId::HASH);
+    groups.initializeEmpty(groupColsType_);
+    payloads.initializeEmpty(payloadColsType_);
 
-    while (position <= dht->getSize()) {
-        idx_t toScan = minValue<idx_t>(STANDARD_VECTOR_SIZE, dht->getSize());
-        // fetch the distinct values from final ht
-        dht->scan(position, result, toScan);
+    for (idx_t p=0;p<partitionsInfo.size();++p) {
+        // insert into the partitions
+        auto& pi = partitionsInfo[p];
+        if (pi.size_ == 0) continue;
 
-        // split the result chunk in groups and payload
-        groups.reference(result, groupCols_);
-        payloads.reference(result, payloadCols_);
-        groups.hash(hash);
-        // add into the agg HT
-        pht->addChunk(hash, groups, payloads);
-        position += STANDARD_VECTOR_SIZE;
+        partitionEntries_[p] += pi.size_;
+        DataChunk pchunk;
+        Vector phash(hash);
+        pchunk.initAndReference(chunk);
+        // slice the chunk with the partition data
+        pchunk.slice(pi.sel_, pi.size_);
+        phash.slice(pi.sel_, pi.size_);
+
+        lock_guard  lock(partitionsMutex_[p]);
+        if (!pAggHts_[p]) {
+            // init partition ht and agg ht
+            auto htInitSize = (estimatedInputCardinality_ > 0)
+                                ?nextPowerOfTwo(estimatedInputCardinality_ / partitionsInfo.size()) * 2 // *2to make the HT to be 50% free
+                                : HT_INIT_CAPACITY;
+            if (distinct_)
+                pDistinctHts_[p] = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, pchunk.getTypes(), htInitSize ));
+            else if(groupCols_.empty())
+                // no groups so will collapse in one group
+                htInitSize = 2;
+
+            pAggHts_[p] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType_, htInitSize, true, functions_));
+        }
+        if (distinct_) {
+            // find the new data to add to the agg ht
+            idx_t newRows = 0;
+            pDistinctHts_[p]->findOrCreateGroups(phash, pchunk, paddresses, newRows, sel);
+            if (newRows == 0) continue;
+            pchunk.slice(sel, newRows);
+        }
+        // insert the new data into the agg ht
+        groups.reference(pchunk, groupCols_);
+        payloads.reference(pchunk, payloadCols_);
+        Vector ghash(LogicalTypeId::HASH, groups.getSize());
+        groups.hash(ghash);
+        pAggHts_[p]->addChunk(ghash, groups, payloads);
     }
 }
-
-void PartitionedAggHT::combinePartitions(idx_t start, idx_t end) {
-    BB_ASSERT(start >= 0 && end < partitionsAggVec_.size());
-    int partitionIndex = -1;
-    for (idx_t i=start; i<=end; i++) {
-        if (!partitionsAggVec_[i])continue;
-        if (partitionIndex < 0) {
-            partitionIndex = i;
-            continue;
-        }
-        // merge large partition with smaller
-        if (partitionsAggVec_[partitionIndex]->getSize() >partitionsAggVec_[i]->getSize()) {
-            partitionsAggVec_[partitionIndex]->combine(*partitionsAggVec_[i]);
-            partitionsAggVec_[i] = nullptr;
-        }else {
-            partitionsAggVec_[i]->combine(*partitionsAggVec_[partitionIndex]);
-            partitionsAggVec_[partitionIndex] = nullptr;
-            partitionIndex = (int)i;
-        }
-    }
-}
-
 
 bool PartitionedAggHT::checkGroups(const vector<idx_t> &groups) {
     return compareVectors(groups, groupCols_);

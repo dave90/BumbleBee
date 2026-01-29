@@ -1,4 +1,4 @@
 %@sql
 SELECT USERID
-FROM "downloads/mini_hits.parquet"
+FROM "downloads/hits.parquet"
 WHERE USERID = 435090932899640449

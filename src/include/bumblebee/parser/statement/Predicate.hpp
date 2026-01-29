@@ -32,6 +32,7 @@ public:
     static constexpr string INTERNAL_VARS_PREFIX = "#ARITH";
     constexpr static string INTERNAL_PREDICATE_AGG_PREFIX = "#AGG";
     constexpr static string INTERNAL_SOURCE_ONE_ROW = "#FASO";
+    constexpr static string INTERNAL_ID_VAR = "#ID";
 
 
     Predicate() = default;
@@ -78,9 +79,18 @@ private:
     // true if contains distinct data ( for example recursion predicate )
     bool distinct_{false};
 public:
+    struct AggregatePredicateInfo {
+        AggregatePredicateInfo(idx_t suffixCounter, vector<idx_t> &groups, vector<idx_t> &payloads,
+            vector<string> &funcNames, bool distinct);
+        idx_t suffixCounter_;
+        vector<idx_t> groups_;
+        vector<idx_t> payloads_;
+        vector<string> funcNames_;
+        bool distinct_;
+    };
     //static functions
-    static string buildAggregateInternalPredicate(idx_t suffixCounter, const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<string>& funcNames);
-    static void parseAggregateInternalPredicate(const string& predName, vector<idx_t>& groups,vector<idx_t>& payloads, vector<string>& funcNames);
+    static string buildAggregateInternalPredicate(const AggregatePredicateInfo& info);
+    static AggregatePredicateInfo parseAggregateInternalPredicate(const string& predName);
 };
 
 

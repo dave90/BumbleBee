@@ -48,6 +48,8 @@ struct ReadParquetDataChunk {
 struct ReadParquetData : public FunctionData {
     explicit ReadParquetData(ClientContext &context): context_(context) {}
 
+    parquet_reader_ptr_t reader_;
+
     // The file path of the parquet file to read
     vector<string> files_;
 
@@ -73,8 +75,7 @@ struct ReadParquetData : public FunctionData {
 };
 
 struct ReadParquetOperatorData : public FunctionOperatorData {
-    // The Parquet reader and state
-    parquet_reader_ptr_t reader_;
+    // The Parquet reader state
     ParquetReaderScanState readerState_;
 
     // cached chunk to read the data
@@ -83,6 +84,7 @@ struct ReadParquetOperatorData : public FunctionOperatorData {
     ReadParquetDataChunk filesToProcess_;
 
     bool finished_{false};
+    bool initialized_{false};
 };
 
 

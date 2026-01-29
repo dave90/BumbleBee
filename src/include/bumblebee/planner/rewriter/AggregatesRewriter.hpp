@@ -25,21 +25,22 @@
 namespace bumblebee{
 
 struct AggInfo {
-    AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t  &terms);
+    AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t  &terms, bool distinct = true);
 
     string createAggPredicateName(idx_t& suffixCounter, const vector<Term>& terms);
 
     // atoms in the body of the aggregate
-    vector<Atom>& atoms;
+    vector<Atom>& atoms_;
     // aggregation terms (group variables + distinct aggregation variable)
-    set_term_variable_t terms;
+    set_term_variable_t terms_;
     // group variable in terms
-    set_term_variable_t groups;
+    set_term_variable_t groups_;
     // map of payload variable and agg function
-    std::unordered_map<string, std::unordered_set<string>> payloadMap;
+    std::unordered_map<string, std::unordered_set<string>> payloadMap_;
     // name of the predicate
-    string predName;
+    string predName_;
 
+    bool distinct_;
 };
 
 

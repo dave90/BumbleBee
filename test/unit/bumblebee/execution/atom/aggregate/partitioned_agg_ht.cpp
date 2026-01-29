@@ -66,10 +66,19 @@ protected:
     }
     void addHTToPartitionedHT(partitioned_agg_ht_ptr_t& pht, distinct_ht_ptr_t& ht, vector<idx_t> groups,
             vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE,
-            bool resize = false) {
+            bool resize = false, bool distinct = true) {
         if (!pht)
-            pht = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, functions));
-        pht->partitionHT(ht);
+            pht = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, functions, 0));
+        if (distinct)
+            pht->setDistinct();
+        DataChunk chunk;
+        chunk.initialize(ht->getTypes());
+        idx_t offset = 0;
+        while (true) {
+            offset += ht->scan(offset, chunk);
+            pht->addChunk(chunk);
+            if (offset >= ht->getSize()) break;
+        }
     }
 
     DataChunk probeToHT(agg_ht_ptr_t& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
@@ -115,10 +124,6 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDist
     addHTToPartitionedHT(pht, ht1, groupIndexTypes, payloadIndexTypes, functions);
     addHTToPartitionedHT(pht, ht2, groupIndexTypes, payloadIndexTypes, functions);
 
-    // build the partitions
-    for (idx_t i = 0; i < pht->getNumPartitions(); ++i) {
-        pht->aggregatePartition(i);
-    }
     pht->finalize();
 
     agg_ht_ptr_t& aht = pht->getAggregateHT();
@@ -137,6 +142,41 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDist
 }
 
 
+TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithoutDistinc) {
+    // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Build the chunk with 8 rows
+    DataChunk chunk = createChunkWithValue(tLeft, 8 );
+
+    // Create HT and add the same chunk twice (duplicates)
+    distinct_ht_ptr_t ht1,ht2;
+    addChunkToHT(ht1, chunk, 16, false);
+    addChunkToHT(ht2, chunk, 16, false);
+
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht1, groupIndexTypes, payloadIndexTypes, functions, STANDARD_VECTOR_SIZE, false, false);
+    addHTToPartitionedHT(pht, ht2, groupIndexTypes, payloadIndexTypes, functions, STANDARD_VECTOR_SIZE, false, false);
+
+    pht->finalize();
+
+    agg_ht_ptr_t& aht = pht->getAggregateHT();
+    // Probe with the original groups; the SUM should be doubled of payload column
+    DataChunk result = probeToHT(aht, chunk, groupIndexTypes, functions);
+
+
+    EXPECT_EQ(result.columnCount(), 1);
+    EXPECT_EQ(result.getSize(), chunk.getSize());
+    for (idx_t i = 0; i < result.getSize(); ++i) {
+        // Expected =  (i * 10 * 2) (* 2 because of duplicates)
+        int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>() * 2;
+        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    }
+}
 
 // Columns-with-same-values test
 TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
@@ -166,10 +206,7 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
     addChunkToHT(ht1, chunk, 32, false);
     partitioned_agg_ht_ptr_t pht;
     addHTToPartitionedHT(pht, ht1, groups, payloads, functions);
-    // build the partitions and finalize
-    for (idx_t i = 0; i < pht->getNumPartitions(); ++i) {
-        pht->aggregatePartition(i);
-    }
+
     pht->finalize();
 
 

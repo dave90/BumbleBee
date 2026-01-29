@@ -26,7 +26,7 @@ namespace bumblebee{
 // This rewriter rewrites the variables in the rule
 class VariablesRewriter : public Rewriter {
 public:
-    explicit VariablesRewriter(const ClientContext &context);
+    explicit VariablesRewriter(ClientContext &context);
 
     void rewrite(Rule& rule) override;
 private:
@@ -36,7 +36,7 @@ private:
     // and prune atoms with all anonymous variables
     void verifyAndPruneAtoms(Rule& rule);
 
-    const ClientContext& context_;
+    ClientContext& context_;
 };
 
 

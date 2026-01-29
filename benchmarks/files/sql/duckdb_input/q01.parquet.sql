@@ -1,3 +1,3 @@
 SELECT COUNT(*)  as count
-FROM 'downloads/mini_hits.parquet'
+FROM 'downloads/hits.parquet'
 WHERE AdvEngineID <> 0

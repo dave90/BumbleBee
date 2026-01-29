@@ -20,6 +20,7 @@
 #include "bumblebee/common/parquet/ParquetReader.hpp"
 
 #include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/Profiler.hpp"
 #include "thrift/protocol/TCompactProtocol.h"
 #include "bumblebee/common/parquet/StructColumnReader.hpp"
 #include "bumblebee/common/types/Decimal.hpp"
@@ -35,6 +36,7 @@ static std::unique_ptr<thrift::protocol::TProtocol> createThriftProtocol(Allocat
 }
 
 static std::shared_ptr<ParquetFileMetadataCache> loadMetadata(Allocator &allocator, FileHandle &file_handle) {
+
 	auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
 	auto proto = createThriftProtocol(allocator, file_handle);
@@ -285,10 +287,6 @@ ParquetReader::ParquetReader(ClientContext &context_p, string file_name_p, const
 	fileName_ = std::move(file_name_p);
 	fileHandle_ = fs.openFile(fileName_, FileFlags::FILE_FLAGS_READ, FileSystem::DEFAULT_LOCK,
 	                          FileSystem::DEFAULT_COMPRESSION);
-	// If object cached is disabled
-	// or if this file has cached metadata
-	// or if the cached version already expired
-	auto last_modify_time = fs.getLastModifiedTime(*fileHandle_);
 
 	metadata_ = loadMetadata(allocator_, *fileHandle_);
 

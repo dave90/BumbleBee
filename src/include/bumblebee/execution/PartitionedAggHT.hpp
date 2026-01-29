@@ -55,19 +55,16 @@ public:
 
     static constexpr idx_t PARTITIONS = 8;
 
-    explicit PartitionedAggHT(ClientContext& context, const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t partitions = PARTITIONS);
+    explicit PartitionedAggHT(ClientContext& context, const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t estimatedSourceCardinality, idx_t partitions = PARTITIONS);
 
     PartitionedAggHT & operator=(const PartitionedAggHT &other) = delete;
     PartitionedAggHT(const PartitionedAggHT &other) = delete;
 
-    // partition the HT and push the partitioned HT in the partition vector
-    void partitionHT(distinct_ht_ptr_t& ht);
     // compute the final aggregate HT
     void finalize();
-    // merge the HT in the same partitions (no lock are used, so each thread should process different partitions)
-    void aggregatePartition(idx_t partition);
-    // merge the partitions
-    void combinePartitions(idx_t start,idx_t end);
+    void initialize(DataChunk &chunk);
+    // add a chunk into the partitioned agg ht
+    void addChunk(DataChunk& chunk);
 
     idx_t getPartitionSize(idx_t partition) {
         return partitionEntries_[partition];
@@ -93,6 +90,10 @@ public:
         return types_;
     }
 
+    void setDistinct(bool distinct = true) {
+        distinct_ = distinct;
+    }
+
     idx_t getSize() {
         BB_ASSERT(isReady());
         return (table_)?table_->getSize() : 0;
@@ -106,29 +107,38 @@ private:
 
     // the final Aggregate HT table
     agg_ht_ptr_t table_;
+
+    // Aggregate HT for each partition
+    vector<agg_ht_ptr_t> pAggHts_;
+    // number of partitions
+    idx_t partitions_;
+    // if the table_ is ready
+    bool ready_;
     // vector of distinct HT
-    vector<vector<distinct_ht_ptr_t>> partitionsVec_;
+    vector<distinct_ht_ptr_t> pDistinctHts_;
     // statistics of entries for each partition
     vector<atomic<idx_t>> partitionEntries_;
     // mutex of the partitioned HT
     mutex mutex_;
-    // Aggregate HT for each partition
-    vector<agg_ht_ptr_t> partitionsAggVec_;
-    // number of partitions
-    idx_t partitions_;
+    vector<mutex> partitionsMutex_;
+    atomic<bool> initialized_{false};
+
     // shift to apply on hash table to calculate the partition
     idx_t shift_;
-    // if the table_ is ready
-    bool ready_;
-
     // Aggregate Group columns
     vector<idx_t> groupCols_;
+    vector<LogicalType> groupColsType_;
     // Payload cols
     vector<idx_t> payloadCols_;
+    vector<LogicalType> payloadColsType_;
     // Aggregates functions
     vector<AggregateFunction*> functions_;
-
+    // Statistics of the input data (more or less expected input). Note it is a upper bound not exact cardinality
+    idx_t estimatedInputCardinality_;
+    // Types of the agg ht
     vector<LogicalType> types_;
+    // If we need to calculate distinct of values
+    bool distinct_{false};
 };
 
 using partitioned_agg_ht_ptr_t = std::unique_ptr<PartitionedAggHT>;

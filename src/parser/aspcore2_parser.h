@@ -50,59 +50,60 @@
      AGGR_MIN = 266,
      AGGR_SUM = 267,
      AGGR_AVG = 268,
-     ERROR = 269,
-     NEWLINE = 270,
-     DOT = 271,
-     DDOT = 272,
-     SEMICOLON = 273,
-     COLON = 274,
-     CONS = 275,
-     QUERY_MARK = 276,
-     PLUS = 277,
-     TIMES = 278,
-     SLASH = 279,
-     BACK_SLASH = 280,
-     ANON_VAR = 281,
-     PARAM_OPEN = 282,
-     PARAM_CLOSE = 283,
-     SQUARE_OPEN = 284,
-     SQUARE_CLOSE = 285,
-     CURLY_OPEN = 286,
-     CURLY_CLOSE = 287,
-     EQUAL = 288,
-     UNEQUAL = 289,
-     LESS = 290,
-     GREATER = 291,
-     LESS_OR_EQ = 292,
-     GREATER_OR_EQ = 293,
-     OR = 294,
-     AND = 295,
-     DASH = 296,
-     COMMA = 297,
-     NAF = 298,
-     AT = 299,
-     WCONS = 300,
-     AMPERSAND = 301,
-     VEL = 302,
-     EXISTS = 303,
-     SQL_SELECT = 304,
-     SQL_FROM = 305,
-     SQL_WHERE = 306,
-     SQL_GROUP = 307,
-     SQL_BY = 308,
-     SQL_AS = 309,
-     SQL_COPY = 310,
-     SQL_TO = 311,
-     SQL_ORDER = 312,
-     SQL_ASC = 313,
-     SQL_DESC = 314,
-     SQL_LIMIT = 315,
-     SQL_SUM = 316,
-     SQL_MIN = 317,
-     SQL_MAX = 318,
-     SQL_AVG = 319,
-     SQL_COUNT = 320,
-     SQL_DIALECT = 321
+     ID = 269,
+     ERROR = 270,
+     NEWLINE = 271,
+     DOT = 272,
+     DDOT = 273,
+     SEMICOLON = 274,
+     COLON = 275,
+     CONS = 276,
+     QUERY_MARK = 277,
+     PLUS = 278,
+     TIMES = 279,
+     SLASH = 280,
+     BACK_SLASH = 281,
+     ANON_VAR = 282,
+     PARAM_OPEN = 283,
+     PARAM_CLOSE = 284,
+     SQUARE_OPEN = 285,
+     SQUARE_CLOSE = 286,
+     CURLY_OPEN = 287,
+     CURLY_CLOSE = 288,
+     EQUAL = 289,
+     UNEQUAL = 290,
+     LESS = 291,
+     GREATER = 292,
+     LESS_OR_EQ = 293,
+     GREATER_OR_EQ = 294,
+     OR = 295,
+     AND = 296,
+     DASH = 297,
+     COMMA = 298,
+     NAF = 299,
+     AT = 300,
+     WCONS = 301,
+     AMPERSAND = 302,
+     VEL = 303,
+     EXISTS = 304,
+     SQL_SELECT = 305,
+     SQL_FROM = 306,
+     SQL_WHERE = 307,
+     SQL_GROUP = 308,
+     SQL_BY = 309,
+     SQL_AS = 310,
+     SQL_COPY = 311,
+     SQL_TO = 312,
+     SQL_ORDER = 313,
+     SQL_ASC = 314,
+     SQL_DESC = 315,
+     SQL_LIMIT = 316,
+     SQL_SUM = 317,
+     SQL_MIN = 318,
+     SQL_MAX = 319,
+     SQL_AVG = 320,
+     SQL_COUNT = 321,
+     SQL_DIALECT = 322
    };
 #endif
 /* Tokens.  */
@@ -117,59 +118,60 @@
 #define AGGR_MIN 266
 #define AGGR_SUM 267
 #define AGGR_AVG 268
-#define ERROR 269
-#define NEWLINE 270
-#define DOT 271
-#define DDOT 272
-#define SEMICOLON 273
-#define COLON 274
-#define CONS 275
-#define QUERY_MARK 276
-#define PLUS 277
-#define TIMES 278
-#define SLASH 279
-#define BACK_SLASH 280
-#define ANON_VAR 281
-#define PARAM_OPEN 282
-#define PARAM_CLOSE 283
-#define SQUARE_OPEN 284
-#define SQUARE_CLOSE 285
-#define CURLY_OPEN 286
-#define CURLY_CLOSE 287
-#define EQUAL 288
-#define UNEQUAL 289
-#define LESS 290
-#define GREATER 291
-#define LESS_OR_EQ 292
-#define GREATER_OR_EQ 293
-#define OR 294
-#define AND 295
-#define DASH 296
-#define COMMA 297
-#define NAF 298
-#define AT 299
-#define WCONS 300
-#define AMPERSAND 301
-#define VEL 302
-#define EXISTS 303
-#define SQL_SELECT 304
-#define SQL_FROM 305
-#define SQL_WHERE 306
-#define SQL_GROUP 307
-#define SQL_BY 308
-#define SQL_AS 309
-#define SQL_COPY 310
-#define SQL_TO 311
-#define SQL_ORDER 312
-#define SQL_ASC 313
-#define SQL_DESC 314
-#define SQL_LIMIT 315
-#define SQL_SUM 316
-#define SQL_MIN 317
-#define SQL_MAX 318
-#define SQL_AVG 319
-#define SQL_COUNT 320
-#define SQL_DIALECT 321
+#define ID 269
+#define ERROR 270
+#define NEWLINE 271
+#define DOT 272
+#define DDOT 273
+#define SEMICOLON 274
+#define COLON 275
+#define CONS 276
+#define QUERY_MARK 277
+#define PLUS 278
+#define TIMES 279
+#define SLASH 280
+#define BACK_SLASH 281
+#define ANON_VAR 282
+#define PARAM_OPEN 283
+#define PARAM_CLOSE 284
+#define SQUARE_OPEN 285
+#define SQUARE_CLOSE 286
+#define CURLY_OPEN 287
+#define CURLY_CLOSE 288
+#define EQUAL 289
+#define UNEQUAL 290
+#define LESS 291
+#define GREATER 292
+#define LESS_OR_EQ 293
+#define GREATER_OR_EQ 294
+#define OR 295
+#define AND 296
+#define DASH 297
+#define COMMA 298
+#define NAF 299
+#define AT 300
+#define WCONS 301
+#define AMPERSAND 302
+#define VEL 303
+#define EXISTS 304
+#define SQL_SELECT 305
+#define SQL_FROM 306
+#define SQL_WHERE 307
+#define SQL_GROUP 308
+#define SQL_BY 309
+#define SQL_AS 310
+#define SQL_COPY 311
+#define SQL_TO 312
+#define SQL_ORDER 313
+#define SQL_ASC 314
+#define SQL_DESC 315
+#define SQL_LIMIT 316
+#define SQL_SUM 317
+#define SQL_MIN 318
+#define SQL_MAX 319
+#define SQL_AVG 320
+#define SQL_COUNT 321
+#define SQL_DIALECT 322
 
 
 
@@ -183,7 +185,7 @@ typedef union YYSTYPE
     int integer;
 }
 /* Line 1529 of yacc.c.  */
-#line 187 "src/parser/aspcore2_parser.h"
+#line 189 "src/parser/aspcore2_parser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

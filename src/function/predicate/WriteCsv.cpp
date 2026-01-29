@@ -186,13 +186,23 @@ string WriteCSVData::getFileToWrite(const vector<string>& partitionValues) {
 
 
 void WriteCSVData::writeDataToFile(const string &file, const_data_ptr_t data, idx_t size) {
-	BB_ASSERT(lockFiles_.contains(file));
-	BB_ASSERT(filesHandler_.contains(file));
-	BB_ASSERT(lockFiles_[file]);
-	BB_ASSERT(filesHandler_[file]);
-	lock_guard flock(*(lockFiles_[file]));
+	std::mutex* fileLock;
+	FileHandle* fileHandle;
 
-	fs.write(*(filesHandler_[file]), (void *)data, size);
+	// Acquire global mutex to safely read from the maps
+	{
+		lock_guard lock(mutex_);
+		BB_ASSERT(lockFiles_.contains(file));
+		BB_ASSERT(filesHandler_.contains(file));
+		fileLock = lockFiles_[file].get();
+		fileHandle = filesHandler_[file].get();
+		BB_ASSERT(fileLock);
+		BB_ASSERT(fileHandle);
+	}
+
+	// Use file-specific lock for the actual write
+	lock_guard flock(*fileLock);
+	fs.write(*fileHandle, (void *)data, size);
 }
 
 static function_data_ptr_t writeCSVBind(ClientContext &context,
@@ -351,7 +361,7 @@ static void writeChunkWithPartitions(WriteCSVData &bind_data, WriteCSVOperatorDa
 		}
 		writer.writeBufferData(bind_data.newline_);
 		if (writer.blob_.size_ >= data.flushSize_) {
-			bind_data.writeDataToFile(data.file_, writer.blob_.data_.get(), writer.blob_.size_);
+			bind_data.writeDataToFile(file, writer.blob_.data_.get(), writer.blob_.size_);
 			writer.reset();
 		}
 	}

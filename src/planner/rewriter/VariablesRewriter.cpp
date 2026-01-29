@@ -19,6 +19,7 @@
 #include "bumblebee/planner/rewriter/VariablesRewriter.hpp"
 
 #include "bumblebee/common/types/Assert.hpp"
+#include "bumblebee/function/PredFunction.hpp"
 
 namespace bumblebee{
 
@@ -69,7 +70,7 @@ void VariablesRewriter::pushAnonymous(Rule &rule) {
 
 }
 
-VariablesRewriter::VariablesRewriter(const ClientContext &context): context_(context) {
+VariablesRewriter::VariablesRewriter(ClientContext &context): context_(context) {
 }
 
 void VariablesRewriter::rewrite(Rule &rule) {
@@ -84,8 +85,18 @@ void VariablesRewriter::verifyAndPruneAtoms(Rule &rule) {
     // check if a source atom is present
     bool sourceAtomPresent = false;
     for (auto& atom:rule.getBody()) {
-        if (atom.getType() == CLASSICAL)
+        if (atom.getType() == CLASSICAL) {
             sourceAtomPresent = true;
+            break;
+        }
+        if (atom.getType() == EXTERNAL) {
+            auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesType()).get();
+            if (func->maxThreadFunction_) {
+                // if max thread function is present it is a source external function
+                sourceAtomPresent = true;
+                break;
+            }
+        }
     }
     if (!sourceAtomPresent) {
         // no source atoms are present
@@ -97,6 +108,7 @@ void VariablesRewriter::verifyAndPruneAtoms(Rule &rule) {
         return;
     }
 
+
     // check no anonymous in head
     // check if all atoms has anonymous if yes prune it
     // check if it is a binop atom that not contains anonymous
@@ -106,12 +118,10 @@ void VariablesRewriter::verifyAndPruneAtoms(Rule &rule) {
     for (idx_t i = 0; i < rule.getBody().size(); ++i) {
         auto& atom = rule.getBody()[i];
         if (!atom.containsAnonymous())continue;
-        if (atom.getType() == AtomType::BUILTIN)
-            ErrorHandler::errorParsing("Error while rewriting rule with VariablesRewriter. Anonymous in BINOP. Please report the issue.");
         set_term_variable_t vars;
         atom.getVariables(vars);
-        if (vars.size() == 0) {
-            // atom contains only anonymouse variable, remove it
+        if (vars.size() == 0 || atom.getType() == AtomType::BUILTIN ) {
+            // atom contains only anonymouse variable or is a builtin with anonymous, remove it
             rule.getBody().erase(rule.getBody().begin() + i);
             --i; // decrement as we are removing one atom
         }

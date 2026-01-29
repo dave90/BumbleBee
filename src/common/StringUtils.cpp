@@ -360,4 +360,39 @@ char StringUtils::characterToLower(char c) {
 	}
 	return c;
 }
+
+std::unordered_map<string,string> StringUtils::parseColMapping(const string &columns, const vector<string> &varNames) {
+	std::unordered_map<string,string> realColumnNames;
+
+	if (columns.empty()) {
+		for (auto &var: varNames)
+			realColumnNames[var] = var;
+		return realColumnNames;
+	}
+
+	std::stringstream ss(columns);
+	string token;
+
+	while (getline(ss, token, ';')) { // Split by ';'
+		if (token.empty()) continue;
+
+		auto pos = token.find(':');
+		if (pos != string::npos) {
+			string varName = token.substr(0, pos);
+			string realName = token.substr(pos + 1);
+
+			varName = trim(varName);
+			realName = trim(realName);
+
+			realColumnNames[varName] = realName;
+		}
+	}
+	for (auto& var : varNames) {
+		// skip anonymous variables (underscore)
+		if (var == "_") continue;
+		if (!realColumnNames.contains(var))
+			ErrorHandler::errorParsing("Error variable "+var+" not specified in the column mapping.");
+	}
+	return realColumnNames;
+}
 }

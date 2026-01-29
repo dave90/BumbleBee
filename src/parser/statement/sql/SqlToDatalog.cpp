@@ -300,6 +300,24 @@ Atom generateAtomFromTable(string& alias, SQLQuery& query, string& errorMessage 
     return Atom::createClassicalAtom(pred, std::move(terms));
 }
 
+Atom generateFirstExtAtomFromTable(sql::FromItem& fi, SQLQuery& query, string& errorMessage ) {
+    // do not generate aux rule for first atom
+    vector<Term> terms;
+    string columnMappingValue;
+    for (auto& col: query.tableColumnsMap_[fi.getAlias()]) {
+        BB_ASSERT(!col.empty());
+        auto t = Term::createVariable(query.getVariableName(fi.getAlias(), col));
+        columnMappingValue += t.toString()+":" + col+ ";";
+        terms.push_back(std::move(t));
+    }
+    columnMappingValue.pop_back();
+    // add the columns_mapping parameter
+    auto& namedParams = fi.getNamedParameters();
+    namedParams["columns_mapping"] = columnMappingValue;
+    auto extAtom = Atom::createExternalAtom(fi.getNamedParameters(), fi.getInputValues(), fi.getExtTableName(), std::move(terms));
+    return extAtom;
+}
+
 void generateRuleForExtAtom( sql::FromItem& item, SQLQuery& query, TranslationResult& result) {
     BB_ASSERT(item.getType() == sql::FromItemType::EXTERNAL);
 
@@ -394,12 +412,15 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
             // is not a group var so set as anonymous
             terms[i] = Term::createVariable(Term::anonymous_variable);
         }
-        Atom groupAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
+        // Atom groupAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
+        vector<Atom> groupBodyAtoms;
+        for (auto& atom:rule.getBody())
+            groupBodyAtoms.push_back(atom.clone());
         auto newPredName = query.generatePredicateName();
         auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, newPredName.c_str(), headGroupTerms.size());
         newPred->setDistinct(); // set distinct to decrease the scan
         Atom head = Atom::createClassicalAtom(newPred, std::move(headGroupTerms));
-        Rule newRule(head.clone(), groupAtom);
+        Rule newRule(head.clone(), groupBodyAtoms);
         additionalRules.push_back(std::move(newRule));
         body.push_back(std::move(head));
     }
@@ -432,11 +453,15 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
             auto t = Term::createVariable(Term::anonymous_variable);
             terms[i] = std::move(t);
         }
+        // add the ID to avoid distinct calculation
+        auto t = Term::createVariable(query.ID_VAR);
+        aggTerms.push_back(std::move(t));
         Term lt,ut;
         lt = Term::createVariable(select.getItems()[agg].getAlias());
         auto aggInternalAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
         vector<Atom> aggBodyAtoms;
-        aggBodyAtoms.push_back(std::move(aggInternalAtom));
+        for (auto& atom:rule.getBody())
+            aggBodyAtoms.push_back(atom.clone());
         Atom aggregateAtom = Atom::createAggregateAtom(select.getAggFunctions()[agg],ASSIGNMENT, NONE_OP,lt,ut, std::move(aggTerms), std::move(aggBodyAtoms) );
         body.push_back(std::move(aggregateAtom));
     }
@@ -484,31 +509,38 @@ void generateOrderRule(sql::SQLStatement &statement,Rule& rule, string& errorMes
 void getAggregatesInformation(sql::SQLStatement &statement, SQLQuery& query,
     string& errorMessage, vector<Atom>& body, vector<Term>& headTerms, std::unordered_set<string>& headVars,
     std::unordered_set<string>& groupVars, std::unordered_map<idx_t, vector<string>>& aggVars) {
-    // if contains aggregation add gen id atom
-    if (statement.containsAggregations()) {
-        auto atom = generateAtomGenId(query.ID_VAR);
-        body.push_back(std::move(atom));
-        headTerms.push_back(Term::createVariable(query.ID_VAR));
-    }
+
 
     for (idx_t i = 0;i< statement.getSelect().getItems().size();++i) {
         auto si = statement.getSelect().getItems()[i];
         if (si.toString(false) == "*" && statement.getSelect().getAggFunctions()[i] == COUNT) {
-            // handle count(*), add the ID as counter and another column if only count is present
-            auto t = Term::createVariable(query.ID_VAR);
-            aggVars[i].push_back(t.getVariable());
-            if (statement.getNumAggregations() == 1) {
+
+            // we can count on all the columns, so just pick a column used in the select
+            string var = "";
+            for (idx_t idx=0;idx< statement.getSelect().getItems().size();++idx) {
+                auto ve = statement.getSelect().getItems()[idx];
+                if (ve.toString(false) != "*") {
+                    for (auto& vp: ve.getValues()) {
+                        if (vp.isIsConstant()) continue;
+                        BB_ASSERT(!vp.getQualifier().table_.empty());
+                        var = query.getVariableName(vp.getQualifier().table_, vp.getQualifier().name_);
+                        break;
+                    }
+                }
+            }
+
+            if (var.empty()) {
                 // add another var as aggregation because we have only count(*) as aggregation
                 // otherwise optimizer we will keep only the ID in the body
                 auto qNames = getAllQualifiedNames(statement, query.tableColumnsMap_);
                 BB_ASSERT(!qNames.empty());
-                auto var = query.getVariableName(qNames[0].table_, qNames[0].name_);
-                aggVars[i].push_back(var);
+                var = query.getVariableName(qNames[0].table_, qNames[0].name_);
                 if (!headVars.contains(var)) {
                     headVars.insert(var);
                     headTerms.push_back(Term::createVariable(var.c_str()));
                 }
             }
+            aggVars[i].push_back(var);
             continue;
         }
         auto t = generateTermFromValueExpr( si, statement.getAlias(), query, errorMessage);
@@ -525,8 +557,6 @@ void getAggregatesInformation(sql::SQLStatement &statement, SQLQuery& query,
         if (statement.getSelect().getAggFunctions()[i] != NONE) {
             // aggregation
             aggVars[i].push_back(t.getVariable());
-            // put also ID var for duplicates values
-            aggVars[i].emplace_back(query.ID_VAR);
         }
 
         if (headVars.contains(t.getVariable()))
@@ -613,18 +643,28 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     // generate body atoms
     idx_t i=0;
     for (auto& fi: statement.getFrom().getItems()) {
+        // for the first table do not create additional rule
+        if (i == 0 && fi.getType() == sql::FromItemType::EXTERNAL) {
+            auto extAtom = generateFirstExtAtomFromTable(fi, query_, result_.errorMessage_);
+            body.push_back(std::move(extAtom));
+            if (result_.foundAnError()) return;
+            ++i;
+            continue;
+        }
+
         switch (fi.getType()) {
-            case sql::FromItemType::EXTERNAL:
-                generateRuleForExtAtom(fi, query_, result_);
+            case sql::FromItemType::EXTERNAL: {
+                if (i > 0)
+                    generateRuleForExtAtom(fi, query_, result_);
                 break;
+            }
             default:
                 result_.errorMessage_ = "Type '" + fi.toString() + "' is not supported.";
         }
-
         string alias = fi.getAlias();
         auto atom = generateAtomFromTable(alias,query_, result_.errorMessage_);
-        if (result_.foundAnError()) return;
         body.push_back(std::move(atom));
+        if (result_.foundAnError()) return;
         ++i;
     }
 
@@ -658,7 +698,6 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
         if (!statement.getOrderby().empty())
             generateOrderRule(statement, aggRule, result_.errorMessage_);
 
-        result_.rules_.push_back(std::move(rule));
         for (auto& r: additionalRules)
             result_.rules_.push_back(std::move(r));
         result_.rules_.push_back(std::move(aggRule));

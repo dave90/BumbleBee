@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.31)
 project(BumbleBee)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 # Enable AddressSanitizer only for Debug builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Building with AddressSanitizer in Debug mode")
-    add_compile_options(-fsanitize=address -g -fno-omit-frame-pointer)
+    add_compile_options(-fsanitize=address -O0 -g -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
 endif()
 

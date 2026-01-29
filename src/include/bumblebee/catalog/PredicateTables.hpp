@@ -118,7 +118,7 @@ public:
     partitioned_agg_ht_ptr_t& getPartitionedAggHashTable() {
         return partitionedAggHT_;
     }
-    partitioned_agg_ht_ptr_t& createPartitionedAggHashTable( const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions );
+    partitioned_agg_ht_ptr_t& createPartitionedAggHashTable( const vector<idx_t>& groups,const vector<idx_t>& payloads, const vector<AggregateFunction*>& aggregateFunctions, idx_t estimatedSourceCardinality = 0 );
     bool existPartitionedAggHashTable();
 
     PredicateTables & operator=(const PredicateTables &other) = delete;

@@ -1,1 +1,1 @@
-SELECT UserID FROM 'downloads/mini_hits.parquet' WHERE UserID = 435090932899640449
+SELECT UserID FROM 'downloads/hits.parquet' WHERE UserID = 435090932899640449

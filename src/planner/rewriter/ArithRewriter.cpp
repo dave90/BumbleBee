@@ -36,7 +36,6 @@ bool isConstantAssignment(Atom& builtin, vector<Atom>& body) {
 
     set_term_variable_t vars;
     for (auto& atom : body) {
-        if (atom.getType() != CLASSICAL) continue;
         atom.getVariables(vars);
         if (vars.contains(var)) return false;
     }

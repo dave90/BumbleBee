@@ -25,10 +25,9 @@ namespace bumblebee{
 class PhysicalPartitionedAggHT : public PhysicalAtom {
 
 public:
-    // constructor for sink and source
+    // constructor for sink
     PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, PredicateTables *pt, const vector<idx_t> &group_cols,
-        const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions,
-        PhysicalHashType type);
+        const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions);
     // constructor for probe
     PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
         const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht);
@@ -36,7 +35,6 @@ public:
     ~PhysicalPartitionedAggHT() override = default;
 
     idx_t getMaxThreads() const override;
-    bool isSource() const override;
     bool isSink() const override;
     string toString() const override;
     pstate_ptr_t getState() const override;
@@ -46,11 +44,8 @@ public:
     void finalize(ThreadContext &context, GlobalPhysicalAtomState &gstate) const override;
     AtomResultType execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,
         PhysicalAtomState &state) const override;
-    AtomResultType getData(ThreadContext &context, DataChunk &chunk, PhysicalAtomState &state,
-        GlobalPhysicalAtomState &gstate) const override;
     AtomResultType sink(ThreadContext &context, DataChunk &input, PhysicalAtomState &state,
         GlobalPhysicalAtomState &gstate) const override;
-    void combine(ThreadContext &context, PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
 
 private:
     const ClientContext& context_;

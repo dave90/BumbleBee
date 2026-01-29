@@ -18,6 +18,7 @@
  */
 #pragma once
 #include <sstream>
+#include <unordered_map>
 
 #include "TypeDefs.hpp"
 #include "Vector.hpp"
@@ -47,6 +48,7 @@ public:
     static string trim(const string& str);
     static string normalizeColumnName(const string &col_name);
     static char characterToLower(char c);
+    static std::unordered_map<string,string> parseColMapping(const string &columns, const vector<string> &varNames);
 
     template <typename... Args>
     static std::string format(std::string_view fmt, Args&&... args) {

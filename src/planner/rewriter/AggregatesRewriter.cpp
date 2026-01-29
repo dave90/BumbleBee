@@ -22,27 +22,27 @@
 #include "bumblebee/common/Helper.hpp"
 
 namespace bumblebee{
-AggInfo::AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t &terms): atoms(atoms), groups(groups), terms(std::move(terms)) {
+AggInfo::AggInfo(vector<Atom> &atoms, set_term_variable_t &groups, set_term_variable_t &terms, bool distinct): atoms_(atoms), groups_(groups), terms_(std::move(terms)), distinct_(distinct) {
 }
 
 string AggInfo::createAggPredicateName(idx_t &suffixCounter, const vector<Term> &terms) {
-    if (predName.size() > 0)return predName;
+    if (predName_.size() > 0)return predName_;
     vector<idx_t> groups, payloads;
     vector<string> aggFunctions;
     for (idx_t i=0;i<terms.size();++i) {
         auto& t = terms[i];
         BB_ASSERT(t.getType() == VARIABLE);
-        if (this->groups.contains(t.getVariable()))
+        if (this->groups_.contains(t.getVariable()))
             groups.push_back(i);
-        if (this->payloadMap.contains(t.getVariable())) {
-            for (auto& fun:payloadMap[t.getVariable()]) {
+        if (this->payloadMap_.contains(t.getVariable())) {
+            for (auto& fun:payloadMap_[t.getVariable()]) {
                 payloads.push_back(i);
                 aggFunctions.push_back(fun);
             }
         }
     }
-    predName = Predicate::buildAggregateInternalPredicate(suffixCounter++, groups, payloads, aggFunctions);
-    return predName;
+    predName_ = Predicate::buildAggregateInternalPredicate({suffixCounter++, groups, payloads, aggFunctions, distinct_});
+    return predName_;
 }
 
 AggregatesRewriter::AggregatesRewriter(ClientContext &clientContext): clientContext_(clientContext) {
@@ -77,28 +77,36 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
             a.getAggSharedVariables(ruleVariables, groupVars);
             // now join the aggregate terms + the shared variables and the set of vars would be vars in head of new predicate
             set_term_variable_t sterms = groupVars;
-            for (auto&t: a.getAggTerms()) sterms.insert((t.getVariable()));
+            bool distinct = true;
+            for (auto&t: a.getAggTerms()) {
+                BB_ASSERT(t.getType() == VARIABLE);
+                if (t.getVariable() == Predicate::INTERNAL_ID_VAR)
+                    distinct = false;
+                else
+                    sterms.insert((t.getVariable()));
+            }
             auto& payload = a.getAggTerms()[0]; // payload is the first term
 
             // now check if is present in the aggInfos ( avoiding creating duplicates aggregates tables)
             bool found = false;
             for (idx_t j=0;j<aggInfos.size() && !found;j++) {
                 auto& info = aggInfos[j];
-                if (compareVectorsNoSort(info.atoms, a.getAggsAtoms())
-                    && info.groups == groupVars
-                    && info.terms == sterms) {
+                if (compareVectorsNoSort(info.atoms_, a.getAggsAtoms())
+                    && info.groups_ == groupVars
+                    && info.terms_ == sterms
+                    && info.distinct_ == distinct) {
                     // we can reuse this aggregate
                     aggInfosIndex.push_back(j);
                     found = true;
-                    info.payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
+                    info.payloadMap_[payload.getVariable()].insert(a.getAggregateFunctionName());
                 }
             }
             if (found) continue;
             // we need to create a new aggregate tables
             aggInfosIndex.push_back(aggInfos.size());
-            aggInfos.emplace_back(a.getAggsAtoms(), groupVars, sterms);
+            aggInfos.emplace_back(a.getAggsAtoms(), groupVars, sterms, distinct);
             // add the information of function and payload
-            aggInfos.back().payloadMap[payload.getVariable()].insert(a.getAggregateFunctionName());
+            aggInfos.back().payloadMap_[payload.getVariable()].insert(a.getAggregateFunctionName());
         }
     }
 
@@ -116,11 +124,11 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
             BB_ASSERT(aggInfosIndex[counter] < aggInfos.size());
             auto &info = aggInfos[aggInfosIndex[counter++]];
             vector<Term> terms;
-            for (auto& v: info.terms)
+            for (auto& v: info.terms_)
                 terms.emplace_back(v.c_str(), true);
-            bool createAuxRule = info.predName.empty();
+            bool createAuxRule = info.predName_.empty();
             string newPredName = info.createAggPredicateName(newPredCounter_, terms);
-            Predicate *predicate = clientContext_.defaultSchema_.createPredicate(&clientContext_, newPredName.c_str(), info.terms.size());
+            Predicate *predicate = clientContext_.defaultSchema_.createPredicate(&clientContext_, newPredName.c_str(), info.terms_.size());
             if (clientContext_.printAll_) {
                 predicate->setInternal(false);
             }

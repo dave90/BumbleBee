@@ -57,6 +57,7 @@ AGGR_MAX            #max
 AGGR_MIN            #min
 AGGR_SUM            #sum
 AGGR_AVG            #avg
+ID                  #ID
 DIRECTIVE_NAME      #([A-Za-z_]*)
 DIRECTIVE_VALUE     .*
 
@@ -166,6 +167,12 @@ NUMBER              ([0-9]+(\.[0-9]+)?)
                             yylval.string=new char[strlen(yytext)+1];
                             strcpy(yylval.string,yytext);
                             return AGGR_AVG;
+                        }
+
+{ID}              {
+                            yylval.string=new char[strlen(yytext)+1];
+                            strcpy(yylval.string,yytext);
+                            return ID;
                         }
 
 {DIRECTIVE_NAME}        {

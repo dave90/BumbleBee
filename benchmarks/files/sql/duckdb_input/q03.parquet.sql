@@ -1,1 +1,1 @@
-SELECT printf('%.6f', AVG(UserID)) as avg FROM 'downloads/mini_hits.parquet'
+SELECT printf('%.6f', AVG(UserID)) as avg FROM 'downloads/hits.parquet'
