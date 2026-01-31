@@ -55,7 +55,9 @@ public:
 
     static constexpr idx_t PARTITIONS = 8;
 
-    explicit PartitionedAggHT(ClientContext& context, const vector<idx_t> &groupCols,const vector<idx_t>& payloadCols,const vector<AggregateFunction*>& functions, idx_t estimatedSourceCardinality, idx_t partitions = PARTITIONS);
+    explicit PartitionedAggHT(ClientContext& context, const vector<idx_t> &groupCols,
+        const vector<idx_t>& payloadCols, const vector<AggregateFunction*>& functions,
+        idx_t estimatedSourceCardinality, idx_t partitions = PARTITIONS);
 
     PartitionedAggHT & operator=(const PartitionedAggHT &other) = delete;
     PartitionedAggHT(const PartitionedAggHT &other) = delete;
@@ -101,6 +103,15 @@ public:
 
     bool checkGroups(const vector<idx_t>& groups);
     bool checkPayload(const vector<idx_t>& payload, const vector<AggregateFunction*>& functions);
+
+    // Merge a local aggregate HT into a specific partition (takes ownership)
+    void merge(idx_t partition, agg_ht_ptr_t localHt);
+
+    // Check if this is a total aggregation (no groups and not distinct)
+    bool isTotalAggregation() const { return groupCols_.empty() && !distinct_; }
+
+    // Get the aggregate functions for creating thread-local HTs
+    const vector<AggregateFunction*>& getFunctions() const { return functions_; }
 
 private:
     const ClientContext& context_;

@@ -28,6 +28,8 @@ public:
 
     // ht used to build the partitioned ht
     distinct_ht_ptr_t ht_;
+    // thread-local aggregate HT for total aggregations (no groups, no distinct)
+    agg_ht_ptr_t localAggHt_;
 };
 
 
@@ -148,6 +150,25 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
     auto& cstate = (PartitionedAggHTJoinAtomState&)state;
 
     DataChunk sinput = projectColumns(input);
+
+    // Fast path: total aggregation (no groups, not distinct) - use thread-local accumulation
+    if (cgstate.pht_.isTotalAggregation()) {
+        if (!cstate.localAggHt_) {
+            // Initialize thread-local aggregate HT
+            cstate.localAggHt_ = agg_ht_ptr_t(new AggregatePRLHashTable(
+                *context_.bufferManager_, {}, 2, false, aggregateFunctions_));
+        }
+        // Extract payload columns and accumulate directly (no hashing, no locks)
+        DataChunk payloads;
+        payloads.initializeEmpty(payloadColsTypes_);
+        payloads.reference(sinput, payloadCols_);
+        cstate.localAggHt_->addChunk(payloads);
+
+        context.profiler_.endPhysicalAtom(input);
+        return AtomResultType::HAVE_MORE_OUTPUT;
+    }
+
+    // Standard path: grouped or distinct aggregation
     cgstate.pht_.addChunk(sinput);
 
     context.profiler_.endPhysicalAtom(input);
@@ -165,6 +186,16 @@ void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAt
         cgstate.pht_.finalize();
     }
     context.profiler_.endPhysicalAtomFinalize();
+}
+
+void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState &state,
+    GlobalPhysicalAtomState &gstate) const {
+    auto& cstate = (PartitionedAggHTJoinAtomState&)state;
+    auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
+
+    // Merge thread-local aggregate HT into partition 0
+    if (cstate.localAggHt_)
+        cgstate.pht_.merge(0, std::move(cstate.localAggHt_));
 
 }
 

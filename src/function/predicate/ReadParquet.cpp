@@ -201,7 +201,11 @@ static void readParquetFunction(ClientContext &context, const FunctionData *bind
 		data.finished_ = true;
 		data.readChunk_.data_.clear();
 	}else {
-		data.readChunk_.reset();
+		// data.readChunk_.reset();
+		data.readChunk_.setCardinality(0);
+		for (auto& col: bind_data.cols_)
+			data.readChunk_.data_[col].initialize(data.readChunk_.getCapacity());
+
 	}
 
 }

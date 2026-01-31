@@ -1,4 +1,6 @@
 ## TODOLIST
+- add filters in parquet reader
+- optimize merge agg tables partitions
 - block parenthesis in sql ad datalog
 - check vector getType and logical types
 - parquet

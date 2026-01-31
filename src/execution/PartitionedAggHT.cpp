@@ -171,4 +171,27 @@ bool PartitionedAggHT::checkPayload(const vector<idx_t> &payload, const vector<A
     return true;
 }
 
+void PartitionedAggHT::merge(idx_t partition, agg_ht_ptr_t localHt) {
+    BB_ASSERT(partition < partitions_);
+    if (!localHt || localHt->getSize() == 0) return;
+
+    // Initialize types if not already done
+    if (!initialized_) {
+        lock_guard lock(mutex_);
+        if (!initialized_) {
+            for (auto* func : functions_)
+                types_.push_back(func->arguments_[0]);
+            initialized_ = true;
+        }
+    }
+
+    lock_guard lock(partitionsMutex_[partition]);
+    if (!pAggHts_[partition]) {
+        // First merge: move the local HT to be the partition HT
+        pAggHts_[partition] = std::move(localHt);
+        return;
+    }
+    pAggHts_[partition]->combine(*localHt);
+}
+
 }

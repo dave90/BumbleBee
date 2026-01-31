@@ -127,7 +127,58 @@ Recursive rules are processed iteratively until a fixed-point is reached. Each i
 ### Aggregation
 - `#ID` variable used in aggregates for duplicate handling (avoids distinct calculation)
 - `&gen_id` atom generates unique IDs when needed
-- Aggregate atoms format: `VAR =#agg{terms:body_atoms}`
+- Aggregate atoms format: `VAR = #agg{agg_terms:agg_body_atoms}`
+
+#### Aggregate Semantics
+- **Aggregate terms** (`agg_terms`): specifies what to aggregate, NOT the groups
+  - `#sum{X:body}` - sum the values of X
+  - `#count{X,Y,#ID:body}` - count tuples (with #ID for uniqueness)
+- **Groups**: determined by variables **shared** between rule body and aggregate body
+
+Example:
+```datalog
+result(X,Y,s) :- a(X,Y), s = #sum{Z:b(X,Y,Z)}.
+```
+- Rule body: `a(X,Y)` → variables X, Y
+- Aggregate body: `b(X,Y,Z)` → variables X, Y, Z
+- Shared variables: X, Y → **these are the groups**
+- Z is local to aggregate, S is the sum of Z values
+
+## AI Development Workflow
+
+### Before Making Changes
+- **Always describe the plan first**: Before modifying any code, provide a clear description of what changes will be made and why. Wait for user approval before proceeding.
+
+### After Making Changes
+- **Compile in debug mode** to verify the code compiles correctly:
+  ```bash
+  cd cmake-build-debug && cmake --build .
+  ```
+- Fix any compilation errors before proceeding.
+
+### Testing Changes
+- **Write test programs in `test.1`** (or `test.2`, `test.3`, etc.) at the project root
+- **Run the debug build** to test:
+  ```bash
+  ./cmake-build-debug/BumbleBee -i test.1
+  ```
+- **Use `-p -r` flags** for detailed output:
+  ```bash
+  ./cmake-build-debug/BumbleBee -i test.1 -p -r
+  ```
+  - `-p`: Print debug logs
+  - `-r`: Print profiling/timing data for each rule
+- **Use `--print-program`** to see the generated Datalog rules:
+  ```bash
+  ./cmake-build-debug/BumbleBee -i test.1 --print-program
+  ```
+
+### Performance Testing
+- After verifying correctness in debug, build and test in release:
+  ```bash
+  cd cmake-build-release && cmake --build .
+  time ./cmake-build-release/BumbleBee -i test.1
+  ```
 
 ## Debugging Tips
 
