@@ -60,9 +60,18 @@ public:
     void fetchAggregates(DataChunk& result);
     void fetchAggregates(Vector& result, idx_t function);
 
+    // Scan the hash table and return both group values and aggregate results
+    // Used for explicit groups where we need to iterate over all entries
+    // Returns the number of entries scanned
+    idx_t scanWithAggregates(idx_t offset, DataChunk& groups, Vector& aggResult, idx_t aggIndex, idx_t size = STANDARD_VECTOR_SIZE);
+    // Version that returns all aggregate results into a DataChunk
+    idx_t scanWithAggregates(idx_t offset, DataChunk& groups, DataChunk& aggResults, idx_t size = STANDARD_VECTOR_SIZE);
+
 private:
     void findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups);
     void moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes);
+    // Helper for scanWithAggregates: builds addresses and gathers group values
+    idx_t scanEntries(idx_t offset, DataChunk &groups, Vector &addresses, idx_t size);
 
     // Aggregates functions
     vector<AggregateFunction*> functions_;

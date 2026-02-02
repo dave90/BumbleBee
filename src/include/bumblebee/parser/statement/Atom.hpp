@@ -59,7 +59,7 @@ public:
     Atom() = default;
     Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type);
     Atom(terms_vector_t &&terms, Binop binop);
-    Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms);
+    Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms, terms_vector_t&& aggGroupTerms = {});
     Atom(AtomType type, bool negative);
     Atom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& terms, bool negative = false);
 
@@ -89,6 +89,8 @@ public:
 
     terms_vector_t& getTerms();
     terms_vector_t& getAggTerms();
+    terms_vector_t getAggGroupTerms();
+    bool hasExplicitGroups() const;
     vector<Atom>& getAggsAtoms();
     const terms_vector_t& getTerms()const;
     Predicate* getPredicate();
@@ -149,6 +151,8 @@ private:
     vector<Atom> aggAtoms_;
     // Aggregation terms
     terms_vector_t aggTerms_;
+    // Note: For aggregates, terms_ stores [lower_guard, upper_guard, group_terms...]
+    // If terms_.size() > 2, the extra terms are explicit group terms
 
     // External atoms
     std::unordered_map<string, Value> namedParameters_;
@@ -159,7 +163,7 @@ public:
     // static functions
     static Atom createClassicalAtom(Predicate* p, terms_vector_t&& t);
     static Atom createBuiltinAtom(terms_vector_t&& t, Binop binop);
-    static Atom createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms );
+    static Atom createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms, terms_vector_t&& aggGroupTerms = {});
     static string getAggFunction(AggregateFunctionType agg);
     static AggregateFunctionType getAggFunction(const char* agg);
     static Atom createExternalAtom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& t);

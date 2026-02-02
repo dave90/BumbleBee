@@ -731,6 +731,17 @@ aggregate_element
         {
             director.getBuilder()->onAggregateElement();
         }
+    | basic_terms agg_group_semicol basic_terms COLON naf_literals
+        {
+            director.getBuilder()->onAggregateElement();
+        }
+    ;
+
+agg_group_semicol
+    : SEMICOLON
+        {
+            director.getBuilder()->onAggregateGroupSemicolon();
+        }
     ;
 
 aggregate_function

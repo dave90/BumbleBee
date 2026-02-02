@@ -106,6 +106,8 @@ public:
 
     // Scan the HT starting from the position until the result and group
     idx_t scan(idx_t offset, DataChunk& result, idx_t size = STANDARD_VECTOR_SIZE);
+    // Scan the HT and also populate the addresses vector (for subclasses that need addresses)
+    idx_t scan(idx_t offset, DataChunk& result, Vector& addresses, idx_t size = STANDARD_VECTOR_SIZE);
 
     // Find or creates groups
     void findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses);

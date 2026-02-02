@@ -498,15 +498,33 @@ void ParserInputBuilder::onAggregateElement() {
     if(foundASafetyError_) return;
 }
 
+void ParserInputBuilder::onAggregateGroupSemicolon() {
+    if(foundASafetyError_) return;
+    // When we see ';', agg_terms_parsered contains the agg terms (before ';')
+    // Save them temporarily to agg_group_terms_parsered
+    // After this, the parser will parse group terms into agg_terms_parsered
+    agg_group_terms_parsered = std::move(agg_terms_parsered);
+    agg_terms_parsered.clear();
+}
+
 void ParserInputBuilder::onAggregate(bool naf) {
     if(foundASafetyError_) return;
 
-    currentAtom = Atom::createAggregateAtom(aggregateFunction_, aggBinop_, aggSecondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms));
+    // If we had explicit groups (saw ';'), then:
+    // - agg_terms_parsered contains group terms (parsed after ';')
+    // - agg_group_terms_parsered contains agg terms (parsed before ';')
+    // We need to swap them for correct semantics
+    if (!agg_group_terms_parsered.empty()) {
+        std::swap(agg_terms_parsered, agg_group_terms_parsered);
+    }
+
+    currentAtom = Atom::createAggregateAtom(aggregateFunction_, aggBinop_, aggSecondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms), std::move(agg_group_terms_parsered));
     aggBinop_ = NONE_OP;
     aggSecondBinop_ = NONE_OP;
     guard_terms.clear();
     agg_atoms.clear();
     agg_terms_parsered.clear();
+    agg_group_terms_parsered.clear();
 }
 
 

@@ -91,6 +91,7 @@ public:
 	virtual void onAggregateFunctionalTerm( char* value, int nTerms );
 	virtual void onAggregateNafLiteral();
 	virtual void onAggregateElement();
+	virtual void onAggregateGroupSemicolon();
 	virtual void onAggregate( bool naf = false );
 
 	virtual void onExtAtom(bool naf = false);
@@ -155,6 +156,7 @@ protected:
 	vector<Term> terms_parsered;
 	vector<Term> guard_terms;
 	vector<Term> agg_terms_parsered;
+	vector<Term> agg_group_terms_parsered;
 	vector<Atom> agg_atoms;
 	vector<Atom> builtin_atoms;
 	Atom currentAtom{};

@@ -299,3 +299,237 @@ TEST_F(AggRLHashTableTest, AddChunk_NoGroups) {
     EXPECT_EQ(result.getValue(0,0).cast(PhysicalType::BIGINT).getNumericValue<int64_t>(), expected);
 
 }
+
+TEST_F(AggRLHashTableTest, ScanWithAggregates_IteratesAllGroupsWithResults) {
+    // Test scanWithAggregates: scan the hash table and get both group values and aggregate results
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {0}; // SUM over SMALLINT (col 0)
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Create 10 unique groups
+    DataChunk chunk = createChunkWithValue(tLeft, 10);
+    agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+
+    EXPECT_EQ(ht->getSize(), 10);
+
+    // Prepare output chunks for scanning
+    vector<LogicalType> groupTypes = {tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]};
+    DataChunk groups;
+    groups.initialize(groupTypes);
+    Vector aggResult(aggFunc->result_);
+
+    // Scan all entries at once
+    idx_t scanned = ht->scanWithAggregates(0, groups, aggResult, 0);
+    EXPECT_EQ(scanned, 10);
+    EXPECT_EQ(groups.getSize(), 10);
+
+    // Verify we got all group values and correct aggregate results
+    // The aggregate result for each group should match what we'd get from fetchAggregates
+    DataChunk probeResult = probeToHT(ht, chunk, groupIndexTypes, functions);
+    EXPECT_EQ(probeResult.getSize(), 10);
+
+    // Both methods should return the same aggregate values (order may differ due to hash table)
+    // Sum all aggregate results from both methods - they should be equal
+    int64_t scanSum = 0, probeSum = 0;
+    for (idx_t i = 0; i < 10; ++i) {
+        scanSum += aggResult.getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        probeSum += probeResult.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+    }
+    EXPECT_EQ(scanSum, probeSum);
+}
+
+TEST_F(AggRLHashTableTest, ScanWithAggregates_BatchIteration) {
+    // Test scanWithAggregates with batched iteration (smaller batch size)
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {2}; // SUM over BIGINT (col 2)
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Create 25 unique groups
+    DataChunk chunk = createChunkWithValue(tLeft, 25);
+    agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 64);
+
+    EXPECT_EQ(ht->getSize(), 25);
+
+    // Scan in batches of 10
+    vector<LogicalType> groupTypes = {tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]};
+    idx_t totalScanned = 0;
+    idx_t offset = 0;
+    int64_t totalAggSum = 0;
+
+    while (offset < ht->getSize()) {
+        DataChunk groups;
+        groups.initialize(groupTypes);
+        Vector aggResult(aggFunc->result_);
+
+        idx_t scanned = ht->scanWithAggregates(offset, groups, aggResult, 0, 10);
+        EXPECT_GT(scanned, 0);
+        totalScanned += scanned;
+        offset += scanned;
+
+        // Accumulate aggregate sum
+        for (idx_t i = 0; i < scanned; ++i) {
+            totalAggSum += aggResult.getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        }
+    }
+
+    EXPECT_EQ(totalScanned, 25);
+
+    // Verify total sum matches expected
+    // Each row i has payload value = i * 20 (col 2 = i * 10 * 2)
+    int64_t expectedSum = 0;
+    for (idx_t i = 0; i < 25; ++i) {
+        expectedSum += i * 20;
+    }
+    EXPECT_EQ(totalAggSum, expectedSum);
+}
+
+TEST_F(AggRLHashTableTest, ScanWithAggregates_AllPayloads) {
+    // Test scanWithAggregates that returns all aggregate results in a DataChunk
+    // Use multiple aggregation functions on different columns
+    vector<idx_t> groupIndexTypes = {1};  // Group by col 1 (UINTEGER)
+    vector<idx_t> payloadIndexTypes = {0, 2};  // SUM over col 0 (SMALLINT) and col 2 (BIGINT)
+
+    auto aggFunc1 = SumFunc().getFunction({tLeft[0]});  // SUM(SMALLINT)
+    auto aggFunc2 = SumFunc().getFunction({tLeft[2]});  // SUM(BIGINT)
+    vector<AggregateFunction*> functions = {
+        (AggregateFunction*)aggFunc1.get(),
+        (AggregateFunction*)aggFunc2.get()
+    };
+
+    // Create 8 unique groups
+    DataChunk chunk = createChunkWithValue(tLeft, 8);
+
+    // Build hash table with multiple payloads
+    vector<LogicalType> groupTypes = {tLeft[groupIndexTypes[0]]};
+    vector<LogicalType> payloadTypes = {tLeft[payloadIndexTypes[0]], tLeft[payloadIndexTypes[1]]};
+
+    agg_ht_ptr ht(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, false, functions));
+
+    DataChunk groups, payload;
+    groups.initialize(groupTypes);
+    payload.initialize(payloadTypes);
+    groups.reference(chunk, groupIndexTypes);
+    payload.reference(chunk, payloadIndexTypes);
+    Vector hash(LogicalTypeId::HASH, groups.getSize());
+    groups.hash(hash);
+    ht->addChunk(hash, groups, payload);
+
+    EXPECT_EQ(ht->getSize(), 8);
+
+    // Prepare output chunks for scanning
+    DataChunk outGroups;
+    outGroups.initialize(groupTypes);
+    DataChunk aggResults;
+    aggResults.initialize({aggFunc1->result_, aggFunc2->result_});
+
+    // Scan all entries at once
+    idx_t scanned = ht->scanWithAggregates(0, outGroups, aggResults);
+    EXPECT_EQ(scanned, 8);
+    EXPECT_EQ(outGroups.getSize(), 8);
+    EXPECT_EQ(aggResults.getSize(), 8);
+    EXPECT_EQ(aggResults.columnCount(), 2);
+
+    // Verify both aggregate columns have values
+    int64_t sum1 = 0, sum2 = 0;
+    for (idx_t i = 0; i < scanned; ++i) {
+        sum1 += aggResults.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        sum2 += aggResults.data_[1].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+    }
+
+    // Expected sums based on createChunkWithValue formula: col j at row i = (i * 10 * j)
+    // col 0: all 0s (j=0), col 2: 0, 20, 40, 60, 80, 100, 120, 140 (j=2)
+    EXPECT_EQ(sum1, 0);  // sum of col 0 = all zeros
+    int64_t expectedSum2 = 0;
+    for (idx_t i = 0; i < 8; ++i) {
+        expectedSum2 += i * 20;  // col 2 values
+    }
+    EXPECT_EQ(sum2, expectedSum2);
+}
+
+TEST_F(AggRLHashTableTest, ScanWithAggregates_EmptyHashTable) {
+    // Test scanWithAggregates on an empty hash table
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Create hash table but don't add any data
+    vector<LogicalType> groupTypes = {tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]};
+    agg_ht_ptr ht(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, false, functions));
+
+    EXPECT_EQ(ht->getSize(), 0);
+
+    // Try to scan empty hash table
+    DataChunk groups;
+    groups.initialize(groupTypes);
+    Vector aggResult(aggFunc->result_);
+
+    idx_t scanned = ht->scanWithAggregates(0, groups, aggResult, 0);
+    EXPECT_EQ(scanned, 0);
+    EXPECT_EQ(groups.getSize(), 0);
+}
+
+TEST_F(AggRLHashTableTest, ScanWithAggregates_SingleEntry) {
+    // Test scanWithAggregates with exactly 1 group (edge case)
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Create chunk with 1 unique row
+    DataChunk chunk = createChunkWithValue(tLeft, 1);
+    agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+
+    EXPECT_EQ(ht->getSize(), 1);
+
+    // Scan the single entry
+    vector<LogicalType> groupTypes = {tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]};
+    DataChunk groups;
+    groups.initialize(groupTypes);
+    Vector aggResult(aggFunc->result_);
+
+    idx_t scanned = ht->scanWithAggregates(0, groups, aggResult, 0);
+    EXPECT_EQ(scanned, 1);
+    EXPECT_EQ(groups.getSize(), 1);
+
+    // Verify the aggregate result matches probe result
+    DataChunk probeResult = probeToHT(ht, chunk, groupIndexTypes, functions);
+    EXPECT_EQ(probeResult.getSize(), 1);
+    EXPECT_EQ(aggResult.getValue(0).cast(PhysicalType::BIGINT).getNumericValue<int64_t>(),
+              probeResult.data_[0].getValue(0).cast(PhysicalType::BIGINT).getNumericValue<int64_t>());
+}
+
+TEST_F(AggRLHashTableTest, ScanWithAggregates_OffsetPastEnd) {
+    // Test scanWithAggregates with offset >= entries (should return 0)
+    vector<idx_t> groupIndexTypes = {1, 2};
+    vector<idx_t> payloadIndexTypes = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Create 5 unique groups
+    DataChunk chunk = createChunkWithValue(tLeft, 5);
+    agg_ht_ptr ht;
+    addChunkToAHT(ht, chunk, groupIndexTypes, payloadIndexTypes, functions, 32);
+
+    EXPECT_EQ(ht->getSize(), 5);
+
+    vector<LogicalType> groupTypes = {tLeft[groupIndexTypes[0]], tLeft[groupIndexTypes[1]]};
+    DataChunk groups;
+    groups.initialize(groupTypes);
+    Vector aggResult(aggFunc->result_);
+
+    // Scan with offset = entries (should return 0)
+    idx_t scanned = ht->scanWithAggregates(5, groups, aggResult, 0);
+    EXPECT_EQ(scanned, 0);
+    EXPECT_EQ(groups.getSize(), 0);
+
+    // Scan with offset > entries (should return 0)
+    scanned = ht->scanWithAggregates(100, groups, aggResult, 0);
+    EXPECT_EQ(scanned, 0);
+    EXPECT_EQ(groups.getSize(), 0);
+}

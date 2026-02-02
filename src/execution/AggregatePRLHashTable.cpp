@@ -229,4 +229,36 @@ void AggregatePRLHashTable::fetchAggregates(Vector &result, idx_t aggIndex) {
     result.reference(val);
 }
 
+idx_t AggregatePRLHashTable::scanEntries(idx_t offset, DataChunk &groups, Vector &addresses, idx_t size) {
+    // Use parent's scan which builds addresses and gathers group values
+    return PRLHashTable::scan(offset, groups, addresses, size);
+}
+
+idx_t AggregatePRLHashTable::scanWithAggregates(idx_t offset, DataChunk &groups, Vector &aggResult, idx_t aggIndex, idx_t size) {
+    Vector addresses(LogicalTypeId::ADDRESS, size);
+    idx_t toScan = scanEntries(offset, groups, addresses, size);
+    if (toScan == 0) return 0;
+
+    // Finalize aggregate states from addresses
+    AggregateFunction::finalizeStates(layout_, addresses, aggResult, aggIndex, toScan);
+    return toScan;
+}
+
+idx_t AggregatePRLHashTable::scanWithAggregates(idx_t offset, DataChunk &groups, DataChunk &aggResults, idx_t size) {
+    BB_ASSERT(functions_.size() == aggResults.columnCount());
+    Vector addresses(LogicalTypeId::ADDRESS, size);
+    idx_t toScan = scanEntries(offset, groups, addresses, size);
+    if (toScan == 0) {
+        aggResults.setCardinality(0);
+        return 0;
+    }
+
+    // Finalize all aggregate states from addresses
+    for (idx_t i = 0; i < functions_.size(); ++i) {
+        AggregateFunction::finalizeStates(layout_, addresses, aggResults.data_[i], i, toScan);
+    }
+    aggResults.setCardinality(toScan);
+    return toScan;
+}
+
 }

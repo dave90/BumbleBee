@@ -67,18 +67,25 @@ void PRLHashTable::addChunk(DataChunk &chunk) {
 }
 
 idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
-    BB_ASSERT(offset < entries_);
+    Vector addresses(LogicalTypeId::ADDRESS, size);
+    return scan(offset, result, addresses, size);
+}
+
+idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, Vector &addresses, idx_t size) {
+    if (offset >= entries_) {
+        result.setCardinality(0);
+        return 0;
+    }
     BB_ASSERT(result.getCapacity() >= size);
     BB_ASSERT(result.columnCount() <= types_.size());
-    // find the addresses
 
     auto remaining = entries_ - offset;
     auto toScan = minValue(size, remaining);
-    Vector addresses(LogicalTypeId::ADDRESS, toScan);
+
+    // Build addresses vector for the entries we're scanning
     auto addrsPtr = FlatVector::getData<data_ptr_t>(addresses);
     auto chunkIdx = offset / tuplesPerBlock_;
     auto chunkOffset = (offset % tuplesPerBlock_) * tupleSize_;
-    BB_ASSERT(chunkOffset + tupleSize_ <= Storage::BLOCK_SIZE);
 
     auto readPtr = payloadPtrs_[chunkIdx++];
     for (idx_t i = 0; i < toScan; i++) {
@@ -86,13 +93,13 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
         addrsPtr[i] = readPtr + chunkOffset;
         chunkOffset += tupleSize_;
         if (chunkOffset >= tuplesPerBlock_ * tupleSize_) {
-            readPtr = (chunkIdx < payloadPtrs_.size())? payloadPtrs_[chunkIdx++]: nullptr;
+            readPtr = (chunkIdx < payloadPtrs_.size()) ? payloadPtrs_[chunkIdx++] : nullptr;
             chunkOffset = 0;
         }
     }
 
-    // now fetch the vectors
-    for (id_t i = 0;i<result.columnCount();++i) {
+    // Gather values from addresses to result
+    for (idx_t i = 0; i < result.columnCount(); ++i) {
         BB_ASSERT(result.data_[i].getLogicalType() == types_[i]);
         BB_ASSERT(result.data_[i].getVectorType() == VectorType::FLAT_VECTOR);
         RowOperations::gather(addresses, FlatVector::INCREMENTAL_SELECTION_VECTOR,
@@ -101,7 +108,7 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, idx_t size) {
     }
 
     result.setCardinality(toScan);
-    return result.getSize();
+    return toScan;
 }
 
 void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &addresses) {

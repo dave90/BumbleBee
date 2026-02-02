@@ -30,6 +30,16 @@ public:
     distinct_ht_ptr_t ht_;
     // thread-local aggregate HT for total aggregations (no groups, no distinct)
     agg_ht_ptr_t localAggHt_;
+    // scan offset for scan mode (explicit groups)
+    idx_t scanOffset_{0};
+    // cache index within current cached scan results
+    idx_t cacheIdx_{0};
+    // cached groups from scan
+    DataChunk cacheGroups_;
+    // cached aggregate results from scan
+    DataChunk cacheAggResults_;
+    bool scanFinished_{false};
+    bool cacheInitialized_{false};
 };
 
 
@@ -83,13 +93,14 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
 
 PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, const vector<idx_t> &group_cols, const vector<idx_t> &payload_cols,
-    AggregatePRLHashTable *aht): PhysicalAtom(types, dcCols, selectedCols) ,
+    AggregatePRLHashTable *aht, bool scanMode): PhysicalAtom(types, dcCols, selectedCols) ,
                                     context_(context),
                                     aht_(aht),
                                     pt_(nullptr),
                                     groupCols_(group_cols),
                                     payloadCols_(payload_cols),
-                                    type_(PROBE){
+                                    type_(PROBE),
+                                    scanMode_(scanMode){
     for (auto& i: groupCols_)
         groupColsTypes_.push_back(types_[i]);
 }
@@ -203,7 +214,14 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     PhysicalAtomState &state) const {
     context.profiler_.startPhysicalAtom(this);
 
-    BB_ASSERT(aht_ );
+    BB_ASSERT(aht_);
+
+    // Scan mode: iterate over hash table entries and push group values + aggregate results
+    if (scanMode_) {
+        return executeScanMode(context, input, chunk, state);
+    }
+
+    // Standard probe mode
     BB_ASSERT(payloadCols_.size() == 1);
     BB_ASSERT(dcCols_.size() == payloadCols_.size());
 
@@ -259,6 +277,92 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     chunk.data_[dcCols_[0]].reference(result);
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
+}
+
+AtomResultType PhysicalPartitionedAggHT::executeScanMode(ThreadContext &context, DataChunk &input, DataChunk &chunk,
+    PhysicalAtomState &state) const {
+    auto& cstate = (PartitionedAggHTJoinAtomState&)state;
+
+    // Initialize cache if needed
+    if (!cstate.cacheInitialized_) {
+        cstate.cacheGroups_.initialize(groupColsTypes_);
+        cstate.cacheAggResults_.initialize(dcColsType_);
+        cstate.cacheInitialized_ = true;
+    }
+
+    // Check if we need to load more from cache (scan more from HT)
+    if (cstate.cacheIdx_ >= cstate.cacheGroups_.getSize()) {
+        if (cstate.scanFinished_) {
+            // If scan is finished and we receive empty input, the previous aggregate is done
+            // Don't reset and rescan - just return NEED_MORE_INPUT
+            if (input.getSize() == 0) {
+                chunk.reset();
+                context.profiler_.endPhysicalAtom(chunk);
+                return AtomResultType::NEED_MORE_INPUT;
+            }
+            // Reset scan state for next input batch - continue to scan below
+            cstate.scanFinished_ = false;
+            cstate.scanOffset_ = 0;
+            cstate.cacheIdx_ = 0;
+            cstate.cacheGroups_.setCardinality(0);
+        }
+
+        // Scan more from hash table
+        cstate.cacheIdx_ = 0;
+        BB_ASSERT(payloadCols_.size() == 1);
+        idx_t payloadInternalCol = payloadCols_[0];
+
+        idx_t scanned = aht_->scanWithAggregates(cstate.scanOffset_, cstate.cacheGroups_,
+            cstate.cacheAggResults_.data_[0], payloadInternalCol);
+        cstate.scanOffset_ += scanned;
+        cstate.cacheAggResults_.setCardinality(scanned);
+
+        if (scanned == 0) {
+            cstate.scanFinished_ = true;
+            chunk.reset();
+            context.profiler_.endPhysicalAtom(chunk);
+            return AtomResultType::NEED_MORE_INPUT;
+        }
+    }
+
+    // Output: reference all input columns, set cached row values as constants
+    if (input.getSize() > 0) {
+        // Cross product: for each cached row, output all input rows
+        chunk.setCardinality(input.getSize());
+        for (idx_t col = 0; col < input.columnCount(); ++col) {
+            chunk.data_[col].reference(input.data_[col]);
+        }
+
+        // Set current cached group values as constants
+        for (idx_t i = 0; i < groupCols_.size(); ++i) {
+            auto val = cstate.cacheGroups_.getValue(i, cstate.cacheIdx_);
+            chunk.data_[groupCols_[i]].reference(val);
+        }
+
+        // Set current cached aggregate result as constant
+        auto aggVal = cstate.cacheAggResults_.getValue(0, cstate.cacheIdx_);
+        chunk.data_[dcCols_[0]].reference(aggVal);
+
+        cstate.cacheIdx_++;
+    } else {
+        // No prior input: output all cached groups and aggregates directly
+        idx_t toOutput = cstate.cacheGroups_.getSize();
+        chunk.setCardinality(toOutput);
+
+        // Reference groups directly
+        for (idx_t i = 0; i < groupCols_.size(); ++i) {
+            chunk.data_[groupCols_[i]].reference(cstate.cacheGroups_.data_[i]);
+        }
+
+        // Reference aggregate results directly
+        chunk.data_[dcCols_[0]].reference(cstate.cacheAggResults_.data_[0]);
+
+        // Mark all cache as consumed
+        cstate.cacheIdx_ = toOutput;
+    }
+
+    context.profiler_.endPhysicalAtom(chunk);
+    return AtomResultType::HAVE_MORE_OUTPUT;
 }
 
 }

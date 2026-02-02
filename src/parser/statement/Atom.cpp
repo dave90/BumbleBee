@@ -47,9 +47,9 @@ Atom::Atom(Atom &&other) noexcept: terms_(std::move(other.terms_)),
                                    aggregate_(other.aggregate_),
                                    aggAtoms_(std::move(other.aggAtoms_)),
                                    aggTerms_(std::move(other.aggTerms_)),
-                                    externalFunctionName_(std::move(other.externalFunctionName_)),
-                                    namedParameters_(std::move(other.namedParameters_)),
-                                    inputValues_(std::move(other.inputValues_)){
+                                   externalFunctionName_(std::move(other.externalFunctionName_)),
+                                   namedParameters_(std::move(other.namedParameters_)),
+                                   inputValues_(std::move(other.inputValues_)){
     calculateIsGround();
 }
 
@@ -59,12 +59,14 @@ Atom::Atom(terms_vector_t &&terms, Binop binop) : terms_(std::move(terms)), type
 }
 
 Atom::Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard, Term &upperGuard,
-    terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms): aggregate_(aggFunction),
+    terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms, terms_vector_t &&aggGroupTerms): aggregate_(aggFunction),
     aggTerms_(std::move(aggTerms)),
     aggAtoms_(std::move(aggAtoms)), predicate_(nullptr), type_(AGGREGATE){
-    terms_.resize(2);
-    terms_[0] = std::move(lowerGuard);
-    terms_[1] = std::move(upperGuard);
+    // terms_ stores: [lower_guard, upper_guard, group_terms...]
+    terms_.push_back(std::move(lowerGuard));
+    terms_.push_back(std::move(upperGuard));
+    for (auto& term : aggGroupTerms)
+        terms_.push_back(std::move(term));
     binops_.push_back(firstBinop);
     binops_.push_back(secondBinop);
 }
@@ -75,6 +77,20 @@ terms_vector_t& Atom::getTerms() {
 
 terms_vector_t & Atom::getAggTerms() {
     return aggTerms_;
+}
+
+terms_vector_t Atom::getAggGroupTerms() {
+    // For aggregates, terms_[2..] are the explicit group terms
+    terms_vector_t groupTerms;
+    if (type_ == AGGREGATE && terms_.size() > 2) {
+        for (idx_t i = 2; i < terms_.size(); ++i)
+            groupTerms.push_back(terms_[i]);
+    }
+    return groupTerms;
+}
+
+bool Atom::hasExplicitGroups() const {
+    return type_ == AGGREGATE && terms_.size() > 2;
 }
 
 vector<Atom> & Atom::getAggsAtoms() {
@@ -313,10 +329,14 @@ hash_t Atom::hash() {
 
 void Atom::getVariables(set_term_variable_t &variables) {
     if (getType() == AGGREGATE) {
+        // For aggregates, terms_ = [lower_guard, upper_guard, group_terms...]
         if (getBinop() != NONE_OP)
             terms_[0].getVariables(variables);
         if (getSecondBinop() != NONE_OP)
             terms_[1].getVariables(variables);
+        // Include explicit group terms (terms_[2..]) as they are "bound" by the aggregate
+        for (idx_t i = 2; i < terms_.size(); ++i)
+            terms_[i].getVariables(variables);
         return;
     }
     for (auto& term : terms_) {
@@ -347,6 +367,13 @@ void Atom::getAggSharedVariables(const set_term_variable_t &globalVariables, set
     set_term_variable_t internals;
     getAggAtomsVariables(internals);
     Term::intersetVariables(internals, globalVariables, sharedVariables);
+    // Remove explicit group terms - they are bound by the aggregate body, not external atoms
+    if (hasExplicitGroups()) {
+        for (idx_t i = 2; i < terms_.size(); ++i) {
+            if (terms_[i].getType() == TermType::VARIABLE)
+                sharedVariables.erase(terms_[i].getVariable());
+        }
+    }
 }
 
 void Atom::setPredicte(Predicate *predicate) {
@@ -392,6 +419,14 @@ std::string Atom::toString() const {
             s += term.toString()+",";
         }
         s.pop_back(); // remove last comma
+        // Add explicit groups if present (terms_[2..])
+        if (terms_.size() > 2) {
+            s += ";";
+            for (idx_t i = 2; i < terms_.size(); ++i) {
+                s += terms_[i].toString()+",";
+            }
+            s.pop_back(); // remove last comma
+        }
         s += ":";
         for (auto& atom : aggAtoms_) {
             s += atom.toString()+",";
@@ -455,8 +490,12 @@ Atom Atom::clone() const {
             terms_vector_t aggTerms;
             for (auto& term : aggTerms_)
                 aggTerms.emplace_back(term);
-            BB_ASSERT(terms.size() == 2);
-            return createAggregateAtom(aggregate_, getBinop(), getSecondBinop(), terms[0],terms[1], std::move(aggTerms), std::move(aggAtoms));
+            // Extract group terms from terms_[2..]
+            terms_vector_t aggGroupTerms;
+            for (idx_t i = 2; i < terms_.size(); ++i)
+                aggGroupTerms.emplace_back(terms_[i]);
+            BB_ASSERT(terms.size() >= 2);
+            return createAggregateAtom(aggregate_, getBinop(), getSecondBinop(), terms[0], terms[1], std::move(aggTerms), std::move(aggAtoms), std::move(aggGroupTerms));
         }case BUILTIN: {
             Atom cloned;
             cloned.setType(BUILTIN);
@@ -492,8 +531,8 @@ Atom Atom::createBuiltinAtom(terms_vector_t &&t, Binop binop) {
 }
 
 Atom Atom::createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term &lowerGuard,
-    Term &upperGuard, terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms) {
-    return Atom(aggFunction, firstBinop, secondBinop, lowerGuard, upperGuard, std::move(aggTerms), std::move(aggAtoms));
+    Term &upperGuard, terms_vector_t &&aggTerms, vector<Atom> &&aggAtoms, terms_vector_t &&aggGroupTerms) {
+    return Atom(aggFunction, firstBinop, secondBinop, lowerGuard, upperGuard, std::move(aggTerms), std::move(aggAtoms), std::move(aggGroupTerms));
 }
 
 Atom Atom::createExternalAtom(std::unordered_map<string, Value> &namedParams, vector<Value> &inputValues,

@@ -19,6 +19,7 @@
 #include "bumblebee/planner/rewriter/AggregatesRewriter.hpp"
 
 #include "bumblebee/ClientContext.hpp"
+#include "bumblebee/common/ErrorHandler.hpp"
 #include "bumblebee/common/Helper.hpp"
 
 namespace bumblebee{
@@ -72,9 +73,23 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
         rule.getVariables(ruleVariables);
         for (auto& a: rule.getBody()) {
             if (a.getType() != AGGREGATE)continue;
-            // calculate the groups
+            // calculate the groups (shared variables between rule body and aggregate body)
             set_term_variable_t groupVars;
             a.getAggSharedVariables(ruleVariables, groupVars);
+            // If explicit groups are specified, there must be NO shared variables
+            // Explicit groups and inferred groups are mutually exclusive
+            if (a.hasExplicitGroups()) {
+                if (!groupVars.empty()) {
+                    ErrorHandler::errorParsing("Cannot use explicit group terms when there are shared variables "
+                        "between the rule body and aggregate body. Either use explicit groups without "
+                        "shared variables, or use inferred groups (no semicolon syntax).");
+                }
+                // Use explicit groups as the group variables
+                for (auto& groupTerm : a.getAggGroupTerms()) {
+                    if (groupTerm.getType() == TermType::VARIABLE)
+                        groupVars.insert(groupTerm.getVariable());
+                }
+            }
             // now join the aggregate terms + the shared variables and the set of vars would be vars in head of new predicate
             set_term_variable_t sterms = groupVars;
             bool distinct = true;

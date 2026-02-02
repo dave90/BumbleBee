@@ -30,7 +30,7 @@ public:
         const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions);
     // constructor for probe
     PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
-        const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht);
+        const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht, bool scanMode = false);
 
     ~PhysicalPartitionedAggHT() override = default;
 
@@ -49,6 +49,10 @@ public:
         GlobalPhysicalAtomState &gstate) const override;
 
 private:
+    // Execute in scan mode for explicit groups (cross product with input)
+    AtomResultType executeScanMode(ThreadContext &context, DataChunk &input, DataChunk &chunk,
+        PhysicalAtomState &state) const;
+
     const ClientContext& context_;
 
     PredicateTables* pt_;
@@ -64,6 +68,9 @@ private:
     vector<LogicalType> payloadColsTypes_;
     vector<AggregateFunction*> aggregateFunctions_;
     PhysicalHashType type_;
+    // When true, scan the hash table for group values instead of probing with input values
+    // Used for explicit groups in aggregates where groups come from aggregate body, not external atoms
+    bool scanMode_{false};
 };
 
 

@@ -191,10 +191,32 @@ void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
     string internalPredName = atom.getAggsAtoms()[0].getPredicate()->getName();
     BB_ASSERT(internalPredName.starts_with(Predicate::INTERNAL_PREDICATE_AGG_PREFIX));
 
+    auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
+
+    // Handle explicit group variables (terms_[2..])
+    // Their types come from the single aggregate body predicate (always classical after AggregatesRewriter)
+    if (atom.hasExplicitGroups()) {
+        auto& aggBodyAtom = atom.getAggsAtoms()[0];
+        BB_ASSERT(aggBodyAtom.getType() == CLASSICAL);
+        for (auto& groupTerm: atom.getAggGroupTerms()) {
+            BB_ASSERT(groupTerm.getType() == TermType::VARIABLE);
+            BB_ASSERT(!groupTerm.isAnonymous());
+            BB_ASSERT(!colsMap_.contains(groupTerm.getVariable()));
+            // Find the group variable's position in the aggregate body predicate
+            for (idx_t j = 0; j < aggBodyAtom.getTerms().size(); ++j) {
+                if (aggBodyAtom.getTerms()[j].getType() == TermType::VARIABLE &&
+                    aggBodyAtom.getTerms()[j].getVariable() == groupTerm.getVariable()) {
+                    typesMap_[groupTerm.getVariable()] = pt->getTypes()[j];
+                    colsMap_[groupTerm.getVariable()] = colsMap_.size();
+                    break;
+                }
+            }
+        }
+    }
+
     // now you need to insert the result type of the agg
     // payload of agg is the first term
     auto payloadIndex = getAggPayloadIndex(atom);
-    auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
     BB_ASSERT(pt->getTypes().size() > payloadIndex);
     LogicalType payloadType = pt->getTypes()[payloadIndex];
     BB_ASSERT(payloadType != PhysicalType::UNKNOWN);
@@ -205,6 +227,7 @@ void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
     cols_.push_back({colsMap_.size()}); // where to put the result of the agg
     colsMap_[term.getVariable()] = colsMap_.size();
     selectedCols_.emplace_back(); // push empty array as aggregate does not have predicates to select
+
 }
 
 void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
@@ -369,7 +392,9 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
             groupCols.push_back(colsMap_[var.getVariable()]);
     }
     vector payloads = {payload};
-    patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, aht));
+    // Use scan mode for explicit groups - group values come from the hash table, not from input
+    bool scanMode = atom.hasExplicitGroups();
+    patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, aht, scanMode));
 }
 
 void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<LogicalType> types,patom_ptr_vector_t& patoms ) {
