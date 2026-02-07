@@ -29,7 +29,9 @@ public:
 
 private:
     // return true if the assignment is possible to evaluate with the current variables
-    bool isAssignmePossibleToEvaluate(set_term_variable_t& currentVariables, set_term_variable_t& builtinVars, Atom& assignment);
+    bool isAssignmentPossibleToEvaluate(set_term_variable_t& currentVariables, set_term_variable_t& builtinVars, Atom& assignment);
+    void insertAtoms(vector<set_term_variable_t>& builtInVariables, vector<Atom*>& builtIntAtoms, set_term_variable_t& currentVariables ,atoms_vector_t& newBody);
+
 };
 
 

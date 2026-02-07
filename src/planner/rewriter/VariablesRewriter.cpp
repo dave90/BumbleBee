@@ -97,6 +97,10 @@ void VariablesRewriter::verifyAndPruneAtoms(Rule &rule) {
                 break;
             }
         }
+        if (atom.getType() == AGGREGATE && atom.hasExplicitGroups()) {
+            sourceAtomPresent = true;
+            break;
+        }
     }
     if (!sourceAtomPresent) {
         // no source atoms are present

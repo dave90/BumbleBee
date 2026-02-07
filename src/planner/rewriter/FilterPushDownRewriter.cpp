@@ -18,10 +18,75 @@
  */
 #include "bumblebee/planner/rewriter/FilterPushDownRewriter.hpp"
 
+#include "bumblebee/common/Log.hpp"
 #include "bumblebee/common/types/Assert.hpp"
 
 namespace bumblebee{
 FilterPushDownRewriter::~FilterPushDownRewriter() {}
+
+
+void FilterPushDownRewriter::insertAtoms(vector<set_term_variable_t>& builtInVariables, vector<Atom*>& builtIntAtoms, set_term_variable_t& currentVariables ,atoms_vector_t& newBody) {
+    // first add the constant assignment
+    for (idx_t j=0; j< builtIntAtoms.size(); j++) {
+        auto atom = builtIntAtoms[j];
+        if (atom == nullptr)continue;
+        if (!atom->isConstantAssignment())continue;
+        atom->setBinop(ASSIGNMENT);
+        atom->getVariables(currentVariables);
+        newBody.push_back(std::move(*atom));
+        builtIntAtoms[j] = nullptr;
+    }
+
+    // first check the possible assignment
+    // we need to loop again and again for cascade assignment ( X = Y, Z = X, etc.)
+    for (idx_t j=0; j< builtIntAtoms.size();) {
+        auto ba = builtIntAtoms[j];
+        // if is nullptr builtin already inserted in the new body
+        if (ba == nullptr) {
+            ++j;
+            continue;
+        }
+        // if is equal or assignment and is possible to evaluate now (so only one variable is not bounded)
+        // then evaluate it now
+
+        if ((
+            ba->getType() == BUILTIN && !ba->isOrBuiltin()
+             && ( ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)
+             && isAssignmentPossibleToEvaluate(currentVariables, builtInVariables[j], *ba))
+             ||(
+             ba->getType() == AGGREGATE
+             && Term::subset(currentVariables, builtInVariables[j])
+             )) {
+                ba->setBinop(ASSIGNMENT);
+                ba->getVariables(currentVariables);
+                newBody.push_back(std::move(*ba));
+                builtIntAtoms[j] = nullptr;
+                // new assignment found restart from 0
+                j = 0;
+                continue;
+        }
+
+        ++j;
+    }
+
+
+    // now check the builtin atoms if is possible to insert one
+    // and while true until no more new atoms is possible to insert
+    for (idx_t j=0; j< builtIntAtoms.size();++j) {
+        auto ba = builtIntAtoms[j];
+        // if is nullptr builtin already inserted in the new body
+        if (ba == nullptr || ba->getType() == AGGREGATE)continue;
+        // if all the variables are present, we can execute as filter
+        if (Term::subset(currentVariables, builtInVariables[j])) {
+            if (ba->getBinop() == ASSIGNMENT) {
+                // change to EQUAL as all the variables are present
+                ba->setBinop(EQUAL);
+            }
+            newBody.push_back(std::move(*ba));
+            builtIntAtoms[j] = nullptr;
+        }
+    }
+}
 
 void FilterPushDownRewriter::rewrite(Rule &rule) {
     auto& body = rule.getBody();
@@ -69,67 +134,19 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
         body[i].getVariables(currentVariables);
         newBody.push_back(std::move(body[i]));
 
-        // first add the constant assignment
-        for (idx_t j=0; j< builtIntAtoms.size(); j++) {
-            auto atom = builtIntAtoms[j];
-            if (atom == nullptr)continue;
-            if (!atom->isConstantAssignment())continue;
-            atom->setBinop(ASSIGNMENT);
-            atom->getVariables(currentVariables);
-            newBody.push_back(std::move(*atom));
+        insertAtoms(builtInVariables, builtIntAtoms, currentVariables, newBody);
+    }
+
+    // Handle remaining aggregate atoms (source aggregates with no prior classical atoms)
+    for (idx_t j = 0; j < builtIntAtoms.size(); j++) {
+        auto ba = builtIntAtoms[j];
+        if (ba == nullptr) continue;
+        if (ba->getType() == AGGREGATE) {
+            ba->getVariables(currentVariables);
+            newBody.push_back(std::move(*ba));
             builtIntAtoms[j] = nullptr;
+            insertAtoms(builtInVariables, builtIntAtoms, currentVariables, newBody);
         }
-
-        // first check the possible assignment
-        // we need to loop again and again for cascade assignment ( X = Y, Z = X, etc.)
-        for (idx_t j=0; j< builtIntAtoms.size();) {
-            auto ba = builtIntAtoms[j];
-            // if is nullptr builtin already inserted in the new body
-            if (ba == nullptr) {
-                ++j;
-                continue;
-            }
-            // if is equal or assignment and is possible to evaluate now (so only one variable is not bounded)
-            // then evaluate it now
-
-            if ((
-                ba->getType() == BUILTIN && !ba->isOrBuiltin()
-                 && ( ba->getBinop() == ASSIGNMENT || ba->getBinop() == EQUAL)
-                 && isAssignmePossibleToEvaluate(currentVariables, builtInVariables[j], *ba))
-                 ||(
-                 ba->getType() == AGGREGATE
-                 && Term::subset(currentVariables, builtInVariables[j])
-                 )) {
-                    ba->setBinop(ASSIGNMENT);
-                    ba->getVariables(currentVariables);
-                    newBody.push_back(std::move(*ba));
-                    builtIntAtoms[j] = nullptr;
-                    // new assignment found restart from 0
-                    j = 0;
-                    continue;
-            }
-
-            ++j;
-        }
-
-
-        // now check the builtin atoms if is possible to insert one
-        // and while true until no more new atoms is possible to insert
-        for (idx_t j=0; j< builtIntAtoms.size();++j) {
-            auto ba = builtIntAtoms[j];
-            // if is nullptr builtin already inserted in the new body
-            if (ba == nullptr || ba->getType() == AGGREGATE)continue;
-            // if all the variables are present, we can execute as filter
-            if (Term::subset(currentVariables, builtInVariables[j])) {
-                if (ba->getBinop() == ASSIGNMENT) {
-                    // change to EQUAL as all the variables are present
-                    ba->setBinop(EQUAL);
-                }
-                newBody.push_back(std::move(*ba));
-                builtIntAtoms[j] = nullptr;
-            }
-        }
-
     }
 
     // check the remaining builtin (if any) and throw error if are present
@@ -141,7 +158,7 @@ void FilterPushDownRewriter::rewrite(Rule &rule) {
     rule.setBody(newBody);
 }
 
-bool FilterPushDownRewriter::isAssignmePossibleToEvaluate(set_term_variable_t &currentVariables,set_term_variable_t &builtinVars, Atom &assignment) {
+bool FilterPushDownRewriter::isAssignmentPossibleToEvaluate(set_term_variable_t &currentVariables,set_term_variable_t &builtinVars, Atom &assignment) {
     BB_ASSERT(assignment.getType() == BUILTIN);
     BB_ASSERT(assignment.getBinop() == EQUAL || assignment.getBinop() == ASSIGNMENT);
     // TODO rewrite the arith; for now we do not rewrite the formula we work with assignment

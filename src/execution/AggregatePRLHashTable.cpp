@@ -45,10 +45,8 @@ void AggregatePRLHashTable::addChunk(Vector &hash, DataChunk &groups, DataChunk 
     findOrCreateGroups(hash, groups, addresses, newGroupCount, newGroupsSel);
 
 
-    // init the states
-    for (idx_t i = 0; i < functions_.size(); i++)
-        AggregateFunction::initStates(layout_, addresses, newGroupsSel, newGroupCount);
-
+    // init the states (initStates already iterates all aggregate functions via layout)
+    AggregateFunction::initStates(layout_, addresses, newGroupsSel, newGroupCount);
 
     // now update the states
     for (id_t i = 0;i<functions_.size();++i)
@@ -67,9 +65,8 @@ void AggregatePRLHashTable::addChunk(DataChunk &payload) {
         newBlock();
         addrPtr[0] = payloadPtrs_.back();
 
-        // init the first state
-        for (idx_t i = 0; i < functions_.size(); i++)
-            AggregateFunction::initStates(layout_, addresses, sel, 1);
+        // init the first state (initStates already iterates all aggregate functions via layout)
+        AggregateFunction::initStates(layout_, addresses, sel, 1);
         entries_ = 1;
     }
     addrPtr[0] = payloadPtrs_.back();
@@ -88,9 +85,8 @@ void AggregatePRLHashTable::moveAndMergeStates(idx_t count, Vector &addresses, V
     idx_t newGroupsCount = 0;
     auto groupAddresses = move(addresses, hashes, count, &newGroupsSel, newGroupsCount);
 
-    // init new states
-    for (idx_t i = 0; i < functions_.size(); i++)
-        AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
+    // init new states (initStates already iterates all aggregate functions via layout)
+    AggregateFunction::initStates(layout_, groupAddresses, newGroupsSel, newGroupsCount);
 
 
     AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, count);
@@ -169,9 +165,8 @@ void AggregatePRLHashTable::fetchAggregates(Vector &hash, DataChunk &groups, Dat
         groups.setCardinality(0);
         return;
     }
-    // copy the agg results value in the result chunk
-    for (id_t i = 0;i<functions_.size();++i)
-        AggregateFunction::finalizeStates(layout_, addresses, result, matchedGroups);
+    // copy the agg results value in the result chunk (finalizeStates already iterates all aggregate functions via layout)
+    AggregateFunction::finalizeStates(layout_, addresses, result, matchedGroups);
 
 }
 
@@ -203,8 +198,8 @@ void AggregatePRLHashTable::fetchAggregates(DataChunk &result) {
     auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
     addrPtr[0] = payloadPtrs_.back();
 
-    for (id_t i = 0;i<functions_.size();++i)
-        AggregateFunction::finalizeStates(layout_, addresses, result, 1);
+    // finalizeStates already iterates all aggregate functions via layout
+    AggregateFunction::finalizeStates(layout_, addresses, result, 1);
 
     result.setCardinality(1);
     // transform the vectors in the results as constant vector
@@ -261,4 +256,11 @@ idx_t AggregatePRLHashTable::scanWithAggregates(idx_t offset, DataChunk &groups,
     return toScan;
 }
 
+vector<LogicalType> AggregatePRLHashTable::getPayloadsTypes() {
+    vector<LogicalType> types;
+    for (auto& func: functions_) {
+        types.push_back(func->result_);
+    }
+    return types;
+}
 }

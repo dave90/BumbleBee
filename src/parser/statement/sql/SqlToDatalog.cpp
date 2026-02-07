@@ -395,75 +395,40 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
         rules_vector_t& additionalRules,  string& errorMessage) {
 
     auto& select = statement.getSelect();
-    vector<Atom> body;
-    BB_ASSERT(rule.getHead().size() == 1);
-    // head atom of the last rule that contains the aggregation predicate
     auto& headLastRule =  rule.getHead()[0];
-
-    if (!groupVars.empty()) {
-        // generate aggregation rule
-        auto terms = headLastRule.getTerms();
-        vector<Term> headGroupTerms;
-        for (idx_t i=0;i<terms.size();++i) {
-            if ( groupVars.contains( terms[i].getVariable())) {
-                headGroupTerms.push_back(terms[i]);
-                continue;
-            }
-            // is not a group var so set as anonymous
-            terms[i] = Term::createVariable(Term::anonymous_variable);
-        }
-        // Atom groupAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
-        vector<Atom> groupBodyAtoms;
-        for (auto& atom:rule.getBody())
-            groupBodyAtoms.push_back(atom.clone());
-        auto newPredName = query.generatePredicateName();
-        auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, newPredName.c_str(), headGroupTerms.size());
-        newPred->setDistinct(); // set distinct to decrease the scan
-        Atom head = Atom::createClassicalAtom(newPred, std::move(headGroupTerms));
-        Rule newRule(head.clone(), groupBodyAtoms);
-        additionalRules.push_back(std::move(newRule));
-        body.push_back(std::move(head));
-    }
-    // collect all the aggregation variables
-    std::unordered_set<string> allAggVars;
-    for (auto& [_, vars]:aggVars) {
-        allAggVars.insert(vars.begin(), vars.end());
-    }
-
-    // now generate the aggregation atoms
-    for (auto& [agg, vars]:aggVars) {
-        auto terms = headLastRule.getTerms();
-        vector<Term> aggTerms;
-        std::unordered_set<string> aggTermVars;
-        // first add in agg terms the aggregation column (must be the first term)
+    vector<Term> assignmentTerms;
+    vector<AggregateFunctionType> aggFunctions;
+    vector<Term> aggTerms;
+    for (auto& [agg, vars]: aggVars) {
+        assignmentTerms.push_back(Term::createVariable(select.getItems()[agg].getAlias()));
+        aggFunctions.push_back(select.getAggFunctions()[agg]);
+        // aggregation term is the first var
         aggTerms.push_back(Term::createVariable(vars[0].c_str()));
-        aggTermVars.insert(vars[0].c_str());
+    }
+    // let's add the ID to avoid the distinct calculation
+    auto t = Term::createVariable(query.ID_VAR);
+    aggTerms.push_back(std::move(t));
 
-        // let's insert all the agg vars to optimize the aggregation aux
-        for (idx_t i=0;i<terms.size();++i) {
-            auto var = terms[i].getVariable();
-            if ( groupVars.contains( var) || allAggVars.contains(var)  ) {
-                if (!aggTermVars.contains(var)) {
-                    aggTerms.push_back(terms[i]);
-                    aggTermVars.insert(var);
-                }
-                continue;
-            }
-            // is not a group or agg var so set as anonymous
-            auto t = Term::createVariable(Term::anonymous_variable);
-            terms[i] = std::move(t);
-        }
-        // add the ID to avoid distinct calculation
-        auto t = Term::createVariable(query.ID_VAR);
-        aggTerms.push_back(std::move(t));
-        Term lt,ut;
-        lt = Term::createVariable(select.getItems()[agg].getAlias());
-        auto aggInternalAtom = Atom::createClassicalAtom(headLastRule.getPredicate(), std::move(terms));
-        vector<Atom> aggBodyAtoms;
-        for (auto& atom:rule.getBody())
-            aggBodyAtoms.push_back(atom.clone());
-        Atom aggregateAtom = Atom::createAggregateAtom(select.getAggFunctions()[agg],ASSIGNMENT, NONE_OP,lt,ut, std::move(aggTerms), std::move(aggBodyAtoms) );
-        body.push_back(std::move(aggregateAtom));
+    vector<Atom> aggBodyAtoms;
+    for (auto& atom:rule.getBody())
+        aggBodyAtoms.push_back(atom.clone());
+
+    vector<Term> aggGroupTerms;
+    for (auto& var: groupVars)
+        aggGroupTerms.push_back(Term::createVariable(var.c_str()));
+
+    BB_ASSERT(aggFunctions.size() > 0);
+    BB_ASSERT(aggFunctions.size() == assignmentTerms.size());
+
+    Atom aggregateAtom ;
+    if (aggFunctions.size() > 1)
+        aggregateAtom = Atom::createMultiAggregateAtom(std::move(aggFunctions), std::move(assignmentTerms),
+        std::move(aggTerms), std::move(aggBodyAtoms), std::move(aggGroupTerms));
+    else  {
+        Term ug;
+        aggregateAtom = Atom::createAggregateAtom(aggFunctions[0], Binop::EQUAL, Binop::NONE_OP,
+            assignmentTerms[0], ug, std::move(aggTerms),
+            std::move(aggBodyAtoms), std::move(aggGroupTerms));
     }
 
     // calculate the terms in the head
@@ -482,12 +447,12 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
         }
         ++i;
     }
-
-
     auto newPred = query.context_.defaultSchema_.createPredicate(&query.context_, headPredicateName.c_str(), headTerms.size());
     Atom head = Atom::createClassicalAtom(newPred, std::move(headTerms));
-    Rule newRule(head, body);
+
+    Rule newRule(head, aggregateAtom);
     return newRule;
+
 }
 
 

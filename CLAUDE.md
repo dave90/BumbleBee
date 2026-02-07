@@ -10,14 +10,12 @@ BumbleBee DB is a high-performance Datalog-based analytics engine written in C++
 
 ```bash
 # Release build
-mkdir -p cmake-build-release && cd cmake-build-release
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
+cmake --build cmake-build-release --target BumbleBee -j 8 --verbose
+./cmake-build-release/BumbleBee --help
 
 # Debug build (includes AddressSanitizer)
-mkdir -p cmake-build-debug && cd cmake-build-debug
-cmake -DCMAKE_BUILD_TYPE=Debug ..
-cmake --build .
+cmake --build cmake-build-debug --target BumbleBee -j 8 --verbose
+./cmake-build-debug/BumbleBee --help
 ```
 
 ## Running the CLI
@@ -48,15 +46,6 @@ cd test/e2e && pytest test.py
 cd test/e2e && python gen_asp_test.py
 ```
 
-## Benchmarks
-
-```bash
-cd benchmarks
-python benchmark_runner.py configs/bumblebee_sql.json   # SQL benchmarks
-python benchmark_runner.py configs/bumblebee_asp.json   # ASP benchmarks
-python benchmark_runner.py configs/clingo_asp.json      # Clingo baseline
-```
-
 ## Parser Regeneration
 
 When modifying `aspcore2.l` or `aspcore2.y`:
@@ -66,21 +55,10 @@ bison -y -d -o src/parser/aspcore2_parser.c src/parser/aspcore2.y
 bison -y -o src/parser/aspcore2_parser.hpp src/parser/aspcore2.y
 ```
 
-## Profiling
-
-Enable profiling by setting `PROFILING` to 1 in `src/include/bumblebee/common/Constants.h`, rebuild, then run with `-r` flag.
-
-## Architecture
-
-### Execution Pipeline
-
-1. **Parsing** (`parser/`): Input (Datalog or SQL) is parsed via Flex/Bison into an internal program structure. SQL is converted to Datalog rules.
-
-2. **Planning** (`planner/`): Rules are organized into a DAG, optimized (filter pushdown, atom reordering), then converted to physical rules. A single logical rule may produce multiple physical stages (e.g., build/probe for joins).
-
-3. **Scheduling** (`parallel/`): Physical rules are split into tasks by partition and queued. The `Scheduler` creates tasks; `TaskExecutor` runs them across threads.
-
-4. **Execution** (`execution/`): Push-based operators process `DataChunk` containers with columnar `Vector` data. Operators return `FINISHED`, `NEED_MORE_INPUT`, or `HAS_MORE_OUTPUT`.
+Or
+```bash
+./build_parser.sh
+```
 
 ### Key Data Structures
 
@@ -96,7 +74,7 @@ Enable profiling by setting `PROFILING` to 1 in `src/include/bumblebee/common/Co
 - `src/parser/` - Flex/Bison grammar and AST construction
 - `src/planner/` - Logical DAG, rewriters, physical plan generation
 - `src/parallel/` - Task scheduling and thread pool execution
-- `src/storage/` - Hash tables for joins and aggregation
+- `src/storage/` - Storage management (block manager, buffer manager, statistics, etc.)
 
 ### Recursion Handling
 
@@ -104,15 +82,9 @@ Recursive rules are processed iteratively until a fixed-point is reached. Each i
 
 ## Code Conventions
 
-### Common Utilities
-- String parsing utilities belong in `StringUtils` (`src/common/StringUtils.cpp`) - avoid duplicating parsing functions across readers
-- Shared constants should go in common headers, not be redefined in multiple files
-
 ### SQL to Datalog Conversion (`SqlToDatalog.cpp`)
 - SQL queries are translated to Datalog rules via `SqlToDatalog::sqlToDatalog()`
 - Variable names follow pattern `COLUMN.#p_N` where N is the table alias index
-- The `columns_mapping` named parameter maps Datalog variable names to actual column names (format: `VAR1:COL1;VAR2:COL2`)
-- First FROM table can use external atom directly; subsequent tables generate auxiliary rules
 
 ### External Atoms
 - Format: `&func_name(input_values;named_param1=val1,named_param2=val2;term1,term2,...)`
@@ -122,68 +94,97 @@ Recursive rules are processed iteratively until a fixed-point is reached. Each i
 ### Anonymous Variables
 - The underscore `_` represents anonymous/don't-care variables
 - The optimizer may introduce `_` when rewriting rules to remove unused variables
-- File readers and column mapping functions must handle `_` specially (skip validation, use placeholder types)
 
 ### Aggregation
 - `#ID` variable used in aggregates for duplicate handling (avoids distinct calculation)
 - `&gen_id` atom generates unique IDs when needed
-- Aggregate atoms format: `VAR = #agg{agg_terms:agg_body_atoms}`
 
-#### Aggregate Semantics
-- **Aggregate terms** (`agg_terms`): specifies what to aggregate, NOT the groups
-  - `#sum{X:body}` - sum the values of X
-  - `#count{X,Y,#ID:body}` - count tuples (with #ID for uniqueness)
+#### Implicit Groups (default)
+- Format: `VAR = #agg{agg_terms:agg_body_atoms}`
 - **Groups**: determined by variables **shared** between rule body and aggregate body
 
 Example:
 ```datalog
-result(X,Y,s) :- a(X,Y), s = #sum{Z:b(X,Y,Z)}.
+result(X,Y,S) :- a(X,Y), S = #sum{Z:b(X,Y,Z)}.
 ```
 - Rule body: `a(X,Y)` → variables X, Y
 - Aggregate body: `b(X,Y,Z)` → variables X, Y, Z
 - Shared variables: X, Y → **these are the groups**
 - Z is local to aggregate, S is the sum of Z values
 
+#### Explicit Groups
+- Format: `VAR = #agg{agg_terms;group_terms:agg_body_atoms}`
+- **Groups**: explicitly specified after semicolon, not inferred from shared variables
+- Useful when there are no prior atoms in the rule body (aggregate is the only source)
+
+Example:
+```datalog
+c(Y,K) :- K = #sum{X;Y:a(Y,X)}.
+```
+- No prior body atoms - groups must be explicit
+- `Y` is the explicit group variable
+- `X` is summed for each distinct `Y`
+
+Cross product example:
+```datalog
+c(V,Y,K) :- b(V), K = #sum{X;Y:a(Y,X)}.
+```
+- `b(V)` provides input rows
+- Aggregate scans all groups from `a(Y,X)`
+- Output is cross product: each `V` combined with each `(Y,K)` pair
+
 ## AI Development Workflow
 
 ### Before Making Changes
 - **Always describe the plan first**: Before modifying any code, provide a clear description of what changes will be made and why. Wait for user approval before proceeding.
+Before making any changes to the code, first provide a concise, high-level plan outlining:
+
+- What will be changed
+- Why those changes are needed
+- How the work will be broken down into phases or steps. 
+- Phases of work, where each phase can include more detailed notes about the specific implementations to be carried out
+
+If there are any uncertainties, assumptions, or missing details, list them at the end as open questions.
+
+Do not modify any code until the user has reviewed and approved the plan.
 
 ### After Making Changes
 - **Compile in debug mode** to verify the code compiles correctly:
-  ```bash
-  cd cmake-build-debug && cmake --build .
-  ```
 - Fix any compilation errors before proceeding.
 
 ### Testing Changes
-- **Write test programs in `test.1`** (or `test.2`, `test.3`, etc.) at the project root
-- **Run the debug build** to test:
+- Extend (if exist) the unit testing class to cover the new implementation in folder `test/unit/`
+- **Create e2e test files** in the appropriate folder:
+  - ASP tests: `test/e2e/files/asp/input/<category>/<name>`
+  - SQL tests: `test/e2e/files/sql/input/<name>.sql`
+- **Create expected output files** in the corresponding expected folder:
+  - ASP: `test/e2e/files/asp/expected/<category>/<name>`
+  - SQL: `test/e2e/files/sql/expected/<name>.csv`
+- **Run and verify** the test produces correct output:
   ```bash
-  ./cmake-build-debug/BumbleBee -i test.1
+  ./cmake-build-debug/BumbleBee -i test/e2e/files/asp/input/<category>/<name> -a
   ```
-- **Use `-p -r` flags** for detailed output:
-  ```bash
-  ./cmake-build-debug/BumbleBee -i test.1 -p -r
-  ```
+- **Run all the e2e test**:
+  -  `cd test/e2e && pytest test.py`
+  -  `cd test/e2e && pytest test.py -k "test_sql"` to run only the sql tests
+  -  `cd test/e2e && pytest test.py -k "test_asp"` to run only the asp tests
+- **Use `-p -r` flags** for detailed debugging:
   - `-p`: Print debug logs
   - `-r`: Print profiling/timing data for each rule
-- **Use `--print-program`** to see the generated Datalog rules:
-  ```bash
-  ./cmake-build-debug/BumbleBee -i test.1 --print-program
-  ```
+- **Use `--print-program`** to see generated Datalog rules
+- **Test edge cases**: Include tests for large cardinality (>5000 rows to test multiple batches), cross products, filters, and various combinations and use python code to help you with the creation of expected output.
 
 ### Performance Testing
 - After verifying correctness in debug, build and test in release:
   ```bash
   cd cmake-build-release && cmake --build .
-  time ./cmake-build-release/BumbleBee -i test.1
+  time ./cmake-build-release/BumbleBee -i test/e2e/files/asp/input/<category>/<name>
   ```
 
 ## Debugging Tips
 
 - Use `--print-program` flag to see generated Datalog rules before execution
 - Use `-p` flag to enable debug logging
-- Debug build includes AddressSanitizer - assertion failures show as `SIGABRT`
-- Check `Testing/Temporary/LastTest.log` for detailed test failure output
-- Run single test with verbose: `ctest -R <test_name> --output-on-failure -V`
+- When investigating bugs or unexpected behavior, use LOG_DEBUG statements to log relevant data during execution. This function follows the same formatting rules as printf, so you can use formatted strings to include variable values and contextual information. 
+  - These logs are meant only for debugging purposes.
+  - Once the issue is resolved, remove any LOG_DEBUG statements that were added during troubleshooting to keep the codebase clean.

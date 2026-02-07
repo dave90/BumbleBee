@@ -18,9 +18,6 @@
  */
 #include "bumblebee/execution/atom/aggregate/PhysicalPartitionedAggHT.hpp"
 
-#include "bumblebee/common/Log.hpp"
-
-
 namespace bumblebee{
 class PartitionedAggHTJoinAtomState : public PhysicalAtomState {
 public:
@@ -30,8 +27,10 @@ public:
     distinct_ht_ptr_t ht_;
     // thread-local aggregate HT for total aggregations (no groups, no distinct)
     agg_ht_ptr_t localAggHt_;
-    // scan offset for scan mode (explicit groups)
+    // scan offset for scan mode (explicit groups or scan mode)
     idx_t scanOffset_{0};
+    // data to scan (for scan mode)
+    int scanCount_{0};
     // cache index within current cached scan results
     idx_t cacheIdx_{0};
     // cached groups from scan
@@ -43,6 +42,33 @@ public:
 };
 
 
+
+class GlobalAggSourceState : public GlobalPhysicalAtomState {
+public:
+    GlobalAggSourceState(AggregatePRLHashTable* aht): aht_(aht),
+        totalEntries_(aht ? aht->getSize() : 0) {}
+
+    bool getNextScanRange(idx_t& start, idx_t& count) {
+        lock_guard lock(mutex_);
+        if (currentOffset_ >= totalEntries_) return false;
+        start = currentOffset_;
+        count = minValue(static_cast<idx_t>(MORSEL_SIZE),
+                         totalEntries_ - currentOffset_);
+        currentOffset_ += count;
+        return true;
+    }
+
+    idx_t estimateMaxThreads() const {
+        if (totalEntries_ == 0) return 1;
+        return totalEntries_ / MORSEL_SIZE + 1;
+    }
+
+private:
+    AggregatePRLHashTable* aht_;
+    std::mutex mutex_;
+    idx_t totalEntries_;
+    idx_t currentOffset_{0};
+};
 
 class GlobalAggHTJoinAtomState : public GlobalPhysicalAtomState {
 public:
@@ -103,9 +129,30 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
                                     scanMode_(scanMode){
     for (auto& i: groupCols_)
         groupColsTypes_.push_back(types_[i]);
+    // cache payload types to avoid repeated allocation in probe path
+    cachedPayloadTypes_ = aht_->getPayloadsTypes();
+}
+
+PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
+    const vector<LogicalType> &types, vector<idx_t> &dcCols,
+    const vector<idx_t> &group_cols, const vector<idx_t> &payload_cols,
+    AggregatePRLHashTable *aht): PhysicalAtom(types),
+                                context_(context), aht_(aht), pt_(nullptr),
+                                groupCols_(group_cols), payloadCols_(payload_cols),
+                                type_(SOURCE) {
+    dcCols_ = dcCols;
+    for (auto& i: groupCols_)
+        groupColsTypes_.push_back(types_[i]);
+    cachedPayloadTypes_ = aht_->getPayloadsTypes();
 }
 
 idx_t PhysicalPartitionedAggHT::getMaxThreads() const {
+    if (type_ == SOURCE) {
+        BB_ASSERT(aht_);
+        GlobalAggSourceState gstate(aht_);
+        return gstate.estimateMaxThreads();
+    }
+    // existing COLLECT logic
     BB_ASSERT(pt_->existPartitionedAggHashTable());
     auto& pht = pt_->getPartitionedAggHashTable();
     return pht->getNumPartitionsNotEmpty(); // max parallelism 1 partition x thread
@@ -113,6 +160,10 @@ idx_t PhysicalPartitionedAggHT::getMaxThreads() const {
 
 bool PhysicalPartitionedAggHT::isSink() const {
     return type_ == COLLECT;
+}
+
+bool PhysicalPartitionedAggHT::isSource() const {
+    return type_ == SOURCE;
 }
 
 string PhysicalPartitionedAggHT::getName() const {
@@ -147,6 +198,11 @@ pstate_ptr_t PhysicalPartitionedAggHT::getState() const {
 }
 
 gpstate_ptr_t PhysicalPartitionedAggHT::getGlobalState() const {
+    if (type_ == SOURCE) {
+        BB_ASSERT(aht_);
+        return gpstate_ptr_t(new GlobalAggSourceState(aht_));
+    }
+    // existing COLLECT logic
     auto& paht = pt_->getPartitionedAggHashTable();
     BB_ASSERT(paht);
     BB_ASSERT(!paht->isReady()); // during build or collect we do not expect is ready
@@ -222,24 +278,24 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
     }
 
     // Standard probe mode
-    BB_ASSERT(payloadCols_.size() == 1);
     BB_ASSERT(dcCols_.size() == payloadCols_.size());
 
     // groupCols contains the group columns to select in the input chunk
     // payload cols contains one index and is the payload to extract
     // dcCols contains the result column where to put the result
 
-    idx_t payloadInternalCol = payloadCols_[0];
 
     // used for total aggregations (no groups)
     if (groupCols_.empty()) {
         // no group to fetch, call directly the fetchAggregate with the result chunk
-        Vector result(chunk.data_[dcCols_[0]].getLogicalType(), 1);
-        aht_->fetchAggregates(result, payloadInternalCol);
-        BB_ASSERT(result.getVectorType() == VectorType::CONSTANT_VECTOR);
-        // reference in the return chunk
         chunk.reference(input);
-        chunk.data_[dcCols_[0]].reference(result);
+        for (idx_t i = 0; i < payloadCols_.size(); ++i) {
+            Vector result(chunk.data_[dcCols_[i]].getLogicalType(), 1);
+            aht_->fetchAggregates(result, payloadCols_[i]);
+            BB_ASSERT(result.getVectorType() == VectorType::CONSTANT_VECTOR);
+            // reference in the return chunk
+            chunk.data_[dcCols_[i]].reference(result);
+        }
 
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
@@ -257,24 +313,23 @@ AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChu
 
     Vector hash(LogicalTypeId::HASH, group.getSize());
     group.hash(hash);
-    Vector result(dcColsType_[0]);
+
+    DataChunk result;
+    result.initialize(cachedPayloadTypes_);
 
     SelectionVector sel(group.getSize());
-    aht_->fetchAggregates(hash, group, result, payloadInternalCol, sel);
-
+    aht_->fetchAggregates(hash, group, result, sel);
     if (group.getSize() == 0) {
         chunk.reset();
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }
-
-    // reference in the return chunk
-    BB_ASSERT(chunk.columnCount() > dcCols_[0]);
     chunk.reference(input);
     if (group.getSize() < chunk.getSize())
         chunk.slice(sel, group.getSize());
-
-    chunk.data_[dcCols_[0]].reference(result);
+    for (idx_t i = 0; i < payloadCols_.size(); ++i) {
+        chunk.data_[dcCols_[i]].reference(result.data_[payloadCols_[i]]);
+    }
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;
 }
@@ -286,7 +341,7 @@ AtomResultType PhysicalPartitionedAggHT::executeScanMode(ThreadContext &context,
     // Initialize cache if needed
     if (!cstate.cacheInitialized_) {
         cstate.cacheGroups_.initialize(groupColsTypes_);
-        cstate.cacheAggResults_.initialize(dcColsType_);
+        cstate.cacheAggResults_.initialize(cachedPayloadTypes_);
         cstate.cacheInitialized_ = true;
     }
 
@@ -309,11 +364,8 @@ AtomResultType PhysicalPartitionedAggHT::executeScanMode(ThreadContext &context,
 
         // Scan more from hash table
         cstate.cacheIdx_ = 0;
-        BB_ASSERT(payloadCols_.size() == 1);
-        idx_t payloadInternalCol = payloadCols_[0];
-
-        idx_t scanned = aht_->scanWithAggregates(cstate.scanOffset_, cstate.cacheGroups_,
-            cstate.cacheAggResults_.data_[0], payloadInternalCol);
+        cstate.cacheAggResults_.setCardinality(0);
+        idx_t scanned = aht_->scanWithAggregates(cstate.scanOffset_, cstate.cacheGroups_, cstate.cacheAggResults_);
         cstate.scanOffset_ += scanned;
         cstate.cacheAggResults_.setCardinality(scanned);
 
@@ -340,9 +392,10 @@ AtomResultType PhysicalPartitionedAggHT::executeScanMode(ThreadContext &context,
         }
 
         // Set current cached aggregate result as constant
-        auto aggVal = cstate.cacheAggResults_.getValue(0, cstate.cacheIdx_);
-        chunk.data_[dcCols_[0]].reference(aggVal);
-
+        for (idx_t i = 0; i < payloadCols_.size(); ++i) {
+            auto aggVal = cstate.cacheAggResults_.getValue(payloadCols_[i], cstate.cacheIdx_);
+            chunk.data_[dcCols_[i]].reference(aggVal);
+        }
         cstate.cacheIdx_++;
     } else {
         // No prior input: output all cached groups and aggregates directly
@@ -355,11 +408,69 @@ AtomResultType PhysicalPartitionedAggHT::executeScanMode(ThreadContext &context,
         }
 
         // Reference aggregate results directly
-        chunk.data_[dcCols_[0]].reference(cstate.cacheAggResults_.data_[0]);
+        for (idx_t i = 0; i < payloadCols_.size(); ++i) {
+            chunk.data_[dcCols_[i]].reference(cstate.cacheAggResults_.data_[payloadCols_[i]]);
+        }
 
         // Mark all cache as consumed
         cstate.cacheIdx_ = toOutput;
     }
+
+    context.profiler_.endPhysicalAtom(chunk);
+    return AtomResultType::HAVE_MORE_OUTPUT;
+}
+
+AtomResultType PhysicalPartitionedAggHT::getData(ThreadContext &context, DataChunk &chunk,
+    PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const {
+    BB_ASSERT(type_ == SOURCE);
+    context.profiler_.startPhysicalAtom(this);
+
+    auto& cstate = (PartitionedAggHTJoinAtomState&)state;
+    auto& cgstate = (GlobalAggSourceState&)gstate;
+
+    // Initialize cache DataChunks (persist across calls in local state)
+    if (!cstate.cacheInitialized_) {
+        cstate.cacheGroups_.initialize(groupColsTypes_);
+        cstate.cacheAggResults_.initialize(cachedPayloadTypes_);
+        cstate.cacheInitialized_ = true;
+
+        idx_t start, count;
+        if (!cgstate.getNextScanRange(start, count)) {
+            chunk.setCardinality(0);
+            context.profiler_.endPhysicalAtom(chunk);
+            return AtomResultType::FINISHED;
+        }
+        cstate.scanOffset_ = start;
+        cstate.scanCount_ = (int)count;
+    }
+
+    if (cstate.scanCount_ <= 0) {
+        chunk.setCardinality(0);
+        context.profiler_.endPhysicalAtom(chunk);
+        return AtomResultType::FINISHED;
+    }
+
+    // Scan aggregate HT for this range
+    idx_t scanned = aht_->scanWithAggregates(cstate.scanOffset_, cstate.cacheGroups_,
+                                              cstate.cacheAggResults_, STANDARD_VECTOR_SIZE);
+    cstate.scanOffset_ += scanned;
+    cstate.scanCount_ -= scanned;
+
+    if (scanned == 0) {
+        chunk.setCardinality(0);
+        context.profiler_.endPhysicalAtom(chunk);
+        return AtomResultType::FINISHED;
+    }
+
+    // Build output chunk: reference groups and aggregate results in target positions
+    chunk.setCardinality(scanned);
+    for (idx_t i = 0; i < groupCols_.size(); ++i)
+        chunk.data_[groupCols_[i]].reference(cstate.cacheGroups_.data_[i]);
+    for (idx_t i = 0; i < payloadCols_.size(); ++i)
+        chunk.data_[dcCols_[i]].reference(cstate.cacheAggResults_.data_[payloadCols_[i]]);
+
+    cstate.cacheGroups_.reset();
+    cstate.cacheAggResults_.reset();
 
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::HAVE_MORE_OUTPUT;

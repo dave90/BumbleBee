@@ -100,7 +100,6 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
                 else
                     sterms.insert((t.getVariable()));
             }
-            auto& payload = a.getAggTerms()[0]; // payload is the first term
 
             // now check if is present in the aggInfos ( avoiding creating duplicates aggregates tables)
             bool found = false;
@@ -113,7 +112,10 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
                     // we can reuse this aggregate
                     aggInfosIndex.push_back(j);
                     found = true;
-                    info.payloadMap_[payload.getVariable()].insert(a.getAggregateFunctionName());
+                    // insert all the payloads
+                    auto funcNames = a.getAggregateFunctionNames();
+                    for (idx_t p=0;p<a.getNumAggregateFunctions();++p)
+                        info.payloadMap_[a.getAggTerms()[p].getVariable()].insert(funcNames[p]);
                 }
             }
             if (found) continue;
@@ -121,7 +123,10 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
             aggInfosIndex.push_back(aggInfos.size());
             aggInfos.emplace_back(a.getAggsAtoms(), groupVars, sterms, distinct);
             // add the information of function and payload
-            aggInfos.back().payloadMap_[payload.getVariable()].insert(a.getAggregateFunctionName());
+            // for (auto& func: a.getAggregateFunctionNames())
+            auto funcNames = a.getAggregateFunctionNames();
+            for (idx_t p=0;p<funcNames.size();++p)
+                aggInfos.back().payloadMap_[a.getAggTerms()[p].getVariable()].insert(funcNames[p]);
         }
     }
 

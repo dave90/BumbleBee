@@ -1,0 +1,2 @@
+% Test 19: Multi-aggregate with empty relation
+c(Min,Sum) :- (Min,Sum) = #[min,sum]{Y,Y:a(X,Y)}.

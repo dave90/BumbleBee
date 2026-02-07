@@ -59,7 +59,10 @@ public:
     Atom() = default;
     Atom(Predicate* predicate, terms_vector_t &&terms, AtomType type);
     Atom(terms_vector_t &&terms, Binop binop);
+    // Single aggregate constructor (with guards)
     Atom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms, terms_vector_t&& aggGroupTerms = {});
+    // Multi-aggregate constructor: assignment terms, aggregate terms, body atoms, explicit groups
+    Atom(vector<AggregateFunctionType>&& aggFunctions, terms_vector_t&& assignTerms, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms, terms_vector_t&& aggGroupTerms = {});
     Atom(AtomType type, bool negative);
     Atom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& terms, bool negative = false);
 
@@ -120,6 +123,11 @@ public:
     vector<PhysicalType> getTermsPhysicalTypes();
     void replaceVariable(const string& var, const string& newVar);
     string getAggregateFunctionName();
+    vector<string> getAggregateFunctionNames();
+    vector<AggregateFunctionType>& getAggregateFunctions();
+    idx_t getNumAggregateFunctions() const;
+    bool isMultiAggregate() const;
+    terms_vector_t getAssignmentTerms();
 
     string getExternalFunctionName();
     std::unordered_map<string, Value>& getNamedParamters();
@@ -146,7 +154,7 @@ private:
     bool ground_{false};
 
     // Aggregate fields
-    AggregateFunctionType aggregate_{NONE};
+    vector<AggregateFunctionType> aggregates_;
     // Atoms to aggregate
     vector<Atom> aggAtoms_;
     // Aggregation terms
@@ -163,7 +171,10 @@ public:
     // static functions
     static Atom createClassicalAtom(Predicate* p, terms_vector_t&& t);
     static Atom createBuiltinAtom(terms_vector_t&& t, Binop binop);
+    // Single aggregate factory (with guards)
     static Atom createAggregateAtom(AggregateFunctionType aggFunction, Binop firstBinop, Binop secondBinop, Term& lowerGuard, Term& upperGuard, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms, terms_vector_t&& aggGroupTerms = {});
+    // Multi-aggregate factory
+    static Atom createMultiAggregateAtom(vector<AggregateFunctionType>&& aggFunctions, terms_vector_t&& assignTerms, terms_vector_t&& aggTerms, vector<Atom>&& aggAtoms, terms_vector_t&& aggGroupTerms = {});
     static string getAggFunction(AggregateFunctionType agg);
     static AggregateFunctionType getAggFunction(const char* agg);
     static Atom createExternalAtom(std::unordered_map<string, Value> & namedParams, vector<Value>& inputValues,string& externalFunctionName, terms_vector_t&& t);

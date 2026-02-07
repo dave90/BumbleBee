@@ -43,3 +43,5 @@ test/unit/bumblebee/function/data/output
 test/e2e/files/csv/mini_hits.csv
 test/e2e/files/csv/tpch/lineitem.csv
 test.*
+plan.md
+prompt.*

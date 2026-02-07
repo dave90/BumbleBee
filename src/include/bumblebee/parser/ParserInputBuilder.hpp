@@ -93,6 +93,8 @@ public:
 	virtual void onAggregateElement();
 	virtual void onAggregateGroupSemicolon();
 	virtual void onAggregate( bool naf = false );
+	virtual void onMultiAssignVariable(char* var);
+	virtual void onMultiAggregateAssignment();
 
 	virtual void onExtAtom(bool naf = false);
 	virtual void onSemicolon();
@@ -151,12 +153,13 @@ protected:
 	Binop secondBinop_{NONE_OP};
 	Binop aggBinop_{NONE_OP};
 	Binop aggSecondBinop_{NONE_OP};
-	AggregateFunctionType aggregateFunction_{NONE};
+	vector<AggregateFunctionType> aggregateFunctions_;
 
 	vector<Term> terms_parsered;
 	vector<Term> guard_terms;
 	vector<Term> agg_terms_parsered;
 	vector<Term> agg_group_terms_parsered;
+	vector<Term> multi_assign_terms_;
 	vector<Atom> agg_atoms;
 	vector<Atom> builtin_atoms;
 	Atom currentAtom{};

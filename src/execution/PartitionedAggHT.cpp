@@ -21,6 +21,7 @@
 
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/Helper.hpp"
+#include "bumblebee/common/Profiler.hpp"
 
 namespace bumblebee{
 PartitionedAggHT::PartitionedAggHT(ClientContext& context, const vector<idx_t>& groupCols,const vector<idx_t> &payloadCols,
@@ -80,6 +81,7 @@ void PartitionedAggHT::initialize(DataChunk &chunk) {
 }
 
 void PartitionedAggHT::addChunk(DataChunk &chunk) {
+
     Vector hash(LogicalTypeId::HASH, chunk.getSize());
     chunk.hash(hash);
 

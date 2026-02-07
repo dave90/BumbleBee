@@ -167,10 +167,11 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
     selectedCols_.emplace_back(); // push empty array as builtin does not have predicates
 }
 
-idx_t getAggPayloadIndex(Atom &atom) {
-    BB_ASSERT(atom.getAggTerms().size() > 0);
-    BB_ASSERT(atom.getAggTerms()[0].getType() == VARIABLE);
-    auto &payloadTerm = atom.getAggTerms()[0];
+idx_t getAggPayloadIndex(Atom &atom, idx_t aggIndex) {
+    BB_ASSERT(!atom.getAggTerms().empty());
+    BB_ASSERT(atom.getAggTerms().size() > aggIndex);
+    auto &payloadTerm = atom.getAggTerms()[aggIndex];
+    BB_ASSERT(payloadTerm.getType() == VARIABLE);
     for (idx_t i = 0;i<atom.getAggsAtoms()[0].getTerms().size();i++) {
         auto &iterm = atom.getAggsAtoms()[0].getTerms()[i];
         BB_ASSERT(iterm.getType() == VARIABLE);
@@ -180,6 +181,24 @@ idx_t getAggPayloadIndex(Atom &atom) {
     }
     ErrorHandler::errorGeneric("Generic error with aggregates, payload not found");
     return 0;
+}
+
+vector<idx_t> findPayloadIndices(Atom& atom, PredicateTables* pt) {
+    vector<idx_t> payloads;
+    auto aggInfo = Predicate::parseAggregateInternalPredicate(pt->predicate_->getName());
+    auto funcNames = atom.getAggregateFunctionNames();
+    for (idx_t f = 0; f < funcNames.size(); ++f) {
+        idx_t internalPayloadIndex = getAggPayloadIndex(atom, f);
+        bool found = false;
+        for (idx_t i = 0; i < aggInfo.funcNames_.size() && !found; i++) {
+            if (aggInfo.payloads_[i] == internalPayloadIndex && aggInfo.funcNames_[i] == funcNames[f]) {
+                found = true;
+                payloads.push_back(i);
+            }
+        }
+        BB_ASSERT(found);
+    }
+    return payloads;
 }
 
 
@@ -193,7 +212,7 @@ void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
 
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
 
-    // Handle explicit group variables (terms_[2..])
+    // Handle explicit group variables
     // Their types come from the single aggregate body predicate (always classical after AggregatesRewriter)
     if (atom.hasExplicitGroups()) {
         auto& aggBodyAtom = atom.getAggsAtoms()[0];
@@ -214,19 +233,23 @@ void PhysicalOptimizer::findColsAndTypesAggregateAtom(Atom &atom) {
         }
     }
 
-    // now you need to insert the result type of the agg
-    // payload of agg is the first term
-    auto payloadIndex = getAggPayloadIndex(atom);
-    BB_ASSERT(pt->getTypes().size() > payloadIndex);
-    LogicalType payloadType = pt->getTypes()[payloadIndex];
-    BB_ASSERT(payloadType != PhysicalType::UNKNOWN);
-    auto function = context_.functionRegister_.getFunction(atom.getAggregateFunctionName(), {payloadType});
-    LogicalType returnType = function->result_;
-    auto& term = atom.getTerms()[0]; // assignment variable
-    typesMap_[term.getVariable()] = returnType;
-    cols_.push_back({colsMap_.size()}); // where to put the result of the agg
-    colsMap_[term.getVariable()] = colsMap_.size();
-    selectedCols_.emplace_back(); // push empty array as aggregate does not have predicates to select
+    cols_.emplace_back();
+    auto funcNames = atom.getAggregateFunctionNames();
+    auto assignmentTerms = atom.getAssignmentTerms();
+    for (idx_t i = 0; i < funcNames.size(); ++i) {
+        // now you need to insert the result type of the agg
+        auto payloadIndex = getAggPayloadIndex(atom, i);
+        BB_ASSERT(pt->getTypes().size() > payloadIndex);
+        LogicalType payloadType = pt->getTypes()[payloadIndex];
+        BB_ASSERT(payloadType != PhysicalType::UNKNOWN);
+        auto function = context_.functionRegister_.getFunction(funcNames[i], {payloadType});
+        LogicalType returnType = function->result_;
+        auto& term = assignmentTerms[i]; // assignment variable
+        typesMap_[term.getVariable()] = returnType;
+        cols_.back().push_back(colsMap_.size()); // where to put the result of the agg
+        colsMap_[term.getVariable()] = colsMap_.size();
+        selectedCols_.emplace_back(); // push empty array as aggregate does not have predicates to select
+    }
 
 }
 
@@ -347,38 +370,11 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
 void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, patom_ptr_vector_t &patoms) {
 
     vector<idx_t> selCols; // empty selCols
-    BB_ASSERT(atom.getAggsAtoms().size() > 0);
+    BB_ASSERT(atom.getAggsAtoms().size() == 1);
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
-    AggregatePRLHashTable *aht;
-    idx_t internalPayloadIndex = getAggPayloadIndex(atom); // index of the payload
-    idx_t payload = 0; // find the payload to extract (can be multiple payloads)
-    bool payloadFound = false;
-    {
-        vector<AggregateFunction*> aggFunctions;
-        auto aggInfo = Predicate::parseAggregateInternalPredicate(pt->predicate_->getName());
-        BB_ASSERT(aggInfo.payloads_.size() == aggInfo.funcNames_.size());
-        vector<LogicalType> arguments;
-        for (auto p:aggInfo.payloads_) {
-            BB_ASSERT(p < pt->getTypes().size());
-            BB_ASSERT(pt->getTypes()[p] != PhysicalType::UNKNOWN);
-            arguments.push_back(pt->getTypes()[p]);
-        }
-        // get the aggregate function
-        for (idx_t i = 0; i < aggInfo.funcNames_.size(); i++) {
-            auto funcName = aggInfo.funcNames_[i];
-            auto function = context_.functionRegister_.getFunction(funcName, {arguments[i]});
-            BB_ASSERT(function);
-            aggFunctions.push_back((AggregateFunction*) function.get());
-            if (aggInfo.payloads_[i] == internalPayloadIndex && funcName == atom.getAggregateFunctionName()) {
-                // we are looking for this payload
-                payload = i;
-                payloadFound = true;
-            }
-        }
-        BB_ASSERT(pt->existPartitionedAggHashTable());
-        aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
-        BB_ASSERT(payloadFound);
-    }
+    auto aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
+
+    vector<idx_t> payloads = findPayloadIndices(atom, pt.get());
 
     vector<idx_t> groupCols;
     // cols are the groups cols
@@ -391,10 +387,31 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
         if (colsMap_.contains(var.getVariable()))
             groupCols.push_back(colsMap_[var.getVariable()]);
     }
-    vector payloads = {payload};
     // Use scan mode for explicit groups - group values come from the hash table, not from input
     bool scanMode = atom.hasExplicitGroups();
     patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, aht, scanMode));
+}
+
+void PhysicalOptimizer::generatePhysicalAggSource(Atom& atom, vector<idx_t>& cols, patom_ptr_t& source) {
+    BB_ASSERT(atom.getType() == AGGREGATE && atom.hasExplicitGroups());
+    BB_ASSERT(atom.getAggsAtoms().size() == 1);
+
+    auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
+    auto aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
+
+    vector<idx_t> payloads = findPayloadIndices(atom, pt.get());
+
+    // Find group columns
+    vector<idx_t> groupCols;
+    auto& internalVarias = atom.getAggsAtoms()[0].getTerms();
+    for (auto& var : internalVarias) {
+        BB_ASSERT(var.getType() == VARIABLE);
+        if (colsMap_.contains(var.getVariable()))
+            groupCols.push_back(colsMap_[var.getVariable()]);
+    }
+
+    source = patom_ptr_t(new PhysicalPartitionedAggHT(
+        context_, types_, cols, groupCols, payloads, aht));
 }
 
 void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<LogicalType> types,patom_ptr_vector_t& patoms ) {
@@ -748,6 +765,9 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         // get the function and bind it
         PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesType() ).get();
         source = patom_ptr_t(new PhysicalPredFunction(context_, types_,cols_[0],  selectedCols_[0], (PredFunction*) func, externalBindData_[0]));
+    } else if (firstAtom.getType() == AGGREGATE && firstAtom.hasExplicitGroups()) {
+        firstAtom.getVariables(vars);
+        generatePhysicalAggSource(firstAtom, cols_[0], source);
     }
 
     for (idx_t i=1;i<rule.getBody().size();++i) {

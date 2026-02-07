@@ -45,6 +45,7 @@ bool queryFound=false;
 
 %token <string> SYMBOLIC_CONSTANT NUMBER VARIABLE STRING DIRECTIVE_NAME DIRECTIVE_VALUE
 %token <string> AGGR_COUNT AGGR_MAX AGGR_MIN AGGR_SUM AGGR_AVG
+%token AGGR_MULTI
 %token <string> ID
 
 
@@ -304,13 +305,10 @@ naf_literal
 
 naf_literal_aggregate
     : naf_literal
-    | aggregate_atom
+    | multi_assign_aggregate
+    | single_aggregate_atom
         {
             director.getBuilder()->onAggregate();
-        }
-    | NAF aggregate_atom
-        {
-            director.getBuilder()->onAggregate(true);
         }
     ;
 
@@ -432,12 +430,7 @@ term_
         {
             director.getBuilder()->onUnknownVariable();
         }
-    | identifier PARAM_OPEN terms PARAM_CLOSE
-        {
-            director.getBuilder()->onFunction($1, $3);
-            delete[] $1;
-        }
-    | NUMBER DDOT NUMBER
+    |  NUMBER DDOT NUMBER
         {
             director.getBuilder()->onTermRange($1, $3);
             delete[] $1;
@@ -685,12 +678,38 @@ right_aggregate
     | aggregate upper_guard_rightward_right_aggregate
     ;
 
-aggregate_atom
+single_aggregate_atom
     : left_aggregate
     | right_aggregate
     | compare_aggregate
     | leftward_left_aggregate upper_guard_leftward_right_aggregate
     | rightward_left_aggregate upper_guard_rightward_right_aggregate
+    ;
+
+multi_assign_aggregate
+    : multi_assign_guard multi_aggregate_function CURLY_OPEN aggregate_elements CURLY_CLOSE
+        {
+            director.getBuilder()->onMultiAggregateAssignment();
+        }
+    ;
+
+multi_assign_guard
+    : PARAM_OPEN multi_assign_vars PARAM_CLOSE EQUAL
+    ;
+
+multi_assign_vars
+    : VARIABLE COMMA VARIABLE
+        {
+            director.getBuilder()->onMultiAssignVariable($1);
+            director.getBuilder()->onMultiAssignVariable($3);
+            delete[] $1;
+            delete[] $3;
+        }
+    | multi_assign_vars COMMA VARIABLE
+        {
+            director.getBuilder()->onMultiAssignVariable($3);
+            delete[] $3;
+        }
     ;
 
 leftwardop
@@ -717,7 +736,23 @@ rightwardop
 
 aggregate
     : aggregate_function CURLY_OPEN aggregate_elements CURLY_CLOSE
-    | aggregate_function CURLY_OPEN CURLY_CLOSE
+    ;
+
+multi_aggregate_function
+    : AGGR_MULTI aggregate_function_list SQUARE_CLOSE
+    ;
+
+aggregate_function_list
+    : aggregate_function_item_generic
+    | aggregate_function_list COMMA aggregate_function_item_generic
+    ;
+
+aggregate_function_item_generic
+    : identifier
+    {
+        director.getBuilder()->onAggregateFunction($1);
+        delete[] $1;
+    }
     ;
 
 aggregate_elements

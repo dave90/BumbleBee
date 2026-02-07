@@ -15,18 +15,26 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 FILTER_PREDICATES = {}
 TEST_TO_EXCLUDE = ["agg.sum.1","agg.sum.4","agg.avg.1",
-                   "agg.explicit_group.1","agg.explicit_group.2","agg.explicit_group.3",
-                   "agg.explicit_group.4","agg.explicit_group.5","agg.explicit_group.6",
-                   "agg.explicit_group.7","agg.explicit_group.8","agg.explicit_group.9",
-                   "agg.explicit_group.10","agg.explicit_group.11","agg.explicit_group.12",
-                   "agg.explicit_group.count","agg.explicit_group.min","agg.explicit_group.max",
-                   "agg.explicit_group.multigroup"]
+                   "agg.explicit_group.*",
+                   "agg.multi.*"]
+
+def is_excluded(filename):
+    """Check if filename matches any pattern in TEST_TO_EXCLUDE.
+    Supports exact matches and wildcard patterns ending with '.*'."""
+    for pattern in TEST_TO_EXCLUDE:
+        if pattern.endswith(".*"):
+            prefix = pattern[:-1]  # e.g. "agg.multi." from "agg.multi.*"
+            if filename.startswith(prefix):
+                return True
+        elif filename == pattern:
+            return True
+    return False
 
 def create_expected():
     # Iterate over all files in the input directory
     for root, _, files in os.walk(INPUT_DIR):
         for filename in files:
-            if filename in TEST_TO_EXCLUDE:
+            if is_excluded(filename):
                 continue
 
             relative_path = os.path.relpath(root, INPUT_DIR)

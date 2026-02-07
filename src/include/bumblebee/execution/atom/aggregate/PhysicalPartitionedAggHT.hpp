@@ -32,10 +32,19 @@ public:
     PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
         const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht, bool scanMode = false);
 
+    // constructor for source (SOURCE) - parallel scan of aggregate HT
+    PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types,
+        vector<idx_t> &dcCols, const vector<idx_t> &group_cols,
+        const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht);
+
     ~PhysicalPartitionedAggHT() override = default;
 
     idx_t getMaxThreads() const override;
     bool isSink() const override;
+    bool isSource() const override;
+
+    AtomResultType getData(ThreadContext &context, DataChunk &chunk,
+        PhysicalAtomState &state, GlobalPhysicalAtomState &gstate) const override;
     string toString() const override;
     pstate_ptr_t getState() const override;
     gpstate_ptr_t getGlobalState() const override;
@@ -67,6 +76,8 @@ private:
     vector<idx_t> payloadCols_;
     vector<LogicalType> payloadColsTypes_;
     vector<AggregateFunction*> aggregateFunctions_;
+    // cached payload types from aht_ to avoid repeated allocation in probe path
+    vector<LogicalType> cachedPayloadTypes_;
     PhysicalHashType type_;
     // When true, scan the hash table for group values instead of probing with input values
     // Used for explicit groups in aggregates where groups come from aggregate body, not external atoms

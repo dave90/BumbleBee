@@ -67,6 +67,7 @@ public:
     // Version that returns all aggregate results into a DataChunk
     idx_t scanWithAggregates(idx_t offset, DataChunk& groups, DataChunk& aggResults, idx_t size = STANDARD_VECTOR_SIZE);
 
+    vector<LogicalType> getPayloadsTypes();
 private:
     void findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups);
     void moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes);

@@ -1,0 +1,4 @@
+% Test 16: Large cross product (5 groups x 500 rows, 4 b values = 20 result rows)
+a(1..5,1..500).
+b(1..4).
+c(V,X,Min,Sum) :- b(V), (Min,Sum) = #[min,sum]{Y,Y;X:a(X,Y)}.

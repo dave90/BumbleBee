@@ -463,10 +463,12 @@ void ParserInputBuilder::onAggregateUpperGuard() {
 }
 
 void ParserInputBuilder::onAggregateFunction(char *functionSymbol) {
+    AggregateFunctionType func;
     if (functionSymbol[0] == '#')
-        aggregateFunction_ = Atom::getAggFunction(++functionSymbol); // skip #
+        func = Atom::getAggFunction(++functionSymbol); // skip #
     else
-        aggregateFunction_ = Atom::getAggFunction(functionSymbol);
+        func = Atom::getAggFunction(functionSymbol);
+    aggregateFunctions_.push_back(func);
 }
 
 void ParserInputBuilder::onAggregateGroundTerm(char *value, bool dash) {
@@ -518,15 +520,53 @@ void ParserInputBuilder::onAggregate(bool naf) {
         std::swap(agg_terms_parsered, agg_group_terms_parsered);
     }
 
-    currentAtom = Atom::createAggregateAtom(aggregateFunction_, aggBinop_, aggSecondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms), std::move(agg_group_terms_parsered));
+
+    BB_ASSERT(aggregateFunctions_.size() == 1);
+    currentAtom = Atom::createAggregateAtom(aggregateFunctions_[0], aggBinop_, aggSecondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms), std::move(agg_group_terms_parsered));
     aggBinop_ = NONE_OP;
     aggSecondBinop_ = NONE_OP;
     guard_terms.clear();
     agg_atoms.clear();
     agg_terms_parsered.clear();
     agg_group_terms_parsered.clear();
+    aggregateFunctions_.clear();
 }
 
+void ParserInputBuilder::onMultiAssignVariable(char* var) {
+    if(foundASafetyError_) return;
+    // Create a variable term and add to multi-assignment terms list
+    string varStr(var);
+    multi_assign_terms_.emplace_back(std::move(varStr), true);
+}
+
+void ParserInputBuilder::onMultiAggregateAssignment() {
+    if(foundASafetyError_) return;
+
+    // If we had explicit groups (saw ';'), then swap terms
+    if (!agg_group_terms_parsered.empty()) {
+        std::swap(agg_terms_parsered, agg_group_terms_parsered);
+    }
+
+    // Validate: number of assignment terms must match number of aggregate functions
+    if (multi_assign_terms_.size() != aggregateFunctions_.size()) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Number of assignment variables (" + std::to_string(multi_assign_terms_.size()) +
+            ") must match number of aggregate functions (" + std::to_string(aggregateFunctions_.size()) + ").";
+        return;
+    }
+
+    currentAtom = Atom::createMultiAggregateAtom(std::move(aggregateFunctions_), std::move(multi_assign_terms_),
+        std::move(agg_terms_parsered), std::move(agg_atoms), std::move(agg_group_terms_parsered));
+
+    aggBinop_ = NONE_OP;
+    aggSecondBinop_ = NONE_OP;
+    guard_terms.clear();
+    agg_atoms.clear();
+    agg_terms_parsered.clear();
+    agg_group_terms_parsered.clear();
+    aggregateFunctions_.clear();
+    multi_assign_terms_.clear();
+}
 
 void ParserInputBuilder::onEnd() {
 }

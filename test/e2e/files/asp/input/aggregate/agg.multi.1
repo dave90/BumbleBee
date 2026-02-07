@@ -1,0 +1,13 @@
+% Test 1: Simple two agg functions (min, sum) with implicit groups
+a(1,10).
+a(1,20).
+a(1,30).
+a(1,40).
+a(2,5).
+a(2,15).
+a(2,25).
+a(2,35).
+a(2,45).
+a(3,100).
+a(3,200).
+c(Min,Sum) :- (Min,Sum) = #[min,sum]{Y,Y:a(X,Y)}.

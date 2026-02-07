@@ -18,6 +18,7 @@
  */
 #include "bumblebee/common/ErrorHandler.hpp"
 
+#include <iostream>
 #include "bumblebee/common/Log.hpp"
 #include "bumblebee/common/types/Assert.hpp"
 
@@ -25,6 +26,7 @@ namespace bumblebee {
 
 static void log_error(const char* error, const std::string& message) {
     std::string e = error +std::string(": ")+message;
+    std::cerr << e << std::endl;
     LOG_ERROR( e.c_str() );
 }
 
