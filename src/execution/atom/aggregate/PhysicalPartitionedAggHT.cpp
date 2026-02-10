@@ -218,14 +218,12 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
 
     DataChunk sinput = projectColumns(input);
 
-    // Fast path: total aggregation (no groups, not distinct) - use thread-local accumulation
+    // Path 1: Total aggregation (no groups, not distinct) - thread-local accumulation
     if (cgstate.pht_.isTotalAggregation()) {
         if (!cstate.localAggHt_) {
-            // Initialize thread-local aggregate HT
             cstate.localAggHt_ = agg_ht_ptr_t(new AggregatePRLHashTable(
                 *context_.bufferManager_, {}, 2, false, aggregateFunctions_));
         }
-        // Extract payload columns and accumulate directly (no hashing, no locks)
         DataChunk payloads;
         payloads.initializeEmpty(payloadColsTypes_);
         payloads.reference(sinput, payloadCols_);
@@ -235,7 +233,29 @@ AtomResultType PhysicalPartitionedAggHT::sink(ThreadContext &context, DataChunk 
         return AtomResultType::HAVE_MORE_OUTPUT;
     }
 
-    // Standard path: grouped or distinct aggregation
+    // Path 2: Grouped aggregation (non-distinct) - thread-local grouped HT
+    if (!cgstate.pht_.isDistinct()) {
+        if (!cgstate.pht_.isInitialized())
+            cgstate.pht_.initialize(sinput);
+        if (!cstate.localAggHt_) {
+            cstate.localAggHt_ = agg_ht_ptr_t(new AggregatePRLHashTable(
+                *context_.bufferManager_, cgstate.pht_.getGroupColsType(),
+                HT_INIT_CAPACITY, true, aggregateFunctions_));
+        }
+        DataChunk groups, payloads;
+        groups.initializeEmpty(groupColsTypes_);
+        groups.reference(sinput, groupCols_);
+        payloads.initializeEmpty(payloadColsTypes_);
+        payloads.reference(sinput, payloadCols_);
+        Vector hash(LogicalTypeId::HASH, sinput.getSize());
+        groups.hash(hash);
+        cstate.localAggHt_->addChunk(hash, groups, payloads);
+
+        context.profiler_.endPhysicalAtom(input);
+        return AtomResultType::HAVE_MORE_OUTPUT;
+    }
+
+    // Path 3: Distinct aggregation - use partitioned path directly
     cgstate.pht_.addChunk(sinput);
 
     context.profiler_.endPhysicalAtom(input);
@@ -260,9 +280,12 @@ void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState
     auto& cstate = (PartitionedAggHTJoinAtomState&)state;
     auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
 
-    // Merge thread-local aggregate HT into partition 0
-    if (cstate.localAggHt_)
-        cgstate.pht_.merge(0, std::move(cstate.localAggHt_));
+    if (cstate.localAggHt_) {
+        if (cgstate.pht_.isTotalAggregation())
+            cgstate.pht_.merge(0, std::move(cstate.localAggHt_));
+        else
+            cgstate.pht_.combineLocalHt(std::move(cstate.localAggHt_));
+    }
 
 }
 

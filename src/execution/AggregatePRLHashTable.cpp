@@ -104,36 +104,26 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
 
     Vector addresses(LogicalTypeId::ADDRESS);
     Vector hashes(LogicalTypeId::HASH);
-    auto addressesPtr = FlatVector::getData<data_ptr_t>(addresses);
-    auto hashesPtr = FlatVector::getData<uint64_t>(hashes);
     if (types_.size() == 0) {
         // no groups, so merge the first state
         BB_ASSERT(entries_ == 1);
         Vector groupAddresses(LogicalTypeId::ADDRESS, 1);
         auto groupAddressesPtr = FlatVector::getData<data_ptr_t>(groupAddresses);
         groupAddressesPtr[0] = payloadPtrs_.back();
-        addressesPtr[0] = other.payloadPtrs_.back();
+        auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+        addrPtr[0] = other.payloadPtrs_.back();
 
         AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, 1);
 
         return ;
     }
 
-    idx_t idx = 0;
-    for (idx_t i = 0; i < other.capacity_; ++i) {
-        auto hashEntryPtr = (HTEntry64*)other.hashesPtr_ + i;
-        if (hashEntryPtr->pageNum_ == 0 ) continue;
-        auto hash = hashEntryPtr->hash_;
-        addressesPtr[idx] = other.payloadPtrs_[ hashEntryPtr->pageNum_ -1] + (hashEntryPtr->pageOffset_ * tupleSize_);
-        hashesPtr[idx] = hash;
-        ++idx;
-        if (idx >= STANDARD_VECTOR_SIZE) {
-            // merge now
-            moveAndMergeStates(idx, addresses, hashes);
-            idx = 0;
-        }
+    idx_t offset = 0;
+    while (true) {
+        idx_t count = other.scanRawEntries(offset, addresses, hashes);
+        if (count == 0) break;
+        moveAndMergeStates(count, addresses, hashes);
     }
-    moveAndMergeStates(idx, addresses, hashes);
 
 }
 

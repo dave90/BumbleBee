@@ -129,6 +129,21 @@ void PRLHashTable::findOrCreateGroups(Vector &hash, DataChunk &groups, Vector &a
     findOrCreateGroupsInternal(hash, groups, addresses, matchedCount, newGroupsCount, true, nullptr, &newGroupSel );
 }
 
+idx_t PRLHashTable::scanRawEntries(idx_t &offset, Vector &addresses, Vector &hashes, idx_t limit) {
+    auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+    auto hashPtr = FlatVector::getData<hash_t>(hashes);
+    idx_t count = 0;
+    while (offset < capacity_ && count < limit) {
+        auto entry = (HTEntry64*)hashesPtr_ + offset;
+        offset++;
+        if (entry->pageNum_ == 0) continue;
+        addrPtr[count] = payloadPtrs_[entry->pageNum_ - 1] + (entry->pageOffset_ * tupleSize_);
+        hashPtr[count] = entry->hash_;
+        count++;
+    }
+    return count;
+}
+
 void PRLHashTable::combine(PRLHashTable &other) {
     if (other.entries_ == 0)
         return;
@@ -160,25 +175,31 @@ struct PRLPartitionInfo {
 
 void PRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t shift) {
     vector<PRLPartitionInfo> partitionsInfo(partitions.size());
-    for (idx_t i = 0; i < capacity_; ++i) {
-        auto hashEntryPtr = (HTEntry64*)hashesPtr_ + i;
-        if (hashEntryPtr->pageNum_ == 0 ) continue;
-        auto hash = hashEntryPtr->hash_;
-        auto p = hash >> shift;
-        BB_ASSERT(p < partitionsInfo.size());
-        auto &info = partitionsInfo[p];
-        info.hashesPtr_[info.size_] = hash;
-        info.addressesPtr_[info.size_] = payloadPtrs_[ hashEntryPtr->pageNum_ -1] + (hashEntryPtr->pageOffset_ * tupleSize_);;
-        info.size_++;
-        if (info.size_ >= STANDARD_VECTOR_SIZE) {
-            // merge with the partition table
-            if (!partitions[p])
-                partitions[p] = distinct_ht_ptr_t(new PRLHashTable(bufferManager_, types_));
-            partitions[p]->move(info.groupAddresses_, info.hashes_, info.size_);
-            info.size_ = 0;
+
+    Vector scanAddresses(LogicalTypeId::ADDRESS);
+    Vector scanHashes(LogicalTypeId::HASH);
+    idx_t offset = 0;
+    while (true) {
+        idx_t count = scanRawEntries(offset, scanAddresses, scanHashes);
+        if (count == 0) break;
+        auto addrPtr = FlatVector::getData<data_ptr_t>(scanAddresses);
+        auto hashPtr = FlatVector::getData<hash_t>(scanHashes);
+        for (idx_t i = 0; i < count; ++i) {
+            auto hash = hashPtr[i];
+            auto p = hash >> shift;
+            BB_ASSERT(p < partitionsInfo.size());
+            auto &info = partitionsInfo[p];
+            info.hashesPtr_[info.size_] = hash;
+            info.addressesPtr_[info.size_] = addrPtr[i];
+            info.size_++;
+            if (info.size_ >= STANDARD_VECTOR_SIZE) {
+                if (!partitions[p])
+                    partitions[p] = distinct_ht_ptr_t(new PRLHashTable(bufferManager_, types_));
+                partitions[p]->move(info.groupAddresses_, info.hashes_, info.size_);
+                info.size_ = 0;
+            }
         }
     }
-
 
     idx_t infoIdx = 0;
     idx_t totalCount = 0;
@@ -198,7 +219,6 @@ void PRLHashTable::partition(vector<distinct_ht_ptr_t> &partitions, idx_t shift)
         infoIdx++;
     }
     BB_ASSERT(totalCount == entries_);
-
 }
 
 idx_t PRLHashTable::getSize() const {
@@ -348,14 +368,11 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
     hash.normalify(size);
     auto groupsHashPtr = FlatVector::getData<uint64_t>(hash);
     // compute the buckets
-    Vector buckets(PhysicalType::UBIGINT, size);
+    uint64_t bucketsArr[(size < STANDARD_VECTOR_SIZE)?STANDARD_VECTOR_SIZE:size];
+    auto bucketsPtr = bucketsArr;
+    for (idx_t i = 0; i < size; i++)
+        bucketsPtr[i] = groupsHashPtr[i] & bitmask_;
 
-    auto val = Value(bitmask_);
-    Vector mask(val);
-    BB_ASSERT(mask.getVectorType() == VectorType::CONSTANT_VECTOR);
-    VectorOperations::lAnd(hash, mask, buckets, size);
-    buckets.normalify(size);
-    auto bucketsPtr = FlatVector::getData<uint64_t>(buckets);
 
     BB_ASSERT(addresses.getType() == PhysicalType::UBIGINT);
     addresses.normalify(size);

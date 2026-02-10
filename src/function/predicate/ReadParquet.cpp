@@ -135,9 +135,14 @@ static function_data_ptr_t readParquetBind(ClientContext &context,
 	}
 
 	if (!filters.filters_.empty()) {
-		// build the filters
 		result->filters_ = table_filter_set_ptr_t(new TableFilterSet());
-		*result->filters_ = std::move(filters);
+		// index of the table filter is based on the column name passed in name, we need to find the real index
+		for (auto& [idx, filter]:filters.filters_) {
+			BB_ASSERT(idx < names.size());
+			auto realName = columnMapping[names[idx]];
+			auto realIdx = result->reader_->colNormalizedIdx_[realName];
+			result->filters_->pushFilter(realIdx, std::move(filter));
+		}
 	}
 
 

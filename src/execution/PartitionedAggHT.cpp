@@ -81,9 +81,12 @@ void PartitionedAggHT::initialize(DataChunk &chunk) {
 }
 
 void PartitionedAggHT::addChunk(DataChunk &chunk) {
-
+    // hash based on group cols
     Vector hash(LogicalTypeId::HASH, chunk.getSize());
-    chunk.hash(hash);
+    if (!groupCols_.empty())
+        chunk.hash(hash, groupCols_);
+    else
+        chunk.hash(hash);
 
     // first find the partitions
     vector<PartitionInfo> partitionsInfo;
@@ -120,39 +123,109 @@ void PartitionedAggHT::addChunk(DataChunk &chunk) {
 
         partitionEntries_[p] += pi.size_;
         DataChunk pchunk;
-        Vector phash(hash);
         pchunk.initAndReference(chunk);
+        Vector ghash(hash);
         // slice the chunk with the partition data
         pchunk.slice(pi.sel_, pi.size_);
-        phash.slice(pi.sel_, pi.size_);
+        ghash.slice(pi.sel_, pi.size_);
 
         lock_guard  lock(partitionsMutex_[p]);
-        if (!pAggHts_[p]) {
-            // init partition ht and agg ht
-            auto htInitSize = (estimatedInputCardinality_ > 0)
-                                ?nextPowerOfTwo(estimatedInputCardinality_ / partitionsInfo.size()) * 2 // *2to make the HT to be 50% free
-                                : HT_INIT_CAPACITY;
-            if (distinct_)
-                pDistinctHts_[p] = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, pchunk.getTypes(), htInitSize ));
-            else if(groupCols_.empty())
-                // no groups so will collapse in one group
-                htInitSize = 2;
-
-            pAggHts_[p] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType_, htInitSize, true, functions_));
-        }
+        ensurePartitionAggHt(p);
         if (distinct_) {
+            // calculate hash on all the columns as we need to check if the rows are unique
+            Vector phash(LogicalTypeId::HASH, pchunk.getSize());
+            pchunk.hash(phash);
             // find the new data to add to the agg ht
             idx_t newRows = 0;
             pDistinctHts_[p]->findOrCreateGroups(phash, pchunk, paddresses, newRows, sel);
             if (newRows == 0) continue;
             pchunk.slice(sel, newRows);
+            ghash.slice(sel, newRows);
         }
         // insert the new data into the agg ht
         groups.reference(pchunk, groupCols_);
         payloads.reference(pchunk, payloadCols_);
-        Vector ghash(LogicalTypeId::HASH, groups.getSize());
-        groups.hash(ghash);
         pAggHts_[p]->addChunk(ghash, groups, payloads);
+    }
+}
+
+void PartitionedAggHT::ensurePartitionAggHt(idx_t p) {
+    if (!pAggHts_[p]) {
+        auto htInitSize = (estimatedInputCardinality_ > 0)
+                            ? nextPowerOfTwo(estimatedInputCardinality_ / partitions_) * 2
+                            : HT_INIT_CAPACITY;
+        if (distinct_)
+            pDistinctHts_[p] = distinct_ht_ptr_t(new PRLHashTable(*context_.bufferManager_, types_, htInitSize));
+        else if (groupCols_.empty())
+            htInitSize = 2;
+
+        pAggHts_[p] = agg_ht_ptr_t(new AggregatePRLHashTable(*context_.bufferManager_, groupColsType_, htInitSize, true, functions_));
+    }
+}
+
+// Per-partition batch buffers
+struct PartitionBatch {
+    Vector addresses{LogicalTypeId::ADDRESS};
+    Vector hashes{LogicalTypeId::HASH};
+    data_ptr_t* addrPtr;
+    hash_t* hashPtr;
+    idx_t size{0};
+
+    PartitionBatch() {
+        addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+        hashPtr = FlatVector::getData<hash_t>(hashes);
+    }
+};
+
+void PartitionedAggHT::combineLocalHt(agg_ht_ptr_t localHt) {
+    if (!localHt || localHt->getSize() == 0) return;
+
+
+    vector<PartitionBatch> batches(partitions_);
+
+    // Scan all entries from the local HT
+    Vector scanAddresses(LogicalTypeId::ADDRESS);
+    Vector scanHashes(LogicalTypeId::HASH);
+    idx_t offset = 0;
+
+    while (true) {
+        idx_t count = localHt->scanRawEntries(offset, scanAddresses, scanHashes);
+        if (count == 0) break;
+
+        auto addrPtr = FlatVector::getData<data_ptr_t>(scanAddresses);
+        auto hashPtr = FlatVector::getData<hash_t>(scanHashes);
+
+        for (idx_t i = 0; i < count; ++i) {
+            auto p = hashPtr[i] >> shift_;
+            BB_ASSERT(p < partitions_);
+            auto& batch = batches[p];
+            batch.addrPtr[batch.size] = addrPtr[i];
+            batch.hashPtr[batch.size] = hashPtr[i];
+            batch.size++;
+
+            if (batch.size >= STANDARD_VECTOR_SIZE) {
+                lock_guard lock(partitionsMutex_[p]);
+                ensurePartitionAggHt(p);
+                pAggHts_[p]->moveAndMergeStates(batch.size, batch.addresses, batch.hashes);
+                batch.size = 0;
+            }
+        }
+    }
+
+    // Flush remaining entries
+    for (idx_t p = 0; p < partitions_; ++p) {
+        auto& batch = batches[p];
+        if (batch.size == 0) continue;
+        lock_guard lock(partitionsMutex_[p]);
+        ensurePartitionAggHt(p);
+        pAggHts_[p]->moveAndMergeStates(batch.size, batch.addresses, batch.hashes);
+    }
+
+    // Transfer string heap from local HT to each partition that received entries,
+    // so aggregate states referencing variable-length data remain valid.
+    for (idx_t p = 0; p < partitions_; ++p) {
+        if (pAggHts_[p])
+            pAggHts_[p]->mergeStringHeap(*localHt);
     }
 }
 

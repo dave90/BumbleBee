@@ -118,6 +118,13 @@ public:
 
 
 
+    // Scan raw entries from the hash directory, returning addresses and hashes
+    idx_t scanRawEntries(idx_t& offset, Vector& addresses, Vector& hashes,
+                         idx_t limit = STANDARD_VECTOR_SIZE);
+
+    // Merge the string heap from another HT into this one
+    void mergeStringHeap(PRLHashTable& other) { stringHeap_->merge(*other.stringHeap_); }
+
     // Combine with other HT
     virtual void combine(PRLHashTable& other);
     // Partition the HT

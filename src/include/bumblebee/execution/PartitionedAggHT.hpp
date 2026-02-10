@@ -53,7 +53,7 @@ using agg_ht_ptr_t = AggregatePRLHashTable::agg_ht_ptr_t;
 class PartitionedAggHT {
 public:
 
-    static constexpr idx_t PARTITIONS = 8;
+    static constexpr idx_t PARTITIONS = 64;
 
     explicit PartitionedAggHT(ClientContext& context, const vector<idx_t> &groupCols,
         const vector<idx_t>& payloadCols, const vector<AggregateFunction*>& functions,
@@ -107,13 +107,23 @@ public:
     // Merge a local aggregate HT into a specific partition (takes ownership)
     void merge(idx_t partition, agg_ht_ptr_t localHt);
 
+    // Combine a thread-local grouped aggregate HT into the partitioned structure
+    void combineLocalHt(agg_ht_ptr_t localHt);
+
     // Check if this is a total aggregation (no groups and not distinct)
     bool isTotalAggregation() const { return groupCols_.empty() && !distinct_; }
+
+    bool isDistinct() const { return distinct_; }
+    bool isInitialized() const { return initialized_.load(); }
 
     // Get the aggregate functions for creating thread-local HTs
     const vector<AggregateFunction*>& getFunctions() const { return functions_; }
 
+    // Get the runtime group column types (populated after initialize())
+    const vector<LogicalType>& getGroupColsType() const { return groupColsType_; }
+
 private:
+    void ensurePartitionAggHt(idx_t p);
     const ClientContext& context_;
 
     // the final Aggregate HT table

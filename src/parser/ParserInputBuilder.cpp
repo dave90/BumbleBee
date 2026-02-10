@@ -509,6 +509,33 @@ void ParserInputBuilder::onAggregateGroupSemicolon() {
     agg_terms_parsered.clear();
 }
 
+// If agg_terms contains #ID, keep only the first numToKeep non-#ID terms and #ID.
+// #ID disables distinct calculation, making extra terms unnecessary overhead.
+static void filterAggTermsWithID(vector<Term>& agg_terms, size_t numToKeep) {
+    bool hasID = false;
+    for (const auto& t : agg_terms) {
+        if (t.getType() == VARIABLE && t.getVariable() == Predicate::INTERNAL_ID_VAR) {
+            hasID = true;
+            break;
+        }
+    }
+    if (!hasID) return;
+
+    vector<Term> filtered;
+    filtered.reserve(numToKeep + 1);
+    size_t kept = 0;
+    for (auto& t : agg_terms) {
+        if (t.getType() == VARIABLE && t.getVariable() == Predicate::INTERNAL_ID_VAR)
+            continue;
+        if (kept < numToKeep) {
+            filtered.push_back(std::move(t));
+            ++kept;
+        }
+    }
+    filtered.emplace_back(string(Predicate::INTERNAL_ID_VAR), true);
+    agg_terms = std::move(filtered);
+}
+
 void ParserInputBuilder::onAggregate(bool naf) {
     if(foundASafetyError_) return;
 
@@ -522,6 +549,8 @@ void ParserInputBuilder::onAggregate(bool naf) {
 
 
     BB_ASSERT(aggregateFunctions_.size() == 1);
+    filterAggTermsWithID(agg_terms_parsered, 1);
+
     currentAtom = Atom::createAggregateAtom(aggregateFunctions_[0], aggBinop_, aggSecondBinop_, guard_terms[0], guard_terms[1], std::move(agg_terms_parsered), std::move(agg_atoms), std::move(agg_group_terms_parsered));
     aggBinop_ = NONE_OP;
     aggSecondBinop_ = NONE_OP;
@@ -546,6 +575,8 @@ void ParserInputBuilder::onMultiAggregateAssignment() {
     if (!agg_group_terms_parsered.empty()) {
         std::swap(agg_terms_parsered, agg_group_terms_parsered);
     }
+
+    filterAggTermsWithID(agg_terms_parsered, aggregateFunctions_.size());
 
     // Validate: number of assignment terms must match number of aggregate functions
     if (multi_assign_terms_.size() != aggregateFunctions_.size()) {
