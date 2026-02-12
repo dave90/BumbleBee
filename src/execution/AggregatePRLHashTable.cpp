@@ -18,6 +18,7 @@
  */
 #include "bumblebee/execution/AggregatePRLHashTable.hpp"
 
+#include "bumblebee/common/Log.hpp"
 #include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee{
@@ -125,6 +126,118 @@ void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {
         moveAndMergeStates(count, addresses, hashes);
     }
 
+}
+
+void AggregatePRLHashTable::combineUnsafe(AggregatePRLHashTable &other) {
+    BB_ASSERT(types_ == other.types_);
+    BB_ASSERT(functions_ == other.functions_);
+    BB_ASSERT(layout_.getRowWidth() == other.layout_.getRowWidth());
+    BB_ASSERT(layout_.getOffsets() == other.layout_.getOffsets());
+    BB_ASSERT(tupleSize_ == other.tupleSize_);
+
+    if (other.entries_ == 0) return;
+
+    // Total aggregation: no groups, merge the single running state
+    if (types_.size() == 0) {
+        BB_ASSERT(entries_ == 1);
+        Vector groupAddresses(LogicalTypeId::ADDRESS, 1);
+        auto groupAddressesPtr = FlatVector::getData<data_ptr_t>(groupAddresses);
+        groupAddressesPtr[0] = payloadPtrs_.back();
+        Vector addresses(LogicalTypeId::ADDRESS, 1);
+        auto addrPtr = FlatVector::getData<data_ptr_t>(addresses);
+        addrPtr[0] = other.payloadPtrs_.back();
+
+        AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, 1);
+        return;
+    }
+
+    auto destBlockCount = payload_.size();
+    auto originalPayloadPageOffset = payloadPageOffset_;
+    auto totalEntries = entries_ + other.entries_;
+
+    // Resize hash directory to fit totalEntries under LOAD_FACTOR
+    while (totalEntries >= capacity_ || (float)totalEntries / (float)capacity_ > LOAD_FACTOR) {
+        resize(capacity_ * 2);
+    }
+
+    // Gap filling: fill the dest's last block gap with rows from the end of the source
+    auto gap = tuplesPerBlock_ - payloadPageOffset_;
+    auto fillCount = minValue(gap, other.entries_);
+    auto remainingInOther = other.entries_ - fillCount;
+
+    if (fillCount > 0) {
+        auto destPtr = payloadPtrs_.back() + payloadPageOffset_ * tupleSize_;
+
+        // Source rows to fill come from the end of the source's payload.
+        // They span at most 2 blocks: the source's last block and the one before it.
+        auto rowsFromLastBlock = minValue(fillCount, other.payloadPageOffset_);
+        auto rowsFromPrevBlock = fillCount - rowsFromLastBlock;
+
+        if (rowsFromPrevBlock > 0) {
+            // Copy from source's second-to-last block (the last rowsFromPrevBlock rows of that block)
+            auto srcBlock = other.payloadPtrs_[other.payload_.size() - 2];
+            auto srcOffset = (tuplesPerBlock_ - rowsFromPrevBlock) * tupleSize_;
+            memcpy(destPtr, srcBlock + srcOffset, rowsFromPrevBlock * tupleSize_);
+            destPtr += rowsFromPrevBlock * tupleSize_;
+        }
+        if (rowsFromLastBlock > 0) {
+            // Copy from source's last block (first rowsFromLastBlock rows starting from
+            // offset other.payloadPageOffset_ - rowsFromLastBlock)
+            auto srcBlock = other.payloadPtrs_.back();
+            auto srcOffset = (other.payloadPageOffset_ - rowsFromLastBlock) * tupleSize_;
+            memcpy(destPtr, srcBlock + srcOffset, rowsFromLastBlock * tupleSize_);
+        }
+        payloadPageOffset_ += fillCount;
+    }
+
+    // Append source's remaining blocks
+    if (remainingInOther > 0) {
+        // Number of full blocks to append: all blocks that hold the first 'remainingInOther' rows
+        auto blocksToAppend = (remainingInOther + tuplesPerBlock_ - 1) / tuplesPerBlock_;
+        for (idx_t i = 0; i < blocksToAppend; ++i) {
+            payload_.push_back(std::move(other.payload_[i]));
+            payloadPtrs_.push_back(payload_.back()->ptr());
+        }
+        payloadPageOffset_ = remainingInOther - (blocksToAppend - 1) * tuplesPerBlock_;
+    }
+
+    // Transfer hash entries from source's hash directory
+    auto htPtr = (HTEntry64*)hashesPtr_;
+    auto otherHtPtr = (HTEntry64*)other.hashesPtr_;
+    for (idx_t i = 0; i < other.capacity_; ++i) {
+        auto& entry = otherHtPtr[i];
+        if (entry.pageNum_ == 0) continue;
+
+        // Compute globalPos: the 0-based row index in the source
+        auto pageNum = entry.pageNum_ - 1;  // 0-based block index
+        auto globalPos = pageNum * tuplesPerBlock_ + entry.pageOffset_;
+
+        uint32_t newPageNum;
+        uint32_t newPageOffset;
+        if (globalPos >= remainingInOther) {
+            // This row was gap-filled into dest's original last block
+            newPageNum = destBlockCount;  // 1-based
+            newPageOffset = originalPayloadPageOffset + (globalPos - remainingInOther);
+        } else {
+            // This row stays in an appended block
+            newPageNum = destBlockCount + pageNum + 1;  // 1-based, offset by dest's original block count
+            newPageOffset = entry.pageOffset_;
+        }
+
+        // Insert into dest's hash directory via linear probing
+        auto bucket = entry.hash_ & bitmask_;
+        while (htPtr[bucket].pageNum_ != 0) {
+            bucket = (bucket + 1) % capacity_;
+        }
+        htPtr[bucket].hash_ = entry.hash_;
+        htPtr[bucket].pageNum_ = newPageNum;
+        htPtr[bucket].pageOffset_ = newPageOffset;
+    }
+
+    entries_ = totalEntries;
+
+    // Merge string heaps
+    stringHeap_->merge(*other.stringHeap_);
 }
 
 void AggregatePRLHashTable::findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups) {

@@ -38,15 +38,22 @@ PartitionedAggHT::PartitionedAggHT(ClientContext& context, const vector<idx_t>& 
 }
 
 void PartitionedAggHT::finalize() {
+    idx_t totalSize = 0;
+    for (auto& aht: pAggHts_)
+        if (aht)
+            totalSize += aht->getSize();
+
     for (auto& aht: pAggHts_) {
         if (!aht) continue;
         if (!table_) {
             // init the final table
             table_ = std::move(aht);
+            if (table_->capacity_ < totalSize)
+                table_->resize(nextPowerOfTwo(totalSize));
             aht = nullptr;
             continue;
         }
-        table_->combine(*aht);
+        table_->combineUnsafe(*aht);
         aht = nullptr; // free memory
     }
     ready_ = true;

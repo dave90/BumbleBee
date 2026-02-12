@@ -35,6 +35,7 @@ namespace bumblebee{
  *
  */
 class AggregatePRLHashTable : public PRLHashTable{
+    friend class PartitionedAggHT;
 public:
     using agg_ht_ptr_t = std::unique_ptr<AggregatePRLHashTable>;
 
@@ -49,6 +50,9 @@ public:
     void addChunk(DataChunk& payload) override;
 
     void combine(AggregatePRLHashTable& other);
+    // Combine the data without checking if are present
+    // Used when combining partitioned aggregates tables
+    void combineUnsafe(AggregatePRLHashTable& other);
 
 
     // Fetch the aggregates for specific groups from the HT and place them in the result

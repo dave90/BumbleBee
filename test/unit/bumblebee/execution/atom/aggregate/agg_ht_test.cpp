@@ -78,6 +78,19 @@ protected:
     }
 
 
+    // Helper: add N unique groups in batches of up to STANDARD_VECTOR_SIZE
+    void addMultipleChunksToAHT(agg_ht_ptr& ht, vector<PhysicalType>& types,
+        vector<idx_t> groups, vector<idx_t> payloads,
+        vector<AggregateFunction*> functions, idx_t totalRows, idx_t offset) {
+        idx_t added = 0;
+        while (added < totalRows) {
+            auto batchSize = minValue((idx_t)STANDARD_VECTOR_SIZE, totalRows - added);
+            auto chunk = createChunkWithValue(types, batchSize, offset + added);
+            addChunkToAHT(ht, chunk, groups, payloads, functions, 32, true);
+            added += batchSize;
+        }
+    }
+
     DataChunk probeToHT(agg_ht_ptr& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
         vector<LogicalType> groupTypes, payloadTypes;
         for (auto g : groups)
@@ -532,4 +545,253 @@ TEST_F(AggRLHashTableTest, ScanWithAggregates_OffsetPastEnd) {
     scanned = ht->scanWithAggregates(100, groups, aggResult, 0);
     EXPECT_EQ(scanned, 0);
     EXPECT_EQ(groups.getSize(), 0);
+}
+
+// ========================= combineUnsafe tests =========================
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_SmallDisjointHTs) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, 10, 0);
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, 5, 100);
+
+    ht1->combineUnsafe(*ht2);
+    EXPECT_EQ(ht1->getSize(), 15);
+
+    // Probe all 15 groups
+    auto chunk1 = createChunkWithValue(tLeft, 10, 0);
+    auto chunk2 = createChunkWithValue(tLeft, 5, 100);
+    auto result1 = probeToHT(ht1, chunk1, groupIdx, functions);
+    auto result2 = probeToHT(ht1, chunk2, groupIdx, functions);
+    EXPECT_EQ(result1.getSize(), 10);
+    EXPECT_EQ(result2.getSize(), 5);
+
+    // Scan all entries
+    DataChunk out;
+    out.initialize((vector<PhysicalType>){tLeft[groupIdx[0]], tLeft[groupIdx[1]]});
+    idx_t visited = 0, pos = 0;
+    while (pos < ht1->getSize()) {
+        idx_t got = ht1->scan(pos, out);
+        visited += got;
+        pos += got;
+    }
+    EXPECT_EQ(visited, 15);
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_SourceEmpty) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, 10, 0);
+    // ht2 is empty
+    vector<LogicalType> groupTypes = {tLeft[groupIdx[0]], tLeft[groupIdx[1]]};
+    ht2 = agg_ht_ptr(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, true, functions));
+
+    ht1->combineUnsafe(*ht2);
+    EXPECT_EQ(ht1->getSize(), 10);
+
+    auto chunk = createChunkWithValue(tLeft, 10, 0);
+    auto result = probeToHT(ht1, chunk, groupIdx, functions);
+    EXPECT_EQ(result.getSize(), 10);
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_DestLastBlockFull) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    // Fill ht1 with exactly tpb groups (1 full block)
+    vector<LogicalType> groupTypes = {tLeft[groupIdx[0]], tLeft[groupIdx[1]]};
+    ht1 = agg_ht_ptr(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, true, functions));
+    auto tpb = ht1->getTuplesPerBlock();
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, tpb, 0);
+    EXPECT_EQ(ht1->getSize(), tpb);
+
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, 20, tpb);
+
+    ht1->combineUnsafe(*ht2);
+    EXPECT_EQ(ht1->getSize(), tpb + 20);
+
+    // Scan all entries
+    DataChunk out;
+    out.initialize(groupTypes);
+    idx_t visited = 0, pos = 0;
+    while (pos < ht1->getSize()) {
+        idx_t got = ht1->scan(pos, out);
+        visited += got;
+        pos += got;
+    }
+    EXPECT_EQ(visited, tpb + 20);
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_MultiBlock) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    vector<LogicalType> groupTypes = {tLeft[groupIdx[0]], tLeft[groupIdx[1]]};
+    ht1 = agg_ht_ptr(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, true, functions));
+    auto tpb = ht1->getTuplesPerBlock();
+
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, tpb + 50, 0);
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, tpb + 30, tpb + 50);
+
+    ht1->combineUnsafe(*ht2);
+    EXPECT_EQ(ht1->getSize(), 2 * tpb + 80);
+
+    // Scan all entries
+    DataChunk out;
+    out.initialize(groupTypes);
+    idx_t visited = 0, pos = 0;
+    while (pos < ht1->getSize()) {
+        idx_t got = ht1->scan(pos, out);
+        visited += got;
+        pos += got;
+    }
+    EXPECT_EQ(visited, 2 * tpb + 80);
+
+    // Probe all groups in batches
+    idx_t totalToProbe = tpb + 50;
+    for (idx_t start = 0; start < totalToProbe; start += STANDARD_VECTOR_SIZE) {
+        auto batchSize = minValue((idx_t)STANDARD_VECTOR_SIZE, totalToProbe - start);
+        auto chunk = createChunkWithValue(tLeft, batchSize, start);
+        auto result = probeToHT(ht1, chunk, groupIdx, functions);
+        EXPECT_EQ(result.getSize(), batchSize);
+    }
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_GapFilledFromTwoBlocks) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    vector<LogicalType> groupTypes = {tLeft[groupIdx[0]], tLeft[groupIdx[1]]};
+    ht1 = agg_ht_ptr(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, true, functions));
+    auto tpb = ht1->getTuplesPerBlock();
+
+    // ht1 has 1 group (payloadPageOffset_ = 1, gap = tpb - 1)
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, 1, 0);
+    // ht2 has tpb + 10 groups (2 blocks, last has 10 rows)
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, tpb + 10, 1);
+
+    ht1->combineUnsafe(*ht2);
+    EXPECT_EQ(ht1->getSize(), tpb + 11);
+
+    // Probe all groups
+    auto chunk1 = createChunkWithValue(tLeft, 1, 0);
+    auto result1 = probeToHT(ht1, chunk1, groupIdx, functions);
+    EXPECT_EQ(result1.getSize(), 1);
+
+    idx_t totalToProbe2 = tpb + 10;
+    for (idx_t start = 0; start < totalToProbe2; start += STANDARD_VECTOR_SIZE) {
+        auto batchSize = minValue((idx_t)STANDARD_VECTOR_SIZE, totalToProbe2 - start);
+        auto chunk = createChunkWithValue(tLeft, batchSize, 1 + start);
+        auto result = probeToHT(ht1, chunk, groupIdx, functions);
+        EXPECT_EQ(result.getSize(), batchSize);
+    }
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_ChainedCombines) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {0};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2, ht3, ht4;
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, 100, 0);
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, 200, 100);
+    addMultipleChunksToAHT(ht3, tLeft, groupIdx, payloadIdx, functions, 150, 300);
+    addMultipleChunksToAHT(ht4, tLeft, groupIdx, payloadIdx, functions, 50, 450);
+
+    ht1->combineUnsafe(*ht2);
+    ht1->combineUnsafe(*ht3);
+    ht1->combineUnsafe(*ht4);
+    EXPECT_EQ(ht1->getSize(), 500);
+
+    // Probe all 500 groups
+    for (idx_t start = 0; start < 500; start += STANDARD_VECTOR_SIZE) {
+        auto batchSize = minValue((idx_t)STANDARD_VECTOR_SIZE, (idx_t)(500 - start));
+        auto chunk = createChunkWithValue(tLeft, batchSize, start);
+        auto result = probeToHT(ht1, chunk, groupIdx, functions);
+        EXPECT_EQ(result.getSize(), batchSize);
+    }
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_VerifyScanAfterMultiBlockCombine) {
+    vector<idx_t> groupIdx = {1, 2};
+    vector<idx_t> payloadIdx = {2}; // SUM over BIGINT (col 2)
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    vector<LogicalType> groupTypes = {tLeft[groupIdx[0]], tLeft[groupIdx[1]]};
+    ht1 = agg_ht_ptr(new AggregatePRLHashTable(*clientContext.bufferManager_, groupTypes, 32, true, functions));
+    auto tpb = ht1->getTuplesPerBlock();
+
+    auto n1 = 2 * tpb + 100;
+    auto n2 = tpb + 200;
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, n1, 0);
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, n2, n1);
+
+    ht1->combineUnsafe(*ht2);
+    auto total = n1 + n2;
+    EXPECT_EQ(ht1->getSize(), total);
+
+    // Scan all entries and compute total aggregate sum
+    DataChunk outGroups;
+    outGroups.initialize(groupTypes);
+    Vector aggResult(aggFunc->result_);
+    int64_t scanSum = 0;
+    idx_t offset = 0, visited = 0;
+    while (offset < ht1->getSize()) {
+        idx_t scanned = ht1->scanWithAggregates(offset, outGroups, aggResult, 0);
+        if (scanned == 0) break;
+        for (idx_t i = 0; i < scanned; ++i)
+            scanSum += aggResult.getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+        visited += scanned;
+        offset += scanned;
+    }
+    EXPECT_EQ(visited, total);
+
+    // Expected sum: each row i (0-based global) has payload col 2 = i * 10 * 2 = i * 20
+    int64_t expectedSum = 0;
+    for (idx_t i = 0; i < total; ++i)
+        expectedSum += (int64_t)i * 20;
+    EXPECT_EQ(scanSum, expectedSum);
+}
+
+TEST_F(AggRLHashTableTest, CombineUnsafe_NoGroups) {
+    vector<idx_t> groupIdx = {};
+    vector<idx_t> payloadIdx = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloadIdx[0]]});
+    vector functions = {(AggregateFunction*)aggFunc.get()};
+
+    agg_ht_ptr ht1, ht2;
+    // Add 8 rows to ht1: col2 values = 0, 20, 40, 60, 80, 100, 120, 140 → sum = 560
+    addMultipleChunksToAHT(ht1, tLeft, groupIdx, payloadIdx, functions, 8, 0);
+    // Add 4 rows to ht2: col2 values = 160, 180, 200, 220 → sum = 760
+    addMultipleChunksToAHT(ht2, tLeft, groupIdx, payloadIdx, functions, 4, 8);
+
+    ht1->combineUnsafe(*ht2);
+
+    DataChunk result;
+    result.initialize((vector<PhysicalType>){tLeft[payloadIdx[0]]});
+    result.setCapacity(1);
+    ht1->fetchAggregates(result);
+    EXPECT_EQ(result.getSize(), 1);
+    auto got = result.getValue(0, 0).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+    EXPECT_EQ(got, 560 + 760);
 }

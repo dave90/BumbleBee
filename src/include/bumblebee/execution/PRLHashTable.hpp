@@ -132,6 +132,7 @@ public:
 
     idx_t getSize() const;
     idx_t getCapacity()const;
+    idx_t getTuplesPerBlock() const { return tuplesPerBlock_; }
     string toString(bool compact = true);
     vector<LogicalType> getTypes() const;
 
