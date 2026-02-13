@@ -28,7 +28,7 @@ namespace bumblebee {
 
 
 template <Value (*FUNC)(const_data_ptr_t input)>
-static std::unique_ptr<BaseStatistics> templatedGetNumericStats(const PhysicalType &type,
+static std::unique_ptr<BaseStatistics> templatedGetNumericStats(const LogicalType &type,
                                                            const format::Statistics &parquet_stats) {
 	auto stats = std::make_unique<NumericStatistics>(type);
 
@@ -39,14 +39,14 @@ static std::unique_ptr<BaseStatistics> templatedGetNumericStats(const PhysicalTy
 	} else if (parquet_stats.__isset.min_value) {
 		stats->min_ = FUNC((const_data_ptr_t)parquet_stats.min_value.data());
 	} else {
-		stats->min_ = Value::minimumValue(stats->type_);
+		stats->min_ = Value::minimumValue(stats->type_.getPhysicalType());
 	}
 	if (parquet_stats.__isset.max) {
 		stats->max_ = FUNC((const_data_ptr_t)parquet_stats.max.data());
 	} else if (parquet_stats.__isset.max_value) {
 		stats->max_ = FUNC((const_data_ptr_t)parquet_stats.max_value.data());
 	} else {
-		stats->max_ = Value::maximumValue(stats->type_);
+		stats->max_ = Value::maximumValue(stats->type_.getPhysicalType());
 	}
 	// GCC 4.x insists on a move() here
 	return std::move(stats);
@@ -67,7 +67,7 @@ static Value transformStatisticsDouble(const_data_ptr_t input) {
 	return Value(val);
 }
 
-std::unique_ptr<BaseStatistics> parquetTransformColumnStatistics(const bumblebee::SchemaElement &s_ele, const PhysicalType &type,
+std::unique_ptr<BaseStatistics> parquetTransformColumnStatistics(const bumblebee::SchemaElement &s_ele, const LogicalType &type,
                                                             const ColumnChunk &column_chunk) {
 	if (!column_chunk.__isset.meta_data || !column_chunk.meta_data.__isset.statistics) {
 		// no stats present for row group
@@ -76,7 +76,7 @@ std::unique_ptr<BaseStatistics> parquetTransformColumnStatistics(const bumblebee
 	auto &parquet_stats = column_chunk.meta_data.statistics;
 	std::unique_ptr<BaseStatistics> row_group_stats;
 
-	switch (type) {
+	switch (type.getPhysicalType()) {
 
 	case PhysicalType::UTINYINT:
 		row_group_stats = templatedGetNumericStats<transformStatisticsPlain<uint8_t>>(type, parquet_stats);

@@ -75,6 +75,8 @@ static function_data_ptr_t readParquetBind(ClientContext &context,
                                        TableFilterSet& filters) {
 	auto result = std::make_unique<ReadParquetData>(context);
 
+
+
 	BB_ASSERT(inputs.size() == 1);
 	BB_ASSERT(returnTypes.empty());
 	BB_ASSERT(!names.empty());
@@ -207,10 +209,7 @@ static void readParquetFunction(ClientContext &context, const FunctionData *bind
 		data.readChunk_.data_.clear();
 	}else {
 		// data.readChunk_.reset();
-		data.readChunk_.setCardinality(0);
-		for (auto& col: bind_data.cols_)
-			data.readChunk_.data_[col].initialize(data.readChunk_.getCapacity());
-
+		data.readChunk_.reset(bind_data.cols_);
 	}
 
 }

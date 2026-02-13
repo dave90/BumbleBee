@@ -1,10 +1,7 @@
 ## TODOLIST
-- add filters in parquet reader
-- optimize merge agg tables partitions
 - block parenthesis in sql ad datalog
 - allow '' in sql and datalog
 - parquet write
-- Query a partition CSV and Parquet
 - Specify predicate tables types
 - NULL values in operations
 - LEFT and RIGHT JOIN

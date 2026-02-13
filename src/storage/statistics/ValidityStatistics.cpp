@@ -21,7 +21,7 @@
 namespace bumblebee{
 
 ValidityStatistics::ValidityStatistics(bool has_null, bool has_no_null)
-    : BaseStatistics(PhysicalType::UTINYINT), hasNull_(has_null), hasNoNull_(has_no_null) {
+    : BaseStatistics(LogicalType(PhysicalType::UTINYINT)), hasNull_(has_null), hasNoNull_(has_no_null) {
 }
 
 std::unique_ptr<BaseStatistics> ValidityStatistics::combine(const std::unique_ptr<BaseStatistics> &lstats,

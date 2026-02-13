@@ -18,6 +18,8 @@
  */
 #include "bumblebee/common/types/DataChunk.hpp"
 
+#include <unordered_set>
+
 #include "bumblebee/common/Log.hpp"
 #include "bumblebee/common/types/Vector.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
@@ -96,6 +98,17 @@ void DataChunk::initialize(const vector<LogicalType> &types) {
     capacity_ = STANDARD_VECTOR_SIZE;
     for (idx_t i = 0; i < types.size(); ++i) {
         data_.emplace_back(types[i]);
+    }
+}
+
+void DataChunk::initialize(const vector<LogicalType> &types, const std::unordered_set<idx_t> & colsToInitialize) {
+    BB_ASSERT(data_.empty());
+    capacity_ = STANDARD_VECTOR_SIZE;
+    for (idx_t i = 0; i < types.size(); ++i) {
+        if (!colsToInitialize.contains(i))
+            data_.emplace_back(types[i], nullptr);
+        else
+            data_.emplace_back(types[i]);
     }
 }
 
@@ -252,6 +265,17 @@ void DataChunk::reset() {
     data_.clear();
     count_ = 0;
     initialize(types);
+}
+
+void DataChunk::reset(const vector<idx_t>& columnsToReset) {
+    if (data_.empty()) {
+        return;
+    }
+    auto types = getTypes();
+    data_.clear();
+    count_ = 0;
+    std::unordered_set<idx_t> colsToInit(columnsToReset.begin(), columnsToReset.end());
+    initialize(types, colsToInit);
 }
 
 void DataChunk::hash(Vector &result) {

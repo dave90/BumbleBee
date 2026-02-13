@@ -83,13 +83,13 @@ void NumericStatistics::update<double>(SegmentStatistics &stats, double new_valu
 }
 
 
-NumericStatistics::NumericStatistics(PhysicalType type_p) : BaseStatistics(type_p) {
-	min_ = Value::maximumValue(type_p);
-	max_ = Value::minimumValue(type_p);
+NumericStatistics::NumericStatistics(const LogicalType &type_p) : BaseStatistics(type_p) {
+	min_ = Value::maximumValue(type_p.getPhysicalType());
+	max_ = Value::minimumValue(type_p.getPhysicalType());
 	validityStats_ = std::make_unique<ValidityStatistics>(false);
 }
 
-NumericStatistics::NumericStatistics(PhysicalType type_p,const Value& min_p,const Value& max_p)
+NumericStatistics::NumericStatistics(const LogicalType &type_p, const Value& min_p, const Value& max_p)
     : BaseStatistics(type_p), min_(min_p.clone()), max_(max_p.clone()) {
 }
 
@@ -113,6 +113,14 @@ FilterPropagateResult NumericStatistics::checkZonemap(Binop comparison_type, con
 			return FilterPropagateResult::NO_PRUNING_POSSIBLE;
 		} else {
 			return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+		}
+	case UNEQUAL:
+		if (constant == min_ && constant == max_) {
+			return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+		} else if (constant >= min_ && constant <= max_) {
+			return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+		} else {
+			return FilterPropagateResult::FILTER_ALWAYS_TRUE;
 		}
 	case GREATER_OR_EQ:
 		// X >= C

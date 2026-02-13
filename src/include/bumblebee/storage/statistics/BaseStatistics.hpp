@@ -34,10 +34,10 @@ enum class FilterPropagateResult : uint8_t {
 
 class BaseStatistics {
 public:
-    explicit BaseStatistics(PhysicalType type);
+    explicit BaseStatistics(LogicalType type);
     virtual ~BaseStatistics();
 
-    PhysicalType type_;
+    LogicalType type_;
     std::unique_ptr<BaseStatistics> validityStats_;
 
 
@@ -48,12 +48,12 @@ public:
         return false;
     }
 
-    static std::unique_ptr<BaseStatistics> createEmpty(PhysicalType type);
+    static std::unique_ptr<BaseStatistics> createEmpty(const LogicalType &type);
 
     virtual void merge(const BaseStatistics &other);
     virtual std::unique_ptr<BaseStatistics> copy();
     virtual void serialize(Serializer &serializer);
-    static std::unique_ptr<BaseStatistics> deserialize(Deserializer &source, PhysicalType type);
+    static std::unique_ptr<BaseStatistics> deserialize(Deserializer &source, const LogicalType &type);
     virtual void verify(Vector &vector, const SelectionVector &sel, idx_t count);
     void verify(Vector &vector, idx_t count);
 

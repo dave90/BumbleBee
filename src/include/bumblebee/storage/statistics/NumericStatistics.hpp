@@ -26,8 +26,8 @@ namespace bumblebee{
 
 class NumericStatistics : public BaseStatistics {
 public:
-	explicit NumericStatistics(PhysicalType type);
-	NumericStatistics(PhysicalType type,const Value& min,const Value& max);
+	explicit NumericStatistics(const LogicalType &type);
+	NumericStatistics(const LogicalType &type, const Value& min, const Value& max);
 
 	// The minimum value of the segment
 	Value min_;

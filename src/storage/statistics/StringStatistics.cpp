@@ -24,7 +24,7 @@
 
 namespace bumblebee{
 
-StringStatistics::StringStatistics(PhysicalType type_p) : BaseStatistics(type_p) {
+StringStatistics::StringStatistics(const LogicalType &type_p) : BaseStatistics(type_p) {
 	for (idx_t i = 0; i < MAX_STRING_MINMAX_SIZE; i++) {
 		min_[i] = 0xFF;
 		max_[i] = 0;
@@ -125,6 +125,12 @@ FilterPropagateResult StringStatistics::checkZonemap(Binop comparison_type, cons
 			return FilterPropagateResult::NO_PRUNING_POSSIBLE;
 		} else {
 			return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+		}
+	case UNEQUAL:
+		if (min_comp >= 0 && max_comp <= 0) {
+			return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+		} else {
+			return FilterPropagateResult::FILTER_ALWAYS_TRUE;
 		}
 	case GREATER:
 	case GREATER_OR_EQ:

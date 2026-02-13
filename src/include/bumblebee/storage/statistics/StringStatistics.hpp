@@ -27,7 +27,7 @@ public:
     constexpr static uint32_t MAX_STRING_MINMAX_SIZE = 8;
 
 public:
-    explicit StringStatistics(PhysicalType type);
+    explicit StringStatistics(const LogicalType &type);
 
     // The minimum value of the segment, potentially truncated
     data_t min_[MAX_STRING_MINMAX_SIZE];

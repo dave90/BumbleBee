@@ -478,6 +478,9 @@ bool ParquetReader::scanInternal(ParquetReaderScanState &state, DataChunk &resul
 				continue;
 			}
 			auto file_col_idx = state.columnIds_[out_col_idx];
+			if (file_col_idx == COLUMN_IDENTIFIER_ROW_ID) {
+				continue;
+			}
 
 			if (filter_mask.none()) {
 				root_reader->getChildReader(file_col_idx)->skip(result.getSize());

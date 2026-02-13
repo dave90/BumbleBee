@@ -91,7 +91,7 @@ public:
 	}
 
 	std::unique_ptr<BaseStatistics> stats(const std::vector<ColumnChunk> &columns) {
-		return parquetTransformColumnStatistics(schema(), logicalType_.getPhysicalType(), columns[fileIdx_]);
+		return parquetTransformColumnStatistics(schema(), logicalType_, columns[fileIdx_]);
 	}
 
 protected:

@@ -32,10 +32,129 @@
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 #include "../../include/bumblebee/execution/atom/external/PhysicalPredFunction.hpp"
 #include "bumblebee/common/Log.hpp"
+#include "bumblebee/planner/filter/ConstantFilter.hpp"
 #include "bumblebee/execution/atom/join/PhysicalRowLayoutHashJoin.hpp"
 #include "bumblebee/execution/atom/output/PhysicalTopNHOutput.hpp"
 
 namespace bumblebee {
+
+TableFilterSet PhysicalOptimizer::extractConstantFilters(atoms_vector_t& body, const vector<string>& names) {
+    TableFilterSet filters;
+
+    // Build varName -> index map for the external atom's output columns
+    std::unordered_map<string, idx_t> varToNameIdx;
+    for (idx_t i = 0; i < names.size(); ++i) {
+        if (names[i] == "*") return filters; // wildcard: skip all
+        varToNameIdx[names[i]] = i;
+    }
+
+    // Pass 1: Build constant resolution map from constant assignments
+    // e.g., C = 10 -> constantMap["C"] = Value(10)
+    std::unordered_map<string, Value> constantMap;
+    for (auto& atom : body) {
+        if (atom.getType() != BUILTIN) continue;
+        if (!atom.isConstantAssignment()) continue;
+        auto& left = atom.getTerms()[0];
+        auto& right = atom.getTerms()[1];
+        if (left.getType() == VARIABLE && right.getType() == CONSTANT) {
+            if (!varToNameIdx.contains(left.getVariable()))
+                constantMap[left.getVariable()] = right.getValue().clone();
+        } else if (right.getType() == VARIABLE && left.getType() == CONSTANT) {
+            if (!varToNameIdx.contains(right.getVariable()))
+                constantMap[right.getVariable()] = left.getValue().clone();
+        }
+    }
+
+    // Pass 1b: Propagate constants through variable-to-variable equalities
+    // Handles: X = 3, Y = X, K < Y  ->  constantMap["X"]=3, constantMap["Y"]=3
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto& atom : body) {
+            if (atom.getType() != BUILTIN) continue;
+            if (atom.isOrBuiltin()) continue;
+            Binop op = atom.getBinop();
+            if (op != EQUAL && op != ASSIGNMENT) continue;
+            auto& terms = atom.getTerms();
+            if (terms.size() != 2) continue;
+            auto& left = terms[0];
+            auto& right = terms[1];
+            if (left.getType() != VARIABLE || right.getType() != VARIABLE) continue;
+            if (constantMap.contains(left.getVariable()) && !constantMap.contains(right.getVariable())
+                && !varToNameIdx.contains(right.getVariable())) {
+                constantMap[right.getVariable()] = constantMap[left.getVariable()].clone();
+                changed = true;
+            } else if (constantMap.contains(right.getVariable()) && !constantMap.contains(left.getVariable())
+                       && !varToNameIdx.contains(left.getVariable())) {
+                constantMap[left.getVariable()] = constantMap[right.getVariable()].clone();
+                changed = true;
+            }
+        }
+    }
+
+    // Pass 2: Extract filters from comparison builtins
+    for (auto& atom : body) {
+        if (atom.getType() != BUILTIN) continue;
+        if (atom.isOrBuiltin()) continue;
+
+        Binop op = atom.getBinop();
+        if (op == ASSIGNMENT) op = EQUAL;
+        if (op != EQUAL && op != UNEQUAL && op != LESS && op != GREATER &&
+            op != LESS_OR_EQ && op != GREATER_OR_EQ) continue;
+
+        auto& terms = atom.getTerms();
+        if (terms.size() != 2) continue;
+        auto& left = terms[0];
+        auto& right = terms[1];
+
+        // Only handle simple VARIABLE and CONSTANT terms
+        if (left.getType() != VARIABLE && left.getType() != CONSTANT) continue;
+        if (right.getType() != VARIABLE && right.getType() != CONSTANT) continue;
+
+        string extVar;
+        Value constVal;
+        Binop finalOp = op;
+        bool found = false;
+
+        // Case 1: EXT_VAR op CONSTANT
+        if (left.getType() == VARIABLE && varToNameIdx.contains(left.getVariable())
+            && right.getType() == CONSTANT) {
+            extVar = left.getVariable();
+            constVal = right.getValue().clone();
+            found = true;
+        }
+        // Case 2: CONSTANT op EXT_VAR (flip operator)
+        else if (right.getType() == VARIABLE && varToNameIdx.contains(right.getVariable())
+                 && left.getType() == CONSTANT) {
+            extVar = right.getVariable();
+            constVal = left.getValue().clone();
+            finalOp = getFlippedBinop(op);
+            found = true;
+        }
+        // Case 3: EXT_VAR op RESOLVED_VAR
+        else if (left.getType() == VARIABLE && varToNameIdx.contains(left.getVariable())
+                 && right.getType() == VARIABLE && constantMap.contains(right.getVariable())) {
+            extVar = left.getVariable();
+            constVal = constantMap[right.getVariable()].clone();
+            found = true;
+        }
+        // Case 4: RESOLVED_VAR op EXT_VAR (flip operator)
+        else if (right.getType() == VARIABLE && varToNameIdx.contains(right.getVariable())
+                 && left.getType() == VARIABLE && constantMap.contains(left.getVariable())) {
+            extVar = right.getVariable();
+            constVal = constantMap[left.getVariable()].clone();
+            finalOp = getFlippedBinop(op);
+            found = true;
+        }
+
+        if (!found) continue;
+
+        idx_t nameIdx = varToNameIdx[extVar];
+        filters.pushFilter(nameIdx, std::make_unique<ConstantFilter>(finalOp, std::move(constVal)));
+    }
+
+    return filters;
+}
 
 PhysicalOptimizer::PhysicalOptimizer(ClientContext& context, bool recursiveRules)
     : context_(context), recursiveRules_(recursiveRules) {
@@ -277,7 +396,7 @@ void PhysicalOptimizer::findColsAndTypesClassicalAtom(Atom &atom) {
     cols_.push_back(std::move(atomCols));
 }
 
-void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
+void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index, atoms_vector_t& body) {
     BB_ASSERT(atom.getType() == EXTERNAL);
     vector<idx_t> atomCols;
     vector<idx_t> prjCols;
@@ -285,7 +404,7 @@ void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
 
     vector<LogicalType> returnTypes;
     vector<string> names;
-    bindExternalAtom(index, atom, returnTypes, names);
+    bindExternalAtom(index, atom, returnTypes, names, body);
 
     for (idx_t i=0;i<names.size();++i) {
         auto& var = names[i];
@@ -304,7 +423,7 @@ void PhysicalOptimizer::findColsAndTypesExternalAtom(Atom &atom, idx_t index) {
     cols_.push_back(std::move(atomCols));
 }
 
-void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalType>& returnTypes, vector<string>& names){
+void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalType>& returnTypes, vector<string>& names, atoms_vector_t& body){
     BB_ASSERT(!externalBindData_.contains(index));
     auto func = (PredFunction*) context_.functionRegister_.getFunction(atom.getExternalFunctionName(), atom.getInputValuesType()).get();
     auto inputTypes = atom.getInputValuesType();
@@ -313,7 +432,7 @@ void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalT
         BB_ASSERT(term.getType() == VARIABLE);
         names.push_back(term.getVariable());
     }
-    TableFilterSet filters;
+    TableFilterSet filters = extractConstantFilters(body, names);
     auto bind = func->bindFunction_(context_, atom.getInputValues(), inputTypes, atom.getNamedParamters(), returnTypes, names,filters );
     externalBindData_[index] = std::move(bind);
 }
@@ -330,7 +449,7 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
         else if (atom.getType() == AGGREGATE)
             findColsAndTypesAggregateAtom(atom);
         else if (atom.getType() == EXTERNAL)
-            findColsAndTypesExternalAtom(atom, i);
+            findColsAndTypesExternalAtom(atom, i, rule.getBody());
         else
             ErrorHandler::errorNotImplemented("Optimizer: find columns implemented only for CLASSICAL, BUILTIN, AGGREGATION and EXTERNAL atoms");
         ++i;
@@ -359,7 +478,8 @@ void PhysicalOptimizer::findColsAndTypes(Rule &rule ) {
                 returnTypes.push_back(types_[col]);
             }
             vector<string> names;
-            bindExternalAtom(index, atom, returnTypes, names);
+            atoms_vector_t emptyBody;
+            bindExternalAtom(index, atom, returnTypes, names, emptyBody);
         }
 
         headCols_.push_back(std::move(atomCols));

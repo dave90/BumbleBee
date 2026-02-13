@@ -26,7 +26,7 @@
 
 namespace bumblebee {
 
-BaseStatistics::BaseStatistics(PhysicalType type) : type_(type) {
+BaseStatistics::BaseStatistics(LogicalType type) : type_(type) {
 }
 
 BaseStatistics::~BaseStatistics() {
@@ -68,8 +68,8 @@ void BaseStatistics::merge(const BaseStatistics &other) {
 	}
 }
 
-std::unique_ptr<BaseStatistics> BaseStatistics::createEmpty(PhysicalType type) {
-	switch (type) {
+std::unique_ptr<BaseStatistics> BaseStatistics::createEmpty(const LogicalType &type) {
+	switch (type.getPhysicalType()) {
 	case PhysicalType::UTINYINT:
 	case PhysicalType::USMALLINT:
 	case PhysicalType::UINTEGER:
@@ -93,7 +93,7 @@ void BaseStatistics::serialize(Serializer &serializer) {
 	// TODO
 }
 
-std::unique_ptr<BaseStatistics> BaseStatistics::deserialize(Deserializer &source, PhysicalType type) {
+std::unique_ptr<BaseStatistics> BaseStatistics::deserialize(Deserializer &source, const LogicalType &type) {
 	// TODO
 	return nullptr;
 }

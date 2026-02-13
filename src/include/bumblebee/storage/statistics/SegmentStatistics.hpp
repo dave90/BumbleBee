@@ -24,16 +24,16 @@ namespace bumblebee{
 
 class SegmentStatistics {
 public:
-    SegmentStatistics(PhysicalType type):type_(type) {
+    SegmentStatistics(const LogicalType &type):type_(type) {
         reset();
     }
-    SegmentStatistics(PhysicalType type, std::unique_ptr<BaseStatistics> statistics): type_(type), statistics_(std::move(statistics)) {
+    SegmentStatistics(const LogicalType &type, std::unique_ptr<BaseStatistics> statistics): type_(type), statistics_(std::move(statistics)) {
         if (!statistics) {
             reset();
         }
     }
 
-    PhysicalType type_;
+    LogicalType type_;
 
     // Type-specific statistics of the segment
     std::unique_ptr<BaseStatistics> statistics_;

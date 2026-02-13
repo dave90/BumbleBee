@@ -19,6 +19,7 @@
 #pragma once
 #include "bumblebee/execution/PhysicalRule.hpp"
 #include "bumblebee/parser/statement/Rule.hpp"
+#include "bumblebee/planner/filter/TableFilter.hpp"
 
 namespace bumblebee{
 
@@ -36,6 +37,8 @@ public:
     virtual prule_ptr_vector_t optimize(Rule& rule);
     virtual void clear();
 
+    static TableFilterSet extractConstantFilters(atoms_vector_t& body, const vector<string>& names);
+
 
 private:
     // create physical rules for the execution of the rule
@@ -46,9 +49,9 @@ private:
     void findColsAndTypesClassicalAtom(Atom& atom);
     void findColsAndTypesAggregateAtom(Atom& atom);
     void findColsAndTypesBuiltin(Atom& atom);
-    void findColsAndTypesExternalAtom(Atom &atom, idx_t index);
+    void findColsAndTypesExternalAtom(Atom &atom, idx_t index, atoms_vector_t& body);
 
-    void bindExternalAtom(idx_t index, Atom& atom, vector<LogicalType>& returnTypes, vector<string>& names);
+    void bindExternalAtom(idx_t index, Atom& atom, vector<LogicalType>& returnTypes, vector<string>& names, atoms_vector_t& body);
 
     // return true if the rule can be not evaluated
     bool canBeSkipped(Rule& rule);

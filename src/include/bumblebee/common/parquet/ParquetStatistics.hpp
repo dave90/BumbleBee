@@ -27,7 +27,7 @@ using format::ColumnChunk;
 using format::SchemaElement;
 
 
-std::unique_ptr<BaseStatistics> parquetTransformColumnStatistics(const SchemaElement &s_ele, const PhysicalType &type,
+std::unique_ptr<BaseStatistics> parquetTransformColumnStatistics(const SchemaElement &s_ele, const LogicalType &type,
                                                             const ColumnChunk &column_chunk);
 
 

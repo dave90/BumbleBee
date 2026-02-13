@@ -18,6 +18,8 @@
  */
 #pragma once
 
+#include <unordered_set>
+
 #include "Value.hpp"
 #include "Vector.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
@@ -93,6 +95,8 @@ public:
 	// the DataChunk.
 	void initialize(const vector<PhysicalType> &types);
 	void initialize(const vector<LogicalType> &types);
+	void initialize(const vector<LogicalType> &types, const std::unordered_set<idx_t> & colsToInitialize);
+
 	// Initializes an empty DataChunk with the given types. The vectors will *not* have any data allocated for them.
 	void initializeEmpty(const vector<PhysicalType> &types);
 	void initializeEmpty(const vector<LogicalType> &types);
@@ -129,6 +133,7 @@ public:
 	// function was called. This sets the count to 0, and resets each member
 	// Vector to point back to the data owned by this DataChunk.
 	void reset();
+	void reset(const vector<idx_t>& columnsToReset);
 
 
 	// Hashes the DataChunk to the target vector

@@ -19,8 +19,48 @@
 #include "../../include/bumblebee/planner/filter/ConstantFilter.hpp"
 #include "bumblebee/storage/statistics/NumericStatistics.hpp"
 #include "bumblebee/storage/statistics/StringStatistics.hpp"
+#include "bumblebee/common/types/Date.hpp"
+#include "bumblebee/common/NumericUtils.hpp"
 
 namespace bumblebee{
+
+static bool castConstantForStats(const Value &constant, const LogicalType &statsType, Value &outValue) {
+    switch (statsType.type()) {
+        case LogicalTypeId::DATE: {
+            auto str = constant.toString();
+            idx_t pos;
+            date_t dateVal;
+            if (!Date::tryConvertDate(str.c_str(), str.length(), pos, dateVal, true)) {
+                return false;
+            }
+            outValue = Value((int32_t)dateVal);
+            return true;
+        }
+        case LogicalTypeId::TIMESTAMP: {
+            ErrorHandler::errorNotImplemented("Timestamp filter pushdown not yet supported");
+            return false;
+        }
+        case LogicalTypeId::DECIMAL: {
+            auto scale = statsType.getDecimalData().scale_;
+            int64_t scaledVal = constant.getNumericValue<int64_t>() * NumericHelper::POWERS_OF_TEN[scale];
+            switch (statsType.getPhysicalType()) {
+                case PhysicalType::SMALLINT:
+                    outValue = Value((int16_t)scaledVal);
+                    return true;
+                case PhysicalType::INTEGER:
+                    outValue = Value((int32_t)scaledVal);
+                    return true;
+                case PhysicalType::BIGINT:
+                    outValue = Value(scaledVal);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        default:
+            return false;
+    }
+}
 
 ConstantFilter::ConstantFilter(Binop comparison_type_p, Value constant_p)
     : TableFilter(TableFilterType::CONSTANT_COMPARISON), comparisonType_(comparison_type_p),
@@ -28,8 +68,19 @@ ConstantFilter::ConstantFilter(Binop comparison_type_p, Value constant_p)
 }
 
 FilterPropagateResult ConstantFilter::checkStatistics(BaseStatistics &stats) {
-    BB_ASSERT(constant_.getPhysicalType() == stats.type_);
-    switch (constant_.getPhysicalType()) {
+    auto logicalTypeId = stats.type_.type();
+    if (logicalTypeId == LogicalTypeId::DATE ||
+        logicalTypeId == LogicalTypeId::TIMESTAMP ||
+        (logicalTypeId == LogicalTypeId::DECIMAL &&
+         constant_.getPhysicalType() != stats.type_.getPhysicalType())) {
+        Value convertedConstant;
+        if (!castConstantForStats(constant_, stats.type_, convertedConstant)) {
+            return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+        }
+        return ((NumericStatistics &)stats).checkZonemap(comparisonType_, convertedConstant);
+    }
+
+    switch (stats.type_.getPhysicalType()) {
         case PhysicalType::UTINYINT:
         case PhysicalType::USMALLINT:
         case PhysicalType::UINTEGER:
@@ -39,11 +90,12 @@ FilterPropagateResult ConstantFilter::checkStatistics(BaseStatistics &stats) {
         case PhysicalType::INTEGER:
         case PhysicalType::BIGINT:
         case PhysicalType::FLOAT:
-        case PhysicalType::DOUBLE:
-            return ((NumericStatistics &)stats).checkZonemap(comparisonType_, constant_);
-        case PhysicalType::STRING:
+        case PhysicalType::DOUBLE: {
+            return ((NumericStatistics &)stats).checkZonemap(comparisonType_, constant_.cast(stats.type_.getPhysicalType()));
+        }case PhysicalType::STRING: {
+            BB_ASSERT(stats.type_.getPhysicalType() == PhysicalType::STRING);
             return ((StringStatistics &)stats).checkZonemap(comparisonType_, constant_.toString());
-        default:
+        }default:
             return FilterPropagateResult::NO_PRUNING_POSSIBLE;
     }
 }
