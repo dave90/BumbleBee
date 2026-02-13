@@ -588,6 +588,55 @@ void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& predicates,
     }
 }
 
+// Determines which non-first table a WHERE filter atom can be pushed to.
+// A filter is pushable if ALL its variables belong to a single non-first table.
+// Variables follow the naming convention "col.alias" (e.g., "O_ORDERDATE.#p_1").
+// Returns the table alias if pushable, empty string otherwise (e.g., cross-table
+// joins, first-table filters, or constants without variables).
+string getAtomPushdownTarget(Atom& atom,
+    const std::unordered_map<string, std::unordered_set<string>>& nonFirstTableCols) {
+    vector<string> variables;
+    atom.getVariablesList(variables);
+    if (variables.empty()) return "";
+
+    string targetAlias;
+    for (auto& var : variables) {
+        // For each variable, find which non-first table it belongs to
+        // by checking if var matches "col.alias" for any (alias, cols) pair
+        string foundAlias;
+        for (auto& [alias, cols] : nonFirstTableCols) {
+            string suffix = "." + alias;
+            if (var.size() > suffix.size() && var.substr(var.size() - suffix.size()) == suffix) {
+                string colPart = var.substr(0, var.size() - suffix.size());
+                if (cols.contains(colPart)) {
+                    foundAlias = alias;
+                    break;
+                }
+            }
+        }
+        // Variable not found in any non-first table (belongs to first table or unknown)
+        if (foundAlias.empty()) return "";
+        // All variables must map to the same table
+        if (targetAlias.empty())
+            targetAlias = foundAlias;
+        else if (targetAlias != foundAlias)
+            return ""; // Cross-table filter, not pushable
+    }
+    return targetAlias;
+}
+
+// Converts qualified variable names in a filter atom from main-rule naming
+// (e.g., "O_ORDERDATE.#p_1") to sourcing-rule naming (e.g., "O_ORDERDATE").
+// This is needed because sourcing rules use simple column names as variables,
+// while the main rule qualifies them with the table alias.
+void convertToSourcingRuleVars(Atom& atom, const string& tableAlias,
+    const std::unordered_set<string>& tableCols) {
+    for (auto& col : tableCols) {
+        string qualifiedName = col + "." + tableAlias;
+        atom.replaceVariable(qualifiedName, col);
+    }
+}
+
 void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     auto& defaultSchema = query_.context_.defaultSchema_;
     vector<Atom> body;
@@ -644,9 +693,43 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     getAggregatesInformation(statement, query_, result_.errorMessage_, body, headTerms, headVars, groupVars, aggVars);
     if (result_.foundAnError()) return;
 
-    // binops atoms
-    generateBinopAtoms(body, statement.getWhere().getItems(), statement.getWhere().getOps(), query_, result_.errorMessage_);
+    // binops atoms — generate into a temporary vector, then push eligible filters
+    // into sourcing rules so the PhysicalOptimizer can push them down to the readers.
+    // This avoids loading unnecessary data from non-first tables.
+    vector<Atom> binopAtoms;
+    generateBinopAtoms(binopAtoms, statement.getWhere().getItems(), statement.getWhere().getOps(), query_, result_.errorMessage_);
     if (result_.foundAnError()) return;
+
+    // Build a map of non-first table aliases to their column sets.
+    // The first table's external atom is already in the main rule body,
+    // so the PhysicalOptimizer handles its filters directly.
+    std::unordered_map<string, std::unordered_set<string>> nonFirstTableCols;
+    idx_t tableIdx = 0;
+    for (auto& fi : statement.getFrom().getItems()) {
+        if (tableIdx > 0)
+            nonFirstTableCols[fi.getAlias()] = query_.tableColumnsMap_[fi.getAlias()];
+        ++tableIdx;
+    }
+
+    for (auto& atom : binopAtoms) {
+        string target = getAtomPushdownTarget(atom, nonFirstTableCols);
+        if (!target.empty()) {
+            // Push this filter into the sourcing rule for 'target'
+            auto clone = atom.clone();
+            convertToSourcingRuleVars(clone, target, nonFirstTableCols[target]);
+            // Find the sourcing rule whose head predicate matches the target alias
+            for (auto& rule : result_.rules_) {
+                BB_ASSERT(!rule.getHead().empty());
+                if (rule.getHead()[0].getPredicate()->getName() == target) {
+                    rule.addAtomInBody(std::move(clone));
+                    break;
+                }
+            }
+        } else {
+            // Not pushable — keep in the main rule body
+            body.push_back(std::move(atom));
+        }
+    }
 
     // generate the rule
     auto pred = defaultSchema.createPredicate(&query_.context_, alias.c_str(), headTerms.size());
