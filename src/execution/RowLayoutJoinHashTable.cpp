@@ -32,7 +32,6 @@ RowLayoutJoinHashTable::RowLayoutJoinHashTable(BufferManager &manager, const vec
     vector<LogicalType> orderedTypes;
     for (auto& idx: key_columns)
         orderedTypes.push_back(types[idx]);
-    keyLayout_.initialize(orderedTypes); // init with keys cols
     for (auto& idx: payload_columns)
         orderedTypes.push_back(types[idx]);
     // last column contains hash
@@ -129,7 +128,6 @@ void RowLayoutJoinHashTable::addChunk(DataChunk &chunk) {
 
     SelectionVector sel = FlatVector::INCREMENTAL_SELECTION_VECTOR;
     RowOperations::scatter(orderedChunk, data.get(), layout_, addresses, *stringHeap_, sel, size);
-    int x = 10;
 }
 
 
@@ -230,11 +228,12 @@ void RowLayoutJoinHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchu
 
     auto vec_data = lchunk.orrify();
     idx_t noMatchCount;
-    auto finalCount = RowOperations::equal(lchunk, vec_data.get(), keyLayout_, addresses, lsel,rsel,matchCount,nullptr, noMatchCount );
+    // will be compared only lchunk columns
+    auto finalCount = RowOperations::equal(lchunk, vec_data.get(), layout_, addresses, lsel,rsel,matchCount,nullptr, noMatchCount );
     // construct the result chunk
     vector<LogicalType> payloadTypes;
     for (idx_t i=0;i<payloadColumns_.size();++i)
-        payloadTypes.push_back(types_[payloadColumns_[i]]);
+        payloadTypes.push_back(types_[keyColumns_.size() + i]);
     result.initializeEmpty(payloadTypes);
     // fetch the payload columns
     for (idx_t idx=0; idx < payloadTypes.size(); ++idx) {
@@ -320,7 +319,8 @@ void RowLayoutJoinHashTable::match(DataChunk &lchunk, Vector &lhash, SelectionVe
     while (toMatchCount > 0) {
         notEqualCount = 0;
         // execute the equal
-        auto matched = RowOperations::equal(lchunk, vec_data.get(), keyLayout_,addresses, toMatch, toMatchCount, &notEqual, notEqualCount );
+        // will be compared only lchunk columns
+        auto matched = RowOperations::equal(lchunk, vec_data.get(), layout_,addresses, toMatch, toMatchCount, &notEqual, notEqualCount );
         // populate the matched rows
         for (idx_t i=0;i<matched;++i)
             matchSel.setIndex(matchCount++, toMatch.getIndex(i));

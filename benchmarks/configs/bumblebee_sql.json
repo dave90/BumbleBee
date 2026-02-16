@@ -126,6 +126,20 @@
       "commands": ["../cmake-build-release/BumbleBee -t 50  -i $file"]
     },
     {
+      "test": "Q07 Parquet",
+      "input_file": "q07.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50  -i $file"]
+    },
+    {
+      "test": "Q12 Parquet",
+      "input_file": "q12.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50  -i $file"]
+    },
+    {
       "test": "Q14 Parquet",
       "input_file": "q14.parquet.sql",
       "sql_export_csv": true,
@@ -140,8 +154,43 @@
       "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
     },
     {
+      "test": "Q25 Parquet",
+      "input_file": "q25.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50  -i $file"]
+    },
+    {
+      "test": "Q26 Parquet",
+      "input_file": "q26.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50  -i $file"]
+    },
+    {
       "test": "Q30 Parquet",
       "input_file": "q30.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
+    },
+    {
+      "test": "Q32 Parquet",
+      "input_file": "q32.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
+    },
+    {
+      "test": "Q33 Parquet",
+      "input_file": "q33.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
+    },
+    {
+      "test": "Q36 Parquet",
+      "input_file": "q36.parquet.sql",
       "sql_export_csv": true,
       "timeout": 600,
       "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]

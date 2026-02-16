@@ -1,0 +1,6 @@
+%@sql
+SELECT SEARCHPHRASE
+FROM "./files/parquet/mini_hits.parquet"
+WHERE SEARCHPHRASE <> ""
+ORDER BY SEARCHPHRASE
+LIMIT 10

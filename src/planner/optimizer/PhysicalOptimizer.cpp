@@ -777,18 +777,36 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         return;
     }
 
+    if (!pred->existJoinRLHashTable(keys, payloads) ||
+        (pred->isRecursive() && !isRowLayoutHTRuleHTCreated(pred->predicate_.get(), keys, payloads)) ) {
+        // generate also if exist because you need to add new data into the join hash table during the recursions
+        // generate the build rule
+        generateJoinRLHTBuildRules(pred, keys, payloads, prules, priority);
+        }else if (isRowLayoutHTRuleHTCreated(pred->predicate_.get(), keys, payloads)) {
+            // ht was created in this bucket so is not ready
+            // then increment prio if is 0
+            if (priority == 0)priority = 1;
+        }
 
-    // check if the hash table is present
-    if (!pred->existJoinHashTable(keys, payloads) ) {
-        // we need to build the hash table
-        generateHTBuildRules(pred, keys, payloads, prules, priority);
-    }
-    // check if the hash table is ready, otherwise we need to set the priority >= 2
-    if (!pred->getJoinHashTable(keys, payloads)->isReady())
-        priority = (priority < 2)? 2 : priority;
-
-    auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, payloads, dcKeys, joinConditions ));
+    auto nj = patom_ptr_t(new PhysicalRowLayoutHashJoin(context_, types, dcCols, selCols, pred, keys, payloads, dcKeys, atom.isNegative() ));
     patoms.push_back(std::move(nj));
+
+    // TODO use PhysicalHashJoin when join produce a lot or rows
+    //
+    //
+    // // check if the hash table is present
+    // if (!pred->existJoinHashTable(keys, payloads) ) {
+    //     // we need to build the hash table
+    //     generateHTBuildRules(pred, keys, payloads, prules, priority);
+    // }
+    // // check if the hash table is ready, otherwise we need to set the priority >= 2
+    // if (!pred->getJoinHashTable(keys, payloads)->isReady())
+    //     priority = (priority < 2)? 2 : priority;
+    //
+    //
+    //
+    // auto nj = patom_ptr_t(new PhysicalHashJoin(types, dcCols, selCols, pred, keys, payloads, dcKeys, joinConditions ));
+    // patoms.push_back(std::move(nj));
 }
 
 void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink, Schema &schema, prule_ptr_vector_t& prules, patom_ptr_t& source, idx_t priority) {

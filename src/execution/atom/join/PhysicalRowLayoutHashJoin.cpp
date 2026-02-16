@@ -131,17 +131,26 @@ void PhysicalRowLayoutHashJoin::executeProbe(PhysicalAtomState& state, DataChunk
     lchunk.initAndReference(input, lkeys_);
     Vector hash(LogicalTypeId::HASH);
     lchunk.hash(hash);
-    DataChunk result;
-    SelectionVector lsel(STANDARD_VECTOR_SIZE),rsel(STANDARD_VECTOR_SIZE);
-    cstate.ht_->probe(cstate.lpos_, cstate.rpos_, lchunk, hash,lsel, rsel, result);
+    hash.normalify(lchunk.getSize());
 
-    auto count = result.getSize();
-    if (count > 0 ) {
-        // we have output chunk to construct
-        chunk.slice(input, lsel, count);
-        for (idx_t i=0;i< result.columnCount();++i) {
-            chunk.data_[dcCols_[i]].reference(result.data_[i]);
+    idx_t count = 0;
+    while (!count && cstate.lpos_ < input.getSize()) {
+        DataChunk result;
+        SelectionVector lsel(STANDARD_VECTOR_SIZE),rsel(STANDARD_VECTOR_SIZE);
+        cstate.ht_->probe(cstate.lpos_, cstate.rpos_, lchunk, hash,lsel, rsel, result);
+
+        count = result.getSize();
+        if (count > 0) {
+            // we have output chunk to construct
+            chunk.slice(input, lsel, count);
+            for (idx_t i=0;i< result.columnCount();++i) {
+                chunk.data_[dcCols_[i]].reference(result.data_[i]);
+            }
         }
+    }
+
+    if (count == 0) {
+        chunk.reset();
     }
 }
 
@@ -154,6 +163,7 @@ void PhysicalRowLayoutHashJoin::executeExist(PhysicalAtomState& state, DataChunk
     lchunk.initAndReference(input, lkeys_);
     Vector hash(LogicalTypeId::HASH);
     lchunk.hash(hash);
+    hash.normalify(lchunk.getSize());
     SelectionVector mSel(lchunk.getSize());
     SelectionVector nmSel(lchunk.getSize());
     idx_t mCount =0, nmCount =0;
@@ -178,15 +188,18 @@ AtomResultType PhysicalRowLayoutHashJoin::execute(ThreadContext &context, DataCh
         return AtomResultType::NEED_MORE_INPUT;
     }
 
-    if (!payloads_.empty())
-        executeProbe(state, input, chunk);
-    else
+    if (negative_) {
         executeExist(state, input, chunk);
+        context.profiler_.endPhysicalAtom(chunk);
+        cstate.reset();
+        return AtomResultType::NEED_MORE_INPUT;
+    }
+
+    executeProbe(state, input, chunk);
 
     context.profiler_.endPhysicalAtom(chunk);
 
-    if (cstate.lpos_ >= input.getSize() || payloads_.empty()) {
-        // we completed the join with current chunk, request new input
+    if (cstate.lpos_ >= input.getSize()) {
         cstate.reset();
         return AtomResultType::NEED_MORE_INPUT;
     }

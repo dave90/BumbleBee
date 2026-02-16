@@ -1,0 +1,1 @@
+SELECT SearchPhrase FROM 'downloads/hits.parquet' WHERE SearchPhrase <> '' ORDER BY SearchPhrase LIMIT 10

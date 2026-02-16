@@ -1,0 +1,7 @@
+%@sql
+SELECT ADVENGINEID, COUNT(*) AS count
+FROM "./files/parquet/mini_hits.parquet"
+WHERE ADVENGINEID <> 0
+GROUP BY ADVENGINEID
+ORDER BY count DESC
+LIMIT 100

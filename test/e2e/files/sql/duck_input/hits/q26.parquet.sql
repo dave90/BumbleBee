@@ -1,0 +1,1 @@
+SELECT EventTime,SearchPhrase FROM './files/parquet/mini_hits.parquet' WHERE SearchPhrase <> '' ORDER BY EventTime, SearchPhrase LIMIT 10

@@ -1,0 +1,1 @@
+SELECT SearchPhrase FROM './files/parquet/mini_hits.parquet' WHERE SearchPhrase <> '' ORDER BY SearchPhrase LIMIT 10

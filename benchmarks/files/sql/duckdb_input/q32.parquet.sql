@@ -1,0 +1,1 @@
+SELECT WatchID, ClientIP, COUNT(*) AS c, SUM(IsRefresh) AS sum, AVG(ResolutionWidth) AS avg FROM 'downloads/hits.parquet' GROUP BY WatchID, ClientIP ORDER BY c DESC, WatchID DESC LIMIT 10

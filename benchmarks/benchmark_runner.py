@@ -26,7 +26,7 @@ NUM_TRIES = 3
 RESULTS_FOLDER = Path("results")
 TIMEOUT = 120
 
-DOWNLOAD_DIR = Path("./downloads")
+DOWNLOAD_DIR = Path("./downloads/raw")
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 def run_command(command, output_path, timeout=TIMEOUT):

@@ -1,0 +1,11 @@
+URL,c
+http://liver.ru/belgorod/page/1006.jки/доп_приборы,13539
+http://kinopoisk.ru,3937
+http://bdsm_po_yers=0&with_video,2981
+http://video.yandex,1893
+http://liver.ru/place_rukodel=365115eb7bbb90,1882
+http://liver.ru/saint-peterburg,1315
+http://smeshariki.ru/region,1003
+http://kinopoisk.ru/vladimir.irr.ru,947
+http://kinopoisk.ru/issunnyayangie-i-kostavega.expressa.ru/russia/kry/erre=all&filmId=GDyTj0NNUXI&where=all&filmId,690
+http://kinopoisk.ru/search,640

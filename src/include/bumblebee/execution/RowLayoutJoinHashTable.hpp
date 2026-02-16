@@ -70,8 +70,6 @@ private:
     vector<idx_t> payloadColumns_;
     // Keys and payload columns
     vector<idx_t> cols_;
-    // keys row layout
-    RowLayout keyLayout_;
     // global mutex for the ht
     mutex mutex_;
     // Index of the data sync in hash table

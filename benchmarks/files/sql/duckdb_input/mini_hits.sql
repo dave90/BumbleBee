@@ -106,6 +106,24 @@ CREATE TABLE hits
     URLHash BIGINT NOT NULL,
     CLID INTEGER NOT NULL
 );
+--
+-- INSERT INTO hits BY NAME
+-- SELECT *
+--            REPLACE (
+--         make_date(EventDate) AS EventDate,
+--         epoch_ms(EventTime * 1000) AS EventTime,
+--         epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
+--         epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
+-- FROM 'downloads/raw/hits.parquet' USING SAMPLE 3%;
+--
+--
+-- COPY
+-- (
+-- SELECT *
+-- FROM mini_hits
+-- ) TO 'downloads/mini_hits.csv';
+--
+-- DELETE FROM hits;
 
 INSERT INTO hits BY NAME
 SELECT *
@@ -114,28 +132,10 @@ SELECT *
         epoch_ms(EventTime * 1000) AS EventTime,
         epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
         epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
-FROM 'downloads/hits.parquet' USING SAMPLE 3%;
-
-
-COPY
-(
-SELECT *
-FROM hits
-) TO 'downloads/mini_hits.csv';
-
-DELETE FROM hits;
-
-INSERT INTO hits BY NAME
-SELECT *
-           REPLACE (
-        make_date(EventDate) AS EventDate,
-        epoch_ms(EventTime * 1000) AS EventTime,
-        epoch_ms(ClientEventTime * 1000) AS ClientEventTime,
-        epoch_ms(LocalEventTime * 1000) AS LocalEventTime)
-FROM 'downloads/hits.parquet' USING SAMPLE 30%;
+FROM 'downloads/raw/hits.parquet';
 
 COPY
 (
 SELECT *
 FROM hits
-) TO 'downloads/mini_hits.parquet';
+) TO 'downloads/hits.parquet';
