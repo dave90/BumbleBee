@@ -45,7 +45,7 @@ public:
 
 class GlobalAggSourceState : public GlobalPhysicalAtomState {
 public:
-    GlobalAggSourceState(AggregatePRLHashTable* aht): aht_(aht),
+    GlobalAggSourceState(PartitionedAggHT* aht): aht_(aht),
         totalEntries_(aht ? aht->getSize() : 0) {}
 
     bool getNextScanRange(idx_t& start, idx_t& count) {
@@ -64,7 +64,7 @@ public:
     }
 
 private:
-    AggregatePRLHashTable* aht_;
+    PartitionedAggHT* aht_;
     std::mutex mutex_;
     idx_t totalEntries_;
     idx_t currentOffset_{0};
@@ -119,7 +119,7 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
 
 PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,
     vector<idx_t> &selectedCols, const vector<idx_t> &group_cols, const vector<idx_t> &payload_cols,
-    AggregatePRLHashTable *aht, bool scanMode): PhysicalAtom(types, dcCols, selectedCols) ,
+    PartitionedAggHT *aht, bool scanMode): PhysicalAtom(types, dcCols, selectedCols) ,
                                     context_(context),
                                     aht_(aht),
                                     pt_(nullptr),
@@ -136,7 +136,7 @@ PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
 PhysicalPartitionedAggHT::PhysicalPartitionedAggHT(const ClientContext& context,
     const vector<LogicalType> &types, vector<idx_t> &dcCols,
     const vector<idx_t> &group_cols, const vector<idx_t> &payload_cols,
-    AggregatePRLHashTable *aht): PhysicalAtom(types),
+    PartitionedAggHT *aht): PhysicalAtom(types),
                                 context_(context), aht_(aht), pt_(nullptr),
                                 groupCols_(group_cols), payloadCols_(payload_cols),
                                 type_(SOURCE) {
@@ -270,7 +270,9 @@ void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAt
     if (type_ == COLLECT) {
         // populate the type columns of the predicate table
         pt_->setTypes(cgstate.pht_.getTypes());
-        cgstate.pht_.finalize();
+        // merge the partitions if data is small
+        if (cgstate.pht_.getSize() < MORSEL_SIZE)
+            cgstate.pht_.finalize();
     }
     context.profiler_.endPhysicalAtomFinalize();
 }

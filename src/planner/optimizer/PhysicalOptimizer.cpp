@@ -492,7 +492,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
     vector<idx_t> selCols; // empty selCols
     BB_ASSERT(atom.getAggsAtoms().size() == 1);
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
-    auto aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
+    auto paht = pt->getPartitionedAggHashTable().get();
 
     vector<idx_t> payloads = findPayloadIndices(atom, pt.get());
 
@@ -509,7 +509,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
     }
     // Use scan mode for explicit groups - group values come from the hash table, not from input
     bool scanMode = atom.hasExplicitGroups();
-    patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, aht, scanMode));
+    patoms.emplace_back(new PhysicalPartitionedAggHT(context_, types_, cols,selCols,groupCols, payloads, paht, scanMode));
 }
 
 void PhysicalOptimizer::generatePhysicalAggSource(Atom& atom, vector<idx_t>& cols, patom_ptr_t& source) {
@@ -517,7 +517,7 @@ void PhysicalOptimizer::generatePhysicalAggSource(Atom& atom, vector<idx_t>& col
     BB_ASSERT(atom.getAggsAtoms().size() == 1);
 
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
-    auto aht = pt->getPartitionedAggHashTable()->getAggregateHT().get();
+    auto paht = pt->getPartitionedAggHashTable().get();
 
     vector<idx_t> payloads = findPayloadIndices(atom, pt.get());
 
@@ -531,7 +531,7 @@ void PhysicalOptimizer::generatePhysicalAggSource(Atom& atom, vector<idx_t>& col
     }
 
     source = patom_ptr_t(new PhysicalPartitionedAggHT(
-        context_, types_, cols, groupCols, payloads, aht));
+        context_, types_, cols, groupCols, payloads, paht));
 }
 
 void PhysicalOptimizer::generatePhysicalExpression(Atom& atom, vector<idx_t>& cols,vector<LogicalType> types,patom_ptr_vector_t& patoms ) {

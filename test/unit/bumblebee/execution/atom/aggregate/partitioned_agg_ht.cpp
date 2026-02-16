@@ -22,19 +22,13 @@
 
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/function/aggregate/Sum.hpp"
+#include "bumblebee/function/aggregate/Count.hpp"
 #include "bumblebee/execution/PartitionedAggHT.hpp"
 
 using namespace bumblebee;
 
 
 class PartitionedAggHTTest : public ::testing::Test {
-    // Creates and returns a DataChunk initialized with a predefined set of column types: INTEGER, UINTEGER, and BIGINT.
-    // For each of the count rows, it populates the columns with incrementing values:
-    // Column 0 (INTEGER): sequential int32_t values starting from 0.
-    // Column 1 (UINTEGER): uint32_t values equal to i * 10.
-    // Column 2 (BIGINT): int64_t values equal to i * 100.
-    // The function sets the cardinality of the chunk to count and returns it.
-    // This utility is primarily used for generating consistent and type-diverse data for testing the ChunkCollection class.
 protected:
 
     vector<LogicalType> tLeft{PhysicalType::SMALLINT, PhysicalType::UINTEGER, PhysicalType::BIGINT};
@@ -54,6 +48,7 @@ protected:
         chunk.setCardinality(count);
         return chunk;
     }
+
     void addChunkToHT(distinct_ht_ptr_t& ht, DataChunk &chunk, idx_t capacity = MORSEL_SIZE,
             bool resize = false) {
 
@@ -64,6 +59,7 @@ protected:
         chunk.hash(hash);
         ht->addChunk(hash, chunk);
     }
+
     void addHTToPartitionedHT(partitioned_agg_ht_ptr_t& pht, distinct_ht_ptr_t& ht, vector<idx_t> groups,
             vector<idx_t> payloads, vector<AggregateFunction*> functions, idx_t capacity = MORSEL_SIZE,
             bool resize = false, bool distinct = true) {
@@ -81,31 +77,61 @@ protected:
         }
     }
 
-    DataChunk probeToHT(agg_ht_ptr_t& ht, DataChunk &chunk, vector<idx_t> groups, vector<AggregateFunction*> functions) {
-        vector<LogicalType> groupTypes, payloadTypes;
-        for (auto g : groups)
-            groupTypes.push_back(chunk.getTypes()[g]);
-        for (auto f : functions)
-            payloadTypes.push_back(f->result_);
+    // Scan all entries from a PartitionedAggHT and return group->agg mappings.
+    // groupCols specifies which group column types to use.
+    // Returns a map from stringified group tuple to aggregate value.
+    std::unordered_map<string, int64_t> scanAll(PartitionedAggHT& pht,
+            const vector<LogicalType>& groupTypes, const vector<AggregateFunction*>& functions) {
+        vector<LogicalType> aggTypes;
+        for (auto* f : functions)
+            aggTypes.push_back(f->result_);
 
-        DataChunk group, payload;
-        group.initialize(groupTypes);
-        group.reference(chunk, groups);
-        payload.initialize(payloadTypes);
-        payload.setCardinality(group.getSize());
+        DataChunk groups, aggResults;
+        groups.initialize(groupTypes);
+        aggResults.initialize(aggTypes);
 
-        Vector hash(LogicalTypeId::HASH, group.getSize());
-        group.hash(hash);
-
-        SelectionVector sel(group.getSize());
-        ht->fetchAggregates(hash, group, payload,sel);
-        return payload;
+        std::unordered_map<string, int64_t> result;
+        idx_t offset = 0;
+        while (true) {
+            idx_t scanned = pht.scanWithAggregates(offset, groups, aggResults);
+            if (scanned == 0) break;
+            for (idx_t i = 0; i < scanned; ++i) {
+                string key;
+                for (idx_t g = 0; g < groupTypes.size(); ++g)
+                    key += groups.getValue(g, i).toString() + ",";
+                auto aggVal = aggResults.getValue(0, i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
+                result[key] = aggVal;
+            }
+            offset += scanned;
+        }
+        return result;
     }
 
+    // Scan all entries and return total count of rows
+    idx_t scanAllCount(PartitionedAggHT& pht,
+            const vector<LogicalType>& groupTypes, const vector<AggregateFunction*>& functions) {
+        vector<LogicalType> aggTypes;
+        for (auto* f : functions)
+            aggTypes.push_back(f->result_);
+
+        DataChunk groups, aggResults;
+        groups.initialize(groupTypes);
+        aggResults.initialize(aggTypes);
+
+        idx_t total = 0;
+        idx_t offset = 0;
+        while (true) {
+            idx_t scanned = pht.scanWithAggregates(offset, groups, aggResults);
+            if (scanned == 0) break;
+            total += scanned;
+            offset += scanned;
+        }
+        return total;
+    }
 };
 
 
-TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDistinc) {
+TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDistinct) {
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2};
@@ -113,10 +139,10 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDist
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Build the chunk with 8 rows
-    DataChunk chunk = createChunkWithValue(tLeft, 8 );
+    DataChunk chunk = createChunkWithValue(tLeft, 8);
 
     // Create HT and add the same chunk twice (duplicates)
-    distinct_ht_ptr_t ht1,ht2;
+    distinct_ht_ptr_t ht1, ht2;
     addChunkToHT(ht1, chunk, 16, false);
     addChunkToHT(ht2, chunk, 16, false);
 
@@ -126,23 +152,25 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithDist
 
     pht->finalize();
 
-    agg_ht_ptr_t& aht = pht->getAggregateHT();
-    // Probe with the original groups; the SUM should be doubled of payload column
-    DataChunk result = probeToHT(aht, chunk, groupIndexTypes, functions);
+    // Scan all groups; with distinct, SUM should NOT double
+    vector<LogicalType> groupTypes;
+    for (auto g : groupIndexTypes)
+        groupTypes.push_back(tLeft[g]);
+    auto result = scanAll(*pht, groupTypes, functions);
 
-
-    EXPECT_EQ(result.columnCount(), 1);
-    EXPECT_EQ(result.getSize(), chunk.getSize());
-    for (idx_t i = 0; i < result.getSize(); ++i) {
-        // Expected =  (i * 10)
+    EXPECT_EQ(result.size(), chunk.getSize());
+    for (idx_t i = 0; i < chunk.getSize(); ++i) {
+        string key;
+        for (auto g : groupIndexTypes)
+            key += chunk.getValue(g, i).toString() + ",";
         int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
-        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
-        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+        ASSERT_TRUE(result.count(key)) << "Missing group " << key;
+        EXPECT_EQ(result[key], expected) << "Row " << i << " mismatch";
     }
 }
 
 
-TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithoutDistinc) {
+TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithoutDistinct) {
     // Group by cols [1,2]; SUM over col 2 (BIGINT). We'll add the *same* rows twice.
     vector<idx_t> groupIndexTypes = {1, 2};
     vector<idx_t> payloadIndexTypes = {2};
@@ -150,10 +178,10 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithoutD
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
 
     // Build the chunk with 8 rows
-    DataChunk chunk = createChunkWithValue(tLeft, 8 );
+    DataChunk chunk = createChunkWithValue(tLeft, 8);
 
     // Create HT and add the same chunk twice (duplicates)
-    distinct_ht_ptr_t ht1,ht2;
+    distinct_ht_ptr_t ht1, ht2;
     addChunkToHT(ht1, chunk, 16, false);
     addChunkToHT(ht2, chunk, 16, false);
 
@@ -163,25 +191,26 @@ TEST_F(PartitionedAggHTTest, AddChunk_DuplicateGroupsAggregatesCorrectlyWithoutD
 
     pht->finalize();
 
-    agg_ht_ptr_t& aht = pht->getAggregateHT();
-    // Probe with the original groups; the SUM should be doubled of payload column
-    DataChunk result = probeToHT(aht, chunk, groupIndexTypes, functions);
+    // Scan all groups; without distinct, SUM should be doubled
+    vector<LogicalType> groupTypes;
+    for (auto g : groupIndexTypes)
+        groupTypes.push_back(tLeft[g]);
+    auto result = scanAll(*pht, groupTypes, functions);
 
-
-    EXPECT_EQ(result.columnCount(), 1);
-    EXPECT_EQ(result.getSize(), chunk.getSize());
-    for (idx_t i = 0; i < result.getSize(); ++i) {
-        // Expected =  (i * 10 * 2) (* 2 because of duplicates)
+    EXPECT_EQ(result.size(), chunk.getSize());
+    for (idx_t i = 0; i < chunk.getSize(); ++i) {
+        string key;
+        for (auto g : groupIndexTypes)
+            key += chunk.getValue(g, i).toString() + ",";
         int64_t expected = chunk.data_[payloadIndexTypes[0]].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>() * 2;
-        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
-        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+        ASSERT_TRUE(result.count(key)) << "Missing group " << key;
+        EXPECT_EQ(result[key], expected) << "Row " << i << " mismatch";
     }
 }
 
 // Columns-with-same-values test
-TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
-    // We will group by cols [0 and 1]
-    vector<idx_t> groups = {0,1};
+TEST_F(PartitionedAggHTTest, DistinctColumns_AggregatesCorrectly1) {
+    vector<idx_t> groups = {0, 1};
     vector<idx_t> payloads = {2};
     auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]}); // Sum over BIGINT
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
@@ -195,12 +224,10 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
     for (idx_t i = 0; i < N; ++i) {
         int64_t v = static_cast<int64_t>(100);
         for (idx_t j = 0; j < tLeft.size(); ++j) {
-            chunk.setValue(j, i, Value(v*j).cast(tLeft[j].getPhysicalType())); // make all columns identical
+            chunk.setValue(j, i, Value(v * j).cast(tLeft[j].getPhysicalType()));
         }
     }
     chunk.setCardinality(N);
-
-    std::cout << chunk.toString() <<std::endl;
 
     distinct_ht_ptr_t ht1;
     addChunkToHT(ht1, chunk, 32, false);
@@ -209,25 +236,22 @@ TEST_F(PartitionedAggHTTest, DistincColumns_AggregatesCorrectly1) {
 
     pht->finalize();
 
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+    auto result = scanAll(*pht, groupTypes, functions);
 
-    agg_ht_ptr_t& aht = pht->getAggregateHT();
-    // Probe with the original groups; the SUM should be doubled of payload column
-    DataChunk result = probeToHT(aht, chunk, groups, functions);
-
-    ASSERT_EQ(result.getSize(), chunk.getSize());
-    // values should be 200 as all the values are duplicates
-    for (idx_t i = 0; i < result.getSize(); ++i) {
-        int64_t expected = 200;
-        int64_t got = result.data_[0].getValue(i).cast(PhysicalType::BIGINT).getNumericValue<int64_t>();
-        EXPECT_EQ(got, expected) << "Row " << i << " mismatch";
+    // All rows have the same group key, so only 1 group after distinct
+    ASSERT_EQ(result.size(), 1);
+    // SUM should be 200 (value is 200 for col 2 which is 100*2)
+    for (auto& [key, val] : result) {
+        EXPECT_EQ(val, 200);
     }
-
 }
 
 
-
 TEST_F(PartitionedAggHTTest, Partition_Shift62) {
-    vector<idx_t> groupIndexTypes = {0,2};
+    vector<idx_t> groupIndexTypes = {0, 2};
     vector<idx_t> payloadIndexTypes = {2};
     auto aggFunc = SumFunc().getFunction({tLeft[payloadIndexTypes[0]]});
     vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
@@ -238,18 +262,17 @@ TEST_F(PartitionedAggHTTest, Partition_Shift62) {
 
     EXPECT_EQ(ht->getSize(), 16);
 
-    // Prepare 2 partitions; with shift=63, index should always be 1 for non-empty buckets.
     std::vector<distinct_ht_ptr_t> partitions(4);
     ht->partition(partitions, 62);
     auto pSize = 0;
-    for (auto& p: partitions)
-        if (p)pSize += p->getSize();
+    for (auto& p : partitions)
+        if (p) pSize += p->getSize();
     EXPECT_EQ(pSize, ht->getSize());
 
     // now combine all the partitions
     distinct_ht_ptr_t htFinal;
-    for (auto& p: partitions) {
-        if (!p)continue;
+    for (auto& p : partitions) {
+        if (!p) continue;
         if (!htFinal) {
             htFinal = std::move(p);
             continue;
@@ -258,4 +281,449 @@ TEST_F(PartitionedAggHTTest, Partition_Shift62) {
         p = nullptr;
     }
     EXPECT_EQ(htFinal->getSize(), ht->getSize());
+}
+
+
+// ====== scanWithAggregates tests ======
+
+// Test: scan on an empty table returns 0
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_EmptyTable) {
+    vector<idx_t> groups = {0};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    partitioned_agg_ht_ptr_t pht(new PartitionedAggHT(context, groups, payloads, functions, 0));
+
+    vector<LogicalType> groupTypes = {tLeft[0]};
+    vector<LogicalType> aggTypes = {((AggregateFunction*)aggFunc.get())->result_};
+    DataChunk grp, agg;
+    grp.initialize(groupTypes);
+    agg.initialize(aggTypes);
+
+    idx_t scanned = pht->scanWithAggregates(0, grp, agg);
+    EXPECT_EQ(scanned, 0);
+}
+
+// Test: scan after finalize returns correct results
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_AfterFinalize) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 16);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 32, false);
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht, groups, payloads, functions);
+
+    pht->finalize();
+    EXPECT_TRUE(pht->isReady());
+
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+    auto totalRows = scanAllCount(*pht, groupTypes, functions);
+    EXPECT_EQ(totalRows, pht->getSize());
+}
+
+// Test: scan without finalize returns same results as with finalize
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_WithoutFinalize) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 16);
+
+    // Build two identical PHTs
+    distinct_ht_ptr_t ht1, ht2;
+    addChunkToHT(ht1, chunk, 32, false);
+    addChunkToHT(ht2, chunk, 32, false);
+
+    partitioned_agg_ht_ptr_t pht1, pht2;
+    addHTToPartitionedHT(pht1, ht1, groups, payloads, functions);
+    addHTToPartitionedHT(pht2, ht2, groups, payloads, functions);
+
+    pht1->finalize();
+    // pht2 is NOT finalized
+
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+
+    auto result1 = scanAll(*pht1, groupTypes, functions);
+    auto result2 = scanAll(*pht2, groupTypes, functions);
+
+    EXPECT_EQ(result1.size(), result2.size());
+    for (auto& [key, val] : result1) {
+        ASSERT_TRUE(result2.count(key)) << "Missing group " << key << " in non-finalized scan";
+        EXPECT_EQ(result2[key], val) << "Mismatch for group " << key;
+    }
+}
+
+// Test: some partitions are empty (few distinct groups, many partitions)
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_SomePartitionsEmpty) {
+    // Group by col 1 (UINTEGER) which has distinct values, unlike col 0 which is always 0
+    vector<idx_t> groups = {1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // 4 distinct groups, 64 partitions -> most partitions will be empty
+    DataChunk chunk = createChunkWithValue(tLeft, 4);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 16, false);
+
+    partitioned_agg_ht_ptr_t pht(new PartitionedAggHT(context, groups, payloads, functions, 0, 64));
+    pht->setDistinct();
+    DataChunk scanChunk;
+    scanChunk.initialize(ht->getTypes());
+    idx_t offset = 0;
+    while (true) {
+        offset += ht->scan(offset, scanChunk);
+        pht->addChunk(scanChunk);
+        if (offset >= ht->getSize()) break;
+    }
+
+    EXPECT_FALSE(pht->isReady());
+
+    vector<LogicalType> groupTypes = {tLeft[1]};
+    auto totalRows = scanAllCount(*pht, groupTypes, functions);
+    EXPECT_EQ(totalRows, 4);
+}
+
+// Test: uneven distribution across partitions
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_UnevenDistribution) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Create a chunk with 100 rows where some group keys repeat heavily
+    DataChunk chunk = createChunkWithValue(tLeft, 100);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 256, false);
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht, groups, payloads, functions);
+
+    // Scan without finalize
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+    auto totalRows = scanAllCount(*pht, groupTypes, functions);
+    EXPECT_EQ(totalRows, pht->getSize());
+}
+
+// Test: equally distributed data
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_EquallyDistributed) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // 200 distinct rows spread across 4 partitions
+    DataChunk chunk = createChunkWithValue(tLeft, 200);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 512, false);
+
+    partitioned_agg_ht_ptr_t pht(new PartitionedAggHT(context, groups, payloads, functions, 0, 4));
+    pht->setDistinct();
+    DataChunk scanChunk;
+    scanChunk.initialize(ht->getTypes());
+    idx_t offset = 0;
+    while (true) {
+        offset += ht->scan(offset, scanChunk);
+        pht->addChunk(scanChunk);
+        if (offset >= ht->getSize()) break;
+    }
+
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+
+    // Scan with finalize
+    auto phtCopyForFinalize = partitioned_agg_ht_ptr_t(new PartitionedAggHT(context, groups, payloads, functions, 0, 4));
+    phtCopyForFinalize->setDistinct();
+    distinct_ht_ptr_t ht2;
+    addChunkToHT(ht2, chunk, 512, false);
+    DataChunk scanChunk2;
+    scanChunk2.initialize(ht2->getTypes());
+    idx_t offset2 = 0;
+    while (true) {
+        offset2 += ht2->scan(offset2, scanChunk2);
+        phtCopyForFinalize->addChunk(scanChunk2);
+        if (offset2 >= ht2->getSize()) break;
+    }
+    phtCopyForFinalize->finalize();
+
+    auto resultFinalized = scanAll(*phtCopyForFinalize, groupTypes, functions);
+    auto resultNotFinalized = scanAll(*pht, groupTypes, functions);
+
+    EXPECT_EQ(resultFinalized.size(), resultNotFinalized.size());
+    for (auto& [key, val] : resultFinalized) {
+        ASSERT_TRUE(resultNotFinalized.count(key)) << "Missing group " << key;
+        EXPECT_EQ(resultNotFinalized[key], val) << "Mismatch for group " << key;
+    }
+}
+
+// Test: multiple scan batches (data exceeds STANDARD_VECTOR_SIZE)
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_MultipleBatches) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // Insert enough data to require multiple scan batches
+    // STANDARD_VECTOR_SIZE is typically 1024, so 2000+ rows will need multiple calls
+    idx_t totalRows = STANDARD_VECTOR_SIZE * 2;
+
+    partitioned_agg_ht_ptr_t pht(new PartitionedAggHT(context, groups, payloads, functions, totalRows, 4));
+    pht->setDistinct();
+
+    // Add in batches
+    for (idx_t batch = 0; batch < totalRows; batch += STANDARD_VECTOR_SIZE) {
+        idx_t batchSize = minValue((idx_t)STANDARD_VECTOR_SIZE, totalRows - batch);
+        DataChunk chunk = createChunkWithValue(tLeft, batchSize, batch);
+        distinct_ht_ptr_t ht;
+        addChunkToHT(ht, chunk, nextPowerOfTwo(batchSize * 2), false);
+        DataChunk scanChunk;
+        scanChunk.initialize(ht->getTypes());
+        idx_t offset = 0;
+        while (true) {
+            offset += ht->scan(offset, scanChunk);
+            pht->addChunk(scanChunk);
+            if (offset >= ht->getSize()) break;
+        }
+    }
+
+    // Verify scan without finalize returns all rows
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+    auto count = scanAllCount(*pht, groupTypes, functions);
+    EXPECT_EQ(count, pht->getSize());
+
+    // Verify no single scan call returns more than STANDARD_VECTOR_SIZE
+    vector<LogicalType> aggTypes = {((AggregateFunction*)aggFunc.get())->result_};
+    DataChunk grp, agg;
+    grp.initialize(groupTypes);
+    agg.initialize(aggTypes);
+
+    idx_t offset = 0;
+    while (true) {
+        idx_t scanned = pht->scanWithAggregates(offset, grp, agg);
+        if (scanned == 0) break;
+        EXPECT_LE(scanned, STANDARD_VECTOR_SIZE);
+        offset += scanned;
+    }
+}
+
+// Test: scan with offset past all data returns 0
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_OffsetPastEnd) {
+    vector<idx_t> groups = {0};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 8);
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 16, false);
+
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht, groups, payloads, functions);
+
+    vector<LogicalType> groupTypes = {tLeft[0]};
+    vector<LogicalType> aggTypes = {((AggregateFunction*)aggFunc.get())->result_};
+    DataChunk grp, agg;
+    grp.initialize(groupTypes);
+    agg.initialize(aggTypes);
+
+    // Use an offset way past the data
+    idx_t scanned = pht->scanWithAggregates(100000, grp, agg);
+    EXPECT_EQ(scanned, 0);
+}
+
+// Test: single group (all rows have the same key)
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_SingleGroup) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    // All rows identical -> single group after distinct
+    const idx_t N = 50;
+    DataChunk chunk;
+    chunk.initialize(tLeft);
+    chunk.setCapacity(N);
+    chunk.resize(N);
+    for (idx_t i = 0; i < N; ++i) {
+        for (idx_t j = 0; j < tLeft.size(); ++j) {
+            chunk.setValue(j, i, Value((int64_t)(42 * j)).cast(tLeft[j].getPhysicalType()));
+        }
+    }
+    chunk.setCardinality(N);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 128, false);
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht, groups, payloads, functions);
+
+    // Should have exactly 1 group
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+    auto result = scanAll(*pht, groupTypes, functions);
+    EXPECT_EQ(result.size(), 1);
+    // SUM of col2 = 42*2 = 84 (single entry, not multiplied)
+    for (auto& [key, val] : result) {
+        EXPECT_EQ(val, 84);
+    }
+}
+
+// Test: large cardinality without finalize spanning many partitions
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_LargeCardinalityWithoutFinalize) {
+    vector<idx_t> groups = {0, 1};
+    vector<idx_t> payloads = {2};
+    auto aggFunc = SumFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)aggFunc.get()};
+
+    idx_t totalRows = 5000;
+
+    partitioned_agg_ht_ptr_t pht(new PartitionedAggHT(context, groups, payloads, functions, totalRows, 64));
+    pht->setDistinct();
+
+    for (idx_t batch = 0; batch < totalRows; batch += STANDARD_VECTOR_SIZE) {
+        idx_t batchSize = minValue((idx_t)STANDARD_VECTOR_SIZE, totalRows - batch);
+        DataChunk chunk = createChunkWithValue(tLeft, batchSize, batch);
+        distinct_ht_ptr_t ht;
+        addChunkToHT(ht, chunk, nextPowerOfTwo(batchSize * 2), false);
+        DataChunk scanChunk;
+        scanChunk.initialize(ht->getTypes());
+        idx_t offset = 0;
+        while (true) {
+            offset += ht->scan(offset, scanChunk);
+            pht->addChunk(scanChunk);
+            if (offset >= ht->getSize()) break;
+        }
+    }
+
+    EXPECT_FALSE(pht->isReady());
+
+    vector<LogicalType> groupTypes;
+    for (auto g : groups)
+        groupTypes.push_back(tLeft[g]);
+    auto count = scanAllCount(*pht, groupTypes, functions);
+    EXPECT_EQ(count, pht->getSize());
+}
+
+// ====== getPayloadsTypes tests ======
+
+// Test: getPayloadsTypes returns aggregate result types, not input payload types.
+// COUNT on SMALLINT input should return UBIGINT, not SMALLINT.
+TEST_F(PartitionedAggHTTest, GetPayloadsTypes_ReturnsResultTypesNotInputTypes) {
+    // Group by col 1 (UINTEGER), COUNT over col 0 (SMALLINT)
+    vector<idx_t> groups = {1};
+    vector<idx_t> payloads = {0}; // SMALLINT column
+    auto countFunc = CountFunc().getFunction({tLeft[payloads[0]]}); // COUNT(SMALLINT) → UBIGINT
+    vector<AggregateFunction*> functions = {(AggregateFunction*)countFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 8);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 16, false);
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht, groups, payloads, functions);
+
+    auto resultTypes = pht->getPayloadsTypes();
+    ASSERT_EQ(resultTypes.size(), 1);
+    // Must be the aggregate RESULT type (UBIGINT), not input type (SMALLINT)
+    EXPECT_EQ(resultTypes[0].type(), LogicalTypeId::UBIGINT);
+    EXPECT_NE(resultTypes[0].type(), LogicalTypeId::SMALLINT);
+}
+
+// Test: scanWithAggregates works correctly when aggregate result type differs from input type.
+// COUNT(SMALLINT) produces UBIGINT results - scan must use the right types.
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_CountDifferentResultType) {
+    // Group by col 1 (UINTEGER), COUNT over col 0 (SMALLINT)
+    vector<idx_t> groups = {1};
+    vector<idx_t> payloads = {0};
+    auto countFunc = CountFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)countFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 16);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 32, false);
+    partitioned_agg_ht_ptr_t pht;
+    addHTToPartitionedHT(pht, ht, groups, payloads, functions);
+
+    pht->finalize();
+
+    // Use getPayloadsTypes() (aggregate result types) for the scan DataChunk
+    auto aggTypes = pht->getPayloadsTypes();
+    ASSERT_EQ(aggTypes.size(), 1);
+    EXPECT_EQ(aggTypes[0].type(), LogicalTypeId::UBIGINT);
+
+    vector<LogicalType> groupTypes = {tLeft[1]};
+    DataChunk grp, agg;
+    grp.initialize(groupTypes);
+    agg.initialize(aggTypes);
+
+    idx_t totalScanned = 0;
+    idx_t offset = 0;
+    while (true) {
+        idx_t scanned = pht->scanWithAggregates(offset, grp, agg);
+        if (scanned == 0) break;
+        totalScanned += scanned;
+        offset += scanned;
+    }
+    EXPECT_EQ(totalScanned, pht->getSize());
+}
+
+// Test: scanWithAggregates without finalize using COUNT (result type != input type)
+TEST_F(PartitionedAggHTTest, ScanWithAggregates_CountWithoutFinalize) {
+    vector<idx_t> groups = {1};
+    vector<idx_t> payloads = {0}; // SMALLINT
+    auto countFunc = CountFunc().getFunction({tLeft[payloads[0]]});
+    vector<AggregateFunction*> functions = {(AggregateFunction*)countFunc.get()};
+
+    DataChunk chunk = createChunkWithValue(tLeft, 32);
+
+    distinct_ht_ptr_t ht;
+    addChunkToHT(ht, chunk, 64, false);
+
+    partitioned_agg_ht_ptr_t pht(new PartitionedAggHT(context, groups, payloads, functions, 0, 4));
+    pht->setDistinct();
+    DataChunk scanChunk;
+    scanChunk.initialize(ht->getTypes());
+    idx_t offset = 0;
+    while (true) {
+        offset += ht->scan(offset, scanChunk);
+        pht->addChunk(scanChunk);
+        if (offset >= ht->getSize()) break;
+    }
+
+    EXPECT_FALSE(pht->isReady());
+
+    auto aggTypes = pht->getPayloadsTypes();
+    vector<LogicalType> groupTypes = {tLeft[1]};
+    DataChunk grp, agg;
+    grp.initialize(groupTypes);
+    agg.initialize(aggTypes);
+
+    idx_t totalScanned = 0;
+    offset = 0;
+    while (true) {
+        idx_t scanned = pht->scanWithAggregates(offset, grp, agg);
+        if (scanned == 0) break;
+        totalScanned += scanned;
+        offset += scanned;
+    }
+    EXPECT_EQ(totalScanned, pht->getSize());
 }

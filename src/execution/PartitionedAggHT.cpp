@@ -276,4 +276,95 @@ void PartitionedAggHT::merge(idx_t partition, agg_ht_ptr_t localHt) {
     pAggHts_[partition]->combine(*localHt);
 }
 
+
+vector<LogicalType> PartitionedAggHT::getPayloadsTypes() const {
+    vector<LogicalType> types;
+    for (auto* func : functions_)
+        types.push_back(func->result_);
+    return types;
+}
+
+void PartitionedAggHT::fetchAggregates(Vector &result, idx_t function) {
+    // if is not ready we need to finalize it
+    if (!ready_) {
+        lock_guard lock(mutex_);
+        if (!ready_) finalize();
+    }
+    table_->fetchAggregates(result, function);
+}
+
+void PartitionedAggHT::fetchAggregates(Vector &hash, DataChunk &group, DataChunk &result, SelectionVector &sel) {
+    // if is not ready we need to finalize it
+    if (!ready_) {
+        lock_guard lock(mutex_);
+        if (!ready_) finalize();
+    }
+    table_->fetchAggregates(hash, group, result, sel);
+}
+
+idx_t PartitionedAggHT::scanWithAggregates(idx_t offset, DataChunk &groups, DataChunk &aggResults, idx_t size) {
+
+    // If partitions have been merged, delegate to the final table
+    if (ready_ && table_) {
+        return table_->scanWithAggregates(offset, groups, aggResults, size);
+    }
+
+    // Scan across partitions without merging.
+    // Each partition's scanWithAggregates writes from position 0, so we use
+    // temporary chunks and append into the output when spanning multiple partitions.
+    idx_t totalScanned = 0;
+    idx_t skipped = 0;
+
+    DataChunk tmpGroups, tmpAgg;
+    bool tmpInitialized = false;
+
+    for (idx_t p = 0; p < partitions_ && totalScanned < size; ++p) {
+        if (!pAggHts_[p] || pAggHts_[p]->getSize() == 0) continue;
+
+        auto partitionSize = pAggHts_[p]->getSize();
+
+        // Check if offset falls beyond this partition
+        if (skipped + partitionSize <= offset) {
+            skipped += partitionSize;
+            continue;
+        }
+
+        auto localOffset = (offset > skipped) ? offset - skipped : 0;
+        auto remaining = size - totalScanned;
+
+        if (totalScanned == 0) {
+            // First partition: scan directly into output chunks
+            auto scanned = pAggHts_[p]->scanWithAggregates(localOffset, groups, aggResults, remaining);
+            if (scanned == 0) {
+                skipped += partitionSize;
+                continue;
+            }
+            totalScanned += scanned;
+            offset = skipped + localOffset + scanned;
+        } else {
+            // Subsequent partitions: scan into temp chunks and append
+            if (!tmpInitialized) {
+                tmpGroups.initialize(groups.getTypes());
+                tmpAgg.initialize(aggResults.getTypes());
+                tmpInitialized = true;
+            }
+            auto scanned = pAggHts_[p]->scanWithAggregates(localOffset, tmpGroups, tmpAgg, remaining);
+            if (scanned == 0) {
+                skipped += partitionSize;
+                continue;
+            }
+            groups.append(tmpGroups);
+            aggResults.append(tmpAgg);
+            totalScanned += scanned;
+            offset = skipped + localOffset + scanned;
+        }
+        skipped += partitionSize;
+    }
+
+    if (totalScanned == 0) {
+        groups.setCardinality(0);
+        aggResults.setCardinality(0);
+    }
+    return totalScanned;
+}
 }

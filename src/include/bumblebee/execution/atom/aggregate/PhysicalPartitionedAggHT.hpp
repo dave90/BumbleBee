@@ -30,12 +30,12 @@ public:
         const vector<idx_t> &payload_cols, const vector<AggregateFunction *> &aggregate_functions);
     // constructor for probe
     PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types, vector<idx_t> &dcCols,vector<idx_t> &selectedCols, const vector<idx_t> &group_cols,
-        const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht, bool scanMode = false);
+        const vector<idx_t> &payload_cols, PartitionedAggHT* paht, bool scanMode = false);
 
     // constructor for source (SOURCE) - parallel scan of aggregate HT
     PhysicalPartitionedAggHT(const ClientContext& context, const vector<LogicalType> &types,
         vector<idx_t> &dcCols, const vector<idx_t> &group_cols,
-        const vector<idx_t> &payload_cols, AggregatePRLHashTable* aht);
+        const vector<idx_t> &payload_cols, PartitionedAggHT* aht);
 
     ~PhysicalPartitionedAggHT() override = default;
 
@@ -66,7 +66,7 @@ private:
 
     PredicateTables* pt_;
     // used during probe phase
-    AggregatePRLHashTable* aht_;
+    PartitionedAggHT* aht_;
     // during build phase point to the internal predicate table columns
     // on probe point to the group column in input data chunk
     vector<idx_t> groupCols_;

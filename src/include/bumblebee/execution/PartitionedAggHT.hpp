@@ -84,9 +84,6 @@ public:
         return ready_;
     }
 
-    agg_ht_ptr_t& getAggregateHT() {
-        return table_;
-    }
 
     vector<LogicalType> getTypes() {
         return types_;
@@ -97,8 +94,12 @@ public:
     }
 
     idx_t getSize() {
-        BB_ASSERT(isReady());
-        return (table_)?table_->getSize() : 0;
+        if (table_)return table_->getSize();
+        idx_t size = 0;
+        for (auto& aht:pAggHts_)
+            if (aht)
+                size += aht->getSize();
+        return size;
     }
 
     bool checkGroups(const vector<idx_t>& groups);
@@ -121,6 +122,14 @@ public:
 
     // Get the runtime group column types (populated after initialize())
     const vector<LogicalType>& getGroupColsType() const { return groupColsType_; }
+    // Get the aggregate result types (matches AggregatePRLHashTable::getPayloadsTypes)
+    vector<LogicalType> getPayloadsTypes() const;
+
+    // Utility functions to scan the data
+    void fetchAggregates(Vector& result, idx_t function);
+    void fetchAggregates(Vector& hash, DataChunk& group, DataChunk& result, SelectionVector &sel);
+    idx_t scanWithAggregates(idx_t offset, DataChunk& groups, DataChunk& aggResults, idx_t size = STANDARD_VECTOR_SIZE);
+
 
 private:
     void ensurePartitionAggHt(idx_t p);
