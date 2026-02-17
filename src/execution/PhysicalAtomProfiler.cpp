@@ -20,6 +20,8 @@
 #include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/types/DataChunk.hpp"
 #include "bumblebee/execution/PhysicalAtom.hpp"
+#include <iomanip>
+#include <sstream>
 
 namespace bumblebee{
 
@@ -66,26 +68,126 @@ void PhysicalAtomProfiler::endPhysicalAtomFinalize() {
     }
 }
 
-string PhysicalAtomProfiler::toString() const {
+void PhysicalAtomProfiler::endPhysicalAtomCombine() {
+    profiler_.end();
+    auto elapsed = profiler_.elapsed();
+    auto find = profilingInfo_.find(active_patom_);
+    if (find == profilingInfo_.end()) {
+        profilingInfo_.insert(std::make_pair(active_patom_, ProfilingInformation{0, 0, 0, elapsed}));
+    }else {
+        find->second.combineTime_ += elapsed;
+    }
+}
+
+static string formatNumber(idx_t n) {
+    if (n == 0) return "0";
+    string s = std::to_string(n);
     string result;
-    for (auto& [key, value]:profilingInfo_) {
-        result += key->toString() + "\t" + std::to_string(value.elements_) + "\t"  + std::to_string(value.time_) + "\t" + std::to_string(value.finalizeTime_) + "\n";
+    int count = 0;
+    for (int i = (int)s.size() - 1; i >= 0; --i) {
+        if (count > 0 && count % 3 == 0) result = "," + result;
+        result = s[i] + result;
+        count++;
     }
     return result;
 }
 
-string PhysicalAtomProfiler::toString(vector<PhysicalAtom*>& patoms) const {
-    string result;
+static string formatTime(double t) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3) << t;
+    return oss.str() + "s";
+}
 
-    for (auto& patom: patoms) {
-        auto key = patom;
-        BB_ASSERT(profilingInfo_.contains(key));
-        auto value = profilingInfo_.find(key)->second;
-        result += key->toString() + "\t" + std::to_string(value.elements_) + "\t" + std::to_string(value.time_) + "\t" +
-                std::to_string(value.finalizeTime_) + "\n";
+static string padRight(const string& s, idx_t width) {
+    if (s.size() >= width) return s.substr(0, width);
+    return s + string(width - s.size(), ' ');
+}
+
+static string padLeft(const string& s, idx_t width) {
+    if (s.size() >= width) return s;
+    return string(width - s.size(), ' ') + s;
+}
+
+static string repeatStr(const string& s, idx_t count) {
+    string result;
+    result.reserve(s.size() * count);
+    for (idx_t i = 0; i < count; ++i) result += s;
+    return result;
+}
+
+static string buildTable(const vector<std::pair<const PhysicalAtom*, ProfilingInformation>>& entries) {
+    // Column widths
+    constexpr idx_t COL_OP = 34;
+    constexpr idx_t COL_ROWS = 14;
+    constexpr idx_t COL_TIME = 10;
+    constexpr idx_t COL_FIN = 10;
+    constexpr idx_t COL_COMB = 10;
+    // Inner width = sum of segment widths + 4 inner column separators (┼)
+    // Each segment: COL_X + 1 (for leading space)
+    const idx_t totalWidth = (COL_OP + 1) + (COL_ROWS + 1) + (COL_TIME + 1) + (COL_FIN + 1) + (COL_COMB + 1) + 4;
+
+    const string H = "\u2500"; // ─
+    std::ostringstream ss;
+
+    // Top border
+    ss << "\u250c" << repeatStr(H, totalWidth) << "\u2510\n";
+
+    // Header
+    ss << "\u2502 " << padRight("Operator", COL_OP)
+       << "\u2502" << padLeft("Rows", COL_ROWS)
+       << " \u2502" << padLeft("Time", COL_TIME)
+       << " \u2502" << padLeft("Finalize", COL_FIN)
+       << " \u2502" << padLeft("Combine", COL_COMB)
+       << " \u2502\n";
+
+    // Header separator
+    ss << "\u251c" << repeatStr(H, COL_OP + 1) << "\u253c"
+       << repeatStr(H, COL_ROWS + 1) << "\u253c"
+       << repeatStr(H, COL_TIME + 1) << "\u253c"
+       << repeatStr(H, COL_FIN + 1) << "\u253c"
+       << repeatStr(H, COL_COMB + 1) << "\u2524\n";
+
+    // Data rows
+    double totalTime = 0;
+    for (auto& [atom, info] : entries) {
+        auto name = atom->getName();
+        auto rowTime = info.time_ + info.finalizeTime_ + info.combineTime_;
+        totalTime += rowTime;
+
+        ss << "\u2502 " << padRight(name, COL_OP)
+           << "\u2502" << padLeft(formatNumber(info.elements_), COL_ROWS)
+           << " \u2502" << padLeft(formatTime(info.time_), COL_TIME)
+           << " \u2502" << padLeft(formatTime(info.finalizeTime_), COL_FIN)
+           << " \u2502" << padLeft(formatTime(info.combineTime_), COL_COMB)
+           << " \u2502\n";
     }
 
-    return result;
+    // Bottom separator
+    ss << "\u251c" << repeatStr(H, totalWidth) << "\u2524\n";
+
+    // Total row
+    ss << "\u2502 " << padRight("Total CPU time: " + formatTime(totalTime), totalWidth - 1) << "\u2502\n";
+
+    // Bottom border
+    ss << "\u2514" << repeatStr(H, totalWidth) << "\u2518\n";
+
+    return ss.str();
+}
+
+string PhysicalAtomProfiler::toString() const {
+    vector<std::pair<const PhysicalAtom*, ProfilingInformation>> entries;
+    for (auto& [key, value] : profilingInfo_)
+        entries.emplace_back(key, value);
+    return buildTable(entries);
+}
+
+string PhysicalAtomProfiler::toString(vector<PhysicalAtom*>& patoms) const {
+    vector<std::pair<const PhysicalAtom*, ProfilingInformation>> entries;
+    for (auto& patom : patoms) {
+        BB_ASSERT(profilingInfo_.contains(patom));
+        entries.emplace_back(patom, profilingInfo_.find(patom)->second);
+    }
+    return buildTable(entries);
 }
 
 void PhysicalAtomProfiler::append(const PhysicalAtomProfiler &other) {
@@ -96,6 +198,7 @@ void PhysicalAtomProfiler::append(const PhysicalAtomProfiler &other) {
         profilingInfo_[key].elements_ += value.elements_;
         profilingInfo_[key].time_ += value.time_;
         profilingInfo_[key].finalizeTime_ += value.finalizeTime_;
+        profilingInfo_[key].combineTime_ += value.combineTime_;
     }
 }
 

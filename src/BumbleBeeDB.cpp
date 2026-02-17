@@ -170,11 +170,12 @@ void BumbleBeeDB::processExit(RulesBucket &bucket, Scheduler &scheduler) {
 
 
     if (context_.printProfiling_) {
-        // print the profiling result
         auto atomProfiler = scheduler.getAtomProfiler();
         for (auto& prule : pruleBucket) {
             auto patoms = prule->getPhysicalAtoms();
-            LOG_INFO("Profile rule: \n%s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+            profilingReport_ += "Rule: " + prule->toString() + "\n";
+            profilingReport_ += atomProfiler.toString(patoms);
+            profilingReport_ += "\n";
         }
     }
 }
@@ -216,11 +217,12 @@ void BumbleBeeDB::processRecursive(RulesBucket &bucket, Scheduler &scheduler) {
         scheduler.scheduleRules(pruleBucket);
 
         if (context_.printProfiling_) {
-            // print the profiling result
             auto atomProfiler = scheduler.getAtomProfiler();
             for (auto& prule : pruleBucket) {
                 auto patoms = prule->getPhysicalAtoms();
-                LOG_INFO("Profile rule: %s\n%s", prule->toString().c_str(),atomProfiler.toString(patoms).c_str());
+                profilingReport_ += "Rule (iter " + std::to_string(iteration) + "): " + prule->toString() + "\n";
+                profilingReport_ += atomProfiler.toString(patoms);
+                profilingReport_ += "\n";
             }
         }
 
@@ -303,8 +305,9 @@ void BumbleBeeDB::print() {
             }
         }
     }
-    if (context_.printProfiling_)
-        LOG_INFO(FunctionProfiler::instance().toString().c_str());
+    if (context_.printProfiling_) {
+        LOG_INFO("\n\n%s\n%s", profilingReport_.c_str(), FunctionProfiler::instance().toString().c_str());
+    }
 }
 
 void BumbleBeeDB::printProgram(rules_vector_t &program) {

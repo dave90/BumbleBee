@@ -1,0 +1,36 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_cmp_%,delta_vs_prev,output_match
+edge 1M,edge1M,0.8791,0.8762,0.8833,-2.2745,-72.12%,-0.0808,match
+edge 1M Filter 1,edge1M.filter.1,0.9406,0.9382,0.9422,-2.5765,-73.26%,-0.0578,match
+edge 1M Filter 2,edge1M.filter.2,1.1536,1.1485,1.1595,-3.4801,-75.10%,-0.0368,match
+Col500K,col500K,0.6147,0.6088,0.6187,-3.5942,-85.40%,0.0027,match
+Cross product 1,join_cp.1,1.3003,1.2755,1.3229,-7.6985,-85.55%,-0.0511,match
+Cross product 2,join_cp.2,0.2925,0.2846,0.2984,-3.0329,-91.20%,-0.1605,match
+Cross product 3,join_cp.3,4.4580,4.4330,4.4858,-82.6822,-94.88%,-0.0129,match
+Join NL 1,join_nl.1,0.4538,0.4482,0.4599,-0.8161,-64.27%,0.0016,match
+Join NL 2,join_nl.2,0.2945,0.2939,0.2950,-0.4212,-58.85%,0.0023,match
+Join NL 3,join_nl.3,2.1763,2.1660,2.1848,-2.7032,-55.40%,-0.0421,match
+Join NL 4,join_nl.4,2.1203,2.1142,2.1270,-15.8066,-88.17%,-0.0133,match
+Join NL 5,join_nl.5,0.1903,0.1891,0.1913,-0.1197,-38.61%,0.0058,match
+Join HT 1,join_ht.1,7.5921,7.5737,7.6142,-4.5209,-37.32%,-0.2088,match
+Join HT 2,join_ht.2,0.6207,0.6194,0.6220,-0.4769,-43.45%,0.0031,match
+Join HT 3,join_ht.3,11.7666,11.7063,11.8108,-108.2334,-90.19%,-0.1376,mismatch
+Join HT 4,join_ht.4,9.7241,9.6866,9.7706,-13.8927,-58.83%,-0.1947,match
+Join HT 5,join_ht.5,23.1827,22.7843,23.8172,20.1111,654.74%,-0.2882,match
+Aggregates 1,agg.1,1.7957,1.7874,1.8052,1.5944,792.06%,0.0038,match
+Aggregates 2,agg.2,1.6608,1.6399,1.6816,-2.8056,-62.82%,-0.0137,match
+Aggregates Complex 1,agg.complex.1,95.1459,95.0755,95.2857,90.4637,1932.08%,-3.7017,mismatch
+Aggregates MinMax 1,agg.minmax.1,7.2018,7.1410,7.2462,-15.6032,-68.42%,-0.0543,match
+Aggregates Single 1,agg.single.1,12.4770,12.4200,12.5577,-106.1617,-89.48%,-0.2539,match
+Aggregates Single 2,agg.single.2,12.4720,12.4369,12.5235,-107.5280,-89.61%,-0.1550,match
+Aggregates Single 3,agg.single.3,12.4456,12.3639,12.5134,-107.5544,-89.63%,-0.1355,match
+Reach 1,reach.1,1.8443,1.8280,1.8575,-3.3089,-64.21%,-0.0741,match
+ORB Join 2,orb_join_2,3.0112,2.9919,3.0393,-5.8034,-65.84%,-0.0085,match
+ORB Join A 10K,orb_join_a.10k,7.2188,7.1873,7.2480,0.3584,5.22%,-0.2051,match
+ORB JOIN A Duplicates 10k,orb_join_a_duplicates.10k,69.3649,69.2598,69.4799,31.6437,83.89%,-0.4736,match
+ORB Join B2 250k,orb_join_b2.250k,5.1984,5.1851,5.2115,-11.3967,-68.68%,-0.0475,match
+ORB Join B2 Duplicates 10k,orb_join_b2_duplicates.10k,0.2614,0.2547,0.2658,-0.1878,-41.80%,0.0007,match
+ORB SG Cyc 2k,orb_sg_cyc.2k,3.4819,3.4568,3.5219,-6.7636,-66.02%,-0.0028,match
+ORB SG NoCyc 4k,orb_sg_nocyc.4k,21.2702,21.2364,21.2980,-15.3127,-41.86%,0.0404,match
+ORB TC Cyc 50k,orb_tc_cyc.50k,1.4284,1.4189,1.4391,-5.6299,-79.76%,0.0180,match
+ORB DTC Cyc 50k,orb_dtc_cyc.50k,18.5321,18.5006,18.5706,-89.3065,-82.81%,0.0263,match
+ORB TC Cyc 500k,orb_tc_cyc.500k,10.6045,10.5849,10.6294,-98.2314,-90.26%,-0.0045,match

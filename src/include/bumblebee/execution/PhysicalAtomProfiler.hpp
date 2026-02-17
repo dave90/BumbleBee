@@ -27,8 +27,9 @@ class PhysicalAtom;
 struct ProfilingInformation {
     double time_ {0};
     double finalizeTime_ {0};
+    double combineTime_ {0};
     idx_t elements_ {0};
-    explicit ProfilingInformation(double time = 0, idx_t elements = 0, double finalizeTime_ = 0) : time_(time), elements_(elements), finalizeTime_(finalizeTime_) {}
+    explicit ProfilingInformation(double time = 0, idx_t elements = 0, double finalizeTime_ = 0, double combineTime = 0) : time_(time), elements_(elements), finalizeTime_(finalizeTime_), combineTime_(combineTime) {}
 };
 
 using patom_profiling_map_t = std::unordered_map<const PhysicalAtom*, ProfilingInformation>;
@@ -41,6 +42,7 @@ public:
     void endPhysicalAtom(DataChunk& chunk);
     void endPhysicalAtom();
     void endPhysicalAtomFinalize();
+    void endPhysicalAtomCombine();
     patom_profiling_map_t& getProfilingMap() {
         return profilingInfo_;
     }

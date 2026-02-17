@@ -338,12 +338,9 @@ Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count, Select
                               FlatVector::INCREMENTAL_SELECTION_VECTOR, count, colOffset);
     }
 
-    Vector hash(LogicalTypeId::HASH);
-    groups.hash(hash);
-
 
     idx_t matchedCount=0;
-    findOrCreateGroupsInternal(hash, groups, groupAddresses, matchedCount, newGroupsCount, true, nullptr, newGroupSel );
+    findOrCreateGroupsInternal(hashes, groups, groupAddresses, matchedCount, newGroupsCount, true, nullptr, newGroupSel );
     return groupAddresses;
 }
 

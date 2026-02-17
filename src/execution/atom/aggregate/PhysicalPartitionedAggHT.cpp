@@ -279,6 +279,7 @@ void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAt
 
 void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState &state,
     GlobalPhysicalAtomState &gstate) const {
+    context.profiler_.startPhysicalAtom(this);
     auto& cstate = (PartitionedAggHTJoinAtomState&)state;
     auto& cgstate = (GlobalAggHTJoinAtomState&)gstate;
 
@@ -288,7 +289,7 @@ void PhysicalPartitionedAggHT::combine(ThreadContext &context, PhysicalAtomState
         else
             cgstate.pht_.combineLocalHt(std::move(cstate.localAggHt_));
     }
-
+    context.profiler_.endPhysicalAtomCombine();
 }
 
 AtomResultType PhysicalPartitionedAggHT::execute(ThreadContext &context, DataChunk &input, DataChunk &chunk,

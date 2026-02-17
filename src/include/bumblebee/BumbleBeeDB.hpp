@@ -46,7 +46,7 @@ private:
     void processRecursive(RulesBucket &bucket, Scheduler &scheduler);
 
     ClientContext context_;
-
+    string profilingReport_;
 
 };
 } // bumblebee
