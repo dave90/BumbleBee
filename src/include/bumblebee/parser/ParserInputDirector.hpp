@@ -20,6 +20,8 @@
 
 #include "ParserInputBuilder.hpp"
 
+#include <string>
+#include <vector>
 
 namespace bumblebee {
 
@@ -28,7 +30,6 @@ using builder_ptr_t = std::shared_ptr<ParserInputBuilder>;
 class ParserInputDirector {
 
 public:
-    // TODO refactor pass client context
     ParserInputDirector(OutputType type, ClientContext& context );
     ~ParserInputDirector() = default;
 
@@ -44,6 +45,11 @@ public:
     int onError(const char* msg);
     void onNewLine() ;
 
+    // Column tracking for error context
+    int readInput(char* buf, int maxSize);
+    void advanceColumn(int n) { parserColumn_ += n; }
+    void setTokenStart() { parserTokenStart_ = parserColumn_; }
+    int getColumn() const { return parserColumn_; }
 
 private:
     int parserLine_;
@@ -54,29 +60,14 @@ private:
     bool findError_;
     OutputType outputType_;
 
+    // Column and line tracking for error context
+    int parserColumn_;
+    int parserTokenStart_;
+    std::vector<std::string> lines_;  // All lines read so far (0-indexed)
+    std::string pendingLine_;         // Line currently being assembled by readInput
+
 };
 };
 
-struct ParsingVar{
-    ParsingVar():eof(0),nRow(0),nBuffer(0),lBuffer(0),nTokenStart(0),nTokenNextStart(0),lMaxBuffer(10000),buffer(new char[lMaxBuffer]){}
-    ~ParsingVar(){if(buffer!=nullptr)delete []buffer;}
-    void clear(){
-        eof=0;
-        nRow=0;
-        nBuffer=0;
-        lBuffer=0;
-        nTokenStart=0;
-        nTokenNextStart=0;
-    }
-    int eof;
-    int nRow ;
-    int nBuffer ;
-    int lBuffer ;
-    int nTokenStart ;
-    int nTokenNextStart ;
-    int lMaxBuffer;
-    char *buffer;
-};
 extern "C" int yylex(bumblebee::ParserInputDirector& director);
 extern "C" int yyerror(bumblebee::ParserInputDirector&, const char*);
-extern "C" int GetNextChar(char *b, int maxBuffer);

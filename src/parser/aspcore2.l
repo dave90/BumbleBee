@@ -24,16 +24,17 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
 
 #define YY_DECL int yylex(bumblebee::ParserInputDirector& director)
 
-#define OPT_PARSER 1
+static bumblebee::ParserInputDirector* g_director = nullptr;
 
-
-#ifndef OPT_PARSER
-#define YY_INPUT(buf,result,max_size)  {\
-    result = GetNextChar(buf, max_size); \
+#define YY_INPUT(buf,result,max_size)  { \
+    result = g_director->readInput(buf, max_size); \
     if (  result <= 0  ) \
       result = YY_NULL; \
     }
-#endif
+
+#define YY_USER_ACTION \
+    director.setTokenStart(); \
+    director.advanceColumn(yyleng);
 %}
 
 
@@ -84,6 +85,7 @@ NUMBER              ([0-9]+(\.[0-9]+)?)
 %s SQL
 
 %%
+        g_director = &director;
         // Newline is normally skipped, except when explicitly
         // requested with WANT_NEWLINE. (e.g. by a construct that is
         // terminated by a newline.)

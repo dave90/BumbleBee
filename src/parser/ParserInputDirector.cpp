@@ -23,11 +23,6 @@
 #include "aspcore2_parser.hpp"
 #include "bumblebee/common/Log.hpp"
 
-/*
- * local variable for parsing file
- */
-static ParsingVar pv;
-
 namespace bumblebee {
 
 ParserInputDirector::ParserInputDirector(OutputType type, ClientContext& context) : parserLine_(0),
@@ -36,7 +31,9 @@ ParserInputDirector::ParserInputDirector(OutputType type, ClientContext& context
     parserStateInternal_(false),
     builder_(std::make_shared<ParserInputBuilder>(type,context)),
     outputType_(type),
-    findError_(false){}
+    findError_(false),
+    parserColumn_(0),
+    parserTokenStart_(0){}
 
 
 void ParserInputDirector::configureBuilder(builder_ptr_t newBuilder) {
@@ -73,6 +70,10 @@ int ParserInputDirector::parse(const char *filename, FILE *file) {
     yyin = file;
     parserFile_ = filename;
     parserLine_ = 1;
+    parserColumn_ = 0;
+    parserTokenStart_ = 0;
+    lines_.clear();
+    pendingLine_.clear();
     yyparse(*this);
 
     if( parserErrors_ > 0 ) {
@@ -82,10 +83,13 @@ int ParserInputDirector::parse(const char *filename, FILE *file) {
 }
 
 int ParserInputDirector::parse() {
-    pv.clear();
     yyin = stdin;
     parserFile_ = "STDIN";
     parserLine_ = 1;
+    parserColumn_ = 0;
+    parserTokenStart_ = 0;
+    lines_.clear();
+    pendingLine_.clear();
     yyparse(*this);
 
     if( parserErrors_ > 0 ) {
@@ -117,10 +121,51 @@ int ParserInputDirector::onError(const char *msg) {
     LOG_ERROR(error.c_str());
     LOG_ERROR(msg);
 
+    // Show the offending source line with a caret pointing to the error position
+    // parserLine_ is 1-based; lines_ is 0-indexed
+    std::string line;
+    int lineIdx = parserLine_ - 1;
+    if (lineIdx >= 0 && lineIdx < (int)lines_.size()) {
+        line = lines_[lineIdx];
+    }
+    if (line.empty() && !pendingLine_.empty()) {
+        // Error on the last line that hasn't been terminated by newline yet
+        line = pendingLine_;
+    }
+    if (line.empty() && lineIdx > 0 && lineIdx - 1 < (int)lines_.size()) {
+        // Fall back to previous line (e.g., error at EOF after newline)
+        line = lines_[lineIdx - 1];
+    }
+    if (!line.empty()) {
+        LOG_ERROR("  %s", line.c_str());
+        int caretPos = parserTokenStart_;
+        if (caretPos > (int)line.size()) caretPos = (int)line.size();
+        if (caretPos < 0) caretPos = 0;
+        std::string caret(caretPos + 2, ' '); // +2 for the "  " prefix
+        caret += '^';
+        LOG_ERROR("%s", caret.c_str());
+    }
+
     return 0;
 }
 
-void ParserInputDirector::onNewLine() { parserLine_++; }
+void ParserInputDirector::onNewLine() {
+    parserLine_++;
+    parserColumn_ = 0;
+}
+
+int ParserInputDirector::readInput(char* buf, int maxSize) {
+    int result = (int)fread(buf, 1, maxSize, yyin);
+    for (int i = 0; i < result; i++) {
+        if (buf[i] == '\n') {
+            lines_.push_back(std::move(pendingLine_));
+            pendingLine_.clear();
+        } else if (buf[i] != '\r') {
+            pendingLine_ += buf[i];
+        }
+    }
+    return result;
+}
 
 ParserInputBuilder* ParserInputDirector::getBuilder() { return builder_.get(); }
 
@@ -136,67 +181,3 @@ int yyerror(bumblebee::ParserInputDirector& director, const char* msg ){
 
 extern "C" int yywrap() { return 1; }    // End-of-file handler for LEX
 extern FILE* yyin;     // Where LEX reads its input from
-
-
-/*--------------------------------------------------------------------
- * getNextLine
- *
- * reads a line into the buffer
- *------------------------------------------------------------------*/
-static
-int getNextLine(void) {
-  char *p;
-
-  /*================================================================*/
-  /*----------------------------------------------------------------*/
-  pv.nBuffer = 0;
-  pv.nTokenStart = -1;
-  pv.nTokenNextStart = 1;
-  pv.eof = false;
-
-  /*================================================================*/
-  /* read a line ---------------------------------------------------*/
-  p = fgets(pv.buffer, pv.lMaxBuffer, yyin);
-  if (  p == NULL  ) {
-    if (  ferror(yyin)  )
-      return -1;
-    pv.eof = true;
-    return 1;
-  }
-
-  pv.nRow += 1;
-  pv.lBuffer = strlen(pv.buffer);
-
-  /*================================================================*/
-  /* that's it -----------------------------------------------------*/
-  return 0;
-}
-/*--------------------------------------------------------------------
- * GetNextChar
- *
- * reads a character from input for flex
- *------------------------------------------------------------------*/
-extern
-int GetNextChar(char *b, int maxBuffer) {
-  int frc;
-
-  /*================================================================*/
-  /*----------------------------------------------------------------*/
-  if (  pv.eof  )
-    return 0;
-
-  /*================================================================*/
-  /* read next line if at the end of the current -------------------*/
-  while (  pv.nBuffer >= pv.lBuffer  ) {
-    frc = getNextLine();
-    if (  frc != 0  )
-      return 0;
-    }
-
-  /*================================================================*/
-  /* ok, return character ------------------------------------------*/
-  b[0] = pv.buffer[pv.nBuffer];
-  pv.nBuffer += 1;
-
-  return b[0]==0?0:1;
-}
