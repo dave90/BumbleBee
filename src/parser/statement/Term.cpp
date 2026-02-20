@@ -33,6 +33,7 @@ Term::Term(Term&& term)
       value_(std::move(term.value_)),
       type_(term.type_),
       anonymous_(term.anonymous_),
+      parenthesized_(term.parenthesized_),
       terms_(std::move(term.terms_)),
       operators_(std::move(term.operators_)) {}
 
@@ -96,6 +97,7 @@ Term & Term::operator=(const Term &other) {
     interval_ = other.interval_;
     type_ = other.type_;
     anonymous_ = other.anonymous_;
+    parenthesized_ = other.parenthesized_;
     terms_ = other.terms_;
     operators_ = other.operators_ ;
     value_ = other.value_.cast(other.value_.ctype_);
@@ -204,9 +206,18 @@ std::string Term::toString() const {
     if ( type_ == TermType::ARITH) {
         std::string s = "";
         for (unsigned int i = 0; i < terms_.size() - 1; i++) {
-            s += terms_[i].toString() + getOperatorChar(operators_[i]);
+            if (terms_[i].getType() == ARITH && terms_[i].isParenthesized())
+                s += "(" + terms_[i].toString() + ")";
+            else
+                s += terms_[i].toString();
+            s += getOperatorChar(operators_[i]);
         }
-        return s + terms_.back().toString();
+        auto& last = terms_.back();
+        if (last.getType() == ARITH && last.isParenthesized())
+            s += "(" + last.toString() + ")";
+        else
+            s += last.toString();
+        return s;
     }
     return value_.toString();
 }
@@ -252,6 +263,21 @@ bool Term::containsConstant() const {
 bool Term::containsOrIsConstant() const {
     if (type_ == TermType::CONSTANT) return true;
     return containsConstant();
+}
+
+bool Term::containsNestedArith() const {
+    for (auto& term : terms_)
+        if (term.getType() == TermType::ARITH)
+            return true;
+    return false;
+}
+
+void Term::setParenthesized(bool p) {
+    parenthesized_ = p;
+}
+
+bool Term::isParenthesized() const {
+    return parenthesized_;
 }
 
 void Term::replaceVariable(const string &var,const string &newVar) {

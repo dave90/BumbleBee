@@ -97,6 +97,9 @@ void ArithRewriter::rewrite(Rule &rule) {
         }
     }
 
+    // extract nested ARITH sub-terms (from parenthesized expressions)
+    extractNestedArith(builtins);
+
     // finally extract the constant in the arith formula
     auto size = builtins.size(); // store the size because new atoms will be pushed
     for (idx_t i = 0; i < size; ++i) {
@@ -260,6 +263,38 @@ Atom ArithRewriter::extractConstantBuiltinArith(Term& left, Term& right) {
     return Atom::createBuiltinAtom(std::move(binopTerms), ASSIGNMENT);
 }
 
+
+void ArithRewriter::extractNestedArith(vector<Atom>& builtins) {
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        auto size = builtins.size();
+        for (idx_t i = 0; i < size; ++i) {
+            auto& atom = builtins[i];
+            if (atom.getType() != BUILTIN) continue;
+            for (auto& bt : atom.getBuiltinTerms()) {
+                // Check left term for nested ARITH sub-terms
+                for (auto* termPtr : {&bt.left, &bt.right}) {
+                    auto& term = *termPtr;
+                    if (term.getType() != ARITH) continue;
+                    for (idx_t j = 0; j < term.getTerms().size(); ++j) {
+                        if (term.getTerms()[j].getType() != ARITH) continue;
+                        // Found nested ARITH - extract it
+                        auto newVarName = Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_);
+                        terms_vector_t binopTerms;
+                        binopTerms.emplace_back(std::string(newVarName), true);
+                        binopTerms.push_back(std::move(term.getTerms()[j]));
+                        Term newVariable(std::string(newVarName), true);
+                        term.getTerms()[j] = std::move(newVariable);
+                        counter_++;
+                        builtins.push_back(Atom::createBuiltinAtom(std::move(binopTerms), EQUAL));
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+}
 
 ArithRewriter::~ArithRewriter() {}
 }

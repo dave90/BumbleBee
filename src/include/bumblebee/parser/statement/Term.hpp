@@ -79,6 +79,7 @@ public:
 		  interval_(other.interval_),
 		  type_(other.type_),
 		  anonymous_(other.anonymous_),
+		  parenthesized_(other.parenthesized_),
 		  terms_(other.terms_),
 		  operators_(other.operators_) {
 		value_ = other.value_.cast(other.value_.ctype_);
@@ -112,6 +113,9 @@ public:
 	void replaceVariable(const string& var,const string& newVar);
 	bool containsConstant() const;
 	bool containsOrIsConstant() const;
+	bool containsNestedArith() const;
+	void setParenthesized(bool p);
+	bool isParenthesized() const;
 
 	inline const Value& getValue()const {
 		return value_;
@@ -161,6 +165,8 @@ private:
 	TermType type_{TermType::NONE_TERM};
 	// True if is anonymous variable
 	bool anonymous_{false};
+	// True if term was wrapped in parentheses during parsing
+	bool parenthesized_{false};
 	// ArithTerm is an arithmetic with the list of a terms
 	// and the relative operator(+, -, *, /,\)
 	term_vector_t terms_{};

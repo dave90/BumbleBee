@@ -236,9 +236,9 @@ string StringUtils::lower(const string &str) {
 }
 
 void StringUtils::removeQuote(string &str) {
-	if (str.back() == '"')
+	if (str.back() == '"' || str.back() == '\'')
 		str.pop_back();
-	if (str.front() == '"')
+	if (str.front() == '"' || str.front() == '\'')
 		str.erase(0,1);
 }
 

@@ -364,6 +364,9 @@ void ParserInputBuilder::onTermDash() {
 }
 
 void ParserInputBuilder::onTermParams() {
+    if (foundASafetyError_) return;
+    if (!terms_parsered.empty() && terms_parsered.back().getType() == ARITH)
+        terms_parsered.back().setParenthesized(true);
 }
 
 void ParserInputBuilder::onTermRange(char *lowerBound, char *upperBound) {
@@ -381,21 +384,37 @@ void ParserInputBuilder::onArithmeticOperation(char arithOperator) {
     auto slt = std::move(terms_parsered.back());
     terms_parsered.pop_back();
 
-    if (lt.getType() != ARITH && slt.getType() != ARITH) {
+    bool sltIsArith = slt.getType() == ARITH;
+    bool ltIsArith = lt.getType() == ARITH;
+
+    // Case : neither is ARITH - create new ARITH term
+    if (!sltIsArith && !ltIsArith) {
         auto t = Term::createArith(std::move(slt), std::move(lt), arithOperator);
         terms_parsered.push_back(std::move(t));
+        return;
+    }
 
+    // Case : if either side is parenthesized or both are ARITH, keep nested
+    if ((sltIsArith && slt.isParenthesized()) ||
+        (ltIsArith && lt.isParenthesized()) ||
+        (sltIsArith && ltIsArith)) {
+        auto t = Term::createArith(std::move(slt), std::move(lt), arithOperator);
+        terms_parsered.push_back(std::move(t));
         return;
     }
-    if (lt.getType() == ARITH ) {
-        // only last term is arith second last is normal term
-        lt.addInArithTerm(std::move(slt), arithOperator);
-        terms_parsered.push_back(std::move(lt));
+
+    // Case : left (slt) is ARITH (not parenthesized), right (lt) is not ARITH
+    if (sltIsArith && !ltIsArith) {
+        slt.addInArithTerm(std::move(lt), arithOperator);
+        terms_parsered.push_back(std::move(slt));
         return;
     }
-    // the second last is arith and the last is normal term
-    slt.addInArithTerm(std::move(lt), arithOperator);
-    terms_parsered.push_back(std::move(slt));
+
+    // Case : right (lt) is ARITH (not parenthesized), left (slt) is not ARITH
+    // Fix ordering: prepend slt at the beginning
+    Operator op = Term::getOperator(arithOperator);
+    lt.addInArithTermBegin(std::move(slt), op);
+    terms_parsered.push_back(std::move(lt));
 }
 
 void ParserInputBuilder::onWeightAtLevels(int nWeight, int nLevel, int nTerm) {
@@ -617,10 +636,11 @@ void ParserInputBuilder::newTerm(char * value) {
         return;
     }
     if( (value[0] == '\"' && value[strlen(value)-1] == '\"') ||
+            (value[0] == '\'' && value[strlen(value)-1] == '\'') ||
             (value[0] >= 'a' && value[0] <='z') )   // String constant
     {
         std::string s(value);
-        if (value[0] == '\"')
+        if (value[0] == '\"' || value[0] == '\'')
             // remove the quote
             s = s.substr(1, s.size() - 2);
 
@@ -741,10 +761,11 @@ void ParserInputBuilder::onSQLValue(char *value) {
         return;
     }
     if( (value[0] == '\"' && value[strlen(value)-1] == '\"') ||
+            (value[0] == '\'' && value[strlen(value)-1] == '\'') ||
             (value[0] >= 'a' && value[0] <='z') )   // String constant
     {
         std::string s(value);
-        if (value[0] == '\"')
+        if (value[0] == '\"' || value[0] == '\'')
             // remove the quote
             s = s.substr(1, s.size() - 2);
         Value v(std::move(s));

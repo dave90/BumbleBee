@@ -38,6 +38,8 @@ private:
     atoms_vector_t rewriteAggregate(Atom& atom);
     // extract constant values from arith term
     Atom extractConstantBuiltinArith(Term& left, Term& right);
+    // extract nested ARITH sub-terms into separate builtins with fresh variables
+    void extractNestedArith(vector<Atom>& builtins);
 
     // extract the first arith term found in the atom and replace with
     // a fresh variable and return the builtin created with the arith term

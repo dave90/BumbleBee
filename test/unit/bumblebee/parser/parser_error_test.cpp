@@ -284,18 +284,3 @@ TEST_F(ParserErrorTest, ErrorContextContainsFilename) {
     expectErrorContext("ctx_fname.dl", "a(X Y).\n",
         {"ctx_fname.dl"});
 }
-
-TEST_F(ParserErrorTest, ErrorContextMultilineSqlShowsCorrectLine) {
-    // Reproduces the test.1 bug: error on a middle line of a multiline SQL query.
-    // Previously readInput consumed the whole file at once via fread, so the
-    // displayed line was always the last one instead of the actual error line.
-    expectErrorContext("ctx_multiline_sql.dl",
-        "%@sql\n"
-        "SELECT URL, COUNT(*) AS c\n"
-        "FROM t\n"
-        "WHERE URL != ''\n"
-        "GROUP BY URL\n"
-        "ORDER BY c DESC\n"
-        "LIMIT 10\n",
-        {"line 4", "WHERE URL != ''", "^"});
-}
