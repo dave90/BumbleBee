@@ -67,7 +67,8 @@ TEST_F(ReadCSVSCanTest, SimpleCSVScanTest) {
     params.emplace("auto_detect", 1 );
     vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
-    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+    std::unordered_map<string, idx_t> bindVarName;
+    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
     EXPECT_EQ(predFunction.maxThreadFunction_(context, bind.get()), 1);
     auto fopd = predFunction.initFunction_(context, bind.get());
     DataChunk chunk;
@@ -89,7 +90,8 @@ TEST_F(ReadCSVSCanTest, MultiCSVScanTest) {
     params.emplace("header", 1 );
     vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
-    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+    std::unordered_map<string, idx_t> bindVarName;
+    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
     EXPECT_EQ(threads, 1);
     idx_t totalLines = 0;
@@ -120,7 +122,8 @@ TEST_F(ReadCSVSCanTest, MultiFilesCSVScanTest) {
     params.emplace("header", 1 );
     vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
-    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+    std::unordered_map<string, idx_t> bindVarName;
+    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
     EXPECT_GT(threads, 1);
     idx_t totalLines = 0;
@@ -151,7 +154,8 @@ TEST_F(ReadCSVSCanTest, Username2CSVScanTest) {
     params.emplace("header", 1 );
     vector<LogicalType> returnTypes;
     vector<string> names = {"COLUMN_1USERNAME","COLUMN_2_IDENTIFIER","COLUMN__LAST_NAME"};
-    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+    std::unordered_map<string, idx_t> bindVarName;
+    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
     EXPECT_EQ(threads, 1);
     idx_t totalLines = 0;
@@ -183,7 +187,8 @@ TEST_F(ReadCSVSCanTest, MultiFilesCSVDirScanTest) {
     params.emplace("header", 1 );
     vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
-    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+    std::unordered_map<string, idx_t> bindVarName;
+    auto bind = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
     auto threads = predFunction.maxThreadFunction_(context, bind.get());
     EXPECT_GT(threads, 1);
     idx_t totalLines = 0;

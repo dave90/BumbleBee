@@ -1,7 +1,7 @@
 %@sql
 SELECT
     L_ORDERKEY AS l_orderkey,
-    SUM(L_EXTENDEDPRICE - L_EXTENDEDPRICE * L_DISCOUNT) AS revenue,
+    SUM(L_EXTENDEDPRICE * (1-  L_DISCOUNT)) AS revenue,
     O_ORDERDATE AS o_orderdate,
     O_SHIPPRIORITY AS o_shippriority
 FROM

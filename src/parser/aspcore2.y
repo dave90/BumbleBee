@@ -1112,29 +1112,40 @@ opt_limit
         delete[] $2;
     }
 
-/* Expressions (simple arithmetic; reuse PLUS/DASH/TIMES/SLASH/BACK_SLASH) */
+/* Expressions with operator precedence: +- (low) vs mul-div (high) */
 value_expr
-    : value_term
-    | value_expr PLUS value_term
+    : value_add_expr
+    ;
+
+value_add_expr
+    : finalized_mul_expr
+    | value_add_expr PLUS finalized_mul_expr
     {
-        director.getBuilder()->onSQLValueTerm('+');
+        director.getBuilder()->onSQLAddTerm('+');
     }
-    | value_expr DASH value_term
+    | value_add_expr DASH finalized_mul_expr
     {
-        director.getBuilder()->onSQLValueTerm('-');
-    }
-    | value_expr TIMES value_term
-    {
-        director.getBuilder()->onSQLValueTerm('*');
-    }
-    | value_expr SLASH value_term
-    {
-        director.getBuilder()->onSQLValueTerm('/');
+        director.getBuilder()->onSQLAddTerm('-');
     }
     ;
 
-value_term
+finalized_mul_expr
+    : value_mul_expr
+    {
+        director.getBuilder()->onSQLFinalizeMulExpr();
+    }
+    ;
+
+value_mul_expr
     : value_primary
+    | value_mul_expr TIMES value_primary
+    {
+        director.getBuilder()->onSQLMulTerm('*');
+    }
+    | value_mul_expr SLASH value_primary
+    {
+        director.getBuilder()->onSQLMulTerm('/');
+    }
     ;
 
 /* Primary values (numbers, strings, identifiers, qualified names, aggregates, parens) */
@@ -1150,7 +1161,7 @@ value_primary
         delete[] $1;
     }
     | qualified_name
-    | PARAM_OPEN value_expr PARAM_CLOSE
+    | PARAM_OPEN { director.getBuilder()->onSQLParenOpen(); } value_expr PARAM_CLOSE { director.getBuilder()->onSQLParenClose(); }
     | aggregate_func PARAM_OPEN aggregate_arg PARAM_CLOSE
     ;
 

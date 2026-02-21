@@ -232,7 +232,8 @@ protected:
         func = functionPtr;
         PredFunction& predFunction = (PredFunction&) *functionPtr;
         vector<LogicalType> returnTypes = chunks[0]->getTypes();
-        bind_data = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+        std::unordered_map<string, idx_t> bindVarName;
+        bind_data = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
         return chunks;
     }
 
@@ -258,7 +259,8 @@ protected:
         auto& pred = static_cast<PredFunction&>(*functionPtr);
         auto returnTypes = chunks[0]->getTypes();
         auto map = params.toMap();
-        auto bind = pred.bindFunction_(context, input, inputTypes, map,
+        std::unordered_map<string, idx_t> bindVarName;
+        auto bind = pred.bindFunction_(context, input, inputTypes, map, bindVarName,
                                        returnTypes, const_cast<std::vector<std::string>&>(names), filters);
         return { std::move(chunks), std::move(bind), std::move(functionPtr) };
     }

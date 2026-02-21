@@ -1,0 +1,3 @@
+SELECT Username, Identifier
+FROM read_csv('./files/csv/username.csv', delim=';', header=true, auto_detect=true)
+WHERE (Identifier + 1) * 2 > 10000

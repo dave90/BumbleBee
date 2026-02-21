@@ -806,9 +806,31 @@ void ParserInputBuilder::onSQLQualifiedName(char *name, char *table) {
     sqlValuePrimary_.emplace_back(qName);
 }
 
-void ParserInputBuilder::onSQLValueTerm(char op) {
+void ParserInputBuilder::onSQLMulTerm(char op) {
+    if (mulExpr_.getOperators().empty()) {
+        auto vp1 = std::move(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+        auto vp2 = std::move(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+        mulExpr_.addValuePrimary(vp2);
+        mulExpr_.addValuePrimary(vp1);
+        mulExpr_.addOperator(getCharOperator(op));
+        return;
+    }
+    mulExpr_.addValuePrimary(sqlValuePrimary_.back());
+    sqlValuePrimary_.pop_back();
+    mulExpr_.addOperator(getCharOperator(op));
+}
+
+void ParserInputBuilder::onSQLFinalizeMulExpr() {
+    if (!mulExpr_.getOperators().empty()) {
+        sqlValuePrimary_.push_back(sql::ValuePrimary(std::move(mulExpr_)));
+        mulExpr_.clear();
+    }
+}
+
+void ParserInputBuilder::onSQLAddTerm(char op) {
     if (valueExpr_.getOperators().empty()) {
-        // pop 2 items as is the first time
         auto vp1 = std::move(sqlValuePrimary_.back());
         sqlValuePrimary_.pop_back();
         auto vp2 = std::move(sqlValuePrimary_.back());
@@ -821,6 +843,22 @@ void ParserInputBuilder::onSQLValueTerm(char op) {
     valueExpr_.addValuePrimary(sqlValuePrimary_.back());
     sqlValuePrimary_.pop_back();
     valueExpr_.addOperator(getCharOperator(op));
+}
+
+void ParserInputBuilder::onSQLParenOpen() {
+    sqlExprStack_.push_back({std::move(valueExpr_), std::move(mulExpr_)});
+    valueExpr_.clear();
+    mulExpr_.clear();
+}
+
+void ParserInputBuilder::onSQLParenClose() {
+    if (!valueExpr_.getOperators().empty()) {
+        sqlValuePrimary_.push_back(sql::ValuePrimary(std::move(valueExpr_)));
+    }
+    auto& saved = sqlExprStack_.back();
+    valueExpr_ = std::move(saved.addExpr);
+    mulExpr_ = std::move(saved.mulExpr);
+    sqlExprStack_.pop_back();
 }
 
 void ParserInputBuilder::onSQLSelectItem() {

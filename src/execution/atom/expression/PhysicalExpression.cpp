@@ -18,6 +18,8 @@
  */
 #include "bumblebee/execution/atom/expression/PhysicalExpression.hpp"
 
+#include "bumblebee/common/vector_operations/VectorOperations.hpp"
+
 namespace bumblebee{
 
 PhysicalExpression::PhysicalExpression(Expression& expr, vector<LogicalType>& types) : PhysicalAtom(types) {
@@ -65,8 +67,17 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
         BB_ASSERT(expressions_[0].left_.cols_.size() == 1);
         auto col = expressions_[0].left_.cols_[0];
         Vector vec(constantValue_);
-        chunk.reference(input);
-        chunk.data_[col].reference(vec);
+        // Cast the constant to the target type if they differ (e.g., integer constant used in DECIMAL context)
+        if (vec.getLogicalType() != types_[col]) {
+            Vector castedVec(types_[col]);
+            castedVec.setVectorType(VectorType::CONSTANT_VECTOR);
+            VectorOperations::cast(vec, castedVec, 1);
+            chunk.reference(input);
+            chunk.data_[col].reference(castedVec);
+        } else {
+            chunk.reference(input);
+            chunk.data_[col].reference(vec);
+        }
         context.profiler_.endPhysicalAtom(chunk);
         return AtomResultType::NEED_MORE_INPUT;
     }

@@ -32,6 +32,7 @@ static function_data_ptr_t genIdBind(ClientContext &context,
                                        vector<Value> &inputs,
                                        vector<LogicalType> & inputTypes,
                                        std::unordered_map<string, Value> &parameters,
+                                       std::unordered_map<string, idx_t> &bindVarName,
                                        vector<LogicalType> &returnTypes, vector<string> &names,
                                        TableFilterSet& filters) {
 	auto result = std::make_unique<GenIdData>();

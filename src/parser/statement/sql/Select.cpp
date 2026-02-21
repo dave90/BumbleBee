@@ -86,13 +86,20 @@ void Select::clear() {
     items_.clear();
 }
 
+static void collectQualifiedNames(vector<QualifiedName>& names, ValueExpr& ve) {
+    for (auto& vp: ve.getValues()) {
+        if (vp.isSubExpr()) {
+            collectQualifiedNames(names, vp.getSubExpr());
+        } else if (!vp.isIsConstant()) {
+            names.push_back(vp.getQualifier());
+        }
+    }
+}
+
 vector<QualifiedName> Select::getQualifiedNames() {
     vector<QualifiedName> names;
     for (auto& ve : getItems()) {
-        for (auto& vp: ve.getValues()) {
-            if (vp.isIsConstant())continue;
-            names.push_back(vp.getQualifier());
-        }
+        collectQualifiedNames(names, ve);
     }
     return names;
 }

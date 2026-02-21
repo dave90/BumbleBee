@@ -116,7 +116,11 @@ public:
 	bool isSQL();
 	void onSQLValue(char*);
 	void onSQLQualifiedName(char* name, char* table = nullptr);
-	void onSQLValueTerm(char );
+	void onSQLMulTerm(char);
+	void onSQLFinalizeMulExpr();
+	void onSQLAddTerm(char);
+	void onSQLParenOpen();
+	void onSQLParenClose();
 	void onSQLSelectItem();
 	void onSQLAlias(char*);
 	void onSQLTableRef(char*);
@@ -195,6 +199,12 @@ protected:
 	vector<sql::ValuePrimary> sqlValuePrimary_;
 	string alias_;
 	sql::ValueExpr valueExpr_;
+	sql::ValueExpr mulExpr_;
+	struct SqlExprState {
+		sql::ValueExpr addExpr;
+		sql::ValueExpr mulExpr;
+	};
+	vector<SqlExprState> sqlExprStack_;
 	sql::from_items_t fromItems_;
 	vector<sql::Predicate> predicates_;
 	sql::Predicate sqlPredicate_;

@@ -116,17 +116,21 @@ predicate_vector_t & Where::getItems() {
     return items_;
 }
 
+static void collectQualifiedNames(vector<QualifiedName>& names, ValueExpr& ve) {
+    for (auto& vp: ve.getValues()) {
+        if (vp.isSubExpr()) {
+            collectQualifiedNames(names, vp.getSubExpr());
+        } else if (!vp.isIsConstant()) {
+            names.push_back(vp.getQualifier());
+        }
+    }
+}
+
 vector<QualifiedName> Where::getQualifiedNames() {
     vector<QualifiedName> names;
     for (auto& p:getItems()) {
-        for (auto& vp: p.getValue1().getValues()) {
-            if (vp.isIsConstant())continue;
-            names.push_back(vp.getQualifier());
-        }
-        for (auto& vp: p.getValue2().getValues()) {
-            if (vp.isIsConstant())continue;
-            names.push_back(vp.getQualifier());
-        }
+        collectQualifiedNames(names, p.getValue1());
+        collectQualifiedNames(names, p.getValue2());
     }
     return names;
 }

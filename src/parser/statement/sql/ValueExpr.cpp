@@ -27,14 +27,20 @@ ValuePrimary::ValuePrimary(Value &value): value_(std::move(value)), isConstant_(
 ValuePrimary::ValuePrimary(QualifiedName &qualifier): qualifier_(std::move(qualifier)) {
 }
 
+ValuePrimary::ValuePrimary(ValueExpr&& subExpr): subExpr_(std::make_unique<ValueExpr>(std::move(subExpr))) {
+}
+
 ValuePrimary::ValuePrimary(const ValuePrimary &other): value_(other.value_.cast(other.value_.getPhysicalType())),
                                                        qualifier_(other.qualifier_),
                                                        isConstant_(other.isConstant_){
+    if (other.subExpr_)
+        subExpr_ = std::make_unique<ValueExpr>(*other.subExpr_);
 }
 
 ValuePrimary::ValuePrimary(ValuePrimary &&other) noexcept: value_(std::move(other.value_)),
                                                            qualifier_(std::move(other.qualifier_)),
-                                                           isConstant_(other.isConstant_) {
+                                                           isConstant_(other.isConstant_),
+                                                           subExpr_(std::move(other.subExpr_)) {
 }
 
 ValuePrimary & ValuePrimary::operator=(const ValuePrimary &other) {
@@ -43,6 +49,10 @@ ValuePrimary & ValuePrimary::operator=(const ValuePrimary &other) {
     value_ = other.value_.cast(other.value_.getPhysicalType());
     qualifier_ = other.qualifier_;
     isConstant_ = other.isConstant_;
+    if (other.subExpr_)
+        subExpr_ = std::make_unique<ValueExpr>(*other.subExpr_);
+    else
+        subExpr_.reset();
     return *this;
 }
 
@@ -52,6 +62,7 @@ ValuePrimary & ValuePrimary::operator=(ValuePrimary &&other) noexcept {
     value_ = std::move(other.value_);
     qualifier_ = std::move(other.qualifier_);
     isConstant_ = other.isConstant_;
+    subExpr_ = std::move(other.subExpr_);
     return *this;
 }
 
@@ -71,7 +82,17 @@ void ValuePrimary::setQualifier(QualifiedName &qualifier) {
     qualifier_ = qualifier;
 }
 
+bool ValuePrimary::isSubExpr() const {
+    return subExpr_ != nullptr;
+}
+
+ValueExpr& ValuePrimary::getSubExpr() {
+    return *subExpr_;
+}
+
 string ValuePrimary::toString() const {
+    if (subExpr_)
+        return "(" + subExpr_->toString(false) + ")";
     if (isConstant_) {
         return value_.toString();
     }

@@ -1,7 +1,7 @@
 %@sql
 SELECT
     N_NAME AS n_name,
-    SUM(L_EXTENDEDPRICE - L_EXTENDEDPRICE * L_DISCOUNT) AS revenue
+    SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue
 FROM
     "downloads/tpch/lineitem.parquet",
     "downloads/tpch/orders.parquet",

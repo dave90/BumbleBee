@@ -2,7 +2,7 @@
 SELECT
     C_CUSTKEY AS c_custkey,
     C_NAME AS c_name,
-    SUM(L_EXTENDEDPRICE - L_EXTENDEDPRICE * L_DISCOUNT) AS revenue,
+    SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue,
     C_ACCTBAL AS c_acctbal,
     N_NAME AS n_name,
     C_ADDRESS AS c_address,

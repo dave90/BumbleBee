@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <memory>
 #include "bumblebee/common/types/Value.hpp"
 
 namespace bumblebee {
@@ -27,10 +28,13 @@ struct QualifiedName {
     string table_;
 };
 
+class ValueExpr;
+
 class ValuePrimary {
 public:
     explicit ValuePrimary(Value &value);
     explicit ValuePrimary(QualifiedName &qualifier);
+    explicit ValuePrimary(ValueExpr&& subExpr);
     ValuePrimary(const ValuePrimary &other);
     ValuePrimary(ValuePrimary &&other) noexcept;
 
@@ -41,6 +45,8 @@ public:
     bool & isIsConstant();
     QualifiedName & getQualifier();
     void setQualifier(QualifiedName &qualifier);
+    bool isSubExpr() const;
+    ValueExpr& getSubExpr();
 
     string toString() const;
 
@@ -49,6 +55,7 @@ private:
     bool isConstant_{false};
 
     QualifiedName qualifier_;
+    std::unique_ptr<ValueExpr> subExpr_;
 };
 
 class ValueExpr {

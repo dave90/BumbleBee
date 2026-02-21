@@ -32,6 +32,7 @@
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
 #include "../../include/bumblebee/execution/atom/external/PhysicalPredFunction.hpp"
 #include "bumblebee/common/Log.hpp"
+#include "bumblebee/common/types/Decimal.hpp"
 #include "bumblebee/planner/filter/ConstantFilter.hpp"
 #include "bumblebee/execution/atom/join/PhysicalRowLayoutHashJoin.hpp"
 #include "bumblebee/execution/atom/output/PhysicalTopNHOutput.hpp"
@@ -263,6 +264,15 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
                 vars.push_back(t.getVariable());
             }
             resultType = Expression::getResultType(types, right.getOperators());
+            // promote integer operands to DECIMAL when result is DECIMAL
+            if (resultType.type() == LogicalTypeId::DECIMAL) {
+                for (auto& t : right.getTerms()) {
+                    auto& varType = typesMap_[t.getVariable()];
+                    if (varType.type() != LogicalTypeId::DECIMAL) {
+                        varType = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, 0);
+                    }
+                }
+            }
         }
         // if we have a diff and is unsigned set to signed
         bool diff = std::find(right.getOperators().begin(), right.getOperators().end(), Operator::MINUS) != right.getOperators().end();
@@ -432,8 +442,12 @@ void PhysicalOptimizer::bindExternalAtom(idx_t index, Atom& atom,vector<LogicalT
         BB_ASSERT(term.getType() == VARIABLE);
         names.push_back(term.getVariable());
     }
+    std::unordered_map<string, idx_t> bindVarName;
+    for (auto& var:names)
+        if (colsMap_.contains(var))
+            bindVarName[var] = colsMap_[var];
     TableFilterSet filters = extractConstantFilters(body, names);
-    auto bind = func->bindFunction_(context_, atom.getInputValues(), inputTypes, atom.getNamedParamters(), returnTypes, names,filters );
+    auto bind = func->bindFunction_(context_, atom.getInputValues(), inputTypes, atom.getNamedParamters(), bindVarName, returnTypes, names,filters );
     externalBindData_[index] = std::move(bind);
 }
 

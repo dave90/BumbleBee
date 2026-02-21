@@ -302,7 +302,14 @@ LogicalType getBumpedLogicalType(LogicalType type) {
 
 LogicalType getCommonTypeDecimal(LogicalType t1, LogicalType t2, Operator op ){
     if (t1.type() != LogicalTypeId::DECIMAL && t2.type() != LogicalTypeId::DECIMAL) return LogicalTypeId::UNKNOWN;
-    if (t1.type() != t2.type()) return LogicalTypeId::UNKNOWN;
+    // promote integer to decimal with scale 0
+    if (t1.type() == LogicalTypeId::DECIMAL && t2.type() != LogicalTypeId::DECIMAL) {
+        if (t2.type() == LogicalTypeId::FLOAT || t2.type() == LogicalTypeId::DOUBLE) return LogicalTypeId::DOUBLE;
+        t2 = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, 0);
+    } else if (t2.type() == LogicalTypeId::DECIMAL && t1.type() != LogicalTypeId::DECIMAL) {
+        if (t1.type() == LogicalTypeId::FLOAT || t1.type() == LogicalTypeId::DOUBLE) return LogicalTypeId::DOUBLE;
+        t1 = LogicalType::createDecimal(Decimal::MAX_WIDTH_INT64, 0);
+    }
     // both are decimal
     // calculate the common scale
     int s1 = t1.getDecimalData().scale_;

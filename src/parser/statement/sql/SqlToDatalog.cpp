@@ -59,7 +59,8 @@ vector<string> getColsFromExtTable(sql::FromItem &item, ClientContext& context_)
     TableFilterSet filters;
     vector<LogicalType> returnTypes;
     vector<string> names = {"*"};
-    pfunc->bindFunction_(context_, item.getInputValues(), types, item.getNamedParameters(), returnTypes, names, filters);
+    std::unordered_map<string, idx_t> bindVarName;
+    pfunc->bindFunction_(context_, item.getInputValues(), types, item.getNamedParameters(), bindVarName, returnTypes, names, filters);
     return names;
 }
 
@@ -83,6 +84,11 @@ vector<sql::QualifiedName> getAllQualifiedNames(sql::SQLStatement& statement, st
 }
 
 void fillQTable(sql::ValuePrimary& vi, std::unordered_map<string, vector<string>>& colsTableMap, string& errorMessage) {
+    if (vi.isSubExpr()) {
+        for (auto& inner: vi.getSubExpr().getValues())
+            fillQTable(inner, colsTableMap, errorMessage);
+        return;
+    }
     if (vi.isIsConstant())return;
     auto& q = vi.getQualifier();
     if (!q.name_.empty() && q.table_.empty()) {
@@ -141,7 +147,7 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
             if (ve.getValues().size() == 1) {
                 // take as alias the name of the variable if is not constant
                 auto& vp = ve.getValues()[0];
-                if (!vp.isIsConstant()) {
+                if (!vp.isSubExpr() && !vp.isIsConstant()) {
                     auto& name = vp.getQualifier().name_;
                     if (colsTableMap.contains(name) && colsTableMap[name].size() == 1)
                         alias = name;
@@ -355,7 +361,12 @@ Term generateTermFromValueExpr(sql::ValueExpr& ve, const string& sqlAlias, SQLQu
 
     vector<Term> terms;
     for (auto& vp: ve.getValues()) {
-        if (!vp.isIsConstant()) {
+        if (vp.isSubExpr()) {
+            Term subTerm = generateTermFromValueExpr(vp.getSubExpr(), sqlAlias, query, errorMessage);
+            if (subTerm.getType() == ARITH)
+                subTerm.setParenthesized(true);
+            terms.push_back(std::move(subTerm));
+        } else if (!vp.isIsConstant()) {
             BB_ASSERT(!vp.getQualifier().table_.empty());
             // generate the variable using the table and name
             string var = query.getVariableName(vp.getQualifier().table_, vp.getQualifier().name_);
@@ -486,7 +497,7 @@ void getAggregatesInformation(sql::SQLStatement &statement, SQLQuery& query,
                 auto ve = statement.getSelect().getItems()[idx];
                 if (ve.toString(false) != "*") {
                     for (auto& vp: ve.getValues()) {
-                        if (vp.isIsConstant()) continue;
+                        if (vp.isSubExpr() || vp.isIsConstant()) continue;
                         BB_ASSERT(!vp.getQualifier().table_.empty());
                         var = query.getVariableName(vp.getQualifier().table_, vp.getQualifier().name_);
                         break;

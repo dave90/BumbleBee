@@ -83,7 +83,8 @@ protected:
         auto& predFunction = (PredFunction&)*functionPtr;
         std::unordered_map<string, Value> params;
         vector<LogicalType> returnTypes;
-        auto bind = predFunction.bindFunction_(context, input, inputTypes, params, returnTypes, names, filters);
+        std::unordered_map<string, idx_t> bindVarName;
+        auto bind = predFunction.bindFunction_(context, input, inputTypes, params, bindVarName, returnTypes, names, filters);
         EXPECT_EQ(predFunction.maxThreadFunction_(context, bind.get()), threadExpected);
         if (expectedNames.empty())
             expectedNames = names;
