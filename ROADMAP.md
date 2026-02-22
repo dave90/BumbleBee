@@ -1,16 +1,14 @@
 ## TODOLIST
-- TPCH add more queries
-- block parenthesis in sql ad datalog
-- parquet write
-- Specify predicate tables types
-- NULL values in operations
-- LEFT and RIGHT JOIN
 - Like expression ext atom
 - sql to datalog allow : WHERE total_revenue = (SELECT max(total_revenue) ... )
 - SQL to datalog allow CASE WHEN
 - SQL to datalog allow EXIST
-- more tests for hits
-- more tests for tpch
+- TPCH add more queries
+- parquet write
+- Specify predicate tables types
+- NULL values in operations
+- LEFT and RIGHT JOIN
+
 
 ## Next
 - CICD

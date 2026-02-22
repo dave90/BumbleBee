@@ -24,8 +24,7 @@ namespace bumblebee{
 
 
 struct StringLikeData : public FunctionData {
-    StringLikeData(idx_t colIdx, string& likePattern, char escape = '\0');
-    idx_t colIdx_; // index of the column to apply the like
+    StringLikeData( string& likePattern, char escape = '\0');
 
     bool match(string_t& str);
 
@@ -33,6 +32,11 @@ struct StringLikeData : public FunctionData {
     bool hasStartPercentage_;
     bool hasEndPercentage_;
 
+    // When the pattern contains '_' or an escape sequence the optimised
+    // segment-based path cannot be used; we fall back to a full generic match.
+    bool useGenericMatch_;
+    string originalPattern_;
+    char escape_;
 };
 
 struct StringLikeOperatorData : public FunctionOperatorData {

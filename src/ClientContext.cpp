@@ -28,6 +28,7 @@
 #include "bumblebee/function/predicate/GenId.hpp"
 #include "bumblebee/function/predicate/ReadCsv.hpp"
 #include "bumblebee/function/predicate/ReadParquet.hpp"
+#include "bumblebee/function/predicate/StringLike.hpp"
 #include "bumblebee/function/predicate/WriteCsv.hpp"
 #include "bumblebee/storage/InMemoryBlockManager.hpp"
 
@@ -63,6 +64,7 @@ void ClientContext::registerFunctions() {
     WriteCsvFunc::registerFunction(functionRegister_);
     ReadParquetFunc::registerFunction(functionRegister_);
     GenIdFunc::registerFunction(functionRegister_);
+    StringLikeFunc::registerFunction(functionRegister_);
 }
 
 void ClientContext::initFileSystem() {

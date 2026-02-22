@@ -18,6 +18,8 @@
  */
 #include "bumblebee/function/predicate/StringLike.hpp"
 
+#include "bumblebee/common/vector_operations/UnaryExecution.hpp"
+
 
 namespace bumblebee{
 
@@ -144,7 +146,52 @@ int find(const unsigned char *haystack, idx_t haystack_size, const unsigned char
 }
 
 
-StringLikeData::StringLikeData(idx_t colIdx, string &likePattern, char escape): colIdx_(colIdx) {
+// Generic LIKE matcher that handles '%' (any sequence), '_' (any one char),
+// and an optional escape character. Uses an iterative backtracking approach.
+static bool genericLikeMatch(const unsigned char *str, idx_t str_len,
+                              const unsigned char *pat, idx_t pat_len,
+                              char escape_char) {
+	idx_t s = 0, p = 0;
+	idx_t last_percent_p = (idx_t)-1;
+	idx_t last_percent_s = (idx_t)-1;
+
+	while (s < str_len) {
+		if (p < pat_len) {
+			auto pc = pat[p];
+			bool is_escape = (escape_char != '\0' && pc == (unsigned char)escape_char);
+
+			if (is_escape && p + 1 < pat_len) {
+				// Escaped literal: match next pattern character exactly.
+				if (str[s] == pat[p + 1]) {
+					s++; p += 2;
+					continue;
+				}
+			} else if (pc == '%') {
+				last_percent_p = p;
+				last_percent_s = s;
+				p++;
+				continue;
+			} else if (pc == '_' || pc == str[s]) {
+				s++; p++;
+				continue;
+			}
+		}
+		// Mismatch: backtrack to the last '%' position if available.
+		if (last_percent_p != (idx_t)-1) {
+			last_percent_s++;
+			s = last_percent_s;
+			p = last_percent_p + 1;
+		} else {
+			return false;
+		}
+	}
+	// Consume any trailing '%' wildcards.
+	while (p < pat_len && pat[p] == '%') p++;
+	return p == pat_len;
+}
+
+StringLikeData::StringLikeData(string &likePattern, char escape)
+    :  useGenericMatch_(false), originalPattern_(likePattern), escape_(escape) {
 	idx_t last_non_pattern = 0;
 	hasStartPercentage_ = false;
 	hasEndPercentage_ = false;
@@ -157,17 +204,16 @@ StringLikeData::StringLikeData(idx_t colIdx, string &likePattern, char escape): 
 			}
 			last_non_pattern = i + 1;
 			if (ch == escape || ch == '_') {
-				// escape or underscore: could not create efficient like matcher
-				// FIXME: we could handle escaped percentages here
+				// Pattern contains '_' or escape: fall back to the generic matcher.
+				useGenericMatch_ = true;
 				return;
-			} else {
-				// sample_size
-				if (i == 0) {
-					hasStartPercentage_ = true;
-				}
-				if (i + 1 == likePattern.size()) {
-					hasEndPercentage_ = true;
-				}
+			}
+			// '%' wildcard
+			if (i == 0) {
+				hasStartPercentage_ = true;
+			}
+			if (i + 1 == likePattern.size()) {
+				hasEndPercentage_ = true;
 			}
 		}
 	}
@@ -178,54 +224,61 @@ StringLikeData::StringLikeData(idx_t colIdx, string &likePattern, char escape): 
 
 bool StringLikeData::match(string_t &str) {
 	auto str_data = (const unsigned char *)str.getDataUnsafe();
-		auto str_len = str.size();
-		idx_t segment_idx = 0;
-		idx_t end_idx = segments_.size() - 1;
-		if (!hasStartPercentage_) {
-			auto &segment = segments_[0];
-			if (str_len < segment.size()) {
-				return false;
-			}
-			if (memcmp(str_data, segment.c_str(), segment.size()) != 0) {
-				return false;
-			}
-			str_data += segment.size();
-			str_len -= segment.size();
-			segment_idx++;
-			if (segments_.size() == 1) {
-				// only one segment, and it matches
-				return hasEndPercentage_ || str_len == 0;
-			}
+	auto str_len = str.size();
+
+	if (useGenericMatch_) {
+		return genericLikeMatch(str_data, str_len,
+		                        (const unsigned char *)originalPattern_.c_str(),
+		                        originalPattern_.size(), escape_);
+	}
+
+	idx_t segment_idx = 0;
+	idx_t end_idx = segments_.size() - 1;
+	if (!hasStartPercentage_) {
+		auto &segment = segments_[0];
+		if (str_len < segment.size()) {
+			return false;
 		}
-		// main match loop: for every segment in the middle, use contains to find the needle in the haystack
-		for (; segment_idx < end_idx; segment_idx++) {
-			auto &segment = segments_[segment_idx];
-			// find the pattern of the current segment
-			int next_offset = find(str_data, str_len, (const unsigned char *)segment.c_str(), segment.size());
-			if (next_offset == -1) {
-				// could not find this pattern in the string: no match
-				return false;
-			}
-			idx_t offset = next_offset + segment.size();
-			str_data += offset;
-			str_len -= offset;
+		if (memcmp(str_data, segment.c_str(), segment.size()) != 0) {
+			return false;
 		}
-		if (!hasEndPercentage_) {
-			end_idx--;
-			// no end sample_size: match the final segment now
-			auto &segment = segments_.back();
-			if (str_len < segment.size()) {
-				return false;
-			}
-			if (memcmp(str_data + str_len - segment.size(), segment.c_str(), segment.size()) != 0) {
-				return false;
-			}
-			return true;
+		str_data += segment.size();
+		str_len -= segment.size();
+		segment_idx++;
+		if (segments_.size() == 1) {
+			// only one segment, and it matches
+			return hasEndPercentage_ || str_len == 0;
 		}
-		auto &segment = segments_.back();
+	}
+	// main match loop: for every segment in the middle, use contains to find the needle in the haystack
+	for (; segment_idx < end_idx; segment_idx++) {
+		auto &segment = segments_[segment_idx];
 		// find the pattern of the current segment
 		int next_offset = find(str_data, str_len, (const unsigned char *)segment.c_str(), segment.size());
-		return next_offset != -1;
+		if (next_offset == -1) {
+			// could not find this pattern in the string: no match
+			return false;
+		}
+		idx_t offset = next_offset + segment.size();
+		str_data += offset;
+		str_len -= offset;
+	}
+	if (!hasEndPercentage_) {
+		end_idx--;
+		// no end sample_size: match the final segment now
+		auto &segment = segments_.back();
+		if (str_len < segment.size()) {
+			return false;
+		}
+		if (memcmp(str_data + str_len - segment.size(), segment.c_str(), segment.size()) != 0) {
+			return false;
+		}
+		return true;
+	}
+	auto &segment = segments_.back();
+	// find the pattern of the current segment
+	int next_offset = find(str_data, str_len, (const unsigned char *)segment.c_str(), segment.size());
+	return next_offset != -1;
 }
 
 
@@ -249,16 +302,10 @@ static function_data_ptr_t stringLikeBind(ClientContext &context,
 	BB_ASSERT(inputTypes[0].getPhysicalType() == PhysicalType::STRING);
 	BB_ASSERT(inputTypes.size() == names.size());
 
-	auto varName = names[0];
-	if (!bindVarName.contains(varName))
-		ErrorHandler::errorParsing("Error, variable "+ varName+" is not binded!");
-	BB_ASSERT(bindVarName.contains(varName));
-	idx_t colIdx = bindVarName[varName];
-
 	auto likeString = inputs[0].toString();
 
 
-	auto result = std::make_unique<StringLikeData>(colIdx, likeString);
+	auto result = std::make_unique<StringLikeData>(likeString);
 
 	return result;
 }
@@ -273,8 +320,23 @@ static function_op_data_ptr_t stringLikeInit(ClientContext &context, const Funct
 
 static void stringLikeFunction(ClientContext &context, const FunctionData *bind_data_p,
 									 FunctionOperatorData *operator_state, DataChunk *input, DataChunk &output) {
+	auto &bind_data = (StringLikeData &)*bind_data_p;
+	auto &data = (StringLikeOperatorData &)*operator_state;
 
+	BB_ASSERT(input);
+	BB_ASSERT(input->columnCount() == 1);
 
+	auto& inputVector = input->data_[0];
+	BB_ASSERT(inputVector.getType() == PhysicalType::STRING);
+	auto func = [&](string_t& inputString) {
+		return bind_data.match(inputString);
+	};
+	SelectionVector trueSel(input->getSize());
+	idx_t falseCount = 0;
+	auto trueCount = UnaryExecution::select<string_t>(inputVector, nullptr, input->getSize(), &trueSel, nullptr, falseCount, func);
+
+	output.reference(*input);
+	output.slice(trueSel, trueCount);
 }
 
 

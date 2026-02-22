@@ -146,7 +146,7 @@ AtomResultType PhysicalPredFunction::execute(ThreadContext &context, DataChunk &
     auto& cstate = (PredFuncState&)state;
     context.profiler_.startPhysicalAtom(this);
     // select input cols
-    DataChunk pinput = selectColumns(input);
+    DataChunk pinput = projectColumns(input);
 
     // create output chunk
     DataChunk output;
