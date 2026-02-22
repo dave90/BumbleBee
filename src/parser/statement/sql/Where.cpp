@@ -50,7 +50,7 @@ Predicate & Predicate::operator=(Predicate &&other) noexcept {
     return *this;
 }
 
-void Predicate::setOp(Binop op) {
+void Predicate::setOp(SQLBinop op) {
     op_ = op;
 }
 
@@ -62,7 +62,7 @@ void Predicate::setValue2(ValueExpr &value2) {
     value2_ = std::move(value2);
 }
 
-Binop & Predicate::getOp() {
+SQLBinop & Predicate::getOp() {
     return op_;
 }
 
@@ -76,7 +76,8 @@ ValueExpr & Predicate::getValue2() {
 
 
 string Predicate::toString() const {
-    return value1_.toString() + " " + getBinopStr(op_) +" "+ value2_.toString();
+    string opStr = (op_ == SQL_LIKE) ? "LIKE" : getBinopStr(toCoreBinop(op_));
+    return value1_.toString() + " " + opStr +" "+ value2_.toString();
 }
 
 Where::Where(const Where &other): items_(other.items_),

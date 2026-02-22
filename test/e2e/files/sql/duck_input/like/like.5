@@ -1,0 +1,3 @@
+SELECT p."First name", p."Last name", p.Identifier
+FROM "./files/csv/username.csv" AS p
+WHERE p."Last name" LIKE 'J%' AND p.Identifier > 5000

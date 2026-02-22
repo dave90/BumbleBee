@@ -398,7 +398,25 @@ Atom generateBuiltinFromPredCondition(sql::Predicate &predicate, SQLQuery& query
     auto t2 = generateTermFromValueExpr(predicate.getValue2(),"",query, errorMessage);
     terms.push_back(std::move(t1));
     terms.push_back(std::move(t2));
-    return Atom::createBuiltinAtom(std::move(terms), predicate.getOp());
+    return Atom::createBuiltinAtom(std::move(terms), sql::toCoreBinop(predicate.getOp()));
+}
+
+Atom generateLikeAtom(sql::Predicate& predicate, SQLQuery& query, string& errorMessage) {
+    auto colTerm = generateTermFromValueExpr(predicate.getValue1(), "", query, errorMessage);
+
+    auto& patternVals = predicate.getValue2().getValues();
+    if (patternVals.size() != 1 || !patternVals.front().isIsConstant()) {
+        errorMessage = "LIKE operator requires a constant string pattern on the right side";
+        return Atom{};
+    }
+
+    vector<Value> inputValues;
+    inputValues.push_back(patternVals.front().getValue().clone());
+    std::unordered_map<string, Value> namedParams;
+    terms_vector_t terms;
+    terms.push_back(std::move(colTerm));
+    string funcName = "&like";
+    return Atom::createExternalAtom(namedParams, inputValues, funcName, std::move(terms));
 }
 
 Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::unordered_map<idx_t, vector<string>>& aggVars,
@@ -579,6 +597,18 @@ void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& predicates,
     binopAtomsDNF.emplace_back();
     for (idx_t i =0;i<predicates.size();++i){
         auto& p = predicates[i];
+
+        if (p.getOp() == sql::SQL_LIKE) {
+            if (i < ops.size() && ops[i] == sql::SQL_OR) {
+                errorMessage = "LIKE operator inside OR conditions is not supported";
+                return;
+            }
+            auto likeAtom = generateLikeAtom(p, query, errorMessage);
+            if (!errorMessage.empty()) return;
+            body.push_back(std::move(likeAtom));
+            continue;
+        }
+
         auto batom = generateBuiltinFromPredCondition(p, query, errorMessage);
         binopAtomsDNF.back().push_back(std::move(batom));
         if (i < ops.size() && ops[i] == sql::SQL_OR) {
@@ -586,6 +616,7 @@ void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& predicates,
             binopAtomsDNF.emplace_back();
         }
     }
+    if (binopAtomsDNF[0].empty()) return;
     // transform in CNF (AND of ORs)
     auto binopAtomsCNF = toBinopAtomsCnf(binopAtomsDNF[0]);
     for (idx_t i=1;i<binopAtomsDNF.size();++i) {

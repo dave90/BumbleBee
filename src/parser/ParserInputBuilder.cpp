@@ -914,7 +914,19 @@ void ParserInputBuilder::onSQLPredicateValueExprOp() {
     }
     sqlPredicate_.setValue2(valueExpr_);
     valueExpr_.clear();
-    sqlPredicate_.setOp(binop_);
+    sqlPredicate_.setOp(sql::toSQLBinop(binop_));
+}
+
+void ParserInputBuilder::onSQLLikePredicate() {
+    if (foundASafetyError_) return;
+    if (valueExpr_.getValues().empty()) {
+        BB_ASSERT(!sqlValuePrimary_.empty());
+        valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+    }
+    sqlPredicate_.setValue2(valueExpr_);
+    valueExpr_.clear();
+    sqlPredicate_.setOp(sql::SQLBinop::SQL_LIKE);
 }
 
 void ParserInputBuilder::onSQLOperatorCondition(const char * op) {
@@ -1071,6 +1083,9 @@ void ParserInputBuilder::onSqlOrderCol() {
     auto& items = sqlStatements_.back().getSelect().getItems();
     for (idx_t i=0;i<items.size() && !find;i++) {
         auto& ve = items[i];
+        if (ve.toString() == "*") {
+            find = true; // we have a select start set find as true
+        }
         if ((!ve.getAlias().empty() && ve.getAlias() == colVar) || (ve.toString() == colVar)) {
                 find = true;
                 idx = i;

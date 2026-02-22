@@ -145,23 +145,18 @@ AtomResultType PhysicalPredFunction::execute(ThreadContext &context, DataChunk &
     PhysicalAtomState &state) const {
     auto& cstate = (PredFuncState&)state;
     context.profiler_.startPhysicalAtom(this);
-    // select input cols
-    DataChunk pinput = projectColumns(input);
 
-    // create output chunk
+    // create output chunk with all column types
     DataChunk output;
-    output.initializeEmpty(dcColsType_);
+    output.initializeEmpty(types_);
 
-    predFunction_->function_(context_, bindData_.get(), cstate.functionOpData_.get(),&pinput, output);
+    predFunction_->function_(context_, bindData_.get(), cstate.functionOpData_.get(), &input, output);
 
     if (output.getSize() > 0) {
-        // set the cols to chunk output
-        chunk.reference(input);
-        for (idx_t i=0;i<dcCols_.size();++i)
-            chunk.data_[dcCols_[i]].reference(output.data_[i]);
-        chunk.setCardinality(output.getSize());
-    }else
+        chunk.reference(output);
+    } else {
         chunk.setCardinality(0);
+    }
 
     context.profiler_.endPhysicalAtom(chunk);
     return AtomResultType::NEED_MORE_INPUT;

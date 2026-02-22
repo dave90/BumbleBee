@@ -146,68 +146,20 @@ int find(const unsigned char *haystack, idx_t haystack_size, const unsigned char
 }
 
 
-// Generic LIKE matcher that handles '%' (any sequence), '_' (any one char),
-// and an optional escape character. Uses an iterative backtracking approach.
-static bool genericLikeMatch(const unsigned char *str, idx_t str_len,
-                              const unsigned char *pat, idx_t pat_len,
-                              char escape_char) {
-	idx_t s = 0, p = 0;
-	idx_t last_percent_p = (idx_t)-1;
-	idx_t last_percent_s = (idx_t)-1;
-
-	while (s < str_len) {
-		if (p < pat_len) {
-			auto pc = pat[p];
-			bool is_escape = (escape_char != '\0' && pc == (unsigned char)escape_char);
-
-			if (is_escape && p + 1 < pat_len) {
-				// Escaped literal: match next pattern character exactly.
-				if (str[s] == pat[p + 1]) {
-					s++; p += 2;
-					continue;
-				}
-			} else if (pc == '%') {
-				last_percent_p = p;
-				last_percent_s = s;
-				p++;
-				continue;
-			} else if (pc == '_' || pc == str[s]) {
-				s++; p++;
-				continue;
-			}
-		}
-		// Mismatch: backtrack to the last '%' position if available.
-		if (last_percent_p != (idx_t)-1) {
-			last_percent_s++;
-			s = last_percent_s;
-			p = last_percent_p + 1;
-		} else {
-			return false;
-		}
-	}
-	// Consume any trailing '%' wildcards.
-	while (p < pat_len && pat[p] == '%') p++;
-	return p == pat_len;
-}
 
 StringLikeData::StringLikeData(string &likePattern, char escape)
-    :  useGenericMatch_(false), originalPattern_(likePattern), escape_(escape) {
+    :   escape_(escape) {
 	idx_t last_non_pattern = 0;
 	hasStartPercentage_ = false;
 	hasEndPercentage_ = false;
 	for (idx_t i = 0; i < likePattern.size(); i++) {
 		auto ch = likePattern[i];
-		if (ch == escape || ch == '%' || ch == '_') {
+		if ( ch == '%' ) {
 			// special character, push a constant pattern
 			if (i > last_non_pattern) {
 				segments_.emplace_back(likePattern.substr(last_non_pattern, i - last_non_pattern));
 			}
 			last_non_pattern = i + 1;
-			if (ch == escape || ch == '_') {
-				// Pattern contains '_' or escape: fall back to the generic matcher.
-				useGenericMatch_ = true;
-				return;
-			}
 			// '%' wildcard
 			if (i == 0) {
 				hasStartPercentage_ = true;
@@ -223,14 +175,11 @@ StringLikeData::StringLikeData(string &likePattern, char escape)
 }
 
 bool StringLikeData::match(string_t &str) {
+	// TODO handle the "_" special character
+
 	auto str_data = (const unsigned char *)str.getDataUnsafe();
 	auto str_len = str.size();
 
-	if (useGenericMatch_) {
-		return genericLikeMatch(str_data, str_len,
-		                        (const unsigned char *)originalPattern_.c_str(),
-		                        originalPattern_.size(), escape_);
-	}
 
 	idx_t segment_idx = 0;
 	idx_t end_idx = segments_.size() - 1;
@@ -304,8 +253,12 @@ static function_data_ptr_t stringLikeBind(ClientContext &context,
 
 	auto likeString = inputs[0].toString();
 
+	if (names.empty() || !bindVarName.count(names[0]))
+		ErrorHandler::errorParsing("Error, like function requires the input variable to be bound in the context!");
+	BB_ASSERT(!names.empty() && bindVarName.count(names[0]));
 
 	auto result = std::make_unique<StringLikeData>(likeString);
+	result->colIndex_ = bindVarName.at(names[0]);
 
 	return result;
 }
@@ -324,9 +277,9 @@ static void stringLikeFunction(ClientContext &context, const FunctionData *bind_
 	auto &data = (StringLikeOperatorData &)*operator_state;
 
 	BB_ASSERT(input);
-	BB_ASSERT(input->columnCount() == 1);
+	BB_ASSERT(bind_data.colIndex_ < input->columnCount());
 
-	auto& inputVector = input->data_[0];
+	auto& inputVector = input->data_[bind_data.colIndex_];
 	BB_ASSERT(inputVector.getType() == PhysicalType::STRING);
 	auto func = [&](string_t& inputString) {
 		return bind_data.match(inputString);

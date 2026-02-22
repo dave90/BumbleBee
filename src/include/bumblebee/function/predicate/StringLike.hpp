@@ -32,11 +32,8 @@ struct StringLikeData : public FunctionData {
     bool hasStartPercentage_;
     bool hasEndPercentage_;
 
-    // When the pattern contains '_' or an escape sequence the optimised
-    // segment-based path cannot be used; we fall back to a full generic match.
-    bool useGenericMatch_;
-    string originalPattern_;
     char escape_;
+    idx_t colIndex_{0}; // column index in the input DataChunk to apply the filter on
 };
 
 struct StringLikeOperatorData : public FunctionOperatorData {

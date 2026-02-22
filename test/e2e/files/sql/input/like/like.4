@@ -1,0 +1,4 @@
+%@sql
+SELECT p.FIRST_NAME, p.LAST_NAME
+FROM "./files/csv/username.csv" AS p
+WHERE p.FIRST_NAME LIKE '%a%' AND p.LAST_NAME LIKE '%er'

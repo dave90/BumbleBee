@@ -69,7 +69,7 @@ bool queryFound=false;
 
 
 /* --- SQL tokens --- */
-%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT
+%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT SQL_LIKE
 %token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG SQL_COUNT
 %token <string> SQL_DIALECT
 
@@ -1014,6 +1014,10 @@ predicate
     : predicate_value_expr binop value_expr
     {
         director.getBuilder()->onSQLPredicateValueExprOp();
+    }
+    | predicate_value_expr SQL_LIKE value_expr
+    {
+        director.getBuilder()->onSQLLikePredicate();
     }
     ;
 

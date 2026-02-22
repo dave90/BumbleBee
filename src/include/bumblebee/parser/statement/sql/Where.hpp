@@ -28,6 +28,28 @@ enum SQLOperator {
     SQL_OR,
 };
 
+// SQL-specific binop that extends the core Binop with SQL-only operators.
+// LIKE (value 8) is SQL-only and must NOT be passed to Datalog builtin atoms.
+enum SQLBinop {
+    SQL_NONE_OP = 0,
+    SQL_EQUAL = 1,
+    SQL_UNEQUAL = 2,
+    SQL_LESS = 3,
+    SQL_GREATER = 4,
+    SQL_LESS_OR_EQ = 5,
+    SQL_GREATER_OR_EQ = 6,
+    SQL_ASSIGNMENT = 7,
+    SQL_LIKE = 8,
+};
+
+inline SQLBinop toSQLBinop(Binop op) {
+    return static_cast<SQLBinop>(op);
+}
+
+inline Binop toCoreBinop(SQLBinop op) {
+    return static_cast<Binop>(op);
+}
+
 class Predicate {
 public:
     Predicate() = default;
@@ -37,11 +59,11 @@ public:
     Predicate & operator=(const Predicate &other);
     Predicate & operator=(Predicate &&other) noexcept;
 
-    void setOp(Binop op);
+    void setOp(SQLBinop op);
     void setValue1(ValueExpr &value1);
     void setValue2(ValueExpr &value2);
 
-    Binop & getOp();
+    SQLBinop & getOp();
 
     ValueExpr & getValue1();
 
@@ -51,7 +73,7 @@ public:
 
 
 private:
-    Binop op_;
+    SQLBinop op_{SQL_NONE_OP};
     ValueExpr value1_;
     ValueExpr value2_;
 };

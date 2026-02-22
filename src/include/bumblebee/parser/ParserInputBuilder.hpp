@@ -128,6 +128,7 @@ public:
 	void onSQLPredicate();
 	void onSQLPredicateValueExpr();
 	void onSQLPredicateValueExprOp();
+	void onSQLLikePredicate();
 	void onSQLOperatorCondition(const char *);
 
 	void onSQLWhere();
