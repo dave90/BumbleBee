@@ -165,8 +165,8 @@ static void collectQualifiedNamesFromItem(vector<QualifiedName>& names, WhereIte
             collectQualifiedNames(names, wi.getValue1());
             collectQualifiedNames(names, wi.getValue2());
         } else { // WhereGroup
-            auto groupNames = wi.getWhere().getQualifiedNames();
-            for (auto& n: groupNames) names.push_back(n);
+            for (auto& inner: wi.getWhere().getItems())
+                collectQualifiedNamesFromItem(names, inner);
         }
     }, item);
 }

@@ -946,6 +946,7 @@ void ParserInputBuilder::onSQLWhereGroupBegin() {
 
 void ParserInputBuilder::onSQLWhereGroupEnd() {
     // Package the completed inner WHERE as a WhereGroup, then restore the outer context
+    BB_ASSERT(!whereContextStack_.empty());
     auto innerWhere = std::move(sqlStatements_.back().getWhere());
     sqlStatements_.back().getWhere() = std::move(whereContextStack_.back());
     whereContextStack_.pop_back();
@@ -967,6 +968,7 @@ void ParserInputBuilder::onSQLSelect() {
 
 void ParserInputBuilder::onSQLStart() {
     isSql_ = true;
+    whereContextStack_.clear();
     sqlStatements_.emplace_back();
 }
 

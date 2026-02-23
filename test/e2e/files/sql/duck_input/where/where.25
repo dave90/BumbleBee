@@ -1,0 +1,4 @@
+SELECT c1.Username AS USER1, c2.Username AS USER2
+FROM read_csv('./files/csv/username.csv', delim=';', header=true, auto_detect=true) AS c1,
+     read_csv('./files/csv/username.csv', delim=';', header=true, auto_detect=true) AS c2
+WHERE c1.Identifier < c2.Identifier AND (c1.Identifier > 2000 OR c2.Identifier > 8000)

@@ -1,0 +1,4 @@
+%@sql
+SELECT c1.USERNAME AS USER1, c2.USERNAME AS USER2
+FROM "./files/csv/username.csv" AS c1, "./files/csv/username.csv" AS c2
+WHERE c1.IDENTIFIER < c2.IDENTIFIER AND (c1.IDENTIFIER > 2000 OR c2.IDENTIFIER > 8000)

@@ -605,17 +605,17 @@ using CNF = vector<vector<Atom>>;
 
 // Forward declaration
 static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
-    bool insideGroup, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage);
+    bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage);
 
 // Generate a CNF for a single WhereItem.
 // LIKE predicates: add to likeBody and return {{}} (OR-identity, skipped in final output).
 // Predicates: return {{atom}}.
 // WhereGroups: recurse.
-static CNF generateWhereItemCNF(sql::WhereItem& item, bool insideGroup,
+static CNF generateWhereItemCNF(sql::WhereItem& item, bool likeForbidden,
     vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
     if (auto* pred = std::get_if<sql::Predicate>(&item)) {
         if (pred->getOp() == sql::SQL_LIKE) {
-            if (insideGroup) {
+            if (likeForbidden) {
                 errorMessage = "LIKE operator inside grouped WHERE conditions is not supported";
                 return {};
             }
@@ -644,20 +644,32 @@ static CNF generateWhereItemCNF(sql::WhereItem& item, bool insideGroup,
 // Implements SQL-standard AND > OR precedence:
 //   items between consecutive ORs form AND-groups; the AND-groups are then OR-distributed.
 // AND-groups: concatenate item CNFs; OR of groups: distribute (Cartesian product).
+//
+// NOTE: CNF conversion via OR-distribution can produce exponential clause counts.
+// N OR-separated AND-groups each with M items yield up to M^N clauses. For queries
+// with many OR-groups this may generate very large rule bodies. Consider simplifying
+// such queries if performance degrades.
 static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
-    bool insideGroup, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
+    bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
     if (items.empty()) return {};
     BB_ASSERT(items.size() == ops.size() + 1);
 
-    // Pre-check: LIKE in OR context is not supported
+    // Pre-check: LIKE in OR context is not supported.
+    // If any OR operator exists at this level, LIKE cannot appear as a top-level item,
+    // because it belongs to an AND-group that would be OR-distributed, giving wrong semantics.
+    // (LIKE inside a nested WhereGroup is caught by the likeForbidden flag in generateWhereItemCNF.)
+    bool hasOrAtThisLevel = false;
+    for (auto& op : ops) {
+        if (op == sql::SQL_OR) { hasOrAtThisLevel = true; break; }
+    }
     for (idx_t i = 0; i < items.size(); ++i) {
         auto* pred = std::get_if<sql::Predicate>(&items[i]);
         if (pred && pred->getOp() == sql::SQL_LIKE) {
-            if (insideGroup) {
+            if (likeForbidden) {
                 errorMessage = "LIKE operator inside grouped WHERE conditions is not supported";
                 return {};
             }
-            if (i < ops.size() && ops[i] == sql::SQL_OR) {
+            if (hasOrAtThisLevel) {
                 errorMessage = "LIKE operator inside OR conditions is not supported";
                 return {};
             }
@@ -665,7 +677,7 @@ static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLO
     }
 
     // Split items into OR-separated AND-groups.
-    // Each AND-group is a range [start, end) of item indices connected by AND.
+    // Each AND-group is a range [start, end] of item indices connected by AND.
     vector<std::pair<idx_t, idx_t>> andGroups; // (start, end) inclusive ranges
     idx_t groupStart = 0;
     for (idx_t i = 0; i < ops.size(); ++i) {
@@ -681,10 +693,10 @@ static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLO
     CNF result;
     for (idx_t gi = 0; gi < andGroups.size(); ++gi) {
         auto [start, end] = andGroups[gi];
-        CNF groupCnf = generateWhereItemCNF(items[start], insideGroup, likeBody, query, errorMessage);
+        CNF groupCnf = generateWhereItemCNF(items[start], likeForbidden, likeBody, query, errorMessage);
         if (!errorMessage.empty()) return {};
         for (idx_t j = start + 1; j <= end; ++j) {
-            CNF next = generateWhereItemCNF(items[j], insideGroup, likeBody, query, errorMessage);
+            CNF next = generateWhereItemCNF(items[j], likeForbidden, likeBody, query, errorMessage);
             if (!errorMessage.empty()) return {};
             for (auto& clause: next) groupCnf.push_back(std::move(clause));
         }
