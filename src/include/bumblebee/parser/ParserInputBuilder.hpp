@@ -130,6 +130,8 @@ public:
 	void onSQLPredicateValueExprOp();
 	void onSQLLikePredicate();
 	void onSQLOperatorCondition(const char *);
+	void onSQLWhereGroupBegin();
+	void onSQLWhereGroupEnd();
 
 	void onSQLWhere();
 	void onSQLFrom();
@@ -212,6 +214,11 @@ protected:
 	vector<sql::SQLStatement> sqlStatements_;
 
 	string sqlExportFilePath_;
+
+	// Stack of outer WHERE contexts saved when entering a parenthesized WHERE group.
+	// onSQLWhereGroupBegin() pushes the current WHERE onto this stack and starts a
+	// fresh one; onSQLWhereGroupEnd() pops it back and wraps the inner WHERE as a group.
+	vector<sql::Where> whereContextStack_;
 
 };
 

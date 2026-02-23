@@ -80,6 +80,33 @@ string Predicate::toString() const {
     return value1_.toString() + " " + opStr +" "+ value2_.toString();
 }
 
+// ---- WhereGroup implementation ----
+// Defined after Where because WhereGroup methods need Where to be complete.
+
+WhereGroup::WhereGroup() : where_(std::make_unique<Where>()) {}
+
+WhereGroup::WhereGroup(Where where) : where_(std::make_unique<Where>(std::move(where))) {}
+
+WhereGroup::~WhereGroup() = default;
+
+WhereGroup::WhereGroup(const WhereGroup &other)
+    : where_(std::make_unique<Where>(*other.where_)) {}
+
+WhereGroup::WhereGroup(WhereGroup &&other) noexcept = default;
+
+WhereGroup & WhereGroup::operator=(const WhereGroup &other) {
+    if (this == &other) return *this;
+    where_ = std::make_unique<Where>(*other.where_);
+    return *this;
+}
+
+WhereGroup & WhereGroup::operator=(WhereGroup &&other) noexcept = default;
+
+Where & WhereGroup::getWhere() { return *where_; }
+const Where & WhereGroup::getWhere() const { return *where_; }
+
+// ---- Where implementation ----
+
 Where::Where(const Where &other): items_(other.items_),
                                   ops_(other.ops_) {
 }
@@ -109,6 +136,10 @@ void Where::addItem(Predicate &condition) {
     items_.push_back(std::move(condition));
 }
 
+void Where::addGroup(WhereGroup group) {
+    items_.push_back(std::move(group));
+}
+
 void Where::addOperator(SQLOperator op) {
     ops_.push_back(op);
 }
@@ -127,11 +158,23 @@ static void collectQualifiedNames(vector<QualifiedName>& names, ValueExpr& ve) {
     }
 }
 
+static void collectQualifiedNamesFromItem(vector<QualifiedName>& names, WhereItem& item) {
+    std::visit([&](auto& wi) {
+        using T = std::decay_t<decltype(wi)>;
+        if constexpr (std::is_same_v<T, Predicate>) {
+            collectQualifiedNames(names, wi.getValue1());
+            collectQualifiedNames(names, wi.getValue2());
+        } else { // WhereGroup
+            auto groupNames = wi.getWhere().getQualifiedNames();
+            for (auto& n: groupNames) names.push_back(n);
+        }
+    }, item);
+}
+
 vector<QualifiedName> Where::getQualifiedNames() {
     vector<QualifiedName> names;
-    for (auto& p:getItems()) {
-        collectQualifiedNames(names, p.getValue1());
-        collectQualifiedNames(names, p.getValue2());
+    for (auto& item: items_) {
+        collectQualifiedNamesFromItem(names, item);
     }
     return names;
 }
@@ -157,15 +200,29 @@ string Where::getStringFromOp(SQLOperator op) {
     return "";
 }
 
-string Where::toString() const {
-    if (items_.empty())return "";
-    string result = "WHERE ";
-    result += items_[0].toString();
-    for (idx_t i =0;i<ops_.size();i++) {
+string Where::toStringCondition() const {
+    if (items_.empty()) return "";
+    auto itemStr = [](const WhereItem& item) -> string {
+        return std::visit([](const auto& wi) -> string {
+            using T = std::decay_t<decltype(wi)>;
+            if constexpr (std::is_same_v<T, Predicate>) {
+                return wi.toString();
+            } else { // WhereGroup
+                return "(" + wi.getWhere().toStringCondition() + ")";
+            }
+        }, item);
+    };
+    string result = itemStr(items_[0]);
+    for (idx_t i = 0; i < ops_.size(); i++) {
         string op{getStringFromOp(ops_[i])};
-        result += " "+op + " "+ items_[i+1].toString();
+        result += " " + op + " " + itemStr(items_[i+1]);
     }
     return result;
+}
+
+string Where::toString() const {
+    if (items_.empty()) return "";
+    return "WHERE " + toStringCondition();
 }
 
 void Where::clear() {

@@ -1,8 +1,7 @@
 ## TODOLIST
-- Like expression ext atom
-- sql to datalog allow : WHERE total_revenue = (SELECT max(total_revenue) ... )
+- sql to datalog allow : WHERE total_revenue = (SELECT max(total_revenue) ... ) q02
 - SQL to datalog allow CASE WHEN
-- SQL to datalog allow EXIST
+- SQL IN and NOT IN (constant and not contant)
 - TPCH add more queries
 - parquet write
 - Specify predicate tables types

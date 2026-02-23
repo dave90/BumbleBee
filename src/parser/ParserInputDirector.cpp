@@ -20,6 +20,24 @@
 
 #include "bumblebee/common/ErrorHandler.hpp"
 #include "aspcore2_lexer.hpp"
+
+/* GLR mode makes bison generate: #define YYLEX yylex (, director)
+ * (it prepends a YYLTYPE* location argument before the %lex-param).
+ * The flex-generated yylex only accepts (director).
+ * Bridge: capture the function pointer before the macro override, then
+ * provide a 2-argument wrapper that discards the (empty) location arg. */
+static int (*const yylex_original_ptr)(bumblebee::ParserInputDirector&) = &yylex;
+
+static int yylex_glr_bridge(bumblebee::ParserInputDirector& director) {
+    return yylex_original_ptr(director);
+}
+
+/* Override yylex so YYLEX expands to a valid call.
+ * C99 variadic macros allow the first argument to be empty:
+ *   yylex (, director)  →  yylex_glr_bridge(director)           */
+#undef yylex
+#define yylex(ignored_loc, ...) yylex_glr_bridge(__VA_ARGS__)
+
 #include "aspcore2_parser.hpp"
 #include "bumblebee/common/Log.hpp"
 

@@ -1,9 +1,8 @@
 /* A Bison parser, made by GNU Bison 2.3.  */
 
-/* Skeleton implementation for Bison's Yacc-like parsers in C
+/* Skeleton implementation for Bison GLR parsers in C
 
-   Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006
-   Free Software Foundation, Inc.
+   Copyright (C) 2002, 2003, 2004, 2005, 2006 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,15 +32,7 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-/* C LALR(1) parser skeleton written by Richard Stallman, by
-   simplifying the original so-called "semantic" parser.  */
-
-/* All symbols defined below should begin with yy or YY, to avoid
-   infringing on user name space.  This should be done even for local
-   variables, as they might otherwise be expanded by user macros.
-   There are some unavoidable exceptions within include files to
-   define necessary library symbols; they are noted "INFRINGES ON
-   USER NAME SPACE" below.  */
+/* C GLR parser skeleton written by Paul Hilfinger.  */
 
 /* Identify Bison output.  */
 #define YYBISON 1
@@ -50,13 +41,16 @@
 #define YYBISON_VERSION "2.3"
 
 /* Skeleton name.  */
-#define YYSKELETON_NAME "yacc.c"
+#define YYSKELETON_NAME "glr.c"
 
 /* Pure parsers.  */
 #define YYPURE 0
 
 /* Using locations.  */
 #define YYLSP_NEEDED 0
+
+
+
 
 
 
@@ -135,80 +129,10 @@
      SQL_DIALECT = 324
    };
 #endif
-/* Tokens.  */
-#define SYMBOLIC_CONSTANT 258
-#define NUMBER 259
-#define VARIABLE 260
-#define STRING 261
-#define DIRECTIVE_NAME 262
-#define DIRECTIVE_VALUE 263
-#define AGGR_COUNT 264
-#define AGGR_MAX 265
-#define AGGR_MIN 266
-#define AGGR_SUM 267
-#define AGGR_AVG 268
-#define AGGR_MULTI 269
-#define ID 270
-#define ERROR 271
-#define NEWLINE 272
-#define DOT 273
-#define DDOT 274
-#define SEMICOLON 275
-#define COLON 276
-#define CONS 277
-#define QUERY_MARK 278
-#define PLUS 279
-#define TIMES 280
-#define SLASH 281
-#define BACK_SLASH 282
-#define ANON_VAR 283
-#define PARAM_OPEN 284
-#define PARAM_CLOSE 285
-#define SQUARE_OPEN 286
-#define SQUARE_CLOSE 287
-#define CURLY_OPEN 288
-#define CURLY_CLOSE 289
-#define EQUAL 290
-#define UNEQUAL 291
-#define LESS 292
-#define GREATER 293
-#define LESS_OR_EQ 294
-#define GREATER_OR_EQ 295
-#define OR 296
-#define AND 297
-#define DASH 298
-#define COMMA 299
-#define NAF 300
-#define AT 301
-#define WCONS 302
-#define AMPERSAND 303
-#define VEL 304
-#define EXISTS 305
-#define SQL_SELECT 306
-#define SQL_FROM 307
-#define SQL_WHERE 308
-#define SQL_GROUP 309
-#define SQL_BY 310
-#define SQL_AS 311
-#define SQL_COPY 312
-#define SQL_TO 313
-#define SQL_ORDER 314
-#define SQL_ASC 315
-#define SQL_DESC 316
-#define SQL_LIMIT 317
-#define SQL_LIKE 318
-#define SQL_SUM 319
-#define SQL_MIN 320
-#define SQL_MAX 321
-#define SQL_AVG 322
-#define SQL_COUNT 323
-#define SQL_DIALECT 324
-
-
 
 
 /* Copy the first part of user declarations.  */
-#line 1 "src/parser/aspcore2.y"
+#line 2 "src/parser/aspcore2.y"
 
 //////////////////////////////////////////////////////////////////////////////
 // aspcore2.y
@@ -234,9 +158,41 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
 #include "bumblebee/parser/ParserInputDirector.hpp"
 #include <iostream>
 
+/* GLR mode causes bison to emit this preamble in both the .h and the .hpp files.
+   Guard against the resulting redefinition when both headers are included together. */
+#ifndef BUMBLEBEE_QUERY_FOUND_GUARD
+#define BUMBLEBEE_QUERY_FOUND_GUARD
 bool queryFound=false;
+#endif
 
 
+
+
+#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+typedef union YYSTYPE 
+#line 39 "src/parser/aspcore2.y"
+{
+    char* string;
+    char single_char;
+    int integer;
+}
+/* Line 204 of glr.c.  */
+#line 181 "src/parser/aspcore2_parser.hpp"
+	YYSTYPE;
+# define YYSTYPE_IS_DECLARED 1
+# define YYSTYPE_IS_TRIVIAL 1
+#endif
+
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE
+{
+
+  char yydummy;
+
+} YYLTYPE;
+# define YYLTYPE_IS_DECLARED 1
+# define YYLTYPE_IS_TRIVIAL 1
+#endif
 
 
 /* Enabling traces.  */
@@ -257,76 +213,23 @@ bool queryFound=false;
 # define YYTOKEN_TABLE 0
 #endif
 
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE
-#line 33 "src/parser/aspcore2.y"
-{
-    char* string;
-    char single_char;
-    int integer;
-}
-/* Line 193 of yacc.c.  */
-#line 270 "src/parser/aspcore2_parser.hpp"
-	YYSTYPE;
-# define yystype YYSTYPE /* obsolescent; will be withdrawn */
-# define YYSTYPE_IS_DECLARED 1
-# define YYSTYPE_IS_TRIVIAL 1
-#endif
-
-
+/* Default (constant) value used for initialization for null
+   right-hand sides.  Unlike the standard yacc.c template,
+   here we set the default value of $$ to a zeroed-out value.
+   Since the default value is undefined, this behavior is
+   technically correct.  */
+static YYSTYPE yyval_default;
 
 /* Copy the second part of user declarations.  */
 
 
-/* Line 216 of yacc.c.  */
-#line 283 "src/parser/aspcore2_parser.hpp"
+/* Line 234 of glr.c.  */
+#line 228 "src/parser/aspcore2_parser.hpp"
 
-#ifdef short
-# undef short
-#endif
-
-#ifdef YYTYPE_UINT8
-typedef YYTYPE_UINT8 yytype_uint8;
-#else
-typedef unsigned char yytype_uint8;
-#endif
-
-#ifdef YYTYPE_INT8
-typedef YYTYPE_INT8 yytype_int8;
-#elif (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-typedef signed char yytype_int8;
-#else
-typedef short int yytype_int8;
-#endif
-
-#ifdef YYTYPE_UINT16
-typedef YYTYPE_UINT16 yytype_uint16;
-#else
-typedef unsigned short int yytype_uint16;
-#endif
-
-#ifdef YYTYPE_INT16
-typedef YYTYPE_INT16 yytype_int16;
-#else
-typedef short int yytype_int16;
-#endif
-
-#ifndef YYSIZE_T
-# ifdef __SIZE_TYPE__
-#  define YYSIZE_T __SIZE_TYPE__
-# elif defined size_t
-#  define YYSIZE_T size_t
-# elif ! defined YYSIZE_T && (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-#  include <stddef.h> /* INFRINGES ON USER NAME SPACE */
-#  define YYSIZE_T size_t
-# else
-#  define YYSIZE_T unsigned int
-# endif
-#endif
-
-#define YYSIZE_MAXIMUM ((YYSIZE_T) -1)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
 
 #ifndef YY_
 # if defined YYENABLE_NLS && YYENABLE_NLS
@@ -365,155 +268,85 @@ YYID (i)
 }
 #endif
 
-#if ! defined yyoverflow || YYERROR_VERBOSE
+#ifndef YYFREE
+# define YYFREE free
+#endif
+#ifndef YYMALLOC
+# define YYMALLOC malloc
+#endif
+#ifndef YYREALLOC
+# define YYREALLOC realloc
+#endif
 
-/* The parser invokes alloca or malloc; define the necessary symbols.  */
+#define YYSIZEMAX ((size_t) -1)
 
-# ifdef YYSTACK_USE_ALLOCA
-#  if YYSTACK_USE_ALLOCA
-#   ifdef __GNUC__
-#    define YYSTACK_ALLOC __builtin_alloca
-#   elif defined __BUILTIN_VA_ARG_INCR
-#    include <alloca.h> /* INFRINGES ON USER NAME SPACE */
-#   elif defined _AIX
-#    define YYSTACK_ALLOC __alloca
-#   elif defined _MSC_VER
-#    include <malloc.h> /* INFRINGES ON USER NAME SPACE */
-#    define alloca _alloca
-#   else
-#    define YYSTACK_ALLOC alloca
-#    if ! defined _ALLOCA_H && ! defined _STDLIB_H && (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-#     include <stdlib.h> /* INFRINGES ON USER NAME SPACE */
-#     ifndef _STDLIB_H
-#      define _STDLIB_H 1
-#     endif
-#    endif
-#   endif
-#  endif
+#ifdef __cplusplus
+   typedef bool yybool;
+#else
+   typedef unsigned char yybool;
+#endif
+#define yytrue 1
+#define yyfalse 0
+
+#ifndef YYSETJMP
+# include <setjmp.h>
+# define YYJMP_BUF jmp_buf
+# define YYSETJMP(env) setjmp (env)
+# define YYLONGJMP(env, val) longjmp (env, val)
+#endif
+
+/*-----------------.
+| GCC extensions.  |
+`-----------------*/
+
+#ifndef __attribute__
+/* This feature is available in gcc versions 2.5 and later.  */
+# if (! defined __GNUC__ || __GNUC__ < 2 \
+      || (__GNUC__ == 2 && __GNUC_MINOR__ < 5) || __STRICT_ANSI__)
+#  define __attribute__(Spec) /* empty */
 # endif
-
-# ifdef YYSTACK_ALLOC
-   /* Pacify GCC's `empty if-body' warning.  */
-#  define YYSTACK_FREE(Ptr) do { /* empty */; } while (YYID (0))
-#  ifndef YYSTACK_ALLOC_MAXIMUM
-    /* The OS might guarantee only one guard page at the bottom of the stack,
-       and a page size can be as small as 4096 bytes.  So we cannot safely
-       invoke alloca (N) if N exceeds 4096.  Use a slightly smaller number
-       to allow for a few compiler-allocated temporary stack slots.  */
-#   define YYSTACK_ALLOC_MAXIMUM 4032 /* reasonable circa 2006 */
-#  endif
-# else
-#  define YYSTACK_ALLOC YYMALLOC
-#  define YYSTACK_FREE YYFREE
-#  ifndef YYSTACK_ALLOC_MAXIMUM
-#   define YYSTACK_ALLOC_MAXIMUM YYSIZE_MAXIMUM
-#  endif
-#  if (defined __cplusplus && ! defined _STDLIB_H \
-       && ! ((defined YYMALLOC || defined malloc) \
-	     && (defined YYFREE || defined free)))
-#   include <stdlib.h> /* INFRINGES ON USER NAME SPACE */
-#   ifndef _STDLIB_H
-#    define _STDLIB_H 1
-#   endif
-#  endif
-#  ifndef YYMALLOC
-#   define YYMALLOC malloc
-#   if ! defined malloc && ! defined _STDLIB_H && (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-void *malloc (YYSIZE_T); /* INFRINGES ON USER NAME SPACE */
-#   endif
-#  endif
-#  ifndef YYFREE
-#   define YYFREE free
-#   if ! defined free && ! defined _STDLIB_H && (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-void free (void *); /* INFRINGES ON USER NAME SPACE */
-#   endif
-#  endif
-# endif
-#endif /* ! defined yyoverflow || YYERROR_VERBOSE */
+#endif
 
 
-#if (! defined yyoverflow \
-     && (! defined __cplusplus \
-	 || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL)))
+#ifdef __cplusplus
+# define YYOPTIONAL_LOC(Name) /* empty */
+#else
+# define YYOPTIONAL_LOC(Name) Name __attribute__ ((__unused__))
+#endif
 
-/* A type that is properly aligned for any stack member.  */
-union yyalloc
-{
-  yytype_int16 yyss;
-  YYSTYPE yyvs;
-  };
-
-/* The size of the maximum gap between one aligned stack and the next.  */
-# define YYSTACK_GAP_MAXIMUM (sizeof (union yyalloc) - 1)
-
-/* The size of an array large to enough to hold all stacks, each with
-   N elements.  */
-# define YYSTACK_BYTES(N) \
-     ((N) * (sizeof (yytype_int16) + sizeof (YYSTYPE)) \
-      + YYSTACK_GAP_MAXIMUM)
-
-/* Copy COUNT objects from FROM to TO.  The source and destination do
-   not overlap.  */
-# ifndef YYCOPY
-#  if defined __GNUC__ && 1 < __GNUC__
-#   define YYCOPY(To, From, Count) \
-      __builtin_memcpy (To, From, (Count) * sizeof (*(From)))
-#  else
-#   define YYCOPY(To, From, Count)		\
-      do					\
-	{					\
-	  YYSIZE_T yyi;				\
-	  for (yyi = 0; yyi < (Count); yyi++)	\
-	    (To)[yyi] = (From)[yyi];		\
-	}					\
-      while (YYID (0))
-#  endif
-# endif
-
-/* Relocate STACK from its old location to the new one.  The
-   local variables YYSIZE and YYSTACKSIZE give the old and new number of
-   elements in the stack, and YYPTR gives the new location of the
-   stack.  Advance YYPTR to a properly aligned location for the next
-   stack.  */
-# define YYSTACK_RELOCATE(Stack)					\
-    do									\
-      {									\
-	YYSIZE_T yynewbytes;						\
-	YYCOPY (&yyptr->Stack, Stack, yysize);				\
-	Stack = &yyptr->Stack;						\
-	yynewbytes = yystacksize * sizeof (*Stack) + YYSTACK_GAP_MAXIMUM; \
-	yyptr += yynewbytes / sizeof (*yyptr);				\
-      }									\
-    while (YYID (0))
-
+#ifndef YYASSERT
+# define YYASSERT(condition) ((void) ((condition) || (abort (), 0)))
 #endif
 
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  94
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   516
+#define YYLAST   543
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  70
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  116
+#define YYNNTS  119
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  249
+#define YYNRULES  253
 /* YYNRULES -- Number of states.  */
-#define YYNSTATES  403
+#define YYNSTATES  409
+/* YYMAXRHS -- Maximum number of symbols on right-hand side of rule.  */
+#define YYMAXRHS 9
+/* YYMAXLEFT -- Maximum number of symbols to the left of a handle
+   accessed by $0, $-1, etc., in any rule.  */
+#define YYMAXLEFT 0
 
-/* YYTRANSLATE(YYLEX) -- Bison symbol number corresponding to YYLEX.  */
+/* YYTRANSLATE(X) -- Bison symbol number corresponding to X.  */
 #define YYUNDEFTOK  2
 #define YYMAXUTOK   324
 
 #define YYTRANSLATE(YYX)						\
-  ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
+  ((YYX <= 0) ? YYEOF :							\
+   (unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
 
 /* YYTRANSLATE[YYLEX] -- Bison symbol number corresponding to YYLEX.  */
-static const yytype_uint8 yytranslate[] =
+static const unsigned char yytranslate[] =
 {
        0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -553,7 +386,7 @@ static const yytype_uint8 yytranslate[] =
 #if YYDEBUG
 /* YYPRHS[YYN] -- Index of the first RHS symbol of rule number YYN in
    YYRHS.  */
-static const yytype_uint16 yyprhs[] =
+static const unsigned short int yyprhs[] =
 {
        0,     0,     3,     5,     8,    10,    12,    14,    17,    19,
       21,    24,    28,    33,    37,    42,    44,    46,    48,    50,
@@ -575,15 +408,16 @@ static const yytype_uint16 yyprhs[] =
      502,   504,   506,   508,   510,   514,   517,   520,   522,   526,
      529,   532,   537,   545,   547,   549,   551,   552,   555,   557,
      559,   561,   563,   565,   567,   569,   570,   573,   575,   579,
-     583,   587,   591,   593,   594,   598,   600,   604,   605,   609,
-     611,   615,   618,   620,   622,   624,   626,   628,   630,   631,
-     633,   635,   636,   639,   641,   643,   647,   651,   653,   655,
-     659,   663,   665,   667,   669,   670,   675,   680,   682,   684,
-     686,   688,   692,   696,   700,   704,   706,   708,   710,   712
+     583,   585,   587,   591,   593,   597,   601,   603,   604,   608,
+     610,   614,   615,   619,   621,   625,   628,   630,   632,   634,
+     636,   638,   640,   641,   643,   645,   646,   649,   651,   653,
+     657,   661,   663,   665,   669,   673,   675,   677,   679,   680,
+     685,   690,   692,   694,   696,   698,   702,   706,   710,   714,
+     716,   718,   720,   722
 };
 
 /* YYRHS -- A `-1'-separated list of the rules' RHS.  */
-static const yytype_int16 yyrhs[] =
+static const short int yyrhs[] =
 {
       72,     0,    -1,    49,    -1,    69,   149,    -1,    73,    -1,
        1,    -1,    74,    -1,    73,    74,    -1,    75,    -1,   122,
@@ -633,60 +467,62 @@ static const yytype_int16 yyrhs[] =
      146,    -1,   146,    -1,   100,    21,    89,    -1,   100,   147,
      100,    21,    89,    -1,    20,    -1,     9,    -1,    10,    -1,
       11,    -1,    12,    -1,    13,    -1,   150,    -1,    57,    29,
-     150,    30,   151,   152,    -1,   153,   154,   158,   165,   169,
-     171,   176,    -1,    58,     6,    -1,    29,    97,    30,    -1,
+     150,    30,   151,   152,    -1,   153,   154,   158,   165,   172,
+     174,   179,    -1,    58,     6,    -1,    29,    97,    30,    -1,
       51,    -1,   155,    -1,    25,    -1,   156,    -1,   157,    -1,
-     156,    44,   157,    -1,   177,   163,    -1,    52,   159,    -1,
+     156,    44,   157,    -1,   180,   163,    -1,    52,   159,    -1,
      160,    -1,   159,    44,   160,    -1,   161,   163,    -1,   162,
      163,    -1,    29,   149,    30,   163,    -1,    48,   121,    29,
       99,    96,    97,    30,    -1,     6,    -1,     3,    -1,     5,
       -1,    -1,    56,   164,    -1,     3,    -1,     5,    -1,    68,
       -1,    67,    -1,    66,    -1,    65,    -1,    64,    -1,    -1,
       53,   166,    -1,   167,    -1,   166,    42,   167,    -1,   166,
-      41,   167,    -1,   168,   104,   177,    -1,   168,    63,   177,
-      -1,   177,    -1,    -1,    54,    55,   170,    -1,   177,    -1,
-     170,    44,   177,    -1,    -1,    59,    55,   172,    -1,   173,
-      -1,   172,    44,   173,    -1,   174,   175,    -1,   184,    -1,
+      41,   167,    -1,   170,    -1,   168,    -1,   169,   166,    30,
+      -1,    29,    -1,   171,   104,   180,    -1,   171,    63,   180,
+      -1,   180,    -1,    -1,    54,    55,   173,    -1,   180,    -1,
+     173,    44,   180,    -1,    -1,    59,    55,   175,    -1,   176,
+      -1,   175,    44,   176,    -1,   177,   178,    -1,   187,    -1,
       64,    -1,    65,    -1,    66,    -1,    67,    -1,    68,    -1,
-      -1,    60,    -1,    61,    -1,    -1,    62,     4,    -1,   178,
-      -1,   179,    -1,   178,    24,   179,    -1,   178,    43,   179,
-      -1,   180,    -1,   181,    -1,   180,    25,   181,    -1,   180,
-      26,   181,    -1,     4,    -1,     6,    -1,   184,    -1,    -1,
-      29,   182,   177,    30,    -1,   185,    29,   183,    30,    -1,
-     177,    -1,    25,    -1,     3,    -1,     5,    -1,     3,    18,
+      -1,    60,    -1,    61,    -1,    -1,    62,     4,    -1,   181,
+      -1,   182,    -1,   181,    24,   182,    -1,   181,    43,   182,
+      -1,   183,    -1,   184,    -1,   183,    25,   184,    -1,   183,
+      26,   184,    -1,     4,    -1,     6,    -1,   187,    -1,    -1,
+      29,   185,   180,    30,    -1,   188,    29,   186,    30,    -1,
+     180,    -1,    25,    -1,     3,    -1,     5,    -1,     3,    18,
        3,    -1,     5,    18,     3,    -1,     5,    18,     5,    -1,
        3,    18,     5,    -1,    64,    -1,    65,    -1,    66,    -1,
       67,    -1,    68,    -1
 };
 
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
-static const yytype_uint16 yyrline[] =
+static const unsigned short int yyrline[] =
 {
-       0,    82,    82,    86,    87,    88,    93,    94,    98,    99,
-     103,   107,   111,   115,   119,   123,   131,   135,   143,   150,
-     155,   163,   168,   172,   182,   186,   191,   195,   199,   206,
-     210,   217,   218,   219,   220,   224,   231,   238,   239,   243,
-     247,   254,   261,   265,   272,   276,   283,   287,   291,   296,
-     300,   307,   308,   309,   316,   322,   323,   327,   332,   337,
-     346,   351,   359,   364,   366,   367,   371,   378,   379,   383,
-     384,   388,   389,   393,   400,   404,   411,   412,   413,   418,
-     419,   423,   424,   425,   429,   433,   439,   443,   448,   453,
-     458,   465,   466,   472,   473,   481,   482,   488,   489,   490,
-     491,   499,   504,   509,   514,   522,   527,   534,   542,   546,
-     553,   557,   564,   573,   578,   582,   587,   595,   596,   597,
-     601,   610,   617,   624,   631,   632,   636,   643,   647,   648,
-     652,   659,   663,   670,   677,   678,   682,   683,   684,   685,
-     686,   690,   697,   701,   708,   716,   720,   727,   731,   738,
-     742,   746,   747,   751,   759,   760,   765,   769,   776,   783,
-     788,   793,   798,   803,   822,   823,   830,   834,   842,   846,
-     853,   862,   871,   875,   876,   880,   889,   898,   899,   903,
-     907,   911,   918,   923,   930,   935,   943,   945,   949,   954,
-     959,   964,   969,   974,   979,   987,   989,   996,  1000,  1005,
-    1014,  1018,  1025,  1032,  1034,  1038,  1042,  1049,  1051,  1055,
-    1056,  1060,  1067,  1068,  1073,  1078,  1083,  1088,  1096,  1099,
-    1104,  1111,  1113,  1121,  1125,  1126,  1130,  1137,  1144,  1145,
-    1149,  1157,  1162,  1167,  1168,  1168,  1169,  1173,  1174,  1182,
-    1187,  1192,  1198,  1204,  1210,  1221,  1226,  1231,  1236,  1241
+       0,    88,    88,    92,    93,    94,    99,   100,   104,   105,
+     109,   113,   117,   121,   125,   129,   137,   141,   149,   156,
+     161,   169,   174,   178,   188,   192,   197,   201,   205,   212,
+     216,   223,   224,   225,   226,   230,   237,   244,   245,   249,
+     253,   260,   267,   271,   278,   282,   289,   293,   297,   302,
+     306,   313,   314,   315,   322,   328,   329,   333,   338,   343,
+     352,   357,   365,   370,   372,   373,   377,   384,   385,   389,
+     390,   394,   395,   399,   406,   410,   417,   418,   419,   424,
+     425,   429,   430,   431,   435,   439,   445,   449,   454,   459,
+     464,   471,   472,   478,   479,   487,   488,   494,   495,   496,
+     497,   505,   510,   515,   520,   528,   533,   540,   548,   552,
+     559,   563,   570,   579,   584,   588,   593,   601,   602,   603,
+     607,   616,   623,   630,   637,   638,   642,   649,   653,   654,
+     658,   665,   669,   676,   683,   684,   688,   689,   690,   691,
+     692,   696,   703,   707,   714,   722,   726,   733,   737,   744,
+     748,   752,   753,   757,   765,   766,   771,   775,   782,   789,
+     794,   799,   804,   809,   828,   829,   836,   840,   848,   852,
+     859,   868,   877,   881,   882,   886,   895,   904,   905,   909,
+     913,   917,   924,   929,   936,   941,   949,   951,   955,   960,
+     965,   970,   975,   980,   985,   993,   995,  1002,  1003,  1007,
+    1014,  1018,  1022,  1029,  1037,  1041,  1048,  1055,  1057,  1061,
+    1065,  1072,  1074,  1078,  1079,  1083,  1090,  1091,  1096,  1101,
+    1106,  1111,  1119,  1122,  1127,  1134,  1136,  1144,  1148,  1149,
+    1153,  1160,  1167,  1168,  1172,  1180,  1185,  1190,  1191,  1191,
+    1192,  1196,  1197,  1205,  1210,  1215,  1221,  1227,  1233,  1244,
+    1249,  1254,  1259,  1264
 };
 #endif
 
@@ -733,32 +569,17 @@ static const char *const yytname[] =
   "sql_query", "sql_copy_to", "sql_copy_params", "sql_select", "select",
   "select_list", "select_items", "select_item", "from", "from_list",
   "from_item", "external_table", "table_ref", "opt_alias", "alias_name",
-  "opt_where", "search_condition", "predicate", "predicate_value_expr",
-  "opt_groupby", "group_list", "opt_orderby", "order_list", "order_col",
-  "order_col_name", "modifier_opt", "opt_limit", "value_expr",
-  "value_add_expr", "finalized_mul_expr", "value_mul_expr",
-  "value_primary", "@1", "aggregate_arg", "qualified_name",
-  "aggregate_func", 0
+  "opt_where", "search_condition", "search_atom", "where_group",
+  "begin_group", "predicate", "predicate_value_expr", "opt_groupby",
+  "group_list", "opt_orderby", "order_list", "order_col", "order_col_name",
+  "modifier_opt", "opt_limit", "value_expr", "value_add_expr",
+  "finalized_mul_expr", "value_mul_expr", "value_primary", "@1",
+  "aggregate_arg", "qualified_name", "aggregate_func", 0
 };
 #endif
 
-# ifdef YYPRINT
-/* YYTOKNUM[YYLEX-NUM] -- Internal token number corresponding to
-   token YYLEX-NUM.  */
-static const yytype_uint16 yytoknum[] =
-{
-       0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
-     275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
-     285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
-     295,   296,   297,   298,   299,   300,   301,   302,   303,   304,
-     305,   306,   307,   308,   309,   310,   311,   312,   313,   314,
-     315,   316,   317,   318,   319,   320,   321,   322,   323,   324
-};
-# endif
-
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
-static const yytype_uint8 yyr1[] =
+static const unsigned char yyr1[] =
 {
        0,    70,    71,    72,    72,    72,    73,    73,    74,    74,
       75,    75,    75,    75,    75,    75,    76,    76,    77,    78,
@@ -780,15 +601,16 @@ static const yytype_uint8 yyr1[] =
      154,   155,   155,   156,   156,   157,   158,   159,   159,   160,
      160,   160,   161,   161,   162,   162,   163,   163,   164,   164,
      164,   164,   164,   164,   164,   165,   165,   166,   166,   166,
-     167,   167,   168,   169,   169,   170,   170,   171,   171,   172,
-     172,   173,   174,   174,   174,   174,   174,   174,   175,   175,
-     175,   176,   176,   177,   178,   178,   178,   179,   180,   180,
-     180,   181,   181,   181,   182,   181,   181,   183,   183,   184,
-     184,   184,   184,   184,   184,   185,   185,   185,   185,   185
+     167,   167,   168,   169,   170,   170,   171,   172,   172,   173,
+     173,   174,   174,   175,   175,   176,   177,   177,   177,   177,
+     177,   177,   178,   178,   178,   179,   179,   180,   181,   181,
+     181,   182,   183,   183,   183,   184,   184,   184,   185,   184,
+     184,   186,   186,   187,   187,   187,   187,   187,   187,   188,
+     188,   188,   188,   188
 };
 
 /* YYR2[YYN] -- Number of symbols composing right hand side of rule YYN.  */
-static const yytype_uint8 yyr2[] =
+static const unsigned char yyr2[] =
 {
        0,     2,     1,     2,     1,     1,     1,     2,     1,     1,
        2,     3,     4,     3,     4,     1,     1,     1,     1,     3,
@@ -810,17 +632,80 @@ static const yytype_uint8 yyr2[] =
        1,     1,     1,     1,     3,     2,     2,     1,     3,     2,
        2,     4,     7,     1,     1,     1,     0,     2,     1,     1,
        1,     1,     1,     1,     1,     0,     2,     1,     3,     3,
-       3,     3,     1,     0,     3,     1,     3,     0,     3,     1,
-       3,     2,     1,     1,     1,     1,     1,     1,     0,     1,
-       1,     0,     2,     1,     1,     3,     3,     1,     1,     3,
-       3,     1,     1,     1,     0,     4,     4,     1,     1,     1,
-       1,     3,     3,     3,     3,     1,     1,     1,     1,     1
+       1,     1,     3,     1,     3,     3,     1,     0,     3,     1,
+       3,     0,     3,     1,     3,     2,     1,     1,     1,     1,
+       1,     1,     0,     1,     1,     0,     2,     1,     1,     3,
+       3,     1,     1,     3,     3,     1,     1,     1,     0,     4,
+       4,     1,     1,     1,     1,     3,     3,     3,     3,     1,
+       1,     1,     1,     1
 };
 
-/* YYDEFACT[STATE-NAME] -- Default rule to reduce with in state
-   STATE-NUM when YYTABLE doesn't specify something else to do.  Zero
-   means the default is an error.  */
-static const yytype_uint8 yydefact[] =
+/* YYDPREC[RULE-NUM] -- Dynamic precedence of rule #RULE-NUM (0 if none).  */
+static const unsigned char yydprec[] =
+{
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0
+};
+
+/* YYMERGER[RULE-NUM] -- Index of merging function for rule #RULE-NUM.  */
+static const unsigned char yymerger[] =
+{
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0
+};
+
+/* YYDEFACT[S] -- default rule to reduce with in state S when YYTABLE
+   doesn't specify something else to do.  Zero means the default is an
+   error.  */
+static const unsigned char yydefact[] =
 {
        0,     5,   117,    89,   119,   118,     0,     0,    84,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     4,     6,
@@ -837,9 +722,9 @@ static const yytype_uint8 yydefact[] =
       85,   119,     0,     0,    47,    50,    13,     0,     0,    76,
        0,    77,    78,   124,   127,   139,     0,   131,   140,     0,
        0,     0,     0,   125,   134,   135,     0,    90,     0,     0,
-     109,     0,    33,     0,     0,     0,     0,    54,     0,   239,
-     231,   240,   232,   171,   234,   245,   246,   247,   248,   249,
-       0,   170,   172,   173,   186,   223,   224,   227,   228,   233,
+     109,     0,    33,     0,     0,     0,     0,    54,     0,   243,
+     235,   244,   236,   171,   238,   249,   250,   251,   252,   253,
+       0,   170,   172,   173,   186,   227,   228,   231,   232,   237,
        0,    11,     0,    28,    26,     0,    89,    94,    96,    59,
        0,    67,     0,     0,     0,    30,    72,     0,    73,   132,
      133,   153,     0,   151,     0,   123,   101,   103,   105,   102,
@@ -849,24 +734,24 @@ static const yytype_uint8 yydefact[] =
        0,   195,     0,     0,   175,     0,     0,     0,     0,     0,
       12,    32,    58,   143,   142,   144,   150,     0,     0,   104,
      158,     0,     0,     0,     0,     0,   149,    36,     0,     0,
-       0,    64,     0,    63,     0,   241,   244,   242,   243,     0,
+       0,    64,     0,    63,     0,   245,   248,   246,   247,     0,
      184,   185,   183,     0,     0,   176,   177,   186,   186,     0,
-     203,   174,   188,   189,   194,   193,   192,   191,   190,   187,
-     225,   226,   229,   230,   238,   237,     0,    31,   152,   141,
+     207,   174,   188,   189,   194,   193,   192,   191,   190,   187,
+     229,   230,   233,   234,   242,   241,     0,    31,   152,   141,
      156,    44,    70,     0,     0,   154,    43,    19,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,   235,     0,     0,
-       0,   179,   180,   196,   197,     0,   202,     0,   207,   236,
-       0,     0,   107,    23,    21,    20,    65,     0,    66,     0,
-     167,    63,   165,   186,     0,   178,     0,     0,     0,     0,
-       0,     0,   221,    45,   157,     0,    61,     0,     0,   181,
-       0,   199,   198,   201,   200,   204,   205,     0,     0,   166,
-      22,    60,   168,    63,     0,   213,   214,   215,   216,   217,
-     208,   209,   218,   212,   222,     0,   206,     0,   219,   220,
-     211,   182,   210
+       0,     0,     0,     0,     0,     0,     0,   239,     0,     0,
+       0,   179,   180,   203,   196,   197,   201,     0,   200,     0,
+     206,     0,   211,   240,     0,     0,   107,    23,    21,    20,
+      65,     0,    66,     0,   167,    63,   165,   186,     0,   178,
+       0,     0,     0,     0,     0,     0,     0,   225,    45,   157,
+       0,    61,     0,     0,   181,     0,   199,   198,   202,   205,
+     204,   208,   209,     0,     0,   166,    22,    60,   168,    63,
+       0,   217,   218,   219,   220,   221,   212,   213,   222,   216,
+     226,     0,   210,     0,   223,   224,   215,   182,   214
 };
 
-/* YYDEFGOTO[NTERM-NUM].  */
-static const yytype_int16 yydefgoto[] =
+/* YYPDEFGOTO[NTERM-NUM].  */
+static const short int yydefgoto[] =
 {
       -1,    99,    17,    18,    19,    20,    21,    47,   231,   320,
       22,    48,    23,    24,   226,    78,    79,    80,   228,   310,
@@ -876,197 +761,275 @@ static const yytype_int16 yydefgoto[] =
       88,    72,    36,    37,    57,   143,    58,    59,    60,    61,
       62,    63,   135,   138,    64,    65,    66,    67,   122,   110,
      111,    68,   141,   202,   203,   219,   220,   263,    69,    91,
-      92,   326,   352,    93,   170,   171,   172,   173,   241,   285,
-     286,   287,   288,   244,   299,   290,   333,   334,   335,   338,
-     375,   362,   390,   391,   392,   400,   379,   336,   175,   176,
-     177,   178,   239,   306,   179,   180
+      92,   326,   356,    93,   170,   171,   172,   173,   241,   285,
+     286,   287,   288,   244,   299,   290,   334,   335,   336,   337,
+     338,   339,   342,   381,   367,   396,   397,   398,   406,   385,
+     340,   175,   176,   177,   178,   239,   306,   179,   180
 };
 
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
-#define YYPACT_NINF -356
-static const yytype_int16 yypact[] =
+#define YYPACT_NINF -342
+static const short int yypact[] =
 {
-     167,  -356,  -356,    32,  -356,  -356,    77,   387,  -356,   241,
-     341,   253,   241,   387,   253,   145,    16,   162,   328,  -356,
-    -356,   133,   107,  -356,   161,  -356,  -356,   179,  -356,  -356,
-    -356,   420,    47,    83,  -356,   453,  -356,  -356,   209,  -356,
-    -356,  -356,  -356,  -356,  -356,   441,    31,   198,   187,  -356,
-    -356,  -356,  -356,  -356,   208,  -356,   420,   297,  -356,   297,
-      94,  -356,   297,   100,  -356,  -356,  -356,   237,   420,   230,
-     241,   236,  -356,  -356,   221,   218,   242,  -356,    30,  -356,
-     259,  -356,   252,  -356,  -356,   265,   260,  -356,    63,  -356,
-     267,  -356,  -356,   120,  -356,  -356,  -356,   376,  -356,    56,
-     253,  -356,  -356,  -356,  -356,  -356,  -356,  -356,  -356,  -356,
-    -356,  -356,  -356,  -356,    51,  -356,  -356,  -356,    51,   434,
-    -356,   244,    45,   253,  -356,  -356,  -356,   387,   241,   479,
-     241,   494,   499,  -356,  -356,  -356,   241,  -356,  -356,   241,
-     253,   264,   241,  -356,  -356,  -356,   321,  -356,   241,    34,
-    -356,   253,   420,   405,   273,   423,   307,  -356,   269,   304,
-    -356,   310,  -356,  -356,  -356,  -356,  -356,  -356,  -356,  -356,
-     277,  -356,   286,  -356,   281,    60,  -356,   156,  -356,  -356,
-     309,  -356,   324,  -356,  -356,    66,  -356,    83,  -356,  -356,
-      90,  -356,   334,   308,   343,  -356,  -356,   420,  -356,  -356,
-    -356,  -356,   -21,  -356,   321,  -356,   323,  -356,   329,   331,
-    -356,  -356,   349,    57,  -356,  -356,  -356,  -356,   333,   101,
-    -356,  -356,  -356,  -356,  -356,  -356,  -356,   241,   319,  -356,
-     241,  -356,  -356,   241,    -1,  -356,   335,   172,   203,   249,
-      43,   313,   249,    28,  -356,   249,   249,   249,   249,   235,
-    -356,   420,  -356,  -356,  -356,  -356,  -356,   253,   112,  -356,
-    -356,   405,   321,   321,   241,   321,  -356,  -356,   405,    72,
-      38,  -356,   332,   241,   316,  -356,  -356,  -356,  -356,   338,
-    -356,  -356,  -356,    16,   253,   351,  -356,   281,   281,   249,
-     347,  -356,  -356,  -356,  -356,  -356,  -356,  -356,  -356,  -356,
-    -356,  -356,  -356,  -356,  -356,  -356,   372,  -356,  -356,  -356,
-     359,  -356,  -356,     9,   113,  -356,  -356,  -356,   241,   241,
-     345,   241,   241,   241,    38,   400,   383,  -356,   384,   388,
-      43,  -356,  -356,   117,  -356,   255,  -356,   358,   361,  -356,
-     405,   405,  -356,   221,   378,  -356,  -356,   134,  -356,   241,
-    -356,   241,  -356,   281,   241,  -356,   249,   249,   249,   249,
-     249,   368,   363,  -356,   359,   241,  -356,   149,   153,  -356,
-      -1,  -356,  -356,  -356,  -356,   397,  -356,   158,   427,  -356,
-     221,  -356,  -356,   241,   249,  -356,  -356,  -356,  -356,  -356,
-     398,  -356,   159,  -356,  -356,   160,  -356,   158,  -356,  -356,
-    -356,  -356,  -356
+     169,  -342,  -342,    32,  -342,  -342,    46,   421,  -342,   457,
+     252,   334,   457,   421,   334,    56,    83,    89,   362,  -342,
+    -342,   144,    60,  -342,   100,  -342,  -342,   128,  -342,  -342,
+    -342,   291,    20,   267,  -342,   472,  -342,  -342,   174,  -342,
+    -342,  -342,  -342,  -342,  -342,   468,    52,   163,   155,  -342,
+    -342,  -342,  -342,  -342,   185,  -342,   291,   323,  -342,   323,
+      51,  -342,   323,   154,  -342,  -342,  -342,   215,   291,   206,
+     457,   233,  -342,  -342,   222,   221,   242,  -342,    30,  -342,
+     251,  -342,   249,  -342,  -342,   295,   274,  -342,    63,  -342,
+     293,  -342,  -342,   120,  -342,  -342,  -342,   410,  -342,    28,
+     334,  -342,  -342,  -342,  -342,  -342,  -342,  -342,  -342,  -342,
+    -342,  -342,  -342,  -342,    70,  -342,  -342,  -342,    70,   368,
+    -342,   276,    71,   334,  -342,  -342,  -342,   421,   457,   391,
+     457,   513,   518,  -342,  -342,  -342,   457,  -342,  -342,   457,
+     334,   305,   457,  -342,  -342,  -342,   474,  -342,   457,    25,
+    -342,   334,   291,   219,   317,   439,   319,  -342,   303,   338,
+    -342,   339,  -342,  -342,  -342,  -342,  -342,  -342,  -342,  -342,
+     318,  -342,   331,  -342,   325,    55,  -342,   226,  -342,  -342,
+     353,  -342,   365,  -342,  -342,    86,  -342,   267,  -342,  -342,
+     102,  -342,   380,   351,   382,  -342,  -342,   291,  -342,  -342,
+    -342,  -342,   -21,  -342,   474,  -342,   359,  -342,   363,   377,
+    -342,  -342,   390,    15,  -342,  -342,  -342,  -342,   378,   143,
+    -342,  -342,  -342,  -342,  -342,  -342,  -342,   457,   364,  -342,
+     457,  -342,  -342,   457,    23,  -342,   387,   105,   210,   285,
+      43,   376,   285,    17,  -342,   285,   285,   285,   285,   240,
+    -342,   291,  -342,  -342,  -342,  -342,  -342,   334,   148,  -342,
+    -342,   219,   474,   474,   457,   474,  -342,  -342,   219,    72,
+      33,  -342,   383,   457,   379,  -342,  -342,  -342,  -342,   405,
+    -342,  -342,  -342,    83,   334,   392,  -342,   325,   325,   296,
+     386,  -342,  -342,  -342,  -342,  -342,  -342,  -342,  -342,  -342,
+    -342,  -342,  -342,  -342,  -342,  -342,   416,  -342,  -342,  -342,
+     403,  -342,  -342,    59,   139,  -342,  -342,  -342,   457,   457,
+     419,   457,   457,   457,    33,   442,   425,  -342,   426,   428,
+      43,  -342,  -342,   312,   218,  -342,  -342,   296,  -342,   171,
+    -342,   420,   406,  -342,   219,   219,  -342,   222,   432,  -342,
+    -342,   149,  -342,   457,  -342,   457,  -342,   325,   457,  -342,
+     296,   296,   190,   285,   285,   285,   429,   431,  -342,   403,
+     457,  -342,   159,   160,  -342,    23,  -342,  -342,  -342,  -342,
+    -342,   437,  -342,    91,   479,  -342,   222,  -342,  -342,   457,
+     285,  -342,  -342,  -342,  -342,  -342,   443,  -342,   236,  -342,
+    -342,   184,  -342,    91,  -342,  -342,  -342,  -342,  -342
 };
 
 /* YYPGOTO[NTERM-NUM].  */
-static const yytype_int16 yypgoto[] =
+static const short int yypgoto[] =
 {
-    -356,  -356,  -356,  -356,   431,  -356,  -356,   -10,  -356,  -356,
-    -356,  -356,  -356,  -356,   210,   367,   317,  -356,  -356,   137,
-    -149,   352,   375,     6,    29,    17,  -226,  -268,   164,  -117,
-     217,  -356,   353,    20,   -30,  -356,  -356,  -356,   365,     0,
-    -356,   379,   224,  -356,  -356,  -356,   346,  -356,  -356,  -356,
-    -356,    14,  -356,  -356,  -356,  -356,  -356,  -356,  -356,  -356,
-    -356,  -356,   426,   428,  -356,  -356,  -356,  -356,  -356,   143,
-     194,   150,  -356,  -356,   243,   294,   234,  -356,  -356,   231,
-     355,  -356,  -356,  -356,  -356,  -356,  -356,   274,  -356,  -356,
-     171,  -356,  -356,  -272,  -356,  -356,  -356,  -128,  -356,  -356,
-    -356,  -356,  -356,   118,  -356,  -356,  -356,   -73,  -356,   -11,
-    -356,    -5,  -356,  -356,  -355,  -356
+    -342,  -342,  -342,  -342,   473,  -342,  -342,    -5,  -342,  -342,
+    -342,  -342,  -342,  -342,   247,   404,   352,  -342,  -342,   162,
+    -149,   381,   411,     6,    29,    19,  -231,  -268,   188,  -117,
+     250,  -342,   384,    82,   -30,  -342,  -342,  -342,   396,     0,
+    -342,   401,   243,  -342,  -342,  -342,   369,  -342,  -342,  -342,
+    -342,    14,  -342,  -342,  -342,  -342,  -342,  -342,  -342,  -342,
+    -342,  -342,   451,   452,  -342,  -342,  -342,  -342,  -342,    75,
+     186,   178,  -342,  -342,   275,   329,   269,  -342,  -342,   253,
+     385,  -342,  -342,  -342,  -342,  -342,  -342,   297,  -342,  -342,
+     205,  -342,  -342,  -271,  -342,  -342,   200,   -50,  -342,  -342,
+    -342,  -342,  -342,  -342,  -342,  -342,   135,  -342,  -342,  -342,
+     -78,  -342,    97,  -342,    99,  -342,  -342,  -341,  -342
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]].  What to do in state STATE-NUM.  If
    positive, shift that token.  If negative, reduce the rule which
    number is the opposite.  If zero, do what YYDEFACT says.
    If YYTABLE_NINF, syntax error.  */
-#define YYTABLE_NINF -131
-static const yytype_int16 yytable[] =
+#define YYTABLE_NINF -204
+static const short int yytable[] =
 {
-      31,   109,   190,    85,   229,   324,    26,    56,   273,    71,
-      75,   256,    84,    56,    35,   331,   332,    28,    31,   232,
-     174,    35,   393,   257,    26,    82,    35,    35,    86,    27,
-     341,   292,    35,   293,     2,    28,     4,     5,   234,   222,
-      81,    83,   393,   148,   322,    71,   280,    27,   281,   282,
-     151,    38,   124,   262,     2,   186,     4,     5,   232,     2,
-      82,     4,     5,   125,   152,    10,     2,    89,     4,     5,
-      84,   112,   283,    90,   123,   193,   129,   260,   261,    14,
-       9,   369,   321,   368,   245,    39,   151,   182,   142,   194,
-     113,   284,   294,   295,   296,   297,   298,    56,   349,   123,
-     251,   262,    82,   246,   317,   184,    15,   156,   115,   116,
-     117,    35,   311,    82,    82,   395,   318,   157,   319,   316,
-     252,   265,   227,   159,   160,   161,   162,    56,   197,    81,
-     198,   104,   265,   106,   148,   266,   199,    82,   105,   200,
-     107,    35,   205,   342,   383,   163,   309,   314,   221,   164,
-      87,    96,    83,   197,   201,    97,    98,   148,   356,   357,
-     218,   159,    94,   161,   366,    82,   279,    35,     1,   174,
-       2,     3,     4,     5,     6,   275,   305,   276,   148,   381,
-      81,   247,   248,   382,   165,   166,   167,   168,   169,     7,
-     401,   363,   311,   148,   100,     8,     9,   321,    10,   131,
-      11,   343,   101,   136,   321,   347,   277,   133,   278,   134,
-      12,   136,   137,   120,    13,    14,   126,    15,   218,   398,
-     399,   227,   385,   386,   387,   388,   389,   267,   371,   372,
-     269,   127,   367,   272,   300,   301,    16,   370,   159,   160,
-     161,   162,   302,   303,     2,     3,     4,     5,   380,   128,
-     132,   140,   159,   160,   161,   162,     2,   139,     4,     5,
-     304,   197,   139,   146,   164,   148,   147,   149,   197,     8,
-       9,   201,    10,   272,   150,    35,   218,   218,   164,   218,
-     153,   119,    35,   154,    70,   373,   374,   376,   192,   155,
-     102,   103,   104,   105,   106,   107,   158,   204,   329,   165,
-     166,   167,   168,   169,   230,   359,    40,    41,    42,    43,
-      44,   396,   235,   165,   166,   167,   168,   169,   358,   344,
-      89,   272,   237,   348,   206,   207,   208,   209,   238,   240,
-     242,     2,     3,     4,     5,     6,   210,   243,   249,   253,
-     197,   197,   250,   254,     2,     3,     4,     5,   255,   211,
-       7,   272,  -117,   259,    35,    35,     8,     9,  -119,    10,
-    -118,    11,   264,   268,   212,   274,   289,   323,   327,     8,
-       9,    12,    10,    73,   325,    13,    14,   345,    15,     2,
-       3,     4,     5,   272,    70,    40,    41,    42,    43,    44,
-       2,     3,     4,     5,   181,   330,    40,    41,    42,    43,
-      44,   337,   339,   340,     8,    45,   350,    10,     2,     3,
-       4,     5,   351,   360,   353,     8,    45,   354,    10,    12,
-     361,    46,   365,   377,    14,   378,     2,     3,     4,     5,
-      12,   394,    46,     8,     9,    14,    10,     2,     3,     4,
-       5,   384,   397,   232,     2,     3,   121,     5,    12,    95,
-      46,     8,     9,    14,    10,   102,   103,   104,   105,   106,
-     107,   307,     8,     9,   189,    10,    70,   185,   225,     8,
-       9,   -57,    10,   -57,   183,   -57,   -57,    70,   364,   195,
-     313,   196,   119,   188,    70,   346,   312,   -57,  -122,  -122,
-    -122,  -122,  -122,   187,   144,   223,   145,   -57,   258,   315,
-     308,   355,   -57,  -126,  -126,  -126,  -126,  -126,  -130,  -130,
-    -130,  -130,  -130,   236,   328,   402,   291
+      31,   109,   190,   273,   229,   324,    26,    56,    85,    71,
+      75,   256,    84,    56,    35,   174,   331,   332,    31,    28,
+     292,    35,   293,   257,    26,    82,    35,    35,    86,    27,
+     222,     2,    35,     4,     5,   260,   261,    28,   234,   322,
+      81,    83,   399,   232,   112,    71,   280,    27,   281,   282,
+     151,    38,   124,   232,    39,     2,    10,     4,     5,   262,
+      82,    87,   399,   113,   152,   125,     2,   148,     4,     5,
+      84,   123,   283,     2,   186,     4,     5,   321,    15,   245,
+     345,   294,   295,   296,   297,   298,   374,   373,   104,    94,
+     106,   284,   182,   353,   159,   123,   161,    56,   246,     9,
+      14,   193,    82,   262,   317,   184,   151,   156,   275,    98,
+     276,    35,   311,    82,    82,   194,   318,   157,   319,   316,
+     251,   401,   227,   159,   160,   161,   162,    56,   197,    81,
+     198,   131,   252,   100,    89,   136,   199,    82,   129,   200,
+      90,    35,   205,   136,   389,   163,   148,   314,   221,   164,
+     142,   101,    83,   197,   201,   391,   392,   393,   394,   395,
+     218,   279,    96,   265,   174,    82,    97,    35,   265,   346,
+       1,   305,     2,     3,     4,     5,     6,   266,   120,   371,
+      81,   126,   309,   148,   165,   166,   167,   168,   169,   387,
+     388,     7,   105,   148,   107,   368,   311,     8,     9,   127,
+      10,   347,    11,   148,   321,   351,   102,   103,   104,   105,
+     106,   107,    12,   277,   407,   278,    13,    14,   218,    15,
+     378,   227,     2,     3,     4,     5,   128,   267,   321,   140,
+     269,   360,   361,   272,   363,   133,   372,   134,    16,   146,
+     137,   375,   132,   159,   160,   161,   162,     8,     9,   139,
+      10,   247,   248,   386,   139,     2,     3,     4,     5,   360,
+     361,   197,    12,   147,    46,   304,   148,    14,   197,   164,
+     149,   201,   153,   272,   150,    35,   218,   218,   119,   218,
+       8,     9,    35,    10,    73,   379,   380,   382,   159,   160,
+     161,   162,   115,   116,   117,    70,   404,   405,   329,   159,
+     160,   161,   162,   155,   165,   166,   167,   168,   169,   364,
+     376,   377,   402,   154,   164,  -203,  -203,  -203,  -203,   348,
+     192,   272,   158,   352,   235,   333,   102,   103,   104,   105,
+     106,   107,    40,    41,    42,    43,    44,     2,   204,     4,
+       5,  -203,   300,   301,   197,   197,   302,   303,   230,   165,
+     166,   167,   168,   169,    89,   272,   237,   238,    35,    35,
+     165,   166,   167,   168,   169,     2,     3,     4,     5,     6,
+     240,     2,     3,     4,     5,   242,  -203,  -203,  -203,  -203,
+    -203,   243,   249,   250,     7,   253,   254,   255,  -117,   272,
+       8,     9,  -119,    10,   259,    11,     8,     9,   189,    10,
+    -122,  -122,  -122,  -122,  -122,    12,  -118,   264,   268,    13,
+      14,    70,    15,     2,     3,     4,     5,   274,   323,    40,
+      41,    42,    43,    44,     2,     3,     4,     5,   181,   289,
+      40,    41,    42,    43,    44,   327,   330,   325,     8,    45,
+     341,    10,     2,     3,     4,     5,   343,   344,   354,     8,
+      45,   349,    10,    12,   355,    46,   357,   358,    14,   232,
+       2,     3,     4,     5,    12,   366,    46,     8,     9,    14,
+      10,     2,     3,   121,     5,   365,   370,   206,   207,   208,
+     209,   390,    70,   400,   383,     8,     9,   403,    10,   210,
+     -57,    95,   -57,   384,   -57,   -57,     8,     9,   307,    10,
+      70,   119,   211,   225,   185,   312,   -57,   369,   195,   350,
+     183,    70,   196,   313,   188,   187,   -57,   212,   223,   144,
+     145,   -57,  -126,  -126,  -126,  -126,  -126,  -130,  -130,  -130,
+    -130,  -130,   308,   258,   315,   359,   328,   362,   408,   291,
+       0,     0,     0,   236
 };
 
-static const yytype_uint16 yycheck[] =
+/* YYCONFLP[YYPACT[STATE-NUM]] -- Pointer into YYCONFL of start of
+   list of conflicting reductions corresponding to action entry for
+   state STATE-NUM in yytable.  0 means no conflicts.  The list in
+   yyconfl is terminated by a rule number of 0.  */
+static const unsigned char yyconflp[] =
 {
-       0,    31,   119,    13,   153,   273,     0,     7,   234,     9,
-      10,    32,    12,    13,     0,   287,   288,     0,    18,    20,
-      93,     7,   377,    44,    18,    11,    12,    13,    14,     0,
-      21,     3,    18,     5,     3,    18,     5,     6,   155,     5,
-      11,    12,   397,    44,   270,    45,     3,    18,     5,     6,
-      20,    19,    46,    44,     3,     4,     5,     6,    20,     3,
-      46,     5,     6,    46,    34,    31,     3,    51,     5,     6,
-      70,    24,    29,    57,    43,    30,    56,    20,    21,    48,
-      29,   353,    44,   351,    24,     8,    20,    97,    68,    44,
-      43,    48,    64,    65,    66,    67,    68,    97,   324,    43,
-      34,    44,    88,    43,    32,    99,    50,    44,    25,    26,
-      27,    97,   261,    99,   100,   383,    44,    88,    46,   268,
-      30,    20,   152,     3,     4,     5,     6,   127,   128,   100,
-     130,    37,    20,    39,    44,    34,   136,   123,    38,   139,
-      40,   127,   142,    30,   370,    25,    34,   264,   148,    29,
-       5,    18,   123,   153,   140,    22,    49,    44,    41,    42,
-     146,     3,     0,     5,    30,   151,   239,   153,     1,   242,
-       3,     4,     5,     6,     7,     3,   249,     5,    44,    30,
-     151,    25,    26,    30,    64,    65,    66,    67,    68,    22,
-      30,   340,   341,    44,    33,    28,    29,    44,    31,    56,
-      33,   318,    23,    60,    44,   322,     3,    57,     5,    59,
-      43,    68,    62,     4,    47,    48,    18,    50,   204,    60,
-      61,   251,    64,    65,    66,    67,    68,   227,   356,   357,
-     230,    44,   349,   233,   245,   246,    69,   354,     3,     4,
-       5,     6,   247,   248,     3,     4,     5,     6,   365,    41,
-      56,    14,     3,     4,     5,     6,     3,    63,     5,     6,
-      25,   261,    68,    33,    29,    44,    30,    49,   268,    28,
-      29,   257,    31,   273,    32,   261,   262,   263,    29,   265,
-      21,    29,   268,    18,    43,   358,   359,   360,    44,    29,
-      35,    36,    37,    38,    39,    40,    29,    33,   284,    64,
-      65,    66,    67,    68,    31,   335,     9,    10,    11,    12,
-      13,   384,     5,    64,    65,    66,    67,    68,    63,   319,
-      51,   321,    18,   323,     3,     4,     5,     6,    18,    52,
-      44,     3,     4,     5,     6,     7,    15,    56,    29,     5,
-     340,   341,    18,    35,     3,     4,     5,     6,     5,    28,
-      22,   351,    29,     4,   340,   341,    28,    29,    29,    31,
-      29,    33,    29,    44,    43,    30,    53,    35,    30,    28,
-      29,    43,    31,    32,    58,    47,    48,    32,    50,     3,
-       4,     5,     6,   383,    43,     9,    10,    11,    12,    13,
-       3,     4,     5,     6,    18,    44,     9,    10,    11,    12,
-      13,    54,    30,    44,    28,    29,     6,    31,     3,     4,
-       5,     6,    29,    55,    30,    28,    29,    29,    31,    43,
-      59,    45,    44,    55,    48,    62,     3,     4,     5,     6,
-      43,     4,    45,    28,    29,    48,    31,     3,     4,     5,
-       6,    44,    44,    20,     3,     4,     5,     6,    43,    18,
-      45,    28,    29,    48,    31,    35,    36,    37,    38,    39,
-      40,   251,    28,    29,    30,    31,    43,   100,   151,    28,
-      29,    18,    31,    20,    99,    22,    23,    43,   341,   127,
-     263,   128,    29,   118,    43,   321,   262,    34,     9,    10,
-      11,    12,    13,   114,    68,   149,    68,    44,   204,   265,
-     257,   330,    49,     9,    10,    11,    12,    13,     9,    10,
-      11,    12,    13,   158,   283,   397,   242
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     1,     3,     5,     7,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     9,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,    11,    13,    15,    17,
+      19,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,     0,     0,     0
+};
+
+/* YYCONFL[I] -- lists of conflicting rule numbers, each terminated by
+   0, pointed into by YYCONFLP.  */
+static const short int yyconfl[] =
+{
+       0,   238,     0,   238,     0,   238,     0,   238,     0,   238,
+       0,   238,     0,   238,     0,   238,     0,   238,     0,   238,
+       0
+};
+
+static const short int yycheck[] =
+{
+       0,    31,   119,   234,   153,   273,     0,     7,    13,     9,
+      10,    32,    12,    13,     0,    93,   287,   288,    18,     0,
+       3,     7,     5,    44,    18,    11,    12,    13,    14,     0,
+       5,     3,    18,     5,     6,    20,    21,    18,   155,   270,
+      11,    12,   383,    20,    24,    45,     3,    18,     5,     6,
+      20,    19,    46,    20,     8,     3,    31,     5,     6,    44,
+      46,     5,   403,    43,    34,    46,     3,    44,     5,     6,
+      70,    43,    29,     3,     4,     5,     6,    44,    50,    24,
+      21,    64,    65,    66,    67,    68,   357,   355,    37,     0,
+      39,    48,    97,   324,     3,    43,     5,    97,    43,    29,
+      48,    30,    88,    44,    32,    99,    20,    44,     3,    49,
+       5,    97,   261,    99,   100,    44,    44,    88,    46,   268,
+      34,   389,   152,     3,     4,     5,     6,   127,   128,   100,
+     130,    56,    30,    33,    51,    60,   136,   123,    56,   139,
+      57,   127,   142,    68,   375,    25,    44,   264,   148,    29,
+      68,    23,   123,   153,   140,    64,    65,    66,    67,    68,
+     146,   239,    18,    20,   242,   151,    22,   153,    20,    30,
+       1,   249,     3,     4,     5,     6,     7,    34,     4,    30,
+     151,    18,    34,    44,    64,    65,    66,    67,    68,    30,
+      30,    22,    38,    44,    40,   344,   345,    28,    29,    44,
+      31,   318,    33,    44,    44,   322,    35,    36,    37,    38,
+      39,    40,    43,     3,    30,     5,    47,    48,   204,    50,
+      30,   251,     3,     4,     5,     6,    41,   227,    44,    14,
+     230,    41,    42,   233,    63,    57,   353,    59,    69,    33,
+      62,   358,    56,     3,     4,     5,     6,    28,    29,    63,
+      31,    25,    26,   370,    68,     3,     4,     5,     6,    41,
+      42,   261,    43,    30,    45,    25,    44,    48,   268,    29,
+      49,   257,    21,   273,    32,   261,   262,   263,    29,   265,
+      28,    29,   268,    31,    32,   363,   364,   365,     3,     4,
+       5,     6,    25,    26,    27,    43,    60,    61,   284,     3,
+       4,     5,     6,    29,    64,    65,    66,    67,    68,   339,
+     360,   361,   390,    18,    29,     3,     4,     5,     6,   319,
+      44,   321,    29,   323,     5,    29,    35,    36,    37,    38,
+      39,    40,     9,    10,    11,    12,    13,     3,    33,     5,
+       6,    29,   245,   246,   344,   345,   247,   248,    31,    64,
+      65,    66,    67,    68,    51,   355,    18,    18,   344,   345,
+      64,    65,    66,    67,    68,     3,     4,     5,     6,     7,
+      52,     3,     4,     5,     6,    44,    64,    65,    66,    67,
+      68,    56,    29,    18,    22,     5,    35,     5,    29,   389,
+      28,    29,    29,    31,     4,    33,    28,    29,    30,    31,
+       9,    10,    11,    12,    13,    43,    29,    29,    44,    47,
+      48,    43,    50,     3,     4,     5,     6,    30,    35,     9,
+      10,    11,    12,    13,     3,     4,     5,     6,    18,    53,
+       9,    10,    11,    12,    13,    30,    44,    58,    28,    29,
+      54,    31,     3,     4,     5,     6,    30,    44,     6,    28,
+      29,    32,    31,    43,    29,    45,    30,    29,    48,    20,
+       3,     4,     5,     6,    43,    59,    45,    28,    29,    48,
+      31,     3,     4,     5,     6,    55,    44,     3,     4,     5,
+       6,    44,    43,     4,    55,    28,    29,    44,    31,    15,
+      18,    18,    20,    62,    22,    23,    28,    29,   251,    31,
+      43,    29,    28,   151,   100,   262,    34,   345,   127,   321,
+      99,    43,   128,   263,   118,   114,    44,    43,   149,    68,
+      68,    49,     9,    10,    11,    12,    13,     9,    10,    11,
+      12,    13,   257,   204,   265,   330,   283,   337,   403,   242,
+      -1,    -1,    -1,   158
 };
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
    symbol of state STATE-NUM.  */
-static const yytype_uint8 yystos[] =
+static const unsigned char yystos[] =
 {
        0,     1,     3,     4,     5,     6,     7,    22,    28,    29,
       31,    33,    43,    47,    48,    50,    69,    72,    73,    74,
@@ -1085,127 +1048,76 @@ static const yytype_uint8 yystos[] =
       14,   142,   103,   125,   132,   133,    33,    30,    44,    49,
       32,    20,    34,    21,    18,    29,    44,    94,    29,     3,
        4,     5,     6,    25,    29,    64,    65,    66,    67,    68,
-     154,   155,   156,   157,   177,   178,   179,   180,   181,   184,
-     185,    18,    77,    92,    93,    85,     4,   111,   108,    30,
+     154,   155,   156,   157,   180,   181,   182,   183,   184,   187,
+     188,    18,    77,    92,    93,    85,     4,   111,   108,    30,
       99,   109,    44,    30,    44,    91,   102,   109,   109,   109,
      109,   121,   143,   144,    33,   109,     3,     4,     5,     6,
       15,    28,    43,   100,   112,   113,   114,   115,   121,   145,
      146,   109,     5,   116,   119,    86,    84,   104,    88,    90,
-      31,    78,    20,    96,    99,     5,   150,    18,    18,   182,
+      31,    78,    20,    96,    99,     5,   150,    18,    18,   185,
       52,   158,    44,    56,   163,    24,    43,    25,    26,    29,
       18,    34,    30,     5,    35,     5,    32,    44,   145,     4,
       20,    21,    44,   147,    29,    20,    34,   109,    44,   109,
-      97,    98,   109,    96,    30,     3,     5,     3,     5,   177,
+      97,    98,   109,    96,    30,     3,     5,     3,     5,   180,
        3,     5,     6,    29,    48,   159,   160,   161,   162,    53,
      165,   157,     3,     5,    64,    65,    66,    67,    68,   164,
-     179,   179,   181,   181,    25,   177,   183,    84,   144,    34,
+     182,   182,   184,   184,    25,   180,   186,    84,   144,    34,
       89,    90,   112,   100,    99,   146,    90,    32,    44,    46,
       79,    44,    96,    35,    97,    58,   151,    30,   149,   121,
-      44,   163,   163,   166,   167,   168,   177,    54,   169,    30,
-      44,    21,    30,    99,   109,    32,    98,    99,   109,    96,
-       6,    29,   152,    30,    29,   160,    41,    42,    63,   104,
-      55,    59,   171,    90,    89,    44,    30,    99,    97,   163,
-      99,   167,   167,   177,   177,   170,   177,    55,    62,   176,
-      99,    30,    30,    96,    44,    64,    65,    66,    67,    68,
-     172,   173,   174,   184,     4,    97,   177,    44,    60,    61,
-     175,    30,   173
+      44,   163,   163,    29,   166,   167,   168,   169,   170,   171,
+     180,    54,   172,    30,    44,    21,    30,    99,   109,    32,
+      98,    99,   109,    96,     6,    29,   152,    30,    29,   160,
+      41,    42,   166,    63,   104,    55,    59,   174,    90,    89,
+      44,    30,    99,    97,   163,    99,   167,   167,    30,   180,
+     180,   173,   180,    55,    62,   179,    99,    30,    30,    96,
+      44,    64,    65,    66,    67,    68,   175,   176,   177,   187,
+       4,    97,   180,    44,    60,    61,   178,    30,   176
 };
 
-#define yyerrok		(yyerrstatus = 0)
-#define yyclearin	(yychar = YYEMPTY)
-#define YYEMPTY		(-2)
-#define YYEOF		0
+
+/* Prevent warning if -Wmissing-prototypes.  */
+int yyparse (bumblebee::ParserInputDirector& director);
 
-#define YYACCEPT	goto yyacceptlab
-#define YYABORT		goto yyabortlab
-#define YYERROR		goto yyerrorlab
-
-
-/* Like YYERROR except do call yyerror.  This remains here temporarily
-   to ease the transition to the new meaning of YYERROR, for GCC.
-   Once GCC version 2 has supplanted version 1, this can go.  */
-
-#define YYFAIL		goto yyerrlab
-
-#define YYRECOVERING()  (!!yyerrstatus)
-
-#define YYBACKUP(Token, Value)					\
-do								\
-  if (yychar == YYEMPTY && yylen == 1)				\
-    {								\
-      yychar = (Token);						\
-      yylval = (Value);						\
-      yytoken = YYTRANSLATE (yychar);				\
-      YYPOPSTACK (1);						\
-      goto yybackup;						\
-    }								\
-  else								\
-    {								\
-      yyerror (director, YY_("syntax error: cannot back up")); \
-      YYERROR;							\
-    }								\
-while (YYID (0))
-
-
-#define YYTERROR	1
-#define YYERRCODE	256
-
+/* Error token number */
+#define YYTERROR 1
 
 /* YYLLOC_DEFAULT -- Set CURRENT to span from RHS[1] to RHS[N].
    If N is 0, then set CURRENT to the empty location which ends
    the previous symbol: RHS[0] (always defined).  */
 
-#define YYRHSLOC(Rhs, K) ((Rhs)[K])
+
 #ifndef YYLLOC_DEFAULT
-# define YYLLOC_DEFAULT(Current, Rhs, N)				\
-    do									\
-      if (YYID (N))                                                    \
-	{								\
-	  (Current).first_line   = YYRHSLOC (Rhs, 1).first_line;	\
-	  (Current).first_column = YYRHSLOC (Rhs, 1).first_column;	\
-	  (Current).last_line    = YYRHSLOC (Rhs, N).last_line;		\
-	  (Current).last_column  = YYRHSLOC (Rhs, N).last_column;	\
-	}								\
-      else								\
-	{								\
-	  (Current).first_line   = (Current).last_line   =		\
-	    YYRHSLOC (Rhs, 0).last_line;				\
-	  (Current).first_column = (Current).last_column =		\
-	    YYRHSLOC (Rhs, 0).last_column;				\
-	}								\
-    while (YYID (0))
+# define YYLLOC_DEFAULT(Current, Rhs, N) ((void) 0)
 #endif
 
 
-/* YY_LOCATION_PRINT -- Print the location on the stream.
-   This macro was not mandated originally: define only if we know
-   we won't break user code: when these are the locations we know.  */
-
 #ifndef YY_LOCATION_PRINT
-# if defined YYLTYPE_IS_TRIVIAL && YYLTYPE_IS_TRIVIAL
-#  define YY_LOCATION_PRINT(File, Loc)			\
-     fprintf (File, "%d.%d-%d.%d",			\
-	      (Loc).first_line, (Loc).first_column,	\
-	      (Loc).last_line,  (Loc).last_column)
-# else
-#  define YY_LOCATION_PRINT(File, Loc) ((void) 0)
-# endif
+# define YY_LOCATION_PRINT(File, Loc) ((void) 0)
 #endif
 
 
 /* YYLEX -- calling `yylex' with the right arguments.  */
+#define YYLEX yylex (, director)
 
-#ifdef YYLEX_PARAM
-# define YYLEX yylex (YYLEX_PARAM)
-#else
-# define YYLEX yylex (director)
-#endif
+YYSTYPE yylval;
 
-/* Enable debugging if requested.  */
+YYLTYPE yylloc;
+
+int yynerrs;
+int yychar;
+
+static const int YYEOF = 0;
+static const int YYEMPTY = -2;
+
+typedef enum { yyok, yyaccept, yyabort, yyerr } YYRESULTTAG;
+
+#define YYCHK(YYE)							     \
+   do { YYRESULTTAG yyflag = YYE; if (yyflag != yyok) return yyflag; }	     \
+   while (YYID (0))
+
 #if YYDEBUG
 
 # ifndef YYFPRINTF
-#  include <stdio.h> /* INFRINGES ON USER NAME SPACE */
 #  define YYFPRINTF fprintf
 # endif
 
@@ -1215,35 +1127,14 @@ do {						\
     YYFPRINTF Args;				\
 } while (YYID (0))
 
-# define YY_SYMBOL_PRINT(Title, Type, Value, Location)			  \
-do {									  \
-  if (yydebug)								  \
-    {									  \
-      YYFPRINTF (stderr, "%s ", Title);					  \
-      yy_symbol_print (stderr,						  \
-		  Type, Value, director); \
-      YYFPRINTF (stderr, "\n");						  \
-    }									  \
-} while (YYID (0))
-
 
 /*--------------------------------.
 | Print this symbol on YYOUTPUT.  |
 `--------------------------------*/
 
 /*ARGSUSED*/
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
 static void
 yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, bumblebee::ParserInputDirector& director)
-#else
-static void
-yy_symbol_value_print (yyoutput, yytype, yyvaluep, director)
-    FILE *yyoutput;
-    int yytype;
-    YYSTYPE const * const yyvaluep;
-    bumblebee::ParserInputDirector& director;
-#endif
 {
   if (!yyvaluep)
     return;
@@ -1266,18 +1157,8 @@ yy_symbol_value_print (yyoutput, yytype, yyvaluep, director)
 | Print this symbol on YYOUTPUT.  |
 `--------------------------------*/
 
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
 static void
 yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, bumblebee::ParserInputDirector& director)
-#else
-static void
-yy_symbol_print (yyoutput, yytype, yyvaluep, director)
-    FILE *yyoutput;
-    int yytype;
-    YYSTYPE const * const yyvaluep;
-    bumblebee::ParserInputDirector& director;
-#endif
 {
   if (yytype < YYNTOKENS)
     YYFPRINTF (yyoutput, "token %s (", yytname[yytype]);
@@ -1288,83 +1169,27 @@ yy_symbol_print (yyoutput, yytype, yyvaluep, director)
   YYFPRINTF (yyoutput, ")");
 }
 
-/*------------------------------------------------------------------.
-| yy_stack_print -- Print the state stack from its BOTTOM up to its |
-| TOP (included).                                                   |
-`------------------------------------------------------------------*/
-
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-static void
-yy_stack_print (yytype_int16 *bottom, yytype_int16 *top)
-#else
-static void
-yy_stack_print (bottom, top)
-    yytype_int16 *bottom;
-    yytype_int16 *top;
-#endif
-{
-  YYFPRINTF (stderr, "Stack now");
-  for (; bottom <= top; ++bottom)
-    YYFPRINTF (stderr, " %d", *bottom);
-  YYFPRINTF (stderr, "\n");
-}
-
-# define YY_STACK_PRINT(Bottom, Top)				\
-do {								\
-  if (yydebug)							\
-    yy_stack_print ((Bottom), (Top));				\
-} while (YYID (0))
-
-
-/*------------------------------------------------.
-| Report that the YYRULE is going to be reduced.  |
-`------------------------------------------------*/
-
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-static void
-yy_reduce_print (YYSTYPE *yyvsp, int yyrule, bumblebee::ParserInputDirector& director)
-#else
-static void
-yy_reduce_print (yyvsp, yyrule, director)
-    YYSTYPE *yyvsp;
-    int yyrule;
-    bumblebee::ParserInputDirector& director;
-#endif
-{
-  int yynrhs = yyr2[yyrule];
-  int yyi;
-  unsigned long int yylno = yyrline[yyrule];
-  YYFPRINTF (stderr, "Reducing stack by rule %d (line %lu):\n",
-	     yyrule - 1, yylno);
-  /* The symbols being reduced.  */
-  for (yyi = 0; yyi < yynrhs; yyi++)
-    {
-      fprintf (stderr, "   $%d = ", yyi + 1);
-      yy_symbol_print (stderr, yyrhs[yyprhs[yyrule] + yyi],
-		       &(yyvsp[(yyi + 1) - (yynrhs)])
-		       		       , director);
-      fprintf (stderr, "\n");
-    }
-}
-
-# define YY_REDUCE_PRINT(Rule)		\
-do {					\
-  if (yydebug)				\
-    yy_reduce_print (yyvsp, Rule, director); \
+# define YY_SYMBOL_PRINT(Title, Type, Value, Location)			    \
+do {									    \
+  if (yydebug)								    \
+    {									    \
+      YYFPRINTF (stderr, "%s ", Title);					    \
+      yy_symbol_print (stderr, Type,					    \
+		       Value, director);  \
+      YYFPRINTF (stderr, "\n");						    \
+    }									    \
 } while (YYID (0))
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
    multiple parsers can coexist.  */
 int yydebug;
+
 #else /* !YYDEBUG */
+
 # define YYDPRINTF(Args)
 # define YY_SYMBOL_PRINT(Title, Type, Value, Location)
-# define YY_STACK_PRINT(Bottom, Top)
-# define YY_REDUCE_PRINT(Rule)
-#endif /* !YYDEBUG */
 
+#endif /* !YYDEBUG */
 
 /* YYINITDEPTH -- initial size of the parser's stacks.  */
 #ifndef	YYINITDEPTH
@@ -1375,39 +1200,45 @@ int yydebug;
    if the built-in stack extension method is used).
 
    Do not make this value too large; the results are undefined if
-   YYSTACK_ALLOC_MAXIMUM < YYSTACK_BYTES (YYMAXDEPTH)
+   SIZE_MAX < YYMAXDEPTH * sizeof (GLRStackItem)
    evaluated with infinite-precision integer arithmetic.  */
 
 #ifndef YYMAXDEPTH
 # define YYMAXDEPTH 10000
 #endif
 
-
+/* Minimum number of free items on the stack allowed after an
+   allocation.  This is to allow allocation and initialization
+   to be completed by functions that call yyexpandGLRStack before the
+   stack is expanded, thus insuring that all necessary pointers get
+   properly redirected to new data.  */
+#define YYHEADROOM 2
+
+#ifndef YYSTACKEXPANDABLE
+# if (! defined __cplusplus \
+      || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL))
+#  define YYSTACKEXPANDABLE 1
+# else
+#  define YYSTACKEXPANDABLE 0
+# endif
+#endif
+
+#if YYSTACKEXPANDABLE
+# define YY_RESERVE_GLRSTACK(Yystack)			\
+  do {							\
+    if (Yystack->yyspaceLeft < YYHEADROOM)		\
+      yyexpandGLRStack (Yystack);			\
+  } while (YYID (0))
+#else
+# define YY_RESERVE_GLRSTACK(Yystack)			\
+  do {							\
+    if (Yystack->yyspaceLeft < YYHEADROOM)		\
+      yyMemoryExhausted (Yystack);			\
+  } while (YYID (0))
+#endif
+
 
 #if YYERROR_VERBOSE
-
-# ifndef yystrlen
-#  if defined __GLIBC__ && defined _STRING_H
-#   define yystrlen strlen
-#  else
-/* Return the length of YYSTR.  */
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-static YYSIZE_T
-yystrlen (const char *yystr)
-#else
-static YYSIZE_T
-yystrlen (yystr)
-    const char *yystr;
-#endif
-{
-  YYSIZE_T yylen;
-  for (yylen = 0; yystr[yylen]; yylen++)
-    continue;
-  return yylen;
-}
-#  endif
-# endif
 
 # ifndef yystpcpy
 #  if defined __GLIBC__ && defined _STRING_H && defined _GNU_SOURCE
@@ -1415,16 +1246,8 @@ yystrlen (yystr)
 #  else
 /* Copy YYSRC to YYDEST, returning the address of the terminating '\0' in
    YYDEST.  */
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
 static char *
 yystpcpy (char *yydest, const char *yysrc)
-#else
-static char *
-yystpcpy (yydest, yysrc)
-    char *yydest;
-    const char *yysrc;
-#endif
 {
   char *yyd = yydest;
   const char *yys = yysrc;
@@ -1445,12 +1268,12 @@ yystpcpy (yydest, yysrc)
    backslash-backslash).  YYSTR is taken from yytname.  If YYRES is
    null, do not copy; instead, return the length of what the result
    would have been.  */
-static YYSIZE_T
+static size_t
 yytnamerr (char *yyres, const char *yystr)
 {
   if (*yystr == '"')
     {
-      YYSIZE_T yyn = 0;
+      size_t yyn = 0;
       char const *yyp = yystr;
 
       for (;;)
@@ -1479,139 +1302,1528 @@ yytnamerr (char *yyres, const char *yystr)
     }
 
   if (! yyres)
-    return yystrlen (yystr);
+    return strlen (yystr);
 
   return yystpcpy (yyres, yystr) - yyres;
 }
 # endif
 
-/* Copy into YYRESULT an error message about the unexpected token
-   YYCHAR while in state YYSTATE.  Return the number of bytes copied,
-   including the terminating null byte.  If YYRESULT is null, do not
-   copy anything; just return the number of bytes that would be
-   copied.  As a special case, return 0 if an ordinary "syntax error"
-   message will do.  Return YYSIZE_MAXIMUM if overflow occurs during
-   size calculation.  */
-static YYSIZE_T
-yysyntax_error (char *yyresult, int yystate, int yychar)
+#endif /* !YYERROR_VERBOSE */
+
+/** State numbers, as in LALR(1) machine */
+typedef int yyStateNum;
+
+/** Rule numbers, as in LALR(1) machine */
+typedef int yyRuleNum;
+
+/** Grammar symbol */
+typedef short int yySymbol;
+
+/** Item references, as in LALR(1) machine */
+typedef short int yyItemNum;
+
+typedef struct yyGLRState yyGLRState;
+typedef struct yyGLRStateSet yyGLRStateSet;
+typedef struct yySemanticOption yySemanticOption;
+typedef union yyGLRStackItem yyGLRStackItem;
+typedef struct yyGLRStack yyGLRStack;
+
+struct yyGLRState {
+  /** Type tag: always true.  */
+  yybool yyisState;
+  /** Type tag for yysemantics.  If true, yysval applies, otherwise
+   *  yyfirstVal applies.  */
+  yybool yyresolved;
+  /** Number of corresponding LALR(1) machine state.  */
+  yyStateNum yylrState;
+  /** Preceding state in this stack */
+  yyGLRState* yypred;
+  /** Source position of the first token produced by my symbol */
+  size_t yyposn;
+  union {
+    /** First in a chain of alternative reductions producing the
+     *  non-terminal corresponding to this state, threaded through
+     *  yynext.  */
+    yySemanticOption* yyfirstVal;
+    /** Semantic value for this state.  */
+    YYSTYPE yysval;
+  } yysemantics;
+  /** Source location for this state.  */
+  YYLTYPE yyloc;
+};
+
+struct yyGLRStateSet {
+  yyGLRState** yystates;
+  /** During nondeterministic operation, yylookaheadNeeds tracks which
+   *  stacks have actually needed the current lookahead.  During deterministic
+   *  operation, yylookaheadNeeds[0] is not maintained since it would merely
+   *  duplicate yychar != YYEMPTY.  */
+  yybool* yylookaheadNeeds;
+  size_t yysize, yycapacity;
+};
+
+struct yySemanticOption {
+  /** Type tag: always false.  */
+  yybool yyisState;
+  /** Rule number for this reduction */
+  yyRuleNum yyrule;
+  /** The last RHS state in the list of states to be reduced.  */
+  yyGLRState* yystate;
+  /** The lookahead for this reduction.  */
+  int yyrawchar;
+  YYSTYPE yyval;
+  YYLTYPE yyloc;
+  /** Next sibling in chain of options.  To facilitate merging,
+   *  options are chained in decreasing order by address.  */
+  yySemanticOption* yynext;
+};
+
+/** Type of the items in the GLR stack.  The yyisState field
+ *  indicates which item of the union is valid.  */
+union yyGLRStackItem {
+  yyGLRState yystate;
+  yySemanticOption yyoption;
+};
+
+struct yyGLRStack {
+  int yyerrState;
+
+
+  YYJMP_BUF yyexception_buffer;
+  yyGLRStackItem* yyitems;
+  yyGLRStackItem* yynextFree;
+  size_t yyspaceLeft;
+  yyGLRState* yysplitPoint;
+  yyGLRState* yylastDeleted;
+  yyGLRStateSet yytops;
+};
+
+#if YYSTACKEXPANDABLE
+static void yyexpandGLRStack (yyGLRStack* yystackp);
+#endif
+
+static void yyFail (yyGLRStack* yystackp, bumblebee::ParserInputDirector& director, const char* yymsg)
+  __attribute__ ((__noreturn__));
+static void
+yyFail (yyGLRStack* yystackp, bumblebee::ParserInputDirector& director, const char* yymsg)
 {
-  int yyn = yypact[yystate];
+  if (yymsg != NULL)
+    yyerror (director, yymsg);
+  YYLONGJMP (yystackp->yyexception_buffer, 1);
+}
 
-  if (! (YYPACT_NINF < yyn && yyn <= YYLAST))
-    return 0;
-  else
+static void yyMemoryExhausted (yyGLRStack* yystackp)
+  __attribute__ ((__noreturn__));
+static void
+yyMemoryExhausted (yyGLRStack* yystackp)
+{
+  YYLONGJMP (yystackp->yyexception_buffer, 2);
+}
+
+#if YYDEBUG || YYERROR_VERBOSE
+/** A printable representation of TOKEN.  */
+static inline const char*
+yytokenName (yySymbol yytoken)
+{
+  if (yytoken == YYEMPTY)
+    return "";
+
+  return yytname[yytoken];
+}
+#endif
+
+/** Fill in YYVSP[YYLOW1 .. YYLOW0-1] from the chain of states starting
+ *  at YYVSP[YYLOW0].yystate.yypred.  Leaves YYVSP[YYLOW1].yystate.yypred
+ *  containing the pointer to the next state in the chain.  */
+static void yyfillin (yyGLRStackItem *, int, int) __attribute__ ((__unused__));
+static void
+yyfillin (yyGLRStackItem *yyvsp, int yylow0, int yylow1)
+{
+  yyGLRState* s;
+  int i;
+  s = yyvsp[yylow0].yystate.yypred;
+  for (i = yylow0-1; i >= yylow1; i -= 1)
     {
-      int yytype = YYTRANSLATE (yychar);
-      YYSIZE_T yysize0 = yytnamerr (0, yytname[yytype]);
-      YYSIZE_T yysize = yysize0;
-      YYSIZE_T yysize1;
-      int yysize_overflow = 0;
-      enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
-      char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
-      int yyx;
-
-# if 0
-      /* This is so xgettext sees the translatable formats that are
-	 constructed on the fly.  */
-      YY_("syntax error, unexpected %s");
-      YY_("syntax error, unexpected %s, expecting %s");
-      YY_("syntax error, unexpected %s, expecting %s or %s");
-      YY_("syntax error, unexpected %s, expecting %s or %s or %s");
-      YY_("syntax error, unexpected %s, expecting %s or %s or %s or %s");
-# endif
-      char *yyfmt;
-      char const *yyf;
-      static char const yyunexpected[] = "syntax error, unexpected %s";
-      static char const yyexpecting[] = ", expecting %s";
-      static char const yyor[] = " or %s";
-      char yyformat[sizeof yyunexpected
-		    + sizeof yyexpecting - 1
-		    + ((YYERROR_VERBOSE_ARGS_MAXIMUM - 2)
-		       * (sizeof yyor - 1))];
-      char const *yyprefix = yyexpecting;
-
-      /* Start YYX at -YYN if negative to avoid negative indexes in
-	 YYCHECK.  */
-      int yyxbegin = yyn < 0 ? -yyn : 0;
-
-      /* Stay within bounds of both yycheck and yytname.  */
-      int yychecklim = YYLAST - yyn + 1;
-      int yyxend = yychecklim < YYNTOKENS ? yychecklim : YYNTOKENS;
-      int yycount = 1;
-
-      yyarg[0] = yytname[yytype];
-      yyfmt = yystpcpy (yyformat, yyunexpected);
-
-      for (yyx = yyxbegin; yyx < yyxend; ++yyx)
-	if (yycheck[yyx + yyn] == yyx && yyx != YYTERROR)
-	  {
-	    if (yycount == YYERROR_VERBOSE_ARGS_MAXIMUM)
-	      {
-		yycount = 1;
-		yysize = yysize0;
-		yyformat[sizeof yyunexpected - 1] = '\0';
-		break;
-	      }
-	    yyarg[yycount++] = yytname[yyx];
-	    yysize1 = yysize + yytnamerr (0, yytname[yyx]);
-	    yysize_overflow |= (yysize1 < yysize);
-	    yysize = yysize1;
-	    yyfmt = yystpcpy (yyfmt, yyprefix);
-	    yyprefix = yyor;
-	  }
-
-      yyf = YY_(yyformat);
-      yysize1 = yysize + yystrlen (yyf);
-      yysize_overflow |= (yysize1 < yysize);
-      yysize = yysize1;
-
-      if (yysize_overflow)
-	return YYSIZE_MAXIMUM;
-
-      if (yyresult)
-	{
-	  /* Avoid sprintf, as that infringes on the user's name space.
-	     Don't have undefined behavior even if the translation
-	     produced a string with the wrong number of "%s"s.  */
-	  char *yyp = yyresult;
-	  int yyi = 0;
-	  while ((*yyp = *yyf) != '\0')
-	    {
-	      if (*yyp == '%' && yyf[1] == 's' && yyi < yycount)
-		{
-		  yyp += yytnamerr (yyp, yyarg[yyi++]);
-		  yyf += 2;
-		}
-	      else
-		{
-		  yyp++;
-		  yyf++;
-		}
-	    }
-	}
-      return yysize;
+      YYASSERT (s->yyresolved);
+      yyvsp[i].yystate.yyresolved = yytrue;
+      yyvsp[i].yystate.yysemantics.yysval = s->yysemantics.yysval;
+      yyvsp[i].yystate.yyloc = s->yyloc;
+      s = yyvsp[i].yystate.yypred = s->yypred;
     }
 }
-#endif /* YYERROR_VERBOSE */
+
+/* Do nothing if YYNORMAL or if *YYLOW <= YYLOW1.  Otherwise, fill in
+ * YYVSP[YYLOW1 .. *YYLOW-1] as in yyfillin and set *YYLOW = YYLOW1.
+ * For convenience, always return YYLOW1.  */
+static inline int yyfill (yyGLRStackItem *, int *, int, yybool)
+     __attribute__ ((__unused__));
+static inline int
+yyfill (yyGLRStackItem *yyvsp, int *yylow, int yylow1, yybool yynormal)
+{
+  if (!yynormal && yylow1 < *yylow)
+    {
+      yyfillin (yyvsp, *yylow, yylow1);
+      *yylow = yylow1;
+    }
+  return yylow1;
+}
+
+/** Perform user action for rule number YYN, with RHS length YYRHSLEN,
+ *  and top stack item YYVSP.  YYLVALP points to place to put semantic
+ *  value ($$), and yylocp points to place for location information
+ *  (@$).  Returns yyok for normal return, yyaccept for YYACCEPT,
+ *  yyerr for YYERROR, yyabort for YYABORT.  */
+/*ARGSUSED*/ static YYRESULTTAG
+yyuserAction (yyRuleNum yyn, int yyrhslen, yyGLRStackItem* yyvsp,
+	      YYSTYPE* yyvalp,
+	      YYLTYPE* YYOPTIONAL_LOC (yylocp),
+	      yyGLRStack* yystackp
+	      , bumblebee::ParserInputDirector& director)
+{
+  yybool yynormal __attribute__ ((__unused__)) =
+    (yystackp->yysplitPoint == NULL);
+  int yylow;
+  YYUSE (director);
+# undef yyerrok
+# define yyerrok (yystackp->yyerrState = 0)
+# undef YYACCEPT
+# define YYACCEPT return yyaccept
+# undef YYABORT
+# define YYABORT return yyabort
+# undef YYERROR
+# define YYERROR return yyerrok, yyerr
+# undef YYRECOVERING
+# define YYRECOVERING() (yystackp->yyerrState != 0)
+# undef yyclearin
+# define yyclearin (yychar = YYEMPTY)
+# undef YYFILL
+# define YYFILL(N) yyfill (yyvsp, &yylow, N, yynormal)
+# undef YYBACKUP
+# define YYBACKUP(Token, Value)						     \
+  return yyerror (director, YY_("syntax error: cannot back up")),     \
+	 yyerrok, yyerr
+
+  yylow = 1;
+  if (yyrhslen == 0)
+    *yyvalp = yyval_default;
+  else
+    *yyvalp = yyvsp[YYFILL (1-yyrhslen)].yystate.yysemantics.yysval;
+  YYLLOC_DEFAULT ((*yylocp), (yyvsp - yyrhslen), yyrhslen);
+
+  switch (yyn)
+    {
+        case 3:
+#line 92 "src/parser/aspcore2.y"
+    { director.getBuilder()->onEnd();}
+    break;
+
+  case 4:
+#line 93 "src/parser/aspcore2.y"
+    { director.getBuilder()->onEnd();}
+    break;
+
+  case 5:
+#line 94 "src/parser/aspcore2.y"
+    { yyerror(director,"Generic error"); }
+    break;
+
+  case 10:
+#line 110 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onRule();
+        }
+    break;
+
+  case 11:
+#line 114 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onRule();
+        }
+    break;
+
+  case 12:
+#line 118 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onRule();
+        }
+    break;
+
+  case 13:
+#line 122 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onConstraint();
+        }
+    break;
+
+  case 14:
+#line 126 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onWeakConstraint();
+        }
+    break;
+
+  case 15:
+#line 130 "src/parser/aspcore2.y"
+    {
+			queryFound=true;
+			director.getBuilder()->onQuery();
+		}
+    break;
+
+  case 16:
+#line 138 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onHead();
+        }
+    break;
+
+  case 17:
+#line 142 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceAtom();
+            director.getBuilder()->onHead();
+        }
+    break;
+
+  case 18:
+#line 150 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onBody();
+        }
+    break;
+
+  case 19:
+#line 157 "src/parser/aspcore2.y"
+    {
+            // There is only the weight. No level and terms.
+            director.getBuilder()->onWeightAtLevels(1,0,0);
+        }
+    break;
+
+  case 20:
+#line 162 "src/parser/aspcore2.y"
+    {
+            // There are also a level and/or some terms.
+            // The finalization has been postponed to "level_and_terms".
+        }
+    break;
+
+  case 21:
+#line 170 "src/parser/aspcore2.y"
+    {
+            // There is no terms following the level.
+            director.getBuilder()->onWeightAtLevels(1,1,0);
+        }
+    break;
+
+  case 22:
+#line 175 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onWeightAtLevels(1,1,(((yyGLRStackItem const *)yyvsp)[YYFILL ((4) - (4))].yystate.yysemantics.yysval.integer));
+        }
+    break;
+
+  case 23:
+#line 179 "src/parser/aspcore2.y"
+    {
+            // The level is omitted.
+            // Thus, the first term, recognized as the
+            // weight, should be a term of this list.
+            director.getBuilder()->onWeightAtLevels(0,0,(((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.integer)+1);
+        }
+    break;
+
+  case 24:
+#line 189 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onHeadAtom();
+        }
+    break;
+
+  case 25:
+#line 193 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onExtAtom();
+            director.getBuilder()->onHeadAtom();
+        }
+    break;
+
+  case 26:
+#line 198 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onHeadAtom();
+        }
+    break;
+
+  case 27:
+#line 202 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onHeadAtom();
+        }
+    break;
+
+  case 28:
+#line 206 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onHeadAtom();
+        }
+    break;
+
+  case 29:
+#line 213 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onBodyLiteral();
+        }
+    break;
+
+  case 30:
+#line 217 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onBodyLiteral();
+        }
+    break;
+
+  case 35:
+#line 231 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceLowerGuard();
+        }
+    break;
+
+  case 36:
+#line 238 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceUpperGuard();
+        }
+    break;
+
+  case 39:
+#line 250 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceElement();
+        }
+    break;
+
+  case 40:
+#line 254 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceElement();
+        }
+    break;
+
+  case 41:
+#line 261 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceElementAtom();
+        }
+    break;
+
+  case 42:
+#line 268 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceElementLiteral();
+        }
+    break;
+
+  case 43:
+#line 272 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onChoiceElementLiteral();
+        }
+    break;
+
+  case 44:
+#line 279 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateNafLiteral();
+        }
+    break;
+
+  case 45:
+#line 283 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateNafLiteral();
+        }
+    break;
+
+  case 46:
+#line 290 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onNafLiteral();
+        }
+    break;
+
+  case 47:
+#line 294 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onNafLiteral(true);
+        }
+    break;
+
+  case 48:
+#line 298 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onBuiltinOrList();
+            director.getBuilder()->onNafLiteral();
+        }
+    break;
+
+  case 49:
+#line 303 "src/parser/aspcore2.y"
+    {
+    		director.getBuilder()->onExtAtom();
+    	}
+    break;
+
+  case 50:
+#line 307 "src/parser/aspcore2.y"
+    {
+			director.getBuilder()->onExtAtom(true);
+		}
+    break;
+
+  case 53:
+#line 316 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregate();
+        }
+    break;
+
+  case 54:
+#line 323 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onExistentialAtom();
+        }
+    break;
+
+  case 55:
+#line 328 "src/parser/aspcore2.y"
+    { director.getBuilder()->onAtom(); }
+    break;
+
+  case 56:
+#line 329 "src/parser/aspcore2.y"
+    { director.getBuilder()->onAtom(true); }
+    break;
+
+  case 57:
+#line 334 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onPredicateName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 58:
+#line 339 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onPredicateName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (4))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (4))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 59:
+#line 344 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onPredicateName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 60:
+#line 353 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onExternalPredicateName((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (9))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (9))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 61:
+#line 358 "src/parser/aspcore2.y"
+    {
+          director.getBuilder()->onExternalPredicateName((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (8))].yystate.yysemantics.yysval.string));
+          delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (8))].yystate.yysemantics.yysval.string);
+      }
+    break;
+
+  case 62:
+#line 366 "src/parser/aspcore2.y"
+    {
+	     	director.getBuilder()->onSemicolon();
+        }
+    break;
+
+  case 66:
+#line 378 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onNamedParameter();
+    }
+    break;
+
+  case 67:
+#line 384 "src/parser/aspcore2.y"
+    { ((*yyvalp).integer) = 1; }
+    break;
+
+  case 68:
+#line 385 "src/parser/aspcore2.y"
+    { ((*yyvalp).integer) = (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.integer) + 1; }
+    break;
+
+  case 73:
+#line 400 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onBuiltinAtom();
+    }
+    break;
+
+  case 74:
+#line 407 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onEqualOperator();
+        }
+    break;
+
+  case 75:
+#line 411 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onUnequalOperator();
+        }
+    break;
+
+  case 79:
+#line 424 "src/parser/aspcore2.y"
+    { ((*yyvalp).single_char) = '+'; }
+    break;
+
+  case 80:
+#line 425 "src/parser/aspcore2.y"
+    { ((*yyvalp).single_char) = '-'; }
+    break;
+
+  case 81:
+#line 429 "src/parser/aspcore2.y"
+    { ((*yyvalp).single_char) = '*'; }
+    break;
+
+  case 82:
+#line 430 "src/parser/aspcore2.y"
+    { ((*yyvalp).single_char) = '/'; }
+    break;
+
+  case 83:
+#line 431 "src/parser/aspcore2.y"
+    { ((*yyvalp).single_char) = '\\'; }
+    break;
+
+  case 84:
+#line 436 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onUnknownVariable();
+        }
+    break;
+
+  case 85:
+#line 440 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onTermRange((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string), (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 86:
+#line 446 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onTermDash();
+        }
+    break;
+
+  case 88:
+#line 455 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 89:
+#line 460 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 90:
+#line 465 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onTermParams();
+        }
+    break;
+
+  case 91:
+#line 471 "src/parser/aspcore2.y"
+    {}
+    break;
+
+  case 94:
+#line 480 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onArithmeticOperation((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (3))].yystate.yysemantics.yysval.single_char));
+        }
+    break;
+
+  case 95:
+#line 487 "src/parser/aspcore2.y"
+    {}
+    break;
+
+  case 96:
+#line 489 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onArithmeticOperation((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (3))].yystate.yysemantics.yysval.single_char));
+        }
+    break;
+
+  case 100:
+#line 498 "src/parser/aspcore2.y"
+    {
+           director.getBuilder()->onAggregateVariableTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+           delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+       }
+    break;
+
+  case 101:
+#line 506 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateGroundTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 102:
+#line 511 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateGroundTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 103:
+#line 516 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateGroundTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 104:
+#line 521 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateGroundTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string),true);
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 105:
+#line 529 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateVariableTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 106:
+#line 534 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateUnknownVariable();
+        }
+    break;
+
+  case 107:
+#line 541 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateFunctionalTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (4))].yystate.yysemantics.yysval.string),(((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (4))].yystate.yysemantics.yysval.integer));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (4))].yystate.yysemantics.yysval.string);
+       }
+    break;
+
+  case 108:
+#line 549 "src/parser/aspcore2.y"
+    {
+               director.getBuilder()->onListTerm(0);
+       }
+    break;
+
+  case 109:
+#line 553 "src/parser/aspcore2.y"
+    {
+               director.getBuilder()->onListTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (3))].yystate.yysemantics.yysval.integer));
+       }
+    break;
+
+  case 110:
+#line 560 "src/parser/aspcore2.y"
+    {
+                ((*yyvalp).integer) = (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.integer);
+        }
+    break;
+
+  case 111:
+#line 564 "src/parser/aspcore2.y"
+    {
+                ((*yyvalp).integer) = 2;
+        }
+    break;
+
+  case 112:
+#line 571 "src/parser/aspcore2.y"
+    {
+
+                director.getBuilder()->onHeadTailList();
+
+        }
+    break;
+
+  case 113:
+#line 580 "src/parser/aspcore2.y"
+    {
+                director.getBuilder()->onTerm((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+                delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 115:
+#line 589 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onExistentialVariable((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 116:
+#line 594 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onExistentialVariable((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 117:
+#line 601 "src/parser/aspcore2.y"
+    { ((*yyvalp).string) = (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string); }
+    break;
+
+  case 118:
+#line 602 "src/parser/aspcore2.y"
+    { ((*yyvalp).string) = (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string); }
+    break;
+
+  case 119:
+#line 603 "src/parser/aspcore2.y"
+    { ((*yyvalp).string) = (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string); }
+    break;
+
+  case 120:
+#line 608 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onDirective((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (2))].yystate.yysemantics.yysval.string),(((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (2))].yystate.yysemantics.yysval.string);
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 121:
+#line 617 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAtom();
+        }
+    break;
+
+  case 122:
+#line 624 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateLowerGuard();
+        }
+    break;
+
+  case 123:
+#line 631 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateUpperGuard();
+        }
+    break;
+
+  case 126:
+#line 643 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateLowerGuard();
+        }
+    break;
+
+  case 130:
+#line 659 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateLowerGuard();
+        }
+    break;
+
+  case 132:
+#line 670 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateUpperGuard();
+        }
+    break;
+
+  case 133:
+#line 677 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateUpperGuard();
+        }
+    break;
+
+  case 141:
+#line 697 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onMultiAggregateAssignment();
+        }
+    break;
+
+  case 143:
+#line 708 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onMultiAssignVariable((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string));
+            director.getBuilder()->onMultiAssignVariable((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 144:
+#line 715 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onMultiAssignVariable((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 145:
+#line 723 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onLessOperator();
+        }
+    break;
+
+  case 146:
+#line 727 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onLessOrEqualOperator();
+        }
+    break;
+
+  case 147:
+#line 734 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onGreaterOperator();
+        }
+    break;
+
+  case 148:
+#line 738 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onGreaterOrEqualOperator();
+        }
+    break;
+
+  case 153:
+#line 758 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 156:
+#line 772 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateElement();
+        }
+    break;
+
+  case 157:
+#line 776 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateElement();
+        }
+    break;
+
+  case 158:
+#line 783 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateGroupSemicolon();
+        }
+    break;
+
+  case 159:
+#line 790 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 160:
+#line 795 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 161:
+#line 800 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 162:
+#line 805 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 163:
+#line 810 "src/parser/aspcore2.y"
+    {
+            director.getBuilder()->onAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+            delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+        }
+    break;
+
+  case 165:
+#line 830 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLCopy();
+    }
+    break;
+
+  case 167:
+#line 841 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLCopyTo((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string));
+         delete [] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 169:
+#line 853 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLStart();
+    }
+    break;
+
+  case 170:
+#line 860 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLSelect();
+    }
+    break;
+
+  case 171:
+#line 869 "src/parser/aspcore2.y"
+    {
+        char * c = new char[2];
+        c[0] = '*';
+        c[1] = '\0';
+        director.getBuilder()->onSQLQualifiedName(c);
+        delete[] c;
+        director.getBuilder()->onSQLSelectItem();
+    }
+    break;
+
+  case 175:
+#line 887 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLSelectItem();
+    }
+    break;
+
+  case 176:
+#line 896 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLFrom();
+    }
+    break;
+
+  case 179:
+#line 910 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLExtTable();
+    }
+    break;
+
+  case 180:
+#line 914 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLFromItem();
+    }
+    break;
+
+  case 181:
+#line 918 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLSubQuery();
+    }
+    break;
+
+  case 182:
+#line 925 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLExtTableName((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (7))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (7))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 183:
+#line 930 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLExtTableNameString((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 184:
+#line 937 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLTableRef((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 185:
+#line 942 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLTableRef((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 188:
+#line 956 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 189:
+#line 961 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+     }
+    break;
+
+  case 190:
+#line 966 "src/parser/aspcore2.y"
+    {
+          director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+          delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+      }
+    break;
+
+  case 191:
+#line 971 "src/parser/aspcore2.y"
+    {
+          director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+          delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+      }
+    break;
+
+  case 192:
+#line 976 "src/parser/aspcore2.y"
+    {
+          director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+          delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+      }
+    break;
+
+  case 193:
+#line 981 "src/parser/aspcore2.y"
+    {
+          director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+          delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+      }
+    break;
+
+  case 194:
+#line 986 "src/parser/aspcore2.y"
+    {
+          director.getBuilder()->onSQLAlias((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+          delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+      }
+    break;
+
+  case 196:
+#line 996 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLWhere();
+    }
+    break;
+
+  case 198:
+#line 1004 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLOperatorCondition("AND");
+    }
+    break;
+
+  case 199:
+#line 1008 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLOperatorCondition("OR");
+    }
+    break;
+
+  case 200:
+#line 1015 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLPredicate();
+    }
+    break;
+
+  case 202:
+#line 1023 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLWhereGroupEnd();
+    }
+    break;
+
+  case 203:
+#line 1030 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLWhereGroupBegin();
+    }
+    break;
+
+  case 204:
+#line 1038 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLPredicateValueExprOp();
+    }
+    break;
+
+  case 205:
+#line 1042 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLLikePredicate();
+    }
+    break;
+
+  case 206:
+#line 1049 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLPredicateValueExpr();
+    }
+    break;
+
+  case 209:
+#line 1062 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLGroupByItem();
+    }
+    break;
+
+  case 210:
+#line 1066 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLGroupByItem();
+    }
+    break;
+
+  case 215:
+#line 1084 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSqlOrderCol();
+    }
+    break;
+
+  case 217:
+#line 1092 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 218:
+#line 1097 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 219:
+#line 1102 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 220:
+#line 1107 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 221:
+#line 1112 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 222:
+#line 1119 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSqlOrderModifier(nullptr);
+    }
+    break;
+
+  case 223:
+#line 1123 "src/parser/aspcore2.y"
+    {
+        char c[] = "asc";
+        director.getBuilder()->onSqlOrderModifier(c);
+    }
+    break;
+
+  case 224:
+#line 1128 "src/parser/aspcore2.y"
+    {
+        char c[] = "desc";
+        director.getBuilder()->onSqlOrderModifier(c);
+    }
+    break;
+
+  case 226:
+#line 1137 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLLimit((((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((2) - (2))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 229:
+#line 1150 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAddTerm('+');
+    }
+    break;
+
+  case 230:
+#line 1154 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAddTerm('-');
+    }
+    break;
+
+  case 231:
+#line 1161 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLFinalizeMulExpr();
+    }
+    break;
+
+  case 233:
+#line 1169 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLMulTerm('*');
+    }
+    break;
+
+  case 234:
+#line 1173 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLMulTerm('/');
+    }
+    break;
+
+  case 235:
+#line 1181 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLValue((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 236:
+#line 1186 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLValue((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 238:
+#line 1191 "src/parser/aspcore2.y"
+    { director.getBuilder()->onSQLParenOpen(); }
+    break;
+
+  case 239:
+#line 1191 "src/parser/aspcore2.y"
+    { director.getBuilder()->onSQLParenClose(); }
+    break;
+
+  case 242:
+#line 1198 "src/parser/aspcore2.y"
+    {
+        char c[] = "*";
+        director.getBuilder()->onSQLValue(c);
+    }
+    break;
+
+  case 243:
+#line 1206 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 244:
+#line 1211 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 245:
+#line 1216 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string), (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string));
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 246:
+#line 1222 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string), (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string));
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 247:
+#line 1228 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string), (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string));
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 248:
+#line 1234 "src/parser/aspcore2.y"
+    {
+         director.getBuilder()->onSQLQualifiedName((((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string), (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string));
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (3))].yystate.yysemantics.yysval.string);
+         delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((3) - (3))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 249:
+#line 1245 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 250:
+#line 1250 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 251:
+#line 1255 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 252:
+#line 1260 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+  case 253:
+#line 1265 "src/parser/aspcore2.y"
+    {
+        director.getBuilder()->onSQLAggregateFunction((((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string));
+        delete[] (((yyGLRStackItem const *)yyvsp)[YYFILL ((1) - (1))].yystate.yysemantics.yysval.string);
+    }
+    break;
+
+
+/* Line 930 of glr.c.  */
+#line 2791 "src/parser/aspcore2_parser.hpp"
+      default: break;
+    }
+
+  return yyok;
+# undef yyerrok
+# undef YYABORT
+# undef YYACCEPT
+# undef YYERROR
+# undef YYBACKUP
+# undef yyclearin
+# undef YYRECOVERING
+}
 
+
+/*ARGSUSED*/ static void
+yyuserMerge (int yyn, YYSTYPE* yy0, YYSTYPE* yy1)
+{
+  YYUSE (yy0);
+  YYUSE (yy1);
+
+  switch (yyn)
+    {
+      
+      default: break;
+    }
+}
+
+			      /* Bison grammar-table manipulation.  */
 
 /*-----------------------------------------------.
 | Release the memory associated to this symbol.  |
 `-----------------------------------------------*/
 
 /*ARGSUSED*/
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
 static void
 yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, bumblebee::ParserInputDirector& director)
-#else
-static void
-yydestruct (yymsg, yytype, yyvaluep, director)
-    const char *yymsg;
-    int yytype;
-    YYSTYPE *yyvaluep;
-    bumblebee::ParserInputDirector& director;
-#endif
 {
   YYUSE (yyvaluep);
   YYUSE (director);
@@ -1627,1782 +2839,1612 @@ yydestruct (yymsg, yytype, yyvaluep, director)
 	break;
     }
 }
-
 
-/* Prevent warnings from -Wmissing-prototypes.  */
+/** Number of symbols composing the right hand side of rule #RULE.  */
+static inline int
+yyrhsLength (yyRuleNum yyrule)
+{
+  return yyr2[yyrule];
+}
 
-#ifdef YYPARSE_PARAM
-#if defined __STDC__ || defined __cplusplus
-int yyparse (void *YYPARSE_PARAM);
-#else
-int yyparse ();
+static void
+yydestroyGLRState (char const *yymsg, yyGLRState *yys, bumblebee::ParserInputDirector& director)
+{
+  if (yys->yyresolved)
+    yydestruct (yymsg, yystos[yys->yylrState],
+		&yys->yysemantics.yysval, director);
+  else
+    {
+#if YYDEBUG
+      if (yydebug)
+	{
+	  if (yys->yysemantics.yyfirstVal)
+	    YYFPRINTF (stderr, "%s unresolved ", yymsg);
+	  else
+	    YYFPRINTF (stderr, "%s incomplete ", yymsg);
+	  yy_symbol_print (stderr, yystos[yys->yylrState],
+			   NULL, director);
+	  YYFPRINTF (stderr, "\n");
+	}
 #endif
-#else /* ! YYPARSE_PARAM */
-#if defined __STDC__ || defined __cplusplus
-int yyparse (bumblebee::ParserInputDirector& director);
-#else
-int yyparse ();
+
+      if (yys->yysemantics.yyfirstVal)
+	{
+	  yySemanticOption *yyoption = yys->yysemantics.yyfirstVal;
+	  yyGLRState *yyrh;
+	  int yyn;
+	  for (yyrh = yyoption->yystate, yyn = yyrhsLength (yyoption->yyrule);
+	       yyn > 0;
+	       yyrh = yyrh->yypred, yyn -= 1)
+	    yydestroyGLRState (yymsg, yyrh, director);
+	}
+    }
+}
+
+/** Left-hand-side symbol for rule #RULE.  */
+static inline yySymbol
+yylhsNonterm (yyRuleNum yyrule)
+{
+  return yyr1[yyrule];
+}
+
+#define yyis_pact_ninf(yystate) \
+  ((yystate) == YYPACT_NINF)
+
+/** True iff LR state STATE has only a default reduction (regardless
+ *  of token).  */
+static inline yybool
+yyisDefaultedState (yyStateNum yystate)
+{
+  return yyis_pact_ninf (yypact[yystate]);
+}
+
+/** The default reduction for STATE, assuming it has one.  */
+static inline yyRuleNum
+yydefaultAction (yyStateNum yystate)
+{
+  return yydefact[yystate];
+}
+
+#define yyis_table_ninf(yytable_value) \
+  YYID (0)
+
+/** Set *YYACTION to the action to take in YYSTATE on seeing YYTOKEN.
+ *  Result R means
+ *    R < 0:  Reduce on rule -R.
+ *    R = 0:  Error.
+ *    R > 0:  Shift to state R.
+ *  Set *CONFLICTS to a pointer into yyconfl to 0-terminated list of
+ *  conflicting reductions.
+ */
+static inline void
+yygetLRActions (yyStateNum yystate, int yytoken,
+		int* yyaction, const short int** yyconflicts)
+{
+  int yyindex = yypact[yystate] + yytoken;
+  if (yyindex < 0 || YYLAST < yyindex || yycheck[yyindex] != yytoken)
+    {
+      *yyaction = -yydefact[yystate];
+      *yyconflicts = yyconfl;
+    }
+  else if (! yyis_table_ninf (yytable[yyindex]))
+    {
+      *yyaction = yytable[yyindex];
+      *yyconflicts = yyconfl + yyconflp[yyindex];
+    }
+  else
+    {
+      *yyaction = 0;
+      *yyconflicts = yyconfl + yyconflp[yyindex];
+    }
+}
+
+static inline yyStateNum
+yyLRgotoState (yyStateNum yystate, yySymbol yylhs)
+{
+  int yyr;
+  yyr = yypgoto[yylhs - YYNTOKENS] + yystate;
+  if (0 <= yyr && yyr <= YYLAST && yycheck[yyr] == yystate)
+    return yytable[yyr];
+  else
+    return yydefgoto[yylhs - YYNTOKENS];
+}
+
+static inline yybool
+yyisShiftAction (int yyaction)
+{
+  return 0 < yyaction;
+}
+
+static inline yybool
+yyisErrorAction (int yyaction)
+{
+  return yyaction == 0;
+}
+
+				/* GLRStates */
+
+/** Return a fresh GLRStackItem.  Callers should call
+ * YY_RESERVE_GLRSTACK afterwards to make sure there is sufficient
+ * headroom.  */
+
+static inline yyGLRStackItem*
+yynewGLRStackItem (yyGLRStack* yystackp, yybool yyisState)
+{
+  yyGLRStackItem* yynewItem = yystackp->yynextFree;
+  yystackp->yyspaceLeft -= 1;
+  yystackp->yynextFree += 1;
+  yynewItem->yystate.yyisState = yyisState;
+  return yynewItem;
+}
+
+/** Add a new semantic action that will execute the action for rule
+ *  RULENUM on the semantic values in RHS to the list of
+ *  alternative actions for STATE.  Assumes that RHS comes from
+ *  stack #K of *STACKP. */
+static void
+yyaddDeferredAction (yyGLRStack* yystackp, size_t yyk, yyGLRState* yystate,
+		     yyGLRState* rhs, yyRuleNum yyrule)
+{
+  yySemanticOption* yynewOption =
+    &yynewGLRStackItem (yystackp, yyfalse)->yyoption;
+  yynewOption->yystate = rhs;
+  yynewOption->yyrule = yyrule;
+  if (yystackp->yytops.yylookaheadNeeds[yyk])
+    {
+      yynewOption->yyrawchar = yychar;
+      yynewOption->yyval = yylval;
+      yynewOption->yyloc = yylloc;
+    }
+  else
+    yynewOption->yyrawchar = YYEMPTY;
+  yynewOption->yynext = yystate->yysemantics.yyfirstVal;
+  yystate->yysemantics.yyfirstVal = yynewOption;
+
+  YY_RESERVE_GLRSTACK (yystackp);
+}
+
+				/* GLRStacks */
+
+/** Initialize SET to a singleton set containing an empty stack.  */
+static yybool
+yyinitStateSet (yyGLRStateSet* yyset)
+{
+  yyset->yysize = 1;
+  yyset->yycapacity = 16;
+  yyset->yystates = (yyGLRState**) YYMALLOC (16 * sizeof yyset->yystates[0]);
+  if (! yyset->yystates)
+    return yyfalse;
+  yyset->yystates[0] = NULL;
+  yyset->yylookaheadNeeds =
+    (yybool*) YYMALLOC (16 * sizeof yyset->yylookaheadNeeds[0]);
+  if (! yyset->yylookaheadNeeds)
+    {
+      YYFREE (yyset->yystates);
+      return yyfalse;
+    }
+  return yytrue;
+}
+
+static void yyfreeStateSet (yyGLRStateSet* yyset)
+{
+  YYFREE (yyset->yystates);
+  YYFREE (yyset->yylookaheadNeeds);
+}
+
+/** Initialize STACK to a single empty stack, with total maximum
+ *  capacity for all stacks of SIZE.  */
+static yybool
+yyinitGLRStack (yyGLRStack* yystackp, size_t yysize)
+{
+  yystackp->yyerrState = 0;
+  yynerrs = 0;
+  yystackp->yyspaceLeft = yysize;
+  yystackp->yyitems =
+    (yyGLRStackItem*) YYMALLOC (yysize * sizeof yystackp->yynextFree[0]);
+  if (!yystackp->yyitems)
+    return yyfalse;
+  yystackp->yynextFree = yystackp->yyitems;
+  yystackp->yysplitPoint = NULL;
+  yystackp->yylastDeleted = NULL;
+  return yyinitStateSet (&yystackp->yytops);
+}
+
+
+#if YYSTACKEXPANDABLE
+# define YYRELOC(YYFROMITEMS,YYTOITEMS,YYX,YYTYPE) \
+  &((YYTOITEMS) - ((YYFROMITEMS) - (yyGLRStackItem*) (YYX)))->YYTYPE
+
+/** If STACK is expandable, extend it.  WARNING: Pointers into the
+    stack from outside should be considered invalid after this call.
+    We always expand when there are 1 or fewer items left AFTER an
+    allocation, so that we can avoid having external pointers exist
+    across an allocation.  */
+static void
+yyexpandGLRStack (yyGLRStack* yystackp)
+{
+  yyGLRStackItem* yynewItems;
+  yyGLRStackItem* yyp0, *yyp1;
+  size_t yysize, yynewSize;
+  size_t yyn;
+  yysize = yystackp->yynextFree - yystackp->yyitems;
+  if (YYMAXDEPTH - YYHEADROOM < yysize)
+    yyMemoryExhausted (yystackp);
+  yynewSize = 2*yysize;
+  if (YYMAXDEPTH < yynewSize)
+    yynewSize = YYMAXDEPTH;
+  yynewItems = (yyGLRStackItem*) YYMALLOC (yynewSize * sizeof yynewItems[0]);
+  if (! yynewItems)
+    yyMemoryExhausted (yystackp);
+  for (yyp0 = yystackp->yyitems, yyp1 = yynewItems, yyn = yysize;
+       0 < yyn;
+       yyn -= 1, yyp0 += 1, yyp1 += 1)
+    {
+      *yyp1 = *yyp0;
+      if (*(yybool *) yyp0)
+	{
+	  yyGLRState* yys0 = &yyp0->yystate;
+	  yyGLRState* yys1 = &yyp1->yystate;
+	  if (yys0->yypred != NULL)
+	    yys1->yypred =
+	      YYRELOC (yyp0, yyp1, yys0->yypred, yystate);
+	  if (! yys0->yyresolved && yys0->yysemantics.yyfirstVal != NULL)
+	    yys1->yysemantics.yyfirstVal =
+	      YYRELOC(yyp0, yyp1, yys0->yysemantics.yyfirstVal, yyoption);
+	}
+      else
+	{
+	  yySemanticOption* yyv0 = &yyp0->yyoption;
+	  yySemanticOption* yyv1 = &yyp1->yyoption;
+	  if (yyv0->yystate != NULL)
+	    yyv1->yystate = YYRELOC (yyp0, yyp1, yyv0->yystate, yystate);
+	  if (yyv0->yynext != NULL)
+	    yyv1->yynext = YYRELOC (yyp0, yyp1, yyv0->yynext, yyoption);
+	}
+    }
+  if (yystackp->yysplitPoint != NULL)
+    yystackp->yysplitPoint = YYRELOC (yystackp->yyitems, yynewItems,
+				 yystackp->yysplitPoint, yystate);
+
+  for (yyn = 0; yyn < yystackp->yytops.yysize; yyn += 1)
+    if (yystackp->yytops.yystates[yyn] != NULL)
+      yystackp->yytops.yystates[yyn] =
+	YYRELOC (yystackp->yyitems, yynewItems,
+		 yystackp->yytops.yystates[yyn], yystate);
+  YYFREE (yystackp->yyitems);
+  yystackp->yyitems = yynewItems;
+  yystackp->yynextFree = yynewItems + yysize;
+  yystackp->yyspaceLeft = yynewSize - yysize;
+}
 #endif
-#endif /* ! YYPARSE_PARAM */
+
+static void
+yyfreeGLRStack (yyGLRStack* yystackp)
+{
+  YYFREE (yystackp->yyitems);
+  yyfreeStateSet (&yystackp->yytops);
+}
+
+/** Assuming that S is a GLRState somewhere on STACK, update the
+ *  splitpoint of STACK, if needed, so that it is at least as deep as
+ *  S.  */
+static inline void
+yyupdateSplit (yyGLRStack* yystackp, yyGLRState* yys)
+{
+  if (yystackp->yysplitPoint != NULL && yystackp->yysplitPoint > yys)
+    yystackp->yysplitPoint = yys;
+}
+
+/** Invalidate stack #K in STACK.  */
+static inline void
+yymarkStackDeleted (yyGLRStack* yystackp, size_t yyk)
+{
+  if (yystackp->yytops.yystates[yyk] != NULL)
+    yystackp->yylastDeleted = yystackp->yytops.yystates[yyk];
+  yystackp->yytops.yystates[yyk] = NULL;
+}
+
+/** Undelete the last stack that was marked as deleted.  Can only be
+    done once after a deletion, and only when all other stacks have
+    been deleted.  */
+static void
+yyundeleteLastStack (yyGLRStack* yystackp)
+{
+  if (yystackp->yylastDeleted == NULL || yystackp->yytops.yysize != 0)
+    return;
+  yystackp->yytops.yystates[0] = yystackp->yylastDeleted;
+  yystackp->yytops.yysize = 1;
+  YYDPRINTF ((stderr, "Restoring last deleted stack as stack #0.\n"));
+  yystackp->yylastDeleted = NULL;
+}
+
+static inline void
+yyremoveDeletes (yyGLRStack* yystackp)
+{
+  size_t yyi, yyj;
+  yyi = yyj = 0;
+  while (yyj < yystackp->yytops.yysize)
+    {
+      if (yystackp->yytops.yystates[yyi] == NULL)
+	{
+	  if (yyi == yyj)
+	    {
+	      YYDPRINTF ((stderr, "Removing dead stacks.\n"));
+	    }
+	  yystackp->yytops.yysize -= 1;
+	}
+      else
+	{
+	  yystackp->yytops.yystates[yyj] = yystackp->yytops.yystates[yyi];
+	  /* In the current implementation, it's unnecessary to copy
+	     yystackp->yytops.yylookaheadNeeds[yyi] since, after
+	     yyremoveDeletes returns, the parser immediately either enters
+	     deterministic operation or shifts a token.  However, it doesn't
+	     hurt, and the code might evolve to need it.  */
+	  yystackp->yytops.yylookaheadNeeds[yyj] =
+	    yystackp->yytops.yylookaheadNeeds[yyi];
+	  if (yyj != yyi)
+	    {
+	      YYDPRINTF ((stderr, "Rename stack %lu -> %lu.\n",
+			  (unsigned long int) yyi, (unsigned long int) yyj));
+	    }
+	  yyj += 1;
+	}
+      yyi += 1;
+    }
+}
+
+/** Shift to a new state on stack #K of STACK, corresponding to LR state
+ * LRSTATE, at input position POSN, with (resolved) semantic value SVAL.  */
+static inline void
+yyglrShift (yyGLRStack* yystackp, size_t yyk, yyStateNum yylrState,
+	    size_t yyposn,
+	    YYSTYPE* yyvalp, YYLTYPE* yylocp)
+{
+  yyGLRState* yynewState = &yynewGLRStackItem (yystackp, yytrue)->yystate;
+
+  yynewState->yylrState = yylrState;
+  yynewState->yyposn = yyposn;
+  yynewState->yyresolved = yytrue;
+  yynewState->yypred = yystackp->yytops.yystates[yyk];
+  yynewState->yysemantics.yysval = *yyvalp;
+  yynewState->yyloc = *yylocp;
+  yystackp->yytops.yystates[yyk] = yynewState;
+
+  YY_RESERVE_GLRSTACK (yystackp);
+}
+
+/** Shift stack #K of YYSTACK, to a new state corresponding to LR
+ *  state YYLRSTATE, at input position YYPOSN, with the (unresolved)
+ *  semantic value of YYRHS under the action for YYRULE.  */
+static inline void
+yyglrShiftDefer (yyGLRStack* yystackp, size_t yyk, yyStateNum yylrState,
+		 size_t yyposn, yyGLRState* rhs, yyRuleNum yyrule)
+{
+  yyGLRState* yynewState = &yynewGLRStackItem (yystackp, yytrue)->yystate;
+
+  yynewState->yylrState = yylrState;
+  yynewState->yyposn = yyposn;
+  yynewState->yyresolved = yyfalse;
+  yynewState->yypred = yystackp->yytops.yystates[yyk];
+  yynewState->yysemantics.yyfirstVal = NULL;
+  yystackp->yytops.yystates[yyk] = yynewState;
+
+  /* Invokes YY_RESERVE_GLRSTACK.  */
+  yyaddDeferredAction (yystackp, yyk, yynewState, rhs, yyrule);
+}
+
+/** Pop the symbols consumed by reduction #RULE from the top of stack
+ *  #K of STACK, and perform the appropriate semantic action on their
+ *  semantic values.  Assumes that all ambiguities in semantic values
+ *  have been previously resolved.  Set *VALP to the resulting value,
+ *  and *LOCP to the computed location (if any).  Return value is as
+ *  for userAction.  */
+static inline YYRESULTTAG
+yydoAction (yyGLRStack* yystackp, size_t yyk, yyRuleNum yyrule,
+	    YYSTYPE* yyvalp, YYLTYPE* yylocp, bumblebee::ParserInputDirector& director)
+{
+  int yynrhs = yyrhsLength (yyrule);
+
+  if (yystackp->yysplitPoint == NULL)
+    {
+      /* Standard special case: single stack.  */
+      yyGLRStackItem* rhs = (yyGLRStackItem*) yystackp->yytops.yystates[yyk];
+      YYASSERT (yyk == 0);
+      yystackp->yynextFree -= yynrhs;
+      yystackp->yyspaceLeft += yynrhs;
+      yystackp->yytops.yystates[0] = & yystackp->yynextFree[-1].yystate;
+      return yyuserAction (yyrule, yynrhs, rhs,
+			   yyvalp, yylocp, yystackp, director);
+    }
+  else
+    {
+      /* At present, doAction is never called in nondeterministic
+       * mode, so this branch is never taken.  It is here in
+       * anticipation of a future feature that will allow immediate
+       * evaluation of selected actions in nondeterministic mode.  */
+      int yyi;
+      yyGLRState* yys;
+      yyGLRStackItem yyrhsVals[YYMAXRHS + YYMAXLEFT + 1];
+      yys = yyrhsVals[YYMAXRHS + YYMAXLEFT].yystate.yypred
+	= yystackp->yytops.yystates[yyk];
+      for (yyi = 0; yyi < yynrhs; yyi += 1)
+	{
+	  yys = yys->yypred;
+	  YYASSERT (yys);
+	}
+      yyupdateSplit (yystackp, yys);
+      yystackp->yytops.yystates[yyk] = yys;
+      return yyuserAction (yyrule, yynrhs, yyrhsVals + YYMAXRHS + YYMAXLEFT - 1,
+			   yyvalp, yylocp, yystackp, director);
+    }
+}
+
+#if !YYDEBUG
+# define YY_REDUCE_PRINT(Args)
+#else
+# define YY_REDUCE_PRINT(Args)		\
+do {					\
+  if (yydebug)				\
+    yy_reduce_print Args;		\
+} while (YYID (0))
+
+/*----------------------------------------------------------.
+| Report that the RULE is going to be reduced on stack #K.  |
+`----------------------------------------------------------*/
+
+/*ARGSUSED*/ static inline void
+yy_reduce_print (yyGLRStack* yystackp, size_t yyk, yyRuleNum yyrule,
+		 YYSTYPE* yyvalp, YYLTYPE* yylocp, bumblebee::ParserInputDirector& director)
+{
+  int yynrhs = yyrhsLength (yyrule);
+  yybool yynormal __attribute__ ((__unused__)) =
+    (yystackp->yysplitPoint == NULL);
+  yyGLRStackItem* yyvsp = (yyGLRStackItem*) yystackp->yytops.yystates[yyk];
+  int yylow = 1;
+  int yyi;
+  YYUSE (yyvalp);
+  YYUSE (yylocp);
+  YYUSE (director);
+  YYFPRINTF (stderr, "Reducing stack %lu by rule %d (line %lu):\n",
+	     (unsigned long int) yyk, yyrule - 1,
+	     (unsigned long int) yyrline[yyrule]);
+  /* The symbols being reduced.  */
+  for (yyi = 0; yyi < yynrhs; yyi++)
+    {
+      fprintf (stderr, "   $%d = ", yyi + 1);
+      yy_symbol_print (stderr, yyrhs[yyprhs[yyrule] + yyi],
+		       &(((yyGLRStackItem const *)yyvsp)[YYFILL ((yyi + 1) - (yynrhs))].yystate.yysemantics.yysval)
+		       		       , director);
+      fprintf (stderr, "\n");
+    }
+}
+#endif
+
+/** Pop items off stack #K of STACK according to grammar rule RULE,
+ *  and push back on the resulting nonterminal symbol.  Perform the
+ *  semantic action associated with RULE and store its value with the
+ *  newly pushed state, if FORCEEVAL or if STACK is currently
+ *  unambiguous.  Otherwise, store the deferred semantic action with
+ *  the new state.  If the new state would have an identical input
+ *  position, LR state, and predecessor to an existing state on the stack,
+ *  it is identified with that existing state, eliminating stack #K from
+ *  the STACK.  In this case, the (necessarily deferred) semantic value is
+ *  added to the options for the existing state's semantic value.
+ */
+static inline YYRESULTTAG
+yyglrReduce (yyGLRStack* yystackp, size_t yyk, yyRuleNum yyrule,
+	     yybool yyforceEval, bumblebee::ParserInputDirector& director)
+{
+  size_t yyposn = yystackp->yytops.yystates[yyk]->yyposn;
+
+  if (yyforceEval || yystackp->yysplitPoint == NULL)
+    {
+      YYSTYPE yysval;
+      YYLTYPE yyloc;
+
+      YY_REDUCE_PRINT ((yystackp, yyk, yyrule, &yysval, &yyloc, director));
+      YYCHK (yydoAction (yystackp, yyk, yyrule, &yysval,
+			 &yyloc, director));
+      YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyrule], &yysval, &yyloc);
+      yyglrShift (yystackp, yyk,
+		  yyLRgotoState (yystackp->yytops.yystates[yyk]->yylrState,
+				 yylhsNonterm (yyrule)),
+		  yyposn, &yysval, &yyloc);
+    }
+  else
+    {
+      size_t yyi;
+      int yyn;
+      yyGLRState* yys, *yys0 = yystackp->yytops.yystates[yyk];
+      yyStateNum yynewLRState;
+
+      for (yys = yystackp->yytops.yystates[yyk], yyn = yyrhsLength (yyrule);
+	   0 < yyn; yyn -= 1)
+	{
+	  yys = yys->yypred;
+	  YYASSERT (yys);
+	}
+      yyupdateSplit (yystackp, yys);
+      yynewLRState = yyLRgotoState (yys->yylrState, yylhsNonterm (yyrule));
+      YYDPRINTF ((stderr,
+		  "Reduced stack %lu by rule #%d; action deferred.  Now in state %d.\n",
+		  (unsigned long int) yyk, yyrule - 1, yynewLRState));
+      for (yyi = 0; yyi < yystackp->yytops.yysize; yyi += 1)
+	if (yyi != yyk && yystackp->yytops.yystates[yyi] != NULL)
+	  {
+	    yyGLRState* yyp, *yysplit = yystackp->yysplitPoint;
+	    yyp = yystackp->yytops.yystates[yyi];
+	    while (yyp != yys && yyp != yysplit && yyp->yyposn >= yyposn)
+	      {
+		if (yyp->yylrState == yynewLRState && yyp->yypred == yys)
+		  {
+		    yyaddDeferredAction (yystackp, yyk, yyp, yys0, yyrule);
+		    yymarkStackDeleted (yystackp, yyk);
+		    YYDPRINTF ((stderr, "Merging stack %lu into stack %lu.\n",
+				(unsigned long int) yyk,
+				(unsigned long int) yyi));
+		    return yyok;
+		  }
+		yyp = yyp->yypred;
+	      }
+	  }
+      yystackp->yytops.yystates[yyk] = yys;
+      yyglrShiftDefer (yystackp, yyk, yynewLRState, yyposn, yys0, yyrule);
+    }
+  return yyok;
+}
+
+static size_t
+yysplitStack (yyGLRStack* yystackp, size_t yyk)
+{
+  if (yystackp->yysplitPoint == NULL)
+    {
+      YYASSERT (yyk == 0);
+      yystackp->yysplitPoint = yystackp->yytops.yystates[yyk];
+    }
+  if (yystackp->yytops.yysize >= yystackp->yytops.yycapacity)
+    {
+      yyGLRState** yynewStates;
+      yybool* yynewLookaheadNeeds;
+
+      yynewStates = NULL;
+
+      if (yystackp->yytops.yycapacity
+	  > (YYSIZEMAX / (2 * sizeof yynewStates[0])))
+	yyMemoryExhausted (yystackp);
+      yystackp->yytops.yycapacity *= 2;
+
+      yynewStates =
+	(yyGLRState**) YYREALLOC (yystackp->yytops.yystates,
+				  (yystackp->yytops.yycapacity
+				   * sizeof yynewStates[0]));
+      if (yynewStates == NULL)
+	yyMemoryExhausted (yystackp);
+      yystackp->yytops.yystates = yynewStates;
+
+      yynewLookaheadNeeds =
+	(yybool*) YYREALLOC (yystackp->yytops.yylookaheadNeeds,
+			     (yystackp->yytops.yycapacity
+			      * sizeof yynewLookaheadNeeds[0]));
+      if (yynewLookaheadNeeds == NULL)
+	yyMemoryExhausted (yystackp);
+      yystackp->yytops.yylookaheadNeeds = yynewLookaheadNeeds;
+    }
+  yystackp->yytops.yystates[yystackp->yytops.yysize]
+    = yystackp->yytops.yystates[yyk];
+  yystackp->yytops.yylookaheadNeeds[yystackp->yytops.yysize]
+    = yystackp->yytops.yylookaheadNeeds[yyk];
+  yystackp->yytops.yysize += 1;
+  return yystackp->yytops.yysize-1;
+}
+
+/** True iff Y0 and Y1 represent identical options at the top level.
+ *  That is, they represent the same rule applied to RHS symbols
+ *  that produce the same terminal symbols.  */
+static yybool
+yyidenticalOptions (yySemanticOption* yyy0, yySemanticOption* yyy1)
+{
+  if (yyy0->yyrule == yyy1->yyrule)
+    {
+      yyGLRState *yys0, *yys1;
+      int yyn;
+      for (yys0 = yyy0->yystate, yys1 = yyy1->yystate,
+	   yyn = yyrhsLength (yyy0->yyrule);
+	   yyn > 0;
+	   yys0 = yys0->yypred, yys1 = yys1->yypred, yyn -= 1)
+	if (yys0->yyposn != yys1->yyposn)
+	  return yyfalse;
+      return yytrue;
+    }
+  else
+    return yyfalse;
+}
+
+/** Assuming identicalOptions (Y0,Y1), destructively merge the
+ *  alternative semantic values for the RHS-symbols of Y1 and Y0.  */
+static void
+yymergeOptionSets (yySemanticOption* yyy0, yySemanticOption* yyy1)
+{
+  yyGLRState *yys0, *yys1;
+  int yyn;
+  for (yys0 = yyy0->yystate, yys1 = yyy1->yystate,
+       yyn = yyrhsLength (yyy0->yyrule);
+       yyn > 0;
+       yys0 = yys0->yypred, yys1 = yys1->yypred, yyn -= 1)
+    {
+      if (yys0 == yys1)
+	break;
+      else if (yys0->yyresolved)
+	{
+	  yys1->yyresolved = yytrue;
+	  yys1->yysemantics.yysval = yys0->yysemantics.yysval;
+	}
+      else if (yys1->yyresolved)
+	{
+	  yys0->yyresolved = yytrue;
+	  yys0->yysemantics.yysval = yys1->yysemantics.yysval;
+	}
+      else
+	{
+	  yySemanticOption** yyz0p;
+	  yySemanticOption* yyz1;
+	  yyz0p = &yys0->yysemantics.yyfirstVal;
+	  yyz1 = yys1->yysemantics.yyfirstVal;
+	  while (YYID (yytrue))
+	    {
+	      if (yyz1 == *yyz0p || yyz1 == NULL)
+		break;
+	      else if (*yyz0p == NULL)
+		{
+		  *yyz0p = yyz1;
+		  break;
+		}
+	      else if (*yyz0p < yyz1)
+		{
+		  yySemanticOption* yyz = *yyz0p;
+		  *yyz0p = yyz1;
+		  yyz1 = yyz1->yynext;
+		  (*yyz0p)->yynext = yyz;
+		}
+	      yyz0p = &(*yyz0p)->yynext;
+	    }
+	  yys1->yysemantics.yyfirstVal = yys0->yysemantics.yyfirstVal;
+	}
+    }
+}
+
+/** Y0 and Y1 represent two possible actions to take in a given
+ *  parsing state; return 0 if no combination is possible,
+ *  1 if user-mergeable, 2 if Y0 is preferred, 3 if Y1 is preferred.  */
+static int
+yypreference (yySemanticOption* y0, yySemanticOption* y1)
+{
+  yyRuleNum r0 = y0->yyrule, r1 = y1->yyrule;
+  int p0 = yydprec[r0], p1 = yydprec[r1];
+
+  if (p0 == p1)
+    {
+      if (yymerger[r0] == 0 || yymerger[r0] != yymerger[r1])
+	return 0;
+      else
+	return 1;
+    }
+  if (p0 == 0 || p1 == 0)
+    return 0;
+  if (p0 < p1)
+    return 3;
+  if (p1 < p0)
+    return 2;
+  return 0;
+}
+
+static YYRESULTTAG yyresolveValue (yyGLRState* yys,
+				   yyGLRStack* yystackp, bumblebee::ParserInputDirector& director);
 
 
+/** Resolve the previous N states starting at and including state S.  If result
+ *  != yyok, some states may have been left unresolved possibly with empty
+ *  semantic option chains.  Regardless of whether result = yyok, each state
+ *  has been left with consistent data so that yydestroyGLRState can be invoked
+ *  if necessary.  */
+static YYRESULTTAG
+yyresolveStates (yyGLRState* yys, int yyn,
+		 yyGLRStack* yystackp, bumblebee::ParserInputDirector& director)
+{
+  if (0 < yyn)
+    {
+      YYASSERT (yys->yypred);
+      YYCHK (yyresolveStates (yys->yypred, yyn-1, yystackp, director));
+      if (! yys->yyresolved)
+	YYCHK (yyresolveValue (yys, yystackp, director));
+    }
+  return yyok;
+}
 
-/* The look-ahead symbol.  */
-int yychar;
+/** Resolve the states for the RHS of OPT, perform its user action, and return
+ *  the semantic value and location.  Regardless of whether result = yyok, all
+ *  RHS states have been destroyed (assuming the user action destroys all RHS
+ *  semantic values if invoked).  */
+static YYRESULTTAG
+yyresolveAction (yySemanticOption* yyopt, yyGLRStack* yystackp,
+		 YYSTYPE* yyvalp, YYLTYPE* yylocp, bumblebee::ParserInputDirector& director)
+{
+  yyGLRStackItem yyrhsVals[YYMAXRHS + YYMAXLEFT + 1];
+  int yynrhs;
+  int yychar_current;
+  YYSTYPE yylval_current;
+  YYLTYPE yylloc_current;
+  YYRESULTTAG yyflag;
 
-/* The semantic value of the look-ahead symbol.  */
-YYSTYPE yylval;
+  yynrhs = yyrhsLength (yyopt->yyrule);
+  yyflag = yyresolveStates (yyopt->yystate, yynrhs, yystackp, director);
+  if (yyflag != yyok)
+    {
+      yyGLRState *yys;
+      for (yys = yyopt->yystate; yynrhs > 0; yys = yys->yypred, yynrhs -= 1)
+	yydestroyGLRState ("Cleanup: popping", yys, director);
+      return yyflag;
+    }
 
-/* Number of syntax errors so far.  */
-int yynerrs;
+  yyrhsVals[YYMAXRHS + YYMAXLEFT].yystate.yypred = yyopt->yystate;
+  yychar_current = yychar;
+  yylval_current = yylval;
+  yylloc_current = yylloc;
+  yychar = yyopt->yyrawchar;
+  yylval = yyopt->yyval;
+  yylloc = yyopt->yyloc;
+  yyflag = yyuserAction (yyopt->yyrule, yynrhs,
+			   yyrhsVals + YYMAXRHS + YYMAXLEFT - 1,
+			   yyvalp, yylocp, yystackp, director);
+  yychar = yychar_current;
+  yylval = yylval_current;
+  yylloc = yylloc_current;
+  return yyflag;
+}
 
+#if YYDEBUG
+static void
+yyreportTree (yySemanticOption* yyx, int yyindent)
+{
+  int yynrhs = yyrhsLength (yyx->yyrule);
+  int yyi;
+  yyGLRState* yys;
+  yyGLRState* yystates[1 + YYMAXRHS];
+  yyGLRState yyleftmost_state;
+
+  for (yyi = yynrhs, yys = yyx->yystate; 0 < yyi; yyi -= 1, yys = yys->yypred)
+    yystates[yyi] = yys;
+  if (yys == NULL)
+    {
+      yyleftmost_state.yyposn = 0;
+      yystates[0] = &yyleftmost_state;
+    }
+  else
+    yystates[0] = yys;
+
+  if (yyx->yystate->yyposn < yys->yyposn + 1)
+    YYFPRINTF (stderr, "%*s%s -> <Rule %d, empty>\n",
+	       yyindent, "", yytokenName (yylhsNonterm (yyx->yyrule)),
+	       yyx->yyrule - 1);
+  else
+    YYFPRINTF (stderr, "%*s%s -> <Rule %d, tokens %lu .. %lu>\n",
+	       yyindent, "", yytokenName (yylhsNonterm (yyx->yyrule)),
+	       yyx->yyrule - 1, (unsigned long int) (yys->yyposn + 1),
+	       (unsigned long int) yyx->yystate->yyposn);
+  for (yyi = 1; yyi <= yynrhs; yyi += 1)
+    {
+      if (yystates[yyi]->yyresolved)
+	{
+	  if (yystates[yyi-1]->yyposn+1 > yystates[yyi]->yyposn)
+	    YYFPRINTF (stderr, "%*s%s <empty>\n", yyindent+2, "",
+		       yytokenName (yyrhs[yyprhs[yyx->yyrule]+yyi-1]));
+	  else
+	    YYFPRINTF (stderr, "%*s%s <tokens %lu .. %lu>\n", yyindent+2, "",
+		       yytokenName (yyrhs[yyprhs[yyx->yyrule]+yyi-1]),
+		       (unsigned long int) (yystates[yyi - 1]->yyposn + 1),
+		       (unsigned long int) yystates[yyi]->yyposn);
+	}
+      else
+	yyreportTree (yystates[yyi]->yysemantics.yyfirstVal, yyindent+2);
+    }
+}
+#endif
+
+/*ARGSUSED*/ static YYRESULTTAG
+yyreportAmbiguity (yySemanticOption* yyx0,
+		   yySemanticOption* yyx1, bumblebee::ParserInputDirector& director)
+{
+  YYUSE (yyx0);
+  YYUSE (yyx1);
+
+#if YYDEBUG
+  YYFPRINTF (stderr, "Ambiguity detected.\n");
+  YYFPRINTF (stderr, "Option 1,\n");
+  yyreportTree (yyx0, 2);
+  YYFPRINTF (stderr, "\nOption 2,\n");
+  yyreportTree (yyx1, 2);
+  YYFPRINTF (stderr, "\n");
+#endif
+
+  yyerror (director, YY_("syntax is ambiguous"));
+  return yyabort;
+}
+
+/** Starting at and including state S1, resolve the location for each of the
+ *  previous N1 states that is unresolved.  The first semantic option of a state
+ *  is always chosen.  */
+static void
+yyresolveLocations (yyGLRState* yys1, int yyn1,
+		    yyGLRStack *yystackp, bumblebee::ParserInputDirector& director)
+{
+  if (0 < yyn1)
+    {
+      yyresolveLocations (yys1->yypred, yyn1 - 1, yystackp, director);
+      if (!yys1->yyresolved)
+	{
+	  yySemanticOption *yyoption;
+	  yyGLRStackItem yyrhsloc[1 + YYMAXRHS];
+	  int yynrhs;
+	  int yychar_current;
+	  YYSTYPE yylval_current;
+	  YYLTYPE yylloc_current;
+	  yyoption = yys1->yysemantics.yyfirstVal;
+	  YYASSERT (yyoption != NULL);
+	  yynrhs = yyrhsLength (yyoption->yyrule);
+	  if (yynrhs > 0)
+	    {
+	      yyGLRState *yys;
+	      int yyn;
+	      yyresolveLocations (yyoption->yystate, yynrhs,
+				  yystackp, director);
+	      for (yys = yyoption->yystate, yyn = yynrhs;
+		   yyn > 0;
+		   yys = yys->yypred, yyn -= 1)
+		yyrhsloc[yyn].yystate.yyloc = yys->yyloc;
+	    }
+	  else
+	    {
+	      /* Both yyresolveAction and yyresolveLocations traverse the GSS
+		 in reverse rightmost order.  It is only necessary to invoke
+		 yyresolveLocations on a subforest for which yyresolveAction
+		 would have been invoked next had an ambiguity not been
+		 detected.  Thus the location of the previous state (but not
+		 necessarily the previous state itself) is guaranteed to be
+		 resolved already.  */
+	      yyGLRState *yyprevious = yyoption->yystate;
+	      yyrhsloc[0].yystate.yyloc = yyprevious->yyloc;
+	    }
+	  yychar_current = yychar;
+	  yylval_current = yylval;
+	  yylloc_current = yylloc;
+	  yychar = yyoption->yyrawchar;
+	  yylval = yyoption->yyval;
+	  yylloc = yyoption->yyloc;
+	  YYLLOC_DEFAULT ((yys1->yyloc), yyrhsloc, yynrhs);
+	  yychar = yychar_current;
+	  yylval = yylval_current;
+	  yylloc = yylloc_current;
+	}
+    }
+}
+
+/** Resolve the ambiguity represented in state S, perform the indicated
+ *  actions, and set the semantic value of S.  If result != yyok, the chain of
+ *  semantic options in S has been cleared instead or it has been left
+ *  unmodified except that redundant options may have been removed.  Regardless
+ *  of whether result = yyok, S has been left with consistent data so that
+ *  yydestroyGLRState can be invoked if necessary.  */
+static YYRESULTTAG
+yyresolveValue (yyGLRState* yys, yyGLRStack* yystackp, bumblebee::ParserInputDirector& director)
+{
+  yySemanticOption* yyoptionList = yys->yysemantics.yyfirstVal;
+  yySemanticOption* yybest;
+  yySemanticOption** yypp;
+  yybool yymerge;
+  YYSTYPE yysval;
+  YYRESULTTAG yyflag;
+  YYLTYPE *yylocp = &yys->yyloc;
+
+  yybest = yyoptionList;
+  yymerge = yyfalse;
+  for (yypp = &yyoptionList->yynext; *yypp != NULL; )
+    {
+      yySemanticOption* yyp = *yypp;
+
+      if (yyidenticalOptions (yybest, yyp))
+	{
+	  yymergeOptionSets (yybest, yyp);
+	  *yypp = yyp->yynext;
+	}
+      else
+	{
+	  switch (yypreference (yybest, yyp))
+	    {
+	    case 0:
+	      yyresolveLocations (yys, 1, yystackp, director);
+	      return yyreportAmbiguity (yybest, yyp, director);
+	      break;
+	    case 1:
+	      yymerge = yytrue;
+	      break;
+	    case 2:
+	      break;
+	    case 3:
+	      yybest = yyp;
+	      yymerge = yyfalse;
+	      break;
+	    default:
+	      /* This cannot happen so it is not worth a YYASSERT (yyfalse),
+		 but some compilers complain if the default case is
+		 omitted.  */
+	      break;
+	    }
+	  yypp = &yyp->yynext;
+	}
+    }
+
+  if (yymerge)
+    {
+      yySemanticOption* yyp;
+      int yyprec = yydprec[yybest->yyrule];
+      yyflag = yyresolveAction (yybest, yystackp, &yysval,
+				yylocp, director);
+      if (yyflag == yyok)
+	for (yyp = yybest->yynext; yyp != NULL; yyp = yyp->yynext)
+	  {
+	    if (yyprec == yydprec[yyp->yyrule])
+	      {
+		YYSTYPE yysval_other;
+		YYLTYPE yydummy;
+		yyflag = yyresolveAction (yyp, yystackp, &yysval_other,
+					  &yydummy, director);
+		if (yyflag != yyok)
+		  {
+		    yydestruct ("Cleanup: discarding incompletely merged value for",
+				yystos[yys->yylrState],
+				&yysval, director);
+		    break;
+		  }
+		yyuserMerge (yymerger[yyp->yyrule], &yysval, &yysval_other);
+	      }
+	  }
+    }
+  else
+    yyflag = yyresolveAction (yybest, yystackp, &yysval, yylocp, director);
+
+  if (yyflag == yyok)
+    {
+      yys->yyresolved = yytrue;
+      yys->yysemantics.yysval = yysval;
+    }
+  else
+    yys->yysemantics.yyfirstVal = NULL;
+  return yyflag;
+}
+
+static YYRESULTTAG
+yyresolveStack (yyGLRStack* yystackp, bumblebee::ParserInputDirector& director)
+{
+  if (yystackp->yysplitPoint != NULL)
+    {
+      yyGLRState* yys;
+      int yyn;
+
+      for (yyn = 0, yys = yystackp->yytops.yystates[0];
+	   yys != yystackp->yysplitPoint;
+	   yys = yys->yypred, yyn += 1)
+	continue;
+      YYCHK (yyresolveStates (yystackp->yytops.yystates[0], yyn, yystackp
+			     , director));
+    }
+  return yyok;
+}
+
+static void
+yycompressStack (yyGLRStack* yystackp)
+{
+  yyGLRState* yyp, *yyq, *yyr;
+
+  if (yystackp->yytops.yysize != 1 || yystackp->yysplitPoint == NULL)
+    return;
+
+  for (yyp = yystackp->yytops.yystates[0], yyq = yyp->yypred, yyr = NULL;
+       yyp != yystackp->yysplitPoint;
+       yyr = yyp, yyp = yyq, yyq = yyp->yypred)
+    yyp->yypred = yyr;
+
+  yystackp->yyspaceLeft += yystackp->yynextFree - yystackp->yyitems;
+  yystackp->yynextFree = ((yyGLRStackItem*) yystackp->yysplitPoint) + 1;
+  yystackp->yyspaceLeft -= yystackp->yynextFree - yystackp->yyitems;
+  yystackp->yysplitPoint = NULL;
+  yystackp->yylastDeleted = NULL;
+
+  while (yyr != NULL)
+    {
+      yystackp->yynextFree->yystate = *yyr;
+      yyr = yyr->yypred;
+      yystackp->yynextFree->yystate.yypred = &yystackp->yynextFree[-1].yystate;
+      yystackp->yytops.yystates[0] = &yystackp->yynextFree->yystate;
+      yystackp->yynextFree += 1;
+      yystackp->yyspaceLeft -= 1;
+    }
+}
+
+static YYRESULTTAG
+yyprocessOneStack (yyGLRStack* yystackp, size_t yyk,
+		   size_t yyposn, bumblebee::ParserInputDirector& director)
+{
+  int yyaction;
+  const short int* yyconflicts;
+  yyRuleNum yyrule;
+
+  while (yystackp->yytops.yystates[yyk] != NULL)
+    {
+      yyStateNum yystate = yystackp->yytops.yystates[yyk]->yylrState;
+      YYDPRINTF ((stderr, "Stack %lu Entering state %d\n",
+		  (unsigned long int) yyk, yystate));
+
+      YYASSERT (yystate != YYFINAL);
+
+      if (yyisDefaultedState (yystate))
+	{
+	  yyrule = yydefaultAction (yystate);
+	  if (yyrule == 0)
+	    {
+	      YYDPRINTF ((stderr, "Stack %lu dies.\n",
+			  (unsigned long int) yyk));
+	      yymarkStackDeleted (yystackp, yyk);
+	      return yyok;
+	    }
+	  YYCHK (yyglrReduce (yystackp, yyk, yyrule, yyfalse, director));
+	}
+      else
+	{
+	  yySymbol yytoken;
+	  yystackp->yytops.yylookaheadNeeds[yyk] = yytrue;
+	  if (yychar == YYEMPTY)
+	    {
+	      YYDPRINTF ((stderr, "Reading a token: "));
+	      yychar = YYLEX;
+	      yytoken = YYTRANSLATE (yychar);
+	      YY_SYMBOL_PRINT ("Next token is", yytoken, &yylval, &yylloc);
+	    }
+	  else
+	    yytoken = YYTRANSLATE (yychar);
+	  yygetLRActions (yystate, yytoken, &yyaction, &yyconflicts);
+
+	  while (*yyconflicts != 0)
+	    {
+	      size_t yynewStack = yysplitStack (yystackp, yyk);
+	      YYDPRINTF ((stderr, "Splitting off stack %lu from %lu.\n",
+			  (unsigned long int) yynewStack,
+			  (unsigned long int) yyk));
+	      YYCHK (yyglrReduce (yystackp, yynewStack,
+				  *yyconflicts, yyfalse, director));
+	      YYCHK (yyprocessOneStack (yystackp, yynewStack,
+					yyposn, director));
+	      yyconflicts += 1;
+	    }
+
+	  if (yyisShiftAction (yyaction))
+	    break;
+	  else if (yyisErrorAction (yyaction))
+	    {
+	      YYDPRINTF ((stderr, "Stack %lu dies.\n",
+			  (unsigned long int) yyk));
+	      yymarkStackDeleted (yystackp, yyk);
+	      break;
+	    }
+	  else
+	    YYCHK (yyglrReduce (yystackp, yyk, -yyaction,
+				yyfalse, director));
+	}
+    }
+  return yyok;
+}
+
+/*ARGSUSED*/ static void
+yyreportSyntaxError (yyGLRStack* yystackp, bumblebee::ParserInputDirector& director)
+{
+  if (yystackp->yyerrState == 0)
+    {
+#if YYERROR_VERBOSE
+      int yyn;
+      yyn = yypact[yystackp->yytops.yystates[0]->yylrState];
+      if (YYPACT_NINF < yyn && yyn <= YYLAST)
+	{
+	  yySymbol yytoken = YYTRANSLATE (yychar);
+	  size_t yysize0 = yytnamerr (NULL, yytokenName (yytoken));
+	  size_t yysize = yysize0;
+	  size_t yysize1;
+	  yybool yysize_overflow = yyfalse;
+	  char* yymsg = NULL;
+	  enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
+	  char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
+	  int yyx;
+	  char *yyfmt;
+	  char const *yyf;
+	  static char const yyunexpected[] = "syntax error, unexpected %s";
+	  static char const yyexpecting[] = ", expecting %s";
+	  static char const yyor[] = " or %s";
+	  char yyformat[sizeof yyunexpected
+			+ sizeof yyexpecting - 1
+			+ ((YYERROR_VERBOSE_ARGS_MAXIMUM - 2)
+			   * (sizeof yyor - 1))];
+	  char const *yyprefix = yyexpecting;
+
+	  /* Start YYX at -YYN if negative to avoid negative indexes in
+	     YYCHECK.  */
+	  int yyxbegin = yyn < 0 ? -yyn : 0;
+
+	  /* Stay within bounds of both yycheck and yytname.  */
+	  int yychecklim = YYLAST - yyn + 1;
+	  int yyxend = yychecklim < YYNTOKENS ? yychecklim : YYNTOKENS;
+	  int yycount = 1;
+
+	  yyarg[0] = yytokenName (yytoken);
+	  yyfmt = yystpcpy (yyformat, yyunexpected);
+
+	  for (yyx = yyxbegin; yyx < yyxend; ++yyx)
+	    if (yycheck[yyx + yyn] == yyx && yyx != YYTERROR)
+	      {
+		if (yycount == YYERROR_VERBOSE_ARGS_MAXIMUM)
+		  {
+		    yycount = 1;
+		    yysize = yysize0;
+		    yyformat[sizeof yyunexpected - 1] = '\0';
+		    break;
+		  }
+		yyarg[yycount++] = yytokenName (yyx);
+		yysize1 = yysize + yytnamerr (NULL, yytokenName (yyx));
+		yysize_overflow |= yysize1 < yysize;
+		yysize = yysize1;
+		yyfmt = yystpcpy (yyfmt, yyprefix);
+		yyprefix = yyor;
+	      }
+
+	  yyf = YY_(yyformat);
+	  yysize1 = yysize + strlen (yyf);
+	  yysize_overflow |= yysize1 < yysize;
+	  yysize = yysize1;
+
+	  if (!yysize_overflow)
+	    yymsg = (char *) YYMALLOC (yysize);
+
+	  if (yymsg)
+	    {
+	      char *yyp = yymsg;
+	      int yyi = 0;
+	      while ((*yyp = *yyf))
+		{
+		  if (*yyp == '%' && yyf[1] == 's' && yyi < yycount)
+		    {
+		      yyp += yytnamerr (yyp, yyarg[yyi++]);
+		      yyf += 2;
+		    }
+		  else
+		    {
+		      yyp++;
+		      yyf++;
+		    }
+		}
+	      yyerror (director, yymsg);
+	      YYFREE (yymsg);
+	    }
+	  else
+	    {
+	      yyerror (director, YY_("syntax error"));
+	      yyMemoryExhausted (yystackp);
+	    }
+	}
+      else
+#endif /* YYERROR_VERBOSE */
+	yyerror (director, YY_("syntax error"));
+      yynerrs += 1;
+    }
+}
+
+/* Recover from a syntax error on *YYSTACKP, assuming that *YYSTACKP->YYTOKENP,
+   yylval, and yylloc are the syntactic category, semantic value, and location
+   of the look-ahead.  */
+/*ARGSUSED*/ static void
+yyrecoverSyntaxError (yyGLRStack* yystackp, bumblebee::ParserInputDirector& director)
+{
+  size_t yyk;
+  int yyj;
+
+  if (yystackp->yyerrState == 3)
+    /* We just shifted the error token and (perhaps) took some
+       reductions.  Skip tokens until we can proceed.  */
+    while (YYID (yytrue))
+      {
+	yySymbol yytoken;
+	if (yychar == YYEOF)
+	  yyFail (yystackp, director, NULL);
+	if (yychar != YYEMPTY)
+	  {
+	    yytoken = YYTRANSLATE (yychar);
+	    yydestruct ("Error: discarding",
+			yytoken, &yylval, director);
+	  }
+	YYDPRINTF ((stderr, "Reading a token: "));
+	yychar = YYLEX;
+	yytoken = YYTRANSLATE (yychar);
+	YY_SYMBOL_PRINT ("Next token is", yytoken, &yylval, &yylloc);
+	yyj = yypact[yystackp->yytops.yystates[0]->yylrState];
+	if (yyis_pact_ninf (yyj))
+	  return;
+	yyj += yytoken;
+	if (yyj < 0 || YYLAST < yyj || yycheck[yyj] != yytoken)
+	  {
+	    if (yydefact[yystackp->yytops.yystates[0]->yylrState] != 0)
+	      return;
+	  }
+	else if (yytable[yyj] != 0 && ! yyis_table_ninf (yytable[yyj]))
+	  return;
+      }
+
+  /* Reduce to one stack.  */
+  for (yyk = 0; yyk < yystackp->yytops.yysize; yyk += 1)
+    if (yystackp->yytops.yystates[yyk] != NULL)
+      break;
+  if (yyk >= yystackp->yytops.yysize)
+    yyFail (yystackp, director, NULL);
+  for (yyk += 1; yyk < yystackp->yytops.yysize; yyk += 1)
+    yymarkStackDeleted (yystackp, yyk);
+  yyremoveDeletes (yystackp);
+  yycompressStack (yystackp);
+
+  /* Now pop stack until we find a state that shifts the error token.  */
+  yystackp->yyerrState = 3;
+  while (yystackp->yytops.yystates[0] != NULL)
+    {
+      yyGLRState *yys = yystackp->yytops.yystates[0];
+      yyj = yypact[yys->yylrState];
+      if (! yyis_pact_ninf (yyj))
+	{
+	  yyj += YYTERROR;
+	  if (0 <= yyj && yyj <= YYLAST && yycheck[yyj] == YYTERROR
+	      && yyisShiftAction (yytable[yyj]))
+	    {
+	      /* Shift the error token having adjusted its location.  */
+	      YYLTYPE yyerrloc;
+	      YY_SYMBOL_PRINT ("Shifting", yystos[yytable[yyj]],
+			       &yylval, &yyerrloc);
+	      yyglrShift (yystackp, 0, yytable[yyj],
+			  yys->yyposn, &yylval, &yyerrloc);
+	      yys = yystackp->yytops.yystates[0];
+	      break;
+	    }
+	}
+
+      yydestroyGLRState ("Error: popping", yys, director);
+      yystackp->yytops.yystates[0] = yys->yypred;
+      yystackp->yynextFree -= 1;
+      yystackp->yyspaceLeft += 1;
+    }
+  if (yystackp->yytops.yystates[0] == NULL)
+    yyFail (yystackp, director, NULL);
+}
+
+#define YYCHK1(YYE)							     \
+  do {									     \
+    switch (YYE) {							     \
+    case yyok:								     \
+      break;								     \
+    case yyabort:							     \
+      goto yyabortlab;							     \
+    case yyaccept:							     \
+      goto yyacceptlab;							     \
+    case yyerr:								     \
+      goto yyuser_error;						     \
+    default:								     \
+      goto yybuglab;							     \
+    }									     \
+  } while (YYID (0))
 
 
 /*----------.
 | yyparse.  |
 `----------*/
 
-#ifdef YYPARSE_PARAM
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
-int
-yyparse (void *YYPARSE_PARAM)
-#else
-int
-yyparse (YYPARSE_PARAM)
-    void *YYPARSE_PARAM;
-#endif
-#else /* ! YYPARSE_PARAM */
-#if (defined __STDC__ || defined __C99__FUNC__ \
-     || defined __cplusplus || defined _MSC_VER)
 int
 yyparse (bumblebee::ParserInputDirector& director)
-#else
-int
-yyparse (director)
-    bumblebee::ParserInputDirector& director;
-#endif
-#endif
 {
-  
-  int yystate;
-  int yyn;
   int yyresult;
-  /* Number of tokens to shift before error messages enabled.  */
-  int yyerrstatus;
-  /* Look-ahead token as an internal (translated) token number.  */
-  int yytoken = 0;
-#if YYERROR_VERBOSE
-  /* Buffer for error messages, and its allocated size.  */
-  char yymsgbuf[128];
-  char *yymsg = yymsgbuf;
-  YYSIZE_T yymsg_alloc = sizeof yymsgbuf;
-#endif
-
-  /* Three stacks and their tools:
-     `yyss': related to states,
-     `yyvs': related to semantic values,
-     `yyls': related to locations.
-
-     Refer to the stacks thru separate pointers, to allow yyoverflow
-     to reallocate them elsewhere.  */
-
-  /* The state stack.  */
-  yytype_int16 yyssa[YYINITDEPTH];
-  yytype_int16 *yyss = yyssa;
-  yytype_int16 *yyssp;
-
-  /* The semantic value stack.  */
-  YYSTYPE yyvsa[YYINITDEPTH];
-  YYSTYPE *yyvs = yyvsa;
-  YYSTYPE *yyvsp;
-
-
-
-#define YYPOPSTACK(N)   (yyvsp -= (N), yyssp -= (N))
-
-  YYSIZE_T yystacksize = YYINITDEPTH;
-
-  /* The variables used to return semantic value and location from the
-     action routines.  */
-  YYSTYPE yyval;
-
-
-  /* The number of symbols on the RHS of the reduced rule.
-     Keep to zero when no symbol should be popped.  */
-  int yylen = 0;
+  yyGLRStack yystack;
+  yyGLRStack* const yystackp = &yystack;
+  size_t yyposn;
 
   YYDPRINTF ((stderr, "Starting parse\n"));
 
-  yystate = 0;
-  yyerrstatus = 0;
-  yynerrs = 0;
-  yychar = YYEMPTY;		/* Cause a token to be read.  */
+  yychar = YYEMPTY;
+  yylval = yyval_default;
 
-  /* Initialize stack pointers.
-     Waste one element of value and location stack
-     so that they stay on the same level as the state stack.
-     The wasted elements are never initialized.  */
 
-  yyssp = yyss;
-  yyvsp = yyvs;
-
-  goto yysetstate;
-
-/*------------------------------------------------------------.
-| yynewstate -- Push a new state, which is found in yystate.  |
-`------------------------------------------------------------*/
- yynewstate:
-  /* In all cases, when you get here, the value and location stacks
-     have just been pushed.  So pushing a state here evens the stacks.  */
-  yyssp++;
-
- yysetstate:
-  *yyssp = yystate;
-
-  if (yyss + yystacksize - 1 <= yyssp)
+  if (! yyinitGLRStack (yystackp, YYINITDEPTH))
+    goto yyexhaustedlab;
+  switch (YYSETJMP (yystack.yyexception_buffer))
     {
-      /* Get the current used size of the three stacks, in elements.  */
-      YYSIZE_T yysize = yyssp - yyss + 1;
-
-#ifdef yyoverflow
-      {
-	/* Give user a chance to reallocate the stack.  Use copies of
-	   these so that the &'s don't force the real ones into
-	   memory.  */
-	YYSTYPE *yyvs1 = yyvs;
-	yytype_int16 *yyss1 = yyss;
-
-
-	/* Each stack pointer address is followed by the size of the
-	   data in use in that stack, in bytes.  This used to be a
-	   conditional around just the two extra args, but that might
-	   be undefined if yyoverflow is a macro.  */
-	yyoverflow (YY_("memory exhausted"),
-		    &yyss1, yysize * sizeof (*yyssp),
-		    &yyvs1, yysize * sizeof (*yyvsp),
-
-		    &yystacksize);
-
-	yyss = yyss1;
-	yyvs = yyvs1;
-      }
-#else /* no yyoverflow */
-# ifndef YYSTACK_RELOCATE
-      goto yyexhaustedlab;
-# else
-      /* Extend the stack our own way.  */
-      if (YYMAXDEPTH <= yystacksize)
-	goto yyexhaustedlab;
-      yystacksize *= 2;
-      if (YYMAXDEPTH < yystacksize)
-	yystacksize = YYMAXDEPTH;
-
-      {
-	yytype_int16 *yyss1 = yyss;
-	union yyalloc *yyptr =
-	  (union yyalloc *) YYSTACK_ALLOC (YYSTACK_BYTES (yystacksize));
-	if (! yyptr)
-	  goto yyexhaustedlab;
-	YYSTACK_RELOCATE (yyss);
-	YYSTACK_RELOCATE (yyvs);
-
-#  undef YYSTACK_RELOCATE
-	if (yyss1 != yyssa)
-	  YYSTACK_FREE (yyss1);
-      }
-# endif
-#endif /* no yyoverflow */
-
-      yyssp = yyss + yysize - 1;
-      yyvsp = yyvs + yysize - 1;
-
-
-      YYDPRINTF ((stderr, "Stack size increased to %lu\n",
-		  (unsigned long int) yystacksize));
-
-      if (yyss + yystacksize - 1 <= yyssp)
-	YYABORT;
+    case 0: break;
+    case 1: goto yyabortlab;
+    case 2: goto yyexhaustedlab;
+    default: goto yybuglab;
     }
-
-  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
-
-  goto yybackup;
-
-/*-----------.
-| yybackup.  |
-`-----------*/
-yybackup:
-
-  /* Do appropriate processing given the current state.  Read a
-     look-ahead token if we need one and don't already have one.  */
-
-  /* First try to decide what to do without reference to look-ahead token.  */
-  yyn = yypact[yystate];
-  if (yyn == YYPACT_NINF)
-    goto yydefault;
-
-  /* Not known => get a look-ahead token if don't already have one.  */
-
-  /* YYCHAR is either YYEMPTY or YYEOF or a valid look-ahead symbol.  */
-  if (yychar == YYEMPTY)
-    {
-      YYDPRINTF ((stderr, "Reading a token: "));
-      yychar = YYLEX;
-    }
-
-  if (yychar <= YYEOF)
-    {
-      yychar = yytoken = YYEOF;
-      YYDPRINTF ((stderr, "Now at end of input.\n"));
-    }
-  else
-    {
-      yytoken = YYTRANSLATE (yychar);
-      YY_SYMBOL_PRINT ("Next token is", yytoken, &yylval, &yylloc);
-    }
-
-  /* If the proper action on seeing token YYTOKEN is to reduce or to
-     detect an error, take that action.  */
-  yyn += yytoken;
-  if (yyn < 0 || YYLAST < yyn || yycheck[yyn] != yytoken)
-    goto yydefault;
-  yyn = yytable[yyn];
-  if (yyn <= 0)
-    {
-      if (yyn == 0 || yyn == YYTABLE_NINF)
-	goto yyerrlab;
-      yyn = -yyn;
-      goto yyreduce;
-    }
-
-  if (yyn == YYFINAL)
-    YYACCEPT;
-
-  /* Count tokens shifted since error; after three, turn off error
-     status.  */
-  if (yyerrstatus)
-    yyerrstatus--;
-
-  /* Shift the look-ahead token.  */
-  YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
-
-  /* Discard the shifted token unless it is eof.  */
-  if (yychar != YYEOF)
-    yychar = YYEMPTY;
-
-  yystate = yyn;
-  *++yyvsp = yylval;
-
-  goto yynewstate;
-
-
-/*-----------------------------------------------------------.
-| yydefault -- do the default action for the current state.  |
-`-----------------------------------------------------------*/
-yydefault:
-  yyn = yydefact[yystate];
-  if (yyn == 0)
-    goto yyerrlab;
-  goto yyreduce;
-
-
-/*-----------------------------.
-| yyreduce -- Do a reduction.  |
-`-----------------------------*/
-yyreduce:
-  /* yyn is the number of a rule to reduce with.  */
-  yylen = yyr2[yyn];
-
-  /* If YYLEN is nonzero, implement the default value of the action:
-     `$$ = $1'.
-
-     Otherwise, the following line sets YYVAL to garbage.
-     This behavior is undocumented and Bison
-     users should not rely upon it.  Assigning to YYVAL
-     unconditionally makes the parser a bit smaller, and it avoids a
-     GCC warning that YYVAL may be used uninitialized.  */
-  yyval = yyvsp[1-yylen];
-
-
-  YY_REDUCE_PRINT (yyn);
-  switch (yyn)
-    {
-        case 3:
-#line 86 "src/parser/aspcore2.y"
-    { director.getBuilder()->onEnd();}
-    break;
-
-  case 4:
-#line 87 "src/parser/aspcore2.y"
-    { director.getBuilder()->onEnd();}
-    break;
-
-  case 5:
-#line 88 "src/parser/aspcore2.y"
-    { yyerror(director,"Generic error"); }
-    break;
-
-  case 10:
-#line 104 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onRule();
-        }
-    break;
-
-  case 11:
-#line 108 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onRule();
-        }
-    break;
-
-  case 12:
-#line 112 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onRule();
-        }
-    break;
-
-  case 13:
-#line 116 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onConstraint();
-        }
-    break;
-
-  case 14:
-#line 120 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onWeakConstraint();
-        }
-    break;
-
-  case 15:
-#line 124 "src/parser/aspcore2.y"
-    {
-			queryFound=true;
-			director.getBuilder()->onQuery();
-		}
-    break;
-
-  case 16:
-#line 132 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onHead();
-        }
-    break;
-
-  case 17:
-#line 136 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceAtom();
-            director.getBuilder()->onHead();
-        }
-    break;
-
-  case 18:
-#line 144 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onBody();
-        }
-    break;
-
-  case 19:
-#line 151 "src/parser/aspcore2.y"
-    {
-            // There is only the weight. No level and terms.
-            director.getBuilder()->onWeightAtLevels(1,0,0);
-        }
-    break;
-
-  case 20:
-#line 156 "src/parser/aspcore2.y"
-    {
-            // There are also a level and/or some terms.
-            // The finalization has been postponed to "level_and_terms".
-        }
-    break;
-
-  case 21:
-#line 164 "src/parser/aspcore2.y"
-    {
-            // There is no terms following the level.
-            director.getBuilder()->onWeightAtLevels(1,1,0);
-        }
-    break;
-
-  case 22:
-#line 169 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onWeightAtLevels(1,1,(yyvsp[(4) - (4)].integer));
-        }
-    break;
-
-  case 23:
-#line 173 "src/parser/aspcore2.y"
-    {
-            // The level is omitted.
-            // Thus, the first term, recognized as the
-            // weight, should be a term of this list.
-            director.getBuilder()->onWeightAtLevels(0,0,(yyvsp[(2) - (2)].integer)+1);
-        }
-    break;
-
-  case 24:
-#line 183 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onHeadAtom();
-        }
-    break;
-
-  case 25:
-#line 187 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onExtAtom();
-            director.getBuilder()->onHeadAtom();
-        }
-    break;
-
-  case 26:
-#line 192 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onHeadAtom();
-        }
-    break;
-
-  case 27:
-#line 196 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onHeadAtom();
-        }
-    break;
-
-  case 28:
-#line 200 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onHeadAtom();
-        }
-    break;
-
-  case 29:
-#line 207 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onBodyLiteral();
-        }
-    break;
-
-  case 30:
-#line 211 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onBodyLiteral();
-        }
-    break;
-
-  case 35:
-#line 225 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceLowerGuard();
-        }
-    break;
-
-  case 36:
-#line 232 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceUpperGuard();
-        }
-    break;
-
-  case 39:
-#line 244 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceElement();
-        }
-    break;
-
-  case 40:
-#line 248 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceElement();
-        }
-    break;
-
-  case 41:
-#line 255 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceElementAtom();
-        }
-    break;
-
-  case 42:
-#line 262 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceElementLiteral();
-        }
-    break;
-
-  case 43:
-#line 266 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onChoiceElementLiteral();
-        }
-    break;
-
-  case 44:
-#line 273 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateNafLiteral();
-        }
-    break;
-
-  case 45:
-#line 277 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateNafLiteral();
-        }
-    break;
-
-  case 46:
-#line 284 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onNafLiteral();
-        }
-    break;
-
-  case 47:
-#line 288 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onNafLiteral(true);
-        }
-    break;
-
-  case 48:
-#line 292 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onBuiltinOrList();
-            director.getBuilder()->onNafLiteral();
-        }
-    break;
-
-  case 49:
-#line 297 "src/parser/aspcore2.y"
-    {
-    		director.getBuilder()->onExtAtom();
-    	}
-    break;
-
-  case 50:
-#line 301 "src/parser/aspcore2.y"
-    {
-			director.getBuilder()->onExtAtom(true);
-		}
-    break;
-
-  case 53:
-#line 310 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregate();
-        }
-    break;
-
-  case 54:
-#line 317 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onExistentialAtom();
-        }
-    break;
-
-  case 55:
-#line 322 "src/parser/aspcore2.y"
-    { director.getBuilder()->onAtom(); }
-    break;
-
-  case 56:
-#line 323 "src/parser/aspcore2.y"
-    { director.getBuilder()->onAtom(true); }
-    break;
-
-  case 57:
-#line 328 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onPredicateName((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 58:
-#line 333 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onPredicateName((yyvsp[(1) - (4)].string));
-            delete[] (yyvsp[(1) - (4)].string);
-        }
-    break;
-
-  case 59:
-#line 338 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onPredicateName((yyvsp[(1) - (3)].string));
-            delete[] (yyvsp[(1) - (3)].string);
-        }
-    break;
-
-  case 60:
-#line 347 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onExternalPredicateName((yyvsp[(2) - (9)].string));
-            delete[] (yyvsp[(2) - (9)].string);
-        }
-    break;
-
-  case 61:
-#line 352 "src/parser/aspcore2.y"
-    {
-          director.getBuilder()->onExternalPredicateName((yyvsp[(2) - (8)].string));
-          delete[] (yyvsp[(2) - (8)].string);
-      }
-    break;
-
-  case 62:
-#line 360 "src/parser/aspcore2.y"
-    {
-	     	director.getBuilder()->onSemicolon();
-        }
-    break;
-
-  case 66:
-#line 372 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onNamedParameter();
-    }
-    break;
-
-  case 67:
-#line 378 "src/parser/aspcore2.y"
-    { (yyval.integer) = 1; }
-    break;
-
-  case 68:
-#line 379 "src/parser/aspcore2.y"
-    { (yyval.integer) = (yyvsp[(1) - (3)].integer) + 1; }
-    break;
-
-  case 73:
-#line 394 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onBuiltinAtom();
-    }
-    break;
-
-  case 74:
-#line 401 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onEqualOperator();
-        }
-    break;
-
-  case 75:
-#line 405 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onUnequalOperator();
-        }
-    break;
-
-  case 79:
-#line 418 "src/parser/aspcore2.y"
-    { (yyval.single_char) = '+'; }
-    break;
-
-  case 80:
-#line 419 "src/parser/aspcore2.y"
-    { (yyval.single_char) = '-'; }
-    break;
-
-  case 81:
-#line 423 "src/parser/aspcore2.y"
-    { (yyval.single_char) = '*'; }
-    break;
-
-  case 82:
-#line 424 "src/parser/aspcore2.y"
-    { (yyval.single_char) = '/'; }
-    break;
-
-  case 83:
-#line 425 "src/parser/aspcore2.y"
-    { (yyval.single_char) = '\\'; }
-    break;
-
-  case 84:
-#line 430 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onUnknownVariable();
-        }
-    break;
-
-  case 85:
-#line 434 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onTermRange((yyvsp[(1) - (3)].string), (yyvsp[(3) - (3)].string));
-            delete[] (yyvsp[(1) - (3)].string);
-            delete[] (yyvsp[(3) - (3)].string);
-        }
-    break;
-
-  case 86:
-#line 440 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onTermDash();
-        }
-    break;
-
-  case 88:
-#line 449 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onTerm((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 89:
-#line 454 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onTerm((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 90:
-#line 459 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onTermParams();
-        }
-    break;
-
-  case 91:
-#line 465 "src/parser/aspcore2.y"
-    {}
-    break;
-
-  case 94:
-#line 474 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onArithmeticOperation((yyvsp[(2) - (3)].single_char));
-        }
-    break;
-
-  case 95:
-#line 481 "src/parser/aspcore2.y"
-    {}
-    break;
-
-  case 96:
-#line 483 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onArithmeticOperation((yyvsp[(2) - (3)].single_char));
-        }
-    break;
-
-  case 100:
-#line 492 "src/parser/aspcore2.y"
-    {
-           director.getBuilder()->onAggregateVariableTerm((yyvsp[(1) - (1)].string));
-           delete[] (yyvsp[(1) - (1)].string);
-       }
-    break;
-
-  case 101:
-#line 500 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateGroundTerm((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 102:
-#line 505 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateGroundTerm((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 103:
-#line 510 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateGroundTerm((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 104:
-#line 515 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateGroundTerm((yyvsp[(2) - (2)].string),true);
-            delete[] (yyvsp[(2) - (2)].string);
-        }
-    break;
-
-  case 105:
-#line 523 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateVariableTerm((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 106:
-#line 528 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateUnknownVariable();
-        }
-    break;
-
-  case 107:
-#line 535 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateFunctionalTerm((yyvsp[(1) - (4)].string),(yyvsp[(3) - (4)].integer));
-            delete[] (yyvsp[(1) - (4)].string);
-       }
-    break;
-
-  case 108:
-#line 543 "src/parser/aspcore2.y"
-    {
-               director.getBuilder()->onListTerm(0);
-       }
-    break;
-
-  case 109:
-#line 547 "src/parser/aspcore2.y"
-    {
-               director.getBuilder()->onListTerm((yyvsp[(2) - (3)].integer));
-       }
-    break;
-
-  case 110:
-#line 554 "src/parser/aspcore2.y"
-    {
-                (yyval.integer) = (yyvsp[(1) - (1)].integer);
-        }
-    break;
-
-  case 111:
-#line 558 "src/parser/aspcore2.y"
-    {
-                (yyval.integer) = 2;
-        }
-    break;
-
-  case 112:
-#line 565 "src/parser/aspcore2.y"
-    {
-
-                director.getBuilder()->onHeadTailList();
-
-        }
-    break;
-
-  case 113:
-#line 574 "src/parser/aspcore2.y"
-    {
-                director.getBuilder()->onTerm((yyvsp[(1) - (1)].string));
-                delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 115:
-#line 583 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onExistentialVariable((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 116:
-#line 588 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onExistentialVariable((yyvsp[(3) - (3)].string));
-            delete[] (yyvsp[(3) - (3)].string);
-        }
-    break;
-
-  case 117:
-#line 595 "src/parser/aspcore2.y"
-    { (yyval.string) = (yyvsp[(1) - (1)].string); }
-    break;
-
-  case 118:
-#line 596 "src/parser/aspcore2.y"
-    { (yyval.string) = (yyvsp[(1) - (1)].string); }
-    break;
-
-  case 119:
-#line 597 "src/parser/aspcore2.y"
-    { (yyval.string) = (yyvsp[(1) - (1)].string); }
-    break;
-
-  case 120:
-#line 602 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onDirective((yyvsp[(1) - (2)].string),(yyvsp[(2) - (2)].string));
-            delete[] (yyvsp[(1) - (2)].string);
-            delete[] (yyvsp[(2) - (2)].string);
-        }
-    break;
-
-  case 121:
-#line 611 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAtom();
-        }
-    break;
-
-  case 122:
-#line 618 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateLowerGuard();
-        }
-    break;
-
-  case 123:
-#line 625 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateUpperGuard();
-        }
-    break;
-
-  case 126:
-#line 637 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateLowerGuard();
-        }
-    break;
-
-  case 130:
-#line 653 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateLowerGuard();
-        }
-    break;
-
-  case 132:
-#line 664 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateUpperGuard();
-        }
-    break;
-
-  case 133:
-#line 671 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateUpperGuard();
-        }
-    break;
-
-  case 141:
-#line 691 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onMultiAggregateAssignment();
-        }
-    break;
-
-  case 143:
-#line 702 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onMultiAssignVariable((yyvsp[(1) - (3)].string));
-            director.getBuilder()->onMultiAssignVariable((yyvsp[(3) - (3)].string));
-            delete[] (yyvsp[(1) - (3)].string);
-            delete[] (yyvsp[(3) - (3)].string);
-        }
-    break;
-
-  case 144:
-#line 709 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onMultiAssignVariable((yyvsp[(3) - (3)].string));
-            delete[] (yyvsp[(3) - (3)].string);
-        }
-    break;
-
-  case 145:
-#line 717 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onLessOperator();
-        }
-    break;
-
-  case 146:
-#line 721 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onLessOrEqualOperator();
-        }
-    break;
-
-  case 147:
-#line 728 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onGreaterOperator();
-        }
-    break;
-
-  case 148:
-#line 732 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onGreaterOrEqualOperator();
-        }
-    break;
-
-  case 153:
-#line 752 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 156:
-#line 766 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateElement();
-        }
-    break;
-
-  case 157:
-#line 770 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateElement();
-        }
-    break;
-
-  case 158:
-#line 777 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateGroupSemicolon();
-        }
-    break;
-
-  case 159:
-#line 784 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 160:
-#line 789 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 161:
-#line 794 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 162:
-#line 799 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 163:
-#line 804 "src/parser/aspcore2.y"
-    {
-            director.getBuilder()->onAggregateFunction((yyvsp[(1) - (1)].string));
-            delete[] (yyvsp[(1) - (1)].string);
-        }
-    break;
-
-  case 165:
-#line 824 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLCopy();
-    }
-    break;
-
-  case 167:
-#line 835 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLCopyTo((yyvsp[(2) - (2)].string));
-         delete [] (yyvsp[(2) - (2)].string);
-    }
-    break;
-
-  case 169:
-#line 847 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLStart();
-    }
-    break;
-
-  case 170:
-#line 854 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLSelect();
-    }
-    break;
-
-  case 171:
-#line 863 "src/parser/aspcore2.y"
-    {
-        char * c = new char[2];
-        c[0] = '*';
-        c[1] = '\0';
-        director.getBuilder()->onSQLQualifiedName(c);
-        delete[] c;
-        director.getBuilder()->onSQLSelectItem();
-    }
-    break;
-
-  case 175:
-#line 881 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLSelectItem();
-    }
-    break;
-
-  case 176:
-#line 890 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLFrom();
-    }
-    break;
-
-  case 179:
-#line 904 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLExtTable();
-    }
-    break;
-
-  case 180:
-#line 908 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLFromItem();
-    }
-    break;
-
-  case 181:
-#line 912 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLSubQuery();
-    }
-    break;
-
-  case 182:
-#line 919 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLExtTableName((yyvsp[(2) - (7)].string));
-        delete[] (yyvsp[(2) - (7)].string);
-    }
-    break;
-
-  case 183:
-#line 924 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLExtTableNameString((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 184:
-#line 931 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLTableRef((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 185:
-#line 936 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLTableRef((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 188:
-#line 950 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 189:
-#line 955 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-         delete[] (yyvsp[(1) - (1)].string);
-     }
-    break;
-
-  case 190:
-#line 960 "src/parser/aspcore2.y"
-    {
-          director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-          delete[] (yyvsp[(1) - (1)].string);
-      }
-    break;
-
-  case 191:
-#line 965 "src/parser/aspcore2.y"
-    {
-          director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-          delete[] (yyvsp[(1) - (1)].string);
-      }
-    break;
-
-  case 192:
-#line 970 "src/parser/aspcore2.y"
-    {
-          director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-          delete[] (yyvsp[(1) - (1)].string);
-      }
-    break;
-
-  case 193:
-#line 975 "src/parser/aspcore2.y"
-    {
-          director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-          delete[] (yyvsp[(1) - (1)].string);
-      }
-    break;
-
-  case 194:
-#line 980 "src/parser/aspcore2.y"
-    {
-          director.getBuilder()->onSQLAlias((yyvsp[(1) - (1)].string));
-          delete[] (yyvsp[(1) - (1)].string);
-      }
-    break;
-
-  case 196:
-#line 990 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLWhere();
-    }
-    break;
-
-  case 197:
-#line 997 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLPredicate();
-    }
-    break;
-
-  case 198:
-#line 1001 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLPredicate();
-        director.getBuilder()->onSQLOperatorCondition("AND");
-    }
-    break;
-
-  case 199:
-#line 1006 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLPredicate();
-        director.getBuilder()->onSQLOperatorCondition("OR");
-    }
-    break;
-
-  case 200:
-#line 1015 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLPredicateValueExprOp();
-    }
-    break;
-
-  case 201:
-#line 1019 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLLikePredicate();
-    }
-    break;
-
-  case 202:
-#line 1026 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLPredicateValueExpr();
-    }
-    break;
-
-  case 205:
-#line 1039 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLGroupByItem();
-    }
-    break;
-
-  case 206:
-#line 1043 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLGroupByItem();
-    }
-    break;
-
-  case 211:
-#line 1061 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSqlOrderCol();
-    }
-    break;
-
-  case 213:
-#line 1069 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 214:
-#line 1074 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 215:
-#line 1079 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 216:
-#line 1084 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 217:
-#line 1089 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 218:
-#line 1096 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSqlOrderModifier(nullptr);
-    }
-    break;
-
-  case 219:
-#line 1100 "src/parser/aspcore2.y"
-    {
-        char c[] = "asc";
-        director.getBuilder()->onSqlOrderModifier(c);
-    }
-    break;
-
-  case 220:
-#line 1105 "src/parser/aspcore2.y"
-    {
-        char c[] = "desc";
-        director.getBuilder()->onSqlOrderModifier(c);
-    }
-    break;
-
-  case 222:
-#line 1114 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLLimit((yyvsp[(2) - (2)].string));
-        delete[] (yyvsp[(2) - (2)].string);
-    }
-    break;
-
-  case 225:
-#line 1127 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAddTerm('+');
-    }
-    break;
-
-  case 226:
-#line 1131 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAddTerm('-');
-    }
-    break;
-
-  case 227:
-#line 1138 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLFinalizeMulExpr();
-    }
-    break;
-
-  case 229:
-#line 1146 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLMulTerm('*');
-    }
-    break;
-
-  case 230:
-#line 1150 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLMulTerm('/');
-    }
-    break;
-
-  case 231:
-#line 1158 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLValue((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 232:
-#line 1163 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLValue((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 234:
-#line 1168 "src/parser/aspcore2.y"
-    { director.getBuilder()->onSQLParenOpen(); }
-    break;
-
-  case 235:
-#line 1168 "src/parser/aspcore2.y"
-    { director.getBuilder()->onSQLParenClose(); }
-    break;
-
-  case 238:
-#line 1175 "src/parser/aspcore2.y"
-    {
-        char c[] = "*";
-        director.getBuilder()->onSQLValue(c);
-    }
-    break;
-
-  case 239:
-#line 1183 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 240:
-#line 1188 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLQualifiedName((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 241:
-#line 1193 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
-         delete[] (yyvsp[(1) - (3)].string);
-         delete[] (yyvsp[(3) - (3)].string);
-    }
-    break;
-
-  case 242:
-#line 1199 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
-         delete[] (yyvsp[(1) - (3)].string);
-         delete[] (yyvsp[(3) - (3)].string);
-    }
-    break;
-
-  case 243:
-#line 1205 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
-         delete[] (yyvsp[(1) - (3)].string);
-         delete[] (yyvsp[(3) - (3)].string);
-    }
-    break;
-
-  case 244:
-#line 1211 "src/parser/aspcore2.y"
-    {
-         director.getBuilder()->onSQLQualifiedName((yyvsp[(3) - (3)].string), (yyvsp[(1) - (3)].string));
-         delete[] (yyvsp[(1) - (3)].string);
-         delete[] (yyvsp[(3) - (3)].string);
-    }
-    break;
-
-  case 245:
-#line 1222 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 246:
-#line 1227 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 247:
-#line 1232 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 248:
-#line 1237 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-  case 249:
-#line 1242 "src/parser/aspcore2.y"
-    {
-        director.getBuilder()->onSQLAggregateFunction((yyvsp[(1) - (1)].string));
-        delete[] (yyvsp[(1) - (1)].string);
-    }
-    break;
-
-
-/* Line 1267 of yacc.c.  */
-#line 3195 "src/parser/aspcore2_parser.hpp"
-      default: break;
-    }
-  YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
-
-  YYPOPSTACK (yylen);
-  yylen = 0;
-  YY_STACK_PRINT (yyss, yyssp);
-
-  *++yyvsp = yyval;
-
-
-  /* Now `shift' the result of the reduction.  Determine what state
-     that goes to, based on the state we popped back to and the rule
-     number reduced by.  */
-
-  yyn = yyr1[yyn];
-
-  yystate = yypgoto[yyn - YYNTOKENS] + *yyssp;
-  if (0 <= yystate && yystate <= YYLAST && yycheck[yystate] == *yyssp)
-    yystate = yytable[yystate];
-  else
-    yystate = yydefgoto[yyn - YYNTOKENS];
-
-  goto yynewstate;
-
-
-/*------------------------------------.
-| yyerrlab -- here on detecting error |
-`------------------------------------*/
-yyerrlab:
-  /* If not already recovering from an error, report this error.  */
-  if (!yyerrstatus)
-    {
-      ++yynerrs;
-#if ! YYERROR_VERBOSE
-      yyerror (director, YY_("syntax error"));
-#else
-      {
-	YYSIZE_T yysize = yysyntax_error (0, yystate, yychar);
-	if (yymsg_alloc < yysize && yymsg_alloc < YYSTACK_ALLOC_MAXIMUM)
-	  {
-	    YYSIZE_T yyalloc = 2 * yysize;
-	    if (! (yysize <= yyalloc && yyalloc <= YYSTACK_ALLOC_MAXIMUM))
-	      yyalloc = YYSTACK_ALLOC_MAXIMUM;
-	    if (yymsg != yymsgbuf)
-	      YYSTACK_FREE (yymsg);
-	    yymsg = (char *) YYSTACK_ALLOC (yyalloc);
-	    if (yymsg)
-	      yymsg_alloc = yyalloc;
-	    else
-	      {
-		yymsg = yymsgbuf;
-		yymsg_alloc = sizeof yymsgbuf;
-	      }
-	  }
-
-	if (0 < yysize && yysize <= yymsg_alloc)
-	  {
-	    (void) yysyntax_error (yymsg, yystate, yychar);
-	    yyerror (director, yymsg);
-	  }
-	else
-	  {
-	    yyerror (director, YY_("syntax error"));
-	    if (yysize != 0)
-	      goto yyexhaustedlab;
-	  }
-      }
-#endif
-    }
-
-
-
-  if (yyerrstatus == 3)
-    {
-      /* If just tried and failed to reuse look-ahead token after an
-	 error, discard it.  */
-
-      if (yychar <= YYEOF)
+  yyglrShift (&yystack, 0, 0, 0, &yylval, &yylloc);
+  yyposn = 0;
+
+  while (YYID (yytrue))
+    {
+      /* For efficiency, we have two loops, the first of which is
+	 specialized to deterministic operation (single stack, no
+	 potential ambiguity).  */
+      /* Standard mode */
+      while (YYID (yytrue))
 	{
-	  /* Return failure if at end of input.  */
-	  if (yychar == YYEOF)
-	    YYABORT;
-	}
-      else
-	{
-	  yydestruct ("Error: discarding",
-		      yytoken, &yylval, director);
-	  yychar = YYEMPTY;
-	}
-    }
+	  yyRuleNum yyrule;
+	  int yyaction;
+	  const short int* yyconflicts;
 
-  /* Else will try to reuse look-ahead token after shifting the error
-     token.  */
-  goto yyerrlab1;
-
-
-/*---------------------------------------------------.
-| yyerrorlab -- error raised explicitly by YYERROR.  |
-`---------------------------------------------------*/
-yyerrorlab:
-
-  /* Pacify compilers like GCC when the user code never invokes
-     YYERROR and the label yyerrorlab therefore never appears in user
-     code.  */
-  if (/*CONSTCOND*/ 0)
-     goto yyerrorlab;
-
-  /* Do not reclaim the symbols of the rule which action triggered
-     this YYERROR.  */
-  YYPOPSTACK (yylen);
-  yylen = 0;
-  YY_STACK_PRINT (yyss, yyssp);
-  yystate = *yyssp;
-  goto yyerrlab1;
-
-
-/*-------------------------------------------------------------.
-| yyerrlab1 -- common code for both syntax error and YYERROR.  |
-`-------------------------------------------------------------*/
-yyerrlab1:
-  yyerrstatus = 3;	/* Each real token shifted decrements this.  */
-
-  for (;;)
-    {
-      yyn = yypact[yystate];
-      if (yyn != YYPACT_NINF)
-	{
-	  yyn += YYTERROR;
-	  if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR)
+	  yyStateNum yystate = yystack.yytops.yystates[0]->yylrState;
+	  YYDPRINTF ((stderr, "Entering state %d\n", yystate));
+	  if (yystate == YYFINAL)
+	    goto yyacceptlab;
+	  if (yyisDefaultedState (yystate))
 	    {
-	      yyn = yytable[yyn];
-	      if (0 < yyn)
+	      yyrule = yydefaultAction (yystate);
+	      if (yyrule == 0)
+		{
+
+		  yyreportSyntaxError (&yystack, director);
+		  goto yyuser_error;
+		}
+	      YYCHK1 (yyglrReduce (&yystack, 0, yyrule, yytrue, director));
+	    }
+	  else
+	    {
+	      yySymbol yytoken;
+	      if (yychar == YYEMPTY)
+		{
+		  YYDPRINTF ((stderr, "Reading a token: "));
+		  yychar = YYLEX;
+		  yytoken = YYTRANSLATE (yychar);
+		  YY_SYMBOL_PRINT ("Next token is", yytoken, &yylval, &yylloc);
+		}
+	      else
+		yytoken = YYTRANSLATE (yychar);
+	      yygetLRActions (yystate, yytoken, &yyaction, &yyconflicts);
+	      if (*yyconflicts != 0)
 		break;
+	      if (yyisShiftAction (yyaction))
+		{
+		  YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
+		  if (yychar != YYEOF)
+		    yychar = YYEMPTY;
+		  yyposn += 1;
+		  yyglrShift (&yystack, 0, yyaction, yyposn, &yylval, &yylloc);
+		  if (0 < yystack.yyerrState)
+		    yystack.yyerrState -= 1;
+		}
+	      else if (yyisErrorAction (yyaction))
+		{
+
+		  yyreportSyntaxError (&yystack, director);
+		  goto yyuser_error;
+		}
+	      else
+		YYCHK1 (yyglrReduce (&yystack, 0, -yyaction, yytrue, director));
 	    }
 	}
 
-      /* Pop the current state because it cannot handle the error token.  */
-      if (yyssp == yyss)
-	YYABORT;
+      while (YYID (yytrue))
+	{
+	  yySymbol yytoken_to_shift;
+	  size_t yys;
 
+	  for (yys = 0; yys < yystack.yytops.yysize; yys += 1)
+	    yystackp->yytops.yylookaheadNeeds[yys] = yychar != YYEMPTY;
 
-      yydestruct ("Error: popping",
-		  yystos[yystate], yyvsp, director);
-      YYPOPSTACK (1);
-      yystate = *yyssp;
-      YY_STACK_PRINT (yyss, yyssp);
+	  /* yyprocessOneStack returns one of three things:
+
+	      - An error flag.  If the caller is yyprocessOneStack, it
+		immediately returns as well.  When the caller is finally
+		yyparse, it jumps to an error label via YYCHK1.
+
+	      - yyok, but yyprocessOneStack has invoked yymarkStackDeleted
+		(&yystack, yys), which sets the top state of yys to NULL.  Thus,
+		yyparse's following invocation of yyremoveDeletes will remove
+		the stack.
+
+	      - yyok, when ready to shift a token.
+
+	     Except in the first case, yyparse will invoke yyremoveDeletes and
+	     then shift the next token onto all remaining stacks.  This
+	     synchronization of the shift (that is, after all preceding
+	     reductions on all stacks) helps prevent double destructor calls
+	     on yylval in the event of memory exhaustion.  */
+
+	  for (yys = 0; yys < yystack.yytops.yysize; yys += 1)
+	    YYCHK1 (yyprocessOneStack (&yystack, yys, yyposn, director));
+	  yyremoveDeletes (&yystack);
+	  if (yystack.yytops.yysize == 0)
+	    {
+	      yyundeleteLastStack (&yystack);
+	      if (yystack.yytops.yysize == 0)
+		yyFail (&yystack, director, YY_("syntax error"));
+	      YYCHK1 (yyresolveStack (&yystack, director));
+	      YYDPRINTF ((stderr, "Returning to deterministic operation.\n"));
+
+	      yyreportSyntaxError (&yystack, director);
+	      goto yyuser_error;
+	    }
+
+	  /* If any yyglrShift call fails, it will fail after shifting.  Thus,
+	     a copy of yylval will already be on stack 0 in the event of a
+	     failure in the following loop.  Thus, yychar is set to YYEMPTY
+	     before the loop to make sure the user destructor for yylval isn't
+	     called twice.  */
+	  yytoken_to_shift = YYTRANSLATE (yychar);
+	  yychar = YYEMPTY;
+	  yyposn += 1;
+	  for (yys = 0; yys < yystack.yytops.yysize; yys += 1)
+	    {
+	      int yyaction;
+	      const short int* yyconflicts;
+	      yyStateNum yystate = yystack.yytops.yystates[yys]->yylrState;
+	      yygetLRActions (yystate, yytoken_to_shift, &yyaction,
+			      &yyconflicts);
+	      /* Note that yyconflicts were handled by yyprocessOneStack.  */
+	      YYDPRINTF ((stderr, "On stack %lu, ", (unsigned long int) yys));
+	      YY_SYMBOL_PRINT ("shifting", yytoken_to_shift, &yylval, &yylloc);
+	      yyglrShift (&yystack, yys, yyaction, yyposn,
+			  &yylval, &yylloc);
+	      YYDPRINTF ((stderr, "Stack %lu now in state #%d\n",
+			  (unsigned long int) yys,
+			  yystack.yytops.yystates[yys]->yylrState));
+	    }
+
+	  if (yystack.yytops.yysize == 1)
+	    {
+	      YYCHK1 (yyresolveStack (&yystack, director));
+	      YYDPRINTF ((stderr, "Returning to deterministic operation.\n"));
+	      yycompressStack (&yystack);
+	      break;
+	    }
+	}
+      continue;
+    yyuser_error:
+      yyrecoverSyntaxError (&yystack, director);
+      yyposn = yystack.yytops.yystates[0]->yyposn;
     }
 
-  if (yyn == YYFINAL)
-    YYACCEPT;
-
-  *++yyvsp = yylval;
-
-
-  /* Shift the error token.  */
-  YY_SYMBOL_PRINT ("Shifting", yystos[yyn], yyvsp, yylsp);
-
-  yystate = yyn;
-  goto yynewstate;
-
-
-/*-------------------------------------.
-| yyacceptlab -- YYACCEPT comes here.  |
-`-------------------------------------*/
-yyacceptlab:
+ yyacceptlab:
   yyresult = 0;
   goto yyreturn;
 
-/*-----------------------------------.
-| yyabortlab -- YYABORT comes here.  |
-`-----------------------------------*/
-yyabortlab:
+ yybuglab:
+  YYASSERT (yyfalse);
+  goto yyabortlab;
+
+ yyabortlab:
   yyresult = 1;
   goto yyreturn;
 
-#ifndef yyoverflow
-/*-------------------------------------------------.
-| yyexhaustedlab -- memory exhaustion comes here.  |
-`-------------------------------------------------*/
-yyexhaustedlab:
+ yyexhaustedlab:
   yyerror (director, YY_("memory exhausted"));
   yyresult = 2;
-  /* Fall through.  */
-#endif
+  goto yyreturn;
 
-yyreturn:
+ yyreturn:
   if (yychar != YYEOF && yychar != YYEMPTY)
-     yydestruct ("Cleanup: discarding lookahead",
-		 yytoken, &yylval, director);
-  /* Do not reclaim the symbols of the rule which action triggered
-     this YYABORT or YYACCEPT.  */
-  YYPOPSTACK (yylen);
-  YY_STACK_PRINT (yyss, yyssp);
-  while (yyssp != yyss)
+    yydestruct ("Cleanup: discarding lookahead",
+		YYTRANSLATE (yychar),
+		&yylval, director);
+
+  /* If the stack is well-formed, pop the stack until it is empty,
+     destroying its entries as we go.  But free the stack regardless
+     of whether it is well-formed.  */
+  if (yystack.yyitems)
     {
-      yydestruct ("Cleanup: popping",
-		  yystos[*yyssp], yyvsp, director);
-      YYPOPSTACK (1);
+      yyGLRState** yystates = yystack.yytops.yystates;
+      if (yystates)
+	{
+	  size_t yysize = yystack.yytops.yysize;
+	  size_t yyk;
+	  for (yyk = 0; yyk < yysize; yyk += 1)
+	    if (yystates[yyk])
+	      {
+		while (yystates[yyk])
+		  {
+		    yyGLRState *yys = yystates[yyk];
+		    yydestroyGLRState ("Cleanup: popping", yys, director);
+		    yystates[yyk] = yys->yypred;
+		    yystack.yynextFree -= 1;
+		    yystack.yyspaceLeft += 1;
+		  }
+		break;
+	      }
+	}
+      yyfreeGLRStack (&yystack);
     }
-#ifndef yyoverflow
-  if (yyss != yyssa)
-    YYSTACK_FREE (yyss);
-#endif
-#if YYERROR_VERBOSE
-  if (yymsg != yymsgbuf)
-    YYSTACK_FREE (yymsg);
-#endif
+
   /* Make sure YYID is used.  */
   return YYID (yyresult);
 }
+
+/* DEBUGGING ONLY */
+#ifdef YYDEBUG
+static void yypstack (yyGLRStack* yystackp, size_t yyk)
+  __attribute__ ((__unused__));
+static void yypdumpstack (yyGLRStack* yystackp) __attribute__ ((__unused__));
+
+static void
+yy_yypstack (yyGLRState* yys)
+{
+  if (yys->yypred)
+    {
+      yy_yypstack (yys->yypred);
+      fprintf (stderr, " -> ");
+    }
+  fprintf (stderr, "%d@%lu", yys->yylrState, (unsigned long int) yys->yyposn);
+}
+
+static void
+yypstates (yyGLRState* yyst)
+{
+  if (yyst == NULL)
+    fprintf (stderr, "<null>");
+  else
+    yy_yypstack (yyst);
+  fprintf (stderr, "\n");
+}
+
+static void
+yypstack (yyGLRStack* yystackp, size_t yyk)
+{
+  yypstates (yystackp->yytops.yystates[yyk]);
+}
+
+#define YYINDEX(YYX)							     \
+    ((YYX) == NULL ? -1 : (yyGLRStackItem*) (YYX) - yystackp->yyitems)
+
+
+static void
+yypdumpstack (yyGLRStack* yystackp)
+{
+  yyGLRStackItem* yyp;
+  size_t yyi;
+  for (yyp = yystackp->yyitems; yyp < yystackp->yynextFree; yyp += 1)
+    {
+      fprintf (stderr, "%3lu. ", (unsigned long int) (yyp - yystackp->yyitems));
+      if (*(yybool *) yyp)
+	{
+	  fprintf (stderr, "Res: %d, LR State: %d, posn: %lu, pred: %ld",
+		   yyp->yystate.yyresolved, yyp->yystate.yylrState,
+		   (unsigned long int) yyp->yystate.yyposn,
+		   (long int) YYINDEX (yyp->yystate.yypred));
+	  if (! yyp->yystate.yyresolved)
+	    fprintf (stderr, ", firstVal: %ld",
+		     (long int) YYINDEX (yyp->yystate.yysemantics.yyfirstVal));
+	}
+      else
+	{
+	  fprintf (stderr, "Option. rule: %d, state: %ld, next: %ld",
+		   yyp->yyoption.yyrule - 1,
+		   (long int) YYINDEX (yyp->yyoption.yystate),
+		   (long int) YYINDEX (yyp->yyoption.yynext));
+	}
+      fprintf (stderr, "\n");
+    }
+  fprintf (stderr, "Tops:");
+  for (yyi = 0; yyi < yystackp->yytops.yysize; yyi += 1)
+    fprintf (stderr, "%lu: %ld; ", (unsigned long int) yyi,
+	     (long int) YYINDEX (yystackp->yytops.yystates[yyi]));
+  fprintf (stderr, "\n");
+}
+#endif
+
 
 
 

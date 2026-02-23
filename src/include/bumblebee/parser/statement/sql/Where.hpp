@@ -17,6 +17,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <memory>
+#include <variant>
 #include "ValueExpr.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
 
@@ -78,7 +80,31 @@ private:
     ValueExpr value2_;
 };
 
-using predicate_vector_t = std::vector<Predicate>;
+// Forward-declare Where so WhereGroup can hold a unique_ptr<Where>
+class Where;
+
+// WhereGroup wraps a parenthesized nested WHERE condition.
+// Uses unique_ptr<Where> to break the circular type dependency.
+class WhereGroup {
+public:
+    WhereGroup();
+    explicit WhereGroup(Where where);
+    ~WhereGroup();
+    WhereGroup(const WhereGroup &other);
+    WhereGroup(WhereGroup &&other) noexcept;
+    WhereGroup & operator=(const WhereGroup &other);
+    WhereGroup & operator=(WhereGroup &&other) noexcept;
+
+    Where & getWhere();
+    const Where & getWhere() const;
+
+private:
+    std::unique_ptr<Where> where_;
+};
+
+// A WhereItem is either a flat Predicate or a parenthesized WhereGroup.
+using WhereItem = std::variant<Predicate, WhereGroup>;
+using predicate_vector_t = std::vector<WhereItem>;
 
 class Where {
 public:
@@ -90,6 +116,7 @@ public:
     Where & operator=(Where &&other) noexcept;
 
     void addItem(Predicate& condition);
+    void addGroup(WhereGroup group);
     void addOperator(SQLOperator op);
 
     predicate_vector_t & getItems();
@@ -97,7 +124,8 @@ public:
 
     vector<SQLOperator> & getOps();
 
-    string toString()const;
+    string toString() const;
+    string toStringCondition() const;
 
     static SQLOperator getOp(string& op);
     static string getStringFromOp(SQLOperator op);

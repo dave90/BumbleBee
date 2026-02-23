@@ -938,6 +938,21 @@ void ParserInputBuilder::onSQLPredicate() {
     sqlStatements_.back().getWhere().addItem(sqlPredicate_);
 }
 
+void ParserInputBuilder::onSQLWhereGroupBegin() {
+    // Save the current (outer) WHERE context and start a fresh one for the inner group
+    whereContextStack_.push_back(std::move(sqlStatements_.back().getWhere()));
+    sqlStatements_.back().getWhere().clear();
+}
+
+void ParserInputBuilder::onSQLWhereGroupEnd() {
+    // Package the completed inner WHERE as a WhereGroup, then restore the outer context
+    auto innerWhere = std::move(sqlStatements_.back().getWhere());
+    sqlStatements_.back().getWhere() = std::move(whereContextStack_.back());
+    whereContextStack_.pop_back();
+    sql::WhereGroup group(std::move(innerWhere));
+    sqlStatements_.back().getWhere().addGroup(std::move(group));
+}
+
 void ParserInputBuilder::onSQLWhere() {
 
 }

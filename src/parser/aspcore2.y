@@ -1,3 +1,4 @@
+%glr-parser
 %{
 //////////////////////////////////////////////////////////////////////////////
 // aspcore2.y
@@ -23,7 +24,12 @@ This file is part of the ASPCOMP2013 ASP-Core-2 validator (validator in the foll
 #include "bumblebee/parser/ParserInputDirector.hpp"
 #include <iostream>
 
+/* GLR mode causes bison to emit this preamble in both the .h and the .hpp files.
+   Guard against the resulting redefinition when both headers are included together. */
+#ifndef BUMBLEBEE_QUERY_FOUND_GUARD
+#define BUMBLEBEE_QUERY_FOUND_GUARD
 bool queryFound=false;
+#endif
 
 
 %}
@@ -993,19 +999,36 @@ opt_where
     ;
 
 search_condition
+    : search_atom
+    | search_condition AND search_atom
+    {
+        director.getBuilder()->onSQLOperatorCondition("AND");
+    }
+    | search_condition OR  search_atom
+    {
+        director.getBuilder()->onSQLOperatorCondition("OR");
+    }
+    ;
+
+search_atom
     : predicate
     {
         director.getBuilder()->onSQLPredicate();
     }
-    | search_condition AND predicate
+    | where_group
+    ;
+
+where_group
+    : begin_group search_condition PARAM_CLOSE
     {
-        director.getBuilder()->onSQLPredicate();
-        director.getBuilder()->onSQLOperatorCondition("AND");
+        director.getBuilder()->onSQLWhereGroupEnd();
     }
-    | search_condition OR  predicate
+    ;
+
+begin_group
+    : PARAM_OPEN
     {
-        director.getBuilder()->onSQLPredicate();
-        director.getBuilder()->onSQLOperatorCondition("OR");
+        director.getBuilder()->onSQLWhereGroupBegin();
     }
     ;
 

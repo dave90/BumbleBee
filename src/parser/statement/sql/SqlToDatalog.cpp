@@ -100,6 +100,23 @@ void fillQTable(sql::ValuePrimary& vi, std::unordered_map<string, vector<string>
     }
 }
 
+// Recursively fill table qualifiers for all predicates inside a WhereItem.
+static void fillWhereQTable(sql::WhereItem& item,
+    std::unordered_map<string, vector<string>>& colsTableMap, string& errorMessage) {
+    std::visit([&](auto& wi) {
+        using T = std::decay_t<decltype(wi)>;
+        if constexpr (std::is_same_v<T, sql::Predicate>) {
+            for (auto& vi: wi.getValue1().getValues())
+                fillQTable(vi, colsTableMap, errorMessage);
+            for (auto& vi: wi.getValue2().getValues())
+                fillQTable(vi, colsTableMap, errorMessage);
+        } else { // sql::WhereGroup
+            for (auto& inner: wi.getWhere().getItems())
+                fillWhereQTable(inner, colsTableMap, errorMessage);
+        }
+    }, item);
+}
+
 void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& statement) {
     // process from items
     // register the columns of the tables
@@ -163,16 +180,9 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
 
         query_.tableColumnsMap_[statement.getAlias()].insert(ve.getAlias());
     }
-    // fill the where values
-    for (auto& p: statement.getWhere().getItems()) {
-        auto& vi1 = p.getValue1();
-        auto& vi2 = p.getValue2();
-
-        // se the table information if empty
-        for (auto& vi: vi1.getValues())
-            fillQTable(vi, colsTableMap, result_.errorMessage_);
-        for (auto& vi: vi2.getValues())
-            fillQTable(vi, colsTableMap, result_.errorMessage_);
+    // fill the where values (recurse into WhereGroups)
+    for (auto& item: statement.getWhere().getItems()) {
+        fillWhereQTable(item, colsTableMap, result_.errorMessage_);
     }
     // fill the groupo by values
     for (auto& ve: statement.getGroupby().getItems()) {
@@ -591,42 +601,111 @@ vector<vector<Atom>> distributeBinopAtoms(vector<vector<Atom>>& cnf1,vector<vect
     return result;
 }
 
-void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& predicates, vector<sql::SQLOperator>& ops, SQLQuery& query, string& errorMessage) {
-    vector<vector<Atom>> binopAtomsDNF;
-    BB_ASSERT(predicates.empty() || predicates.size() == ops.size() +1);
-    binopAtomsDNF.emplace_back();
-    for (idx_t i =0;i<predicates.size();++i){
-        auto& p = predicates[i];
+using CNF = vector<vector<Atom>>;
 
-        if (p.getOp() == sql::SQL_LIKE) {
+// Forward declaration
+static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
+    bool insideGroup, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage);
+
+// Generate a CNF for a single WhereItem.
+// LIKE predicates: add to likeBody and return {{}} (OR-identity, skipped in final output).
+// Predicates: return {{atom}}.
+// WhereGroups: recurse.
+static CNF generateWhereItemCNF(sql::WhereItem& item, bool insideGroup,
+    vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
+    if (auto* pred = std::get_if<sql::Predicate>(&item)) {
+        if (pred->getOp() == sql::SQL_LIKE) {
+            if (insideGroup) {
+                errorMessage = "LIKE operator inside grouped WHERE conditions is not supported";
+                return {};
+            }
+            auto atom = generateLikeAtom(*pred, query, errorMessage);
+            if (!errorMessage.empty()) return {};
+            likeBody.push_back(std::move(atom));
+            // Return a CNF with one empty clause: acts as OR-identity in distributeBinopAtoms
+            CNF result;
+            result.emplace_back();
+            return result;
+        }
+        auto atom = generateBuiltinFromPredCondition(*pred, query, errorMessage);
+        if (!errorMessage.empty()) return {};
+        CNF result;
+        result.emplace_back();
+        result.back().push_back(std::move(atom));
+        return result;
+    } else { // sql::WhereGroup
+        auto& group = std::get<sql::WhereGroup>(item);
+        auto& w = group.getWhere();
+        return generateWhereListCNF(w.getItems(), w.getOps(), true, likeBody, query, errorMessage);
+    }
+}
+
+// Generate a CNF from a list of WhereItems connected by ops.
+// Implements SQL-standard AND > OR precedence:
+//   items between consecutive ORs form AND-groups; the AND-groups are then OR-distributed.
+// AND-groups: concatenate item CNFs; OR of groups: distribute (Cartesian product).
+static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
+    bool insideGroup, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
+    if (items.empty()) return {};
+    BB_ASSERT(items.size() == ops.size() + 1);
+
+    // Pre-check: LIKE in OR context is not supported
+    for (idx_t i = 0; i < items.size(); ++i) {
+        auto* pred = std::get_if<sql::Predicate>(&items[i]);
+        if (pred && pred->getOp() == sql::SQL_LIKE) {
+            if (insideGroup) {
+                errorMessage = "LIKE operator inside grouped WHERE conditions is not supported";
+                return {};
+            }
             if (i < ops.size() && ops[i] == sql::SQL_OR) {
                 errorMessage = "LIKE operator inside OR conditions is not supported";
-                return;
+                return {};
             }
-            auto likeAtom = generateLikeAtom(p, query, errorMessage);
-            if (!errorMessage.empty()) return;
-            body.push_back(std::move(likeAtom));
-            continue;
         }
+    }
 
-        auto batom = generateBuiltinFromPredCondition(p, query, errorMessage);
-        binopAtomsDNF.back().push_back(std::move(batom));
-        if (i < ops.size() && ops[i] == sql::SQL_OR) {
-            // we have an or so we need to generate builtin or list
-            binopAtomsDNF.emplace_back();
+    // Split items into OR-separated AND-groups.
+    // Each AND-group is a range [start, end) of item indices connected by AND.
+    vector<std::pair<idx_t, idx_t>> andGroups; // (start, end) inclusive ranges
+    idx_t groupStart = 0;
+    for (idx_t i = 0; i < ops.size(); ++i) {
+        if (ops[i] == sql::SQL_OR) {
+            andGroups.emplace_back(groupStart, i);
+            groupStart = i + 1;
         }
     }
-    if (binopAtomsDNF[0].empty()) return;
-    // transform in CNF (AND of ORs)
-    auto binopAtomsCNF = toBinopAtomsCnf(binopAtomsDNF[0]);
-    for (idx_t i=1;i<binopAtomsDNF.size();++i) {
-        auto c = toBinopAtomsCnf(binopAtomsDNF[i]);
-        binopAtomsCNF = distributeBinopAtoms(binopAtomsCNF, c);
+    andGroups.emplace_back(groupStart, (idx_t)items.size() - 1);
+
+    // For each AND-group, conjoin the item CNFs (AND = concatenate clauses).
+    // Then distribute (OR) the AND-group CNFs.
+    CNF result;
+    for (idx_t gi = 0; gi < andGroups.size(); ++gi) {
+        auto [start, end] = andGroups[gi];
+        CNF groupCnf = generateWhereItemCNF(items[start], insideGroup, likeBody, query, errorMessage);
+        if (!errorMessage.empty()) return {};
+        for (idx_t j = start + 1; j <= end; ++j) {
+            CNF next = generateWhereItemCNF(items[j], insideGroup, likeBody, query, errorMessage);
+            if (!errorMessage.empty()) return {};
+            for (auto& clause: next) groupCnf.push_back(std::move(clause));
+        }
+        if (gi == 0) {
+            result = std::move(groupCnf);
+        } else {
+            result = distributeBinopAtoms(result, groupCnf);
+        }
     }
-    // now generate the binops atom
-    for (auto& atoms : binopAtomsCNF) {
-        Atom binopAtom = Atom::createOrBuiltinAtom(atoms);
-        body.push_back(std::move(binopAtom));
+    return result;
+}
+
+void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops, SQLQuery& query, string& errorMessage) {
+    if (items.empty()) return;
+    vector<Atom> likeBody;
+    auto cnf = generateWhereListCNF(items, ops, false, likeBody, query, errorMessage);
+    if (!errorMessage.empty()) return;
+    for (auto& likeAtom: likeBody) body.push_back(std::move(likeAtom));
+    for (auto& atoms: cnf) {
+        if (atoms.empty()) continue; // skip empty clauses (OR-identity placeholder from LIKE)
+        body.push_back(Atom::createOrBuiltinAtom(atoms));
     }
 }
 

@@ -1,0 +1,27 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_cmp_%,delta_vs_prev,output_match
+Cross product 3,join_cp.3,1.4399,1.3653,1.5138,-3.4194,-70.37%,-0.0810,match
+Join NL 1,join_nl.1,0.2354,0.2348,0.2364,-0.2012,-46.08%,0.0138,match
+Join NL 3,join_nl.3,1.7481,1.7375,1.7574,-0.4264,-19.61%,0.0494,match
+Join NL 4,join_nl.4,0.6687,0.6227,0.7196,-1.3465,-66.81%,-0.0753,match
+Join HT 1,join_ht.1,3.5075,3.4091,3.5951,-4.3231,-55.21%,0.0872,match
+Join HT 3,join_ht.3,10.9783,10.9031,11.0447,-0.8047,-6.83%,0.1421,mismatch
+Join HT 4,join_ht.4,9.1497,8.6123,9.4450,-0.7102,-7.20%,0.2585,match
+Join HT 5,join_ht.5,23.8232,23.4247,24.0796,0.0155,0.07%,-1.5153,match
+Aggregates 1,agg.1,0.9957,0.9882,0.9995,-0.7940,-44.36%,-0.0378,match
+Aggregates 2,agg.2,0.7627,0.7082,0.8267,-0.9348,-55.07%,0.1033,match
+Aggregates Complex 1,agg.complex.1,49.1150,44.4583,52.7105,-46.9992,-48.90%,11.9659,mismatch
+Aggregates MinMax 1,agg.minmax.1,3.3197,3.1658,3.4373,-4.0066,-54.69%,0.3346,match
+Aggregates Single 1,agg.single.1,8.5405,7.9096,9.5628,-4.3262,-33.62%,1.1587,match
+Aggregates Single 2,agg.single.2,7.6658,7.6279,7.7148,-4.9343,-39.16%,0.8220,match
+Aggregates Single 3,agg.single.3,7.7329,7.7099,7.7698,-4.8471,-38.53%,0.8930,match
+Reach 1,reach.1,1.9834,1.8964,2.1366,0.0667,3.48%,0.0450,match
+ORB Join 2,orb_join_2,2.6727,2.5653,2.7274,-0.3414,-11.33%,0.2766,match
+ORB Join A 10K,orb_join_a.10k,7.0658,6.9987,7.1629,-0.3847,-5.16%,0.1439,match
+ORB JOIN A Duplicates 10k,orb_join_a_duplicates.10k,69.4587,69.0421,69.9308,-1.0708,-1.52%,0.0797,match
+ORB Join B2 250k,orb_join_b2.250k,5.2850,5.1794,5.3413,-0.1467,-2.70%,0.1745,match
+ORB Join B2 Duplicates 10k,orb_join_b2_duplicates.10k,0.2537,0.2457,0.2615,-0.0012,-0.45%,0.0015,match
+ORB SG Cyc 2k,orb_sg_cyc.2k,1.8471,1.8114,1.8726,-1.6508,-47.19%,0.0143,match
+ORB SG NoCyc 4k,orb_sg_nocyc.4k,10.9335,10.7130,11.1034,-10.4605,-48.89%,0.2413,match
+ORB TC Cyc 50k,orb_tc_cyc.50k,0.7675,0.7588,0.7727,-0.6693,-46.58%,0.0001,match
+ORB DTC Cyc 50k,orb_dtc_cyc.50k,9.8162,9.6787,9.9385,-8.8034,-47.28%,-0.6756,match
+ORB TC Cyc 500k,orb_tc_cyc.500k,5.7891,5.7779,5.8013,-4.9455,-46.07%,-1.1211,match
