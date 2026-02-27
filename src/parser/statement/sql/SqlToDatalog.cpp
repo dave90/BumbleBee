@@ -42,6 +42,11 @@ string SQLQuery::getVariableName(const string &table, const string &col) {
 SqlQueryNormalizer::SqlQueryNormalizer(SQLQuery &query): query_(query) {
 }
 
+void SqlQueryNormalizer::setOuterColumnsMap(
+    const std::unordered_map<string, std::unordered_set<string>>& outerMap) {
+    outerColumnsMap_ = &outerMap;
+}
+
 void SqlQueryNormalizer::normalize() {
     assignAliasesAndCollectColumns(query_.statement_);
     expandSelectStars(query_.statement_);
@@ -110,6 +115,11 @@ static void fillWhereQTable(sql::WhereItem& item,
                 fillQTable(vi, colsTableMap, errorMessage);
             for (auto& vi: wi.getValue2().getValues())
                 fillQTable(vi, colsTableMap, errorMessage);
+        } else if constexpr (std::is_same_v<T, sql::SubqueryPredicate>) {
+            // Fill table qualifier for outer LHS column only.
+            // The subquery's internal columns are handled during inner normalization.
+            for (auto& vi: wi.value_.getValues())
+                fillQTable(vi, colsTableMap, errorMessage);
         } else { // sql::WhereGroup
             for (auto& inner: wi.getWhere().getItems())
                 fillWhereQTable(inner, colsTableMap, errorMessage);
@@ -152,6 +162,17 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
     for (auto& sq: statement.getFrom().getSubQueries())
         for (auto& col: query_.tableColumnsMap_[sq.getAlias()])
             colsTableMap[col].push_back(sq.getAlias());
+
+    // If an outer-scope column map is provided (correlated subquery), add outer columns
+    // as fallback for any column name not already resolved from the inner FROM tables.
+    // This is only applied at the root statement level of this normalizer to avoid
+    // polluting nested sub-query resolution.
+    if (outerColumnsMap_ && &statement == &query_.statement_) {
+        for (auto& [alias, cols]: *outerColumnsMap_)
+            for (auto& col: cols)
+                if (!colsTableMap.count(col))
+                    colsTableMap[col].push_back(alias);
+    }
 
     if (statement.getAlias().empty())
         // generate alias
@@ -271,15 +292,62 @@ void SqlQueryNormalizer::validateGroupBy(sql::SQLStatement& statement) {
     }
 }
 
+// Collect all bare column names referenced inside a subquery's WHERE clause
+// (recursing into nested SubqueryPredicates).  These are the candidate correlated
+// references that must be kept in the outer tableColumnsMap_ even though they do
+// not appear at the outer query level.
+static void collectInnerSubqueryColNames(sql::SQLStatement& stmt, std::unordered_set<string>& names) {
+    for (auto& item: stmt.getWhere().getItems()) {
+        std::visit([&](auto& wi) {
+            using T = std::decay_t<decltype(wi)>;
+            if constexpr (std::is_same_v<T, sql::Predicate>) {
+                for (auto& vp: wi.getValue1().getValues())
+                    if (!vp.isIsConstant() && !vp.isSubExpr())
+                        names.insert(vp.getQualifier().name_);
+                for (auto& vp: wi.getValue2().getValues())
+                    if (!vp.isIsConstant() && !vp.isSubExpr())
+                        names.insert(vp.getQualifier().name_);
+            } else if constexpr (std::is_same_v<T, sql::SubqueryPredicate>) {
+                collectInnerSubqueryColNames(*wi.subquery_, names);
+            }
+            // WhereGroup: groups are only at the outer level; ignore for now.
+        }, item);
+    }
+}
+
 void SqlQueryNormalizer::removeUnusedCols(sql::SQLStatement &statement) {
+    // Recursively prune sub-queries first (bottom-up) so each level only sees
+    // columns relevant to its own SELECT/WHERE/GROUP BY.
+    for (auto& sq: statement.getFrom().getSubQueries()) {
+        removeUnusedCols(sq);
+    }
+
     auto queryQualifiedNames = statement.getQualifiedNames();
     std::unordered_set<string> usedCols;
     for (auto& q: queryQualifiedNames)
         usedCols.insert(q.table_+"."+q.name_);
 
+    // Collect bare column names from inner subquery WHEREs so that correlated
+    // outer-scope columns are not erroneously pruned (they appear only inside
+    // the subquery at this point, not at the outer predicate level).
+    std::unordered_set<string> innerSubqueryColNames;
+    for (auto& item: statement.getWhere().getItems())
+        if (auto* sp = std::get_if<sql::SubqueryPredicate>(&item))
+            collectInnerSubqueryColNames(*sp->subquery_, innerSubqueryColNames);
+
+    // Only prune tables that are directly in THIS statement's FROM clause.
+    // Sub-query result aliases (e.g. SHIPPING) and inner tables (N1, N2, lineitem,
+    // etc.) that belong to sub-queries are handled by the recursive calls above.
+    std::unordered_set<string> directTables;
+    for (auto& fi: statement.getFrom().getItems())
+        directTables.insert(fi.getAlias());
+    for (auto& sq: statement.getFrom().getSubQueries())
+        directTables.insert(sq.getAlias());
+
     for (auto& [table, cols]: query_.tableColumnsMap_) {
+        if (!directTables.contains(table)) continue;
         for (auto it = cols.begin(); it != cols.end(); ) {
-            if (usedCols.contains(table + "." + *it)) {
+            if (usedCols.contains(table + "." + *it) || innerSubqueryColNames.contains(*it)) {
                 ++it;
             } else {
                 it = cols.erase(it); // erase returns the next valid iterator
@@ -603,16 +671,375 @@ vector<vector<Atom>> distributeBinopAtoms(vector<vector<Atom>>& cnf1,vector<vect
 
 using CNF = vector<vector<Atom>>;
 
-// Forward declaration
+// ---- Forward declarations for mutually recursive subquery helpers ----
+
+static vector<Atom> generateInnerBodyFromSubquery(
+    sql::SQLStatement& inner, SQLQuery& query, TranslationResult& result, string& errorMessage);
+
+static vector<Atom> generateWhereSubqueryAtoms(
+    sql::SubqueryPredicate& sp, SQLQuery& query, TranslationResult& result, string& errorMessage);
+
 static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
-    bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage);
+    bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, TranslationResult& result, string& errorMessage);
+
+void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
+    SQLQuery& query, TranslationResult& result, string& errorMessage);
+
+// ---- Subquery validation ----
+
+static void validateWhereSubquery(sql::SQLStatement& inner, string& errorMessage) {
+    if (inner.getSelect().getItems().size() != 1) {
+        errorMessage = "Scalar subquery in WHERE must return exactly one column";
+        return;
+    }
+    if (inner.getSelect().getAggFunctions()[0] == NONE) {
+        errorMessage = "Scalar subquery in WHERE must use an aggregate function (MAX, MIN, AVG, SUM, COUNT)";
+        return;
+    }
+}
+
+// ---- Inner body generation (normalizes inner subquery and builds FROM+WHERE body atoms) ----
+
+static vector<Atom> generateInnerBodyFromSubquery(
+    sql::SQLStatement& inner, SQLQuery& outerQuery, TranslationResult& result, string& errorMessage) {
+
+    // Create an inner SQLQuery sharing the outer counter to avoid name conflicts.
+    SQLQuery innerQuery(inner, outerQuery.context_);
+    innerQuery.counter_ = outerQuery.counter_;
+
+    SqlQueryNormalizer normalizer(innerQuery);
+    // Provide the outer scope so that correlated column references in the inner WHERE
+    // (e.g. P_PARTKEY from an outer "part" table) are resolved correctly.
+    // Use only FROM table aliases — NOT the outer SELECT result alias — to prevent
+    // ambiguity when a SELECT column has the same name as a FROM table column.
+    std::unordered_map<string, std::unordered_set<string>> outerFromMap;
+    for (auto& fi: outerQuery.statement_.getFrom().getItems()) {
+        const auto& alias = fi.getAlias();
+        auto it = outerQuery.tableColumnsMap_.find(alias);
+        if (it != outerQuery.tableColumnsMap_.end())
+            outerFromMap[alias] = it->second;
+    }
+    for (auto& sq: outerQuery.statement_.getFrom().getSubQueries()) {
+        const auto& alias = sq.getAlias();
+        auto it = outerQuery.tableColumnsMap_.find(alias);
+        if (it != outerQuery.tableColumnsMap_.end())
+            outerFromMap[alias] = it->second;
+    }
+    normalizer.setOuterColumnsMap(outerFromMap);
+    normalizer.normalize();
+    if (normalizer.result_.foundAnError()) {
+        errorMessage = normalizer.result_.errorMessage_;
+        return {};
+    }
+
+    // Sync counter back and merge tableColumnsMap so outer can use inner alias names.
+    outerQuery.counter_ = innerQuery.counter_;
+    for (auto& [alias, cols]: innerQuery.tableColumnsMap_)
+        outerQuery.tableColumnsMap_[alias] = cols;
+
+    // Generate FROM body atoms.
+    vector<Atom> body;
+    idx_t tableIdx = 0;
+    for (auto& fi: inner.getFrom().getItems()) {
+        if (tableIdx == 0 && fi.getType() == sql::FromItemType::EXTERNAL) {
+            auto extAtom = generateFirstExtAtomFromTable(fi, outerQuery, errorMessage);
+            if (!errorMessage.empty()) return {};
+            body.push_back(std::move(extAtom));
+        } else if (fi.getType() == sql::FromItemType::EXTERNAL) {
+            generateRuleForExtAtom(fi, outerQuery, result);
+            if (result.foundAnError()) { errorMessage = result.errorMessage_; return {}; }
+            string fiAlias = fi.getAlias();
+            auto atom = generateAtomFromTable(fiAlias, outerQuery, errorMessage);
+            if (!errorMessage.empty()) return {};
+            body.push_back(std::move(atom));
+        } else {
+            errorMessage = "Only external tables are supported in subquery FROM clause";
+            return {};
+        }
+        ++tableIdx;
+    }
+
+    // Process inner WHERE items.
+    auto& whereItems = inner.getWhere().getItems();
+    auto& whereOps   = inner.getWhere().getOps();
+    for (auto& item: whereItems) {
+        if (auto* pred = std::get_if<sql::Predicate>(&item)) {
+            if (pred->getOp() == sql::SQL_LIKE) {
+                auto atom = generateLikeAtom(*pred, outerQuery, errorMessage);
+                if (!errorMessage.empty()) return {};
+                body.push_back(std::move(atom));
+            } else {
+                auto atom = generateBuiltinFromPredCondition(*pred, outerQuery, errorMessage);
+                if (!errorMessage.empty()) return {};
+                body.push_back(std::move(atom));
+            }
+        } else if (auto* grp = std::get_if<sql::WhereGroup>(&item)) {
+            // Delegate grouped conditions to the CNF machinery (without subquery support
+            // inside groups — subqueries inside grouped conditions would need auxiliary rules,
+            // which is not supported here).
+            generateBinopAtoms(body, grp->getWhere().getItems(), grp->getWhere().getOps(),
+                outerQuery, result, errorMessage);
+            if (!errorMessage.empty()) return {};
+        } else if (auto* sp2 = std::get_if<sql::SubqueryPredicate>(&item)) {
+            // Nested subquery: generate auxiliary predicate rule.
+            validateWhereSubquery(*sp2->subquery_, errorMessage);
+            if (!errorMessage.empty()) return {};
+
+            // Recursively build the innermost body atoms.
+            auto innermostBody = generateInnerBodyFromSubquery(*sp2->subquery_, outerQuery, result, errorMessage);
+            if (!errorMessage.empty()) return {};
+
+            // Build aggregate info from innermost select.
+            auto& innermostSelect = sp2->subquery_->getSelect();
+            AggregateFunctionType aggFunc = innermostSelect.getAggFunctions()[0];
+
+            Term aggTerm;
+            if (innermostSelect.getItems()[0].toString(false) == "*" && aggFunc == COUNT) {
+                // COUNT(*): pick any column from the innermost table.
+                auto qNames = getAllQualifiedNames(*sp2->subquery_, outerQuery.tableColumnsMap_);
+                BB_ASSERT(!qNames.empty());
+                auto var = outerQuery.getVariableName(qNames[0].table_, qNames[0].name_);
+                aggTerm = Term::createVariable(std::move(var));
+            } else {
+                auto& si = innermostSelect.getItems()[0];
+                aggTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(si),
+                    sp2->subquery_->getAlias(), outerQuery, errorMessage);
+                if (!errorMessage.empty()) return {};
+            }
+
+            // Fresh guard variable for assignment in the auxiliary rule.
+            string guardVarName = outerQuery.generateVarName();
+            Term guardTerm = Term::createVariable(guardVarName.c_str());
+            Term emptyGuard;
+            terms_vector_t aggTerms;
+            aggTerms.push_back(std::move(aggTerm));
+            aggTerms.push_back(Term::createVariable(SQLQuery::ID_VAR));
+
+            // Aggregate atom: guardVar = #agg{aggTerm, #ID : innermostBody}
+            auto aggAtom = Atom::createAggregateAtom(aggFunc, Binop::EQUAL, Binop::NONE_OP,
+                guardTerm, emptyGuard, std::move(aggTerms), std::move(innermostBody), {});
+
+            // Create auxiliary predicate rule: #aux(guardVar) :- aggAtom
+            string auxPredName = outerQuery.generatePredicateName();
+            auto auxPred = outerQuery.context_.defaultSchema_.createPredicate(
+                &outerQuery.context_, auxPredName.c_str(), 1);
+            terms_vector_t auxHeadTerms = { Term::createVariable(guardVarName.c_str()) };
+            auto auxHead = Atom::createClassicalAtom(auxPred, std::move(auxHeadTerms));
+            Rule auxRule(auxHead, aggAtom);
+            result.rules_.push_back(std::move(auxRule));
+
+            // Add classical atom #aux(guardVar) to inner body (binds guardVar).
+            terms_vector_t classTerms = { Term::createVariable(guardVarName.c_str()) };
+            body.push_back(Atom::createClassicalAtom(auxPred, std::move(classTerms)));
+
+            // Add builtin: LHS BINOP guardVar to enforce the comparison.
+            auto lhsTerm = generateTermFromValueExpr(sp2->value_, "", outerQuery, errorMessage);
+            if (!errorMessage.empty()) return {};
+            terms_vector_t builtinTerms = { std::move(lhsTerm), Term::createVariable(guardVarName.c_str()) };
+            body.push_back(Atom::createBuiltinAtom(std::move(builtinTerms), sql::toCoreBinop(sp2->op_)));
+        }
+    }
+
+    // Validate that no top-level OR connects WHERE items in the inner subquery.
+    // Each item is currently treated independently (equivalent to AND). OR at
+    // this level would produce wrong results silently, so we guard it explicitly.
+    for (auto& op: whereOps) {
+        if (op == sql::SQL_OR) {
+            errorMessage = "OR in scalar subquery WHERE clause is not yet supported";
+            return {};
+        }
+    }
+
+    return body;
+}
+
+// ---- Collect outer-scope (correlated) variables from inner WHERE predicates ----
+// After inner normalization, correlated columns carry an outer-table alias suffix
+// (e.g. "O_ORDERKEY.#p_0"). This function returns those variable names so they
+// can be used as explicit group variables and auxiliary-predicate head arguments.
+// outerAliases must be a snapshot of the outer tableColumnsMap_ taken BEFORE
+// generateInnerBodyFromSubquery merges inner aliases into it.
+static vector<string> findCorrelatedVarNamesFromWhere(
+    sql::SQLStatement& inner,
+    const std::unordered_map<string, std::unordered_set<string>>& outerAliases) {
+    std::unordered_set<string> seen;
+    vector<string> corrVarNames;
+    auto inspect = [&](sql::ValueExpr& ve) {
+        for (auto& vp: ve.getValues()) {
+            if (vp.isIsConstant() || vp.isSubExpr()) continue;
+            auto& q = vp.getQualifier();
+            if (!q.table_.empty() && outerAliases.count(q.table_)) {
+                string varName = q.name_ + "." + q.table_;
+                if (!seen.count(varName)) {
+                    seen.insert(varName);
+                    corrVarNames.push_back(varName);
+                }
+            }
+        }
+    };
+    for (auto& item: inner.getWhere().getItems()) {
+        if (auto* pred = std::get_if<sql::Predicate>(&item)) {
+            inspect(pred->getValue1());
+            inspect(pred->getValue2());
+        } else if (auto* grp = std::get_if<sql::WhereGroup>(&item)) {
+            // Recurse into parenthesized groups to find correlated references.
+            for (auto& inner_item: grp->getWhere().getItems()) {
+                if (auto* inner_pred = std::get_if<sql::Predicate>(&inner_item)) {
+                    inspect(inner_pred->getValue1());
+                    inspect(inner_pred->getValue2());
+                }
+            }
+        }
+    }
+    return corrVarNames;
+}
+
+// ---- Aggregate atom construction for a scalar WHERE subquery ----
+// Always generates an auxiliary predicate rule to avoid nested aggregates (which
+// occur when the outer query also has GROUP BY aggregates).  Returns a classical
+// atom that references the auxiliary predicate.
+//
+// Two sub-cases:
+//   (a) Constant LHS  (e.g.  0 < COUNT(*)):
+//       #aux(corrVars...) :- lhs OP #agg{...; corrVars: inner_body}
+//       Returns: #aux(corrVars...)
+//
+//   (b) Variable LHS  (e.g.  col == MIN(x)):
+//       guard = fresh var
+//       #aux(corrVars..., guard) :- guard == #agg{...; corrVars: inner_body}
+//       Returns: #aux(corrVars..., lhs_var)
+//       (when OP == EQUAL the classical atom unification handles the check;
+//        other operators are handled with the guard mechanism inside the agg atom)
+static vector<Atom> generateWhereSubqueryAtoms(
+    sql::SubqueryPredicate& sp, SQLQuery& query, TranslationResult& result, string& errorMessage) {
+
+    auto& inner = *sp.subquery_;
+
+    validateWhereSubquery(inner, errorMessage);
+    if (!errorMessage.empty()) return {};
+
+    // Snapshot outer aliases BEFORE generateInnerBodyFromSubquery merges inner
+    // table aliases into query.tableColumnsMap_ — used to identify correlated vars.
+    auto outerAliasesSnapshot = query.tableColumnsMap_;
+
+    auto innerBodyAtoms = generateInnerBodyFromSubquery(inner, query, result, errorMessage);
+    if (!errorMessage.empty()) return {};
+
+    auto& select = inner.getSelect();
+    AggregateFunctionType aggFunc = select.getAggFunctions()[0];
+
+    // Build the aggregation term.
+    Term aggTerm;
+    if (select.getItems()[0].toString(false) == "*" && aggFunc == COUNT) {
+        // COUNT(*): pick any inner column as the aggregate term.
+        auto qNames = getAllQualifiedNames(inner, query.tableColumnsMap_);
+        BB_ASSERT(!qNames.empty());
+        auto var = query.getVariableName(qNames[0].table_, qNames[0].name_);
+        aggTerm = Term::createVariable(std::move(var));
+    } else {
+        auto& si = select.getItems()[0];
+        aggTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(si),
+            inner.getAlias(), query, errorMessage);
+        if (!errorMessage.empty()) return {};
+    }
+
+    terms_vector_t aggTerms;
+    aggTerms.push_back(std::move(aggTerm));
+    aggTerms.push_back(Term::createVariable(SQLQuery::ID_VAR));
+
+    // Collect correlated (outer-scope) variable names from the inner WHERE using
+    // the pre-merge snapshot (after the merge, inner aliases are also in the map).
+    auto corrVarNames = findCorrelatedVarNamesFromWhere(inner, outerAliasesSnapshot);
+
+    // Build explicit group terms from the correlated variable names.
+    terms_vector_t explicitGroups;
+    for (auto& name: corrVarNames) explicitGroups.push_back(Term::createVariable(name.c_str()));
+
+    // Determine whether the LHS is a constant (e.g. 0) or a column reference.
+    bool lhsIsConstant = sp.value_.getValues().size() == 1
+                      && sp.value_.getValues()[0].isIsConstant();
+
+    Atom aggAtom;
+    Term emptyGuard;
+    string guardVarName;  // only used in case (b)
+
+    if (lhsIsConstant) {
+        // (a) Constant LHS: embed guard and binop directly in the aggregate atom.
+        auto lhsTerm = generateTermFromValueExpr(sp.value_, "", query, errorMessage);
+        if (!errorMessage.empty()) return {};
+        aggAtom = Atom::createAggregateAtom(aggFunc, sql::toCoreBinop(sp.op_), Binop::NONE_OP,
+            lhsTerm, emptyGuard, std::move(aggTerms), std::move(innerBodyAtoms),
+            std::move(explicitGroups));
+    } else {
+        // (b) Variable LHS: use a fresh guard variable assigned by the aggregate.
+        guardVarName = query.generateVarName();
+        Term guardTerm = Term::createVariable(guardVarName.c_str());
+        aggAtom = Atom::createAggregateAtom(aggFunc, Binop::EQUAL, Binop::NONE_OP,
+            guardTerm, emptyGuard, std::move(aggTerms), std::move(innerBodyAtoms),
+            std::move(explicitGroups));
+    }
+
+    // Build auxiliary predicate head terms.
+    terms_vector_t auxHeadTerms;
+    for (auto& name: corrVarNames) auxHeadTerms.push_back(Term::createVariable(name.c_str()));
+    if (!lhsIsConstant)
+        auxHeadTerms.push_back(Term::createVariable(guardVarName.c_str()));
+
+    // Create the auxiliary predicate and rule.
+    string auxPredName = query.generatePredicateName();
+    auto auxPred = query.context_.defaultSchema_.createPredicate(
+        &query.context_, auxPredName.c_str(), auxHeadTerms.size());
+    auto auxHead = Atom::createClassicalAtom(auxPred, std::move(auxHeadTerms));
+    Rule auxRule(auxHead, aggAtom);
+    result.rules_.push_back(std::move(auxRule));
+
+    // Build the classical atom to return (used in the outer rule body).
+    // For case (a): use corrVars directly — planner uses hash join (equality).
+    // For case (b) with EQUAL: use outer column directly — planner uses hash join.
+    // For case (b) with non-EQUAL (>, <, >=, <=, !=): use fresh var — planner does
+    //   cross-product (broadcasts scalar), then a separate builtin enforces the actual binop.
+    terms_vector_t classTerms;
+    for (auto& name: corrVarNames) classTerms.push_back(Term::createVariable(name.c_str()));
+
+    vector<Atom> resultAtoms;
+
+    if (!lhsIsConstant) {
+        auto lhsTerm = generateTermFromValueExpr(sp.value_, "", query, errorMessage);
+        if (!errorMessage.empty()) return {};
+
+        Binop coreBinop = sql::toCoreBinop(sp.op_);
+        if (coreBinop == Binop::EQUAL) {
+            // Equality: place outer column in classical atom → planner uses hash join.
+            classTerms.push_back(std::move(lhsTerm));
+            resultAtoms.push_back(Atom::createClassicalAtom(auxPred, std::move(classTerms)));
+        } else {
+            // Non-equality: use fresh var in classical atom → cross-product assigns scalar.
+            // Then add a builtin to enforce the actual comparison.
+            string freshVarName = query.generateVarName();
+            classTerms.push_back(Term::createVariable(freshVarName.c_str()));
+            resultAtoms.push_back(Atom::createClassicalAtom(auxPred, std::move(classTerms)));
+            // Builtin: lhsTerm binop freshVar  (e.g. INDEX.#p_0 <= #Vfresh)
+            terms_vector_t filterTerms;
+            filterTerms.push_back(std::move(lhsTerm));
+            filterTerms.push_back(Term::createVariable(freshVarName.c_str()));
+            resultAtoms.push_back(Atom::createBuiltinAtom(std::move(filterTerms), coreBinop));
+        }
+    } else {
+        resultAtoms.push_back(Atom::createClassicalAtom(auxPred, std::move(classTerms)));
+    }
+
+    return resultAtoms;
+}
+
+// ---- WHERE CNF generation (updated to thread TranslationResult through) ----
 
 // Generate a CNF for a single WhereItem.
 // LIKE predicates: add to likeBody and return {{}} (OR-identity, skipped in final output).
 // Predicates: return {{atom}}.
 // WhereGroups: recurse.
+// SubqueryPredicates: return {{aggregate_atom}}.
 static CNF generateWhereItemCNF(sql::WhereItem& item, bool likeForbidden,
-    vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
+    vector<Atom>& likeBody, SQLQuery& query, TranslationResult& result, string& errorMessage) {
     if (auto* pred = std::get_if<sql::Predicate>(&item)) {
         if (pred->getOp() == sql::SQL_LIKE) {
             if (likeForbidden) {
@@ -623,20 +1050,33 @@ static CNF generateWhereItemCNF(sql::WhereItem& item, bool likeForbidden,
             if (!errorMessage.empty()) return {};
             likeBody.push_back(std::move(atom));
             // Return a CNF with one empty clause: acts as OR-identity in distributeBinopAtoms
-            CNF result;
-            result.emplace_back();
-            return result;
+            CNF cnf;
+            cnf.emplace_back();
+            return cnf;
         }
         auto atom = generateBuiltinFromPredCondition(*pred, query, errorMessage);
         if (!errorMessage.empty()) return {};
-        CNF result;
-        result.emplace_back();
-        result.back().push_back(std::move(atom));
-        return result;
+        CNF cnf;
+        cnf.emplace_back();
+        cnf.back().push_back(std::move(atom));
+        return cnf;
+    } else if (auto* sp = std::get_if<sql::SubqueryPredicate>(&item)) {
+        if (likeForbidden) {
+            errorMessage = "Subquery predicate inside grouped WHERE conditions is not supported";
+            return {};
+        }
+        auto atoms = generateWhereSubqueryAtoms(*sp, query, result, errorMessage);
+        if (!errorMessage.empty()) return {};
+        CNF cnf;
+        for (auto& atom: atoms) {
+            cnf.emplace_back();
+            cnf.back().push_back(std::move(atom));
+        }
+        return cnf;
     } else { // sql::WhereGroup
         auto& group = std::get<sql::WhereGroup>(item);
         auto& w = group.getWhere();
-        return generateWhereListCNF(w.getItems(), w.getOps(), true, likeBody, query, errorMessage);
+        return generateWhereListCNF(w.getItems(), w.getOps(), true, likeBody, query, result, errorMessage);
     }
 }
 
@@ -650,7 +1090,7 @@ static CNF generateWhereItemCNF(sql::WhereItem& item, bool likeForbidden,
 // with many OR-groups this may generate very large rule bodies. Consider simplifying
 // such queries if performance degrades.
 static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
-    bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, string& errorMessage) {
+    bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, TranslationResult& result, string& errorMessage) {
     if (items.empty()) return {};
     BB_ASSERT(items.size() == ops.size() + 1);
 
@@ -690,34 +1130,41 @@ static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLO
 
     // For each AND-group, conjoin the item CNFs (AND = concatenate clauses).
     // Then distribute (OR) the AND-group CNFs.
-    CNF result;
+    CNF cnfResult;
     for (idx_t gi = 0; gi < andGroups.size(); ++gi) {
         auto [start, end] = andGroups[gi];
-        CNF groupCnf = generateWhereItemCNF(items[start], likeForbidden, likeBody, query, errorMessage);
+        CNF groupCnf = generateWhereItemCNF(items[start], likeForbidden, likeBody, query, result, errorMessage);
         if (!errorMessage.empty()) return {};
         for (idx_t j = start + 1; j <= end; ++j) {
-            CNF next = generateWhereItemCNF(items[j], likeForbidden, likeBody, query, errorMessage);
+            CNF next = generateWhereItemCNF(items[j], likeForbidden, likeBody, query, result, errorMessage);
             if (!errorMessage.empty()) return {};
             for (auto& clause: next) groupCnf.push_back(std::move(clause));
         }
         if (gi == 0) {
-            result = std::move(groupCnf);
+            cnfResult = std::move(groupCnf);
         } else {
-            result = distributeBinopAtoms(result, groupCnf);
+            cnfResult = distributeBinopAtoms(cnfResult, groupCnf);
         }
     }
-    return result;
+    return cnfResult;
 }
 
-void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops, SQLQuery& query, string& errorMessage) {
+void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
+    SQLQuery& query, TranslationResult& result, string& errorMessage) {
     if (items.empty()) return;
     vector<Atom> likeBody;
-    auto cnf = generateWhereListCNF(items, ops, false, likeBody, query, errorMessage);
+    auto cnf = generateWhereListCNF(items, ops, false, likeBody, query, result, errorMessage);
     if (!errorMessage.empty()) return;
     for (auto& likeAtom: likeBody) body.push_back(std::move(likeAtom));
     for (auto& atoms: cnf) {
         if (atoms.empty()) continue; // skip empty clauses (OR-identity placeholder from LIKE)
-        body.push_back(Atom::createOrBuiltinAtom(atoms));
+        if (atoms.size() == 1) {
+            // Single atom: push directly (handles both BUILTIN and AGGREGATE atoms)
+            body.push_back(std::move(atoms[0]));
+        } else {
+            // Multiple atoms in an OR clause: all are BUILTINs
+            body.push_back(Atom::createOrBuiltinAtom(atoms));
+        }
     }
 }
 
@@ -726,8 +1173,11 @@ void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& items, vect
 // Variables follow the naming convention "col.alias" (e.g., "O_ORDERDATE.#p_1").
 // Returns the table alias if pushable, empty string otherwise (e.g., cross-table
 // joins, first-table filters, or constants without variables).
+// Aggregate atoms are never pushed: they may contain correlated outer-scope variables
+// and must remain in the main rule body where all outer bindings are visible.
 string getAtomPushdownTarget(Atom& atom,
     const std::unordered_map<string, std::unordered_set<string>>& nonFirstTableCols) {
+    if (atom.getType() == AGGREGATE) return "";
     vector<string> variables;
     atom.getVariablesList(variables);
     if (variables.empty()) return "";
@@ -778,11 +1228,24 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     for (auto& sq: statement.getFrom().getSubQueries()) {
         generateRules(sq);
         if (result_.foundAnError()) return;
-        // construct the atom from subquery
+        // Construct the body atom for the sub-query alias using SELECT item order.
+        // The inner rule's head is built in SELECT item order, so the body atom must
+        // match those positions. Using unordered_set iteration (via generateAtomFromTable)
+        // can produce wrong positional bindings (e.g. VOLUME bound to SUPP_NATION slot).
         string alias = sq.getAlias();
         BB_ASSERT(!alias.empty());
         BB_ASSERT(query_.tableColumnsMap_.contains(alias));
-        auto atom = generateAtomFromTable(alias, query_, result_.errorMessage_);
+        auto& keptCols = query_.tableColumnsMap_[alias];
+        vector<Term> sqTerms;
+        for (auto& item: sq.getSelect().getItems()) {
+            const auto& colAlias = item.getAlias();
+            if (!keptCols.contains(colAlias)) continue;
+            auto t = Term::createVariable(query_.getVariableName(alias, colAlias));
+            sqTerms.push_back(std::move(t));
+        }
+        auto sqPred = query_.context_.defaultSchema_.createPredicate(
+            &query_.context_, alias.c_str(), sqTerms.size());
+        auto atom = Atom::createClassicalAtom(sqPred, std::move(sqTerms));
         if (result_.foundAnError()) return;
         body.push_back(std::move(atom));
     }
@@ -830,7 +1293,7 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     // into sourcing rules so the PhysicalOptimizer can push them down to the readers.
     // This avoids loading unnecessary data from non-first tables.
     vector<Atom> binopAtoms;
-    generateBinopAtoms(binopAtoms, statement.getWhere().getItems(), statement.getWhere().getOps(), query_, result_.errorMessage_);
+    generateBinopAtoms(binopAtoms, statement.getWhere().getItems(), statement.getWhere().getOps(), query_, result_, result_.errorMessage_);
     if (result_.foundAnError()) return;
 
     // Build a map of non-first table aliases to their column sets.

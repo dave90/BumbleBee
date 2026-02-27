@@ -915,6 +915,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         source = patom_ptr_t(new PhysicalChunkScan(types, cols_[0], selectedCols_[0], ptSource.get()));
     }else if (firstAtom.getType() == EXTERNAL) {
         // get the function and bind it
+        firstAtom.getVariables(vars);
         PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesType() ).get();
         source = patom_ptr_t(new PhysicalPredFunction(context_, types_,cols_[0],  selectedCols_[0], (PredFunction*) func, externalBindData_[0]));
     } else if (firstAtom.getType() == AGGREGATE && firstAtom.hasExplicitGroups()) {

@@ -116,14 +116,28 @@ public:
                 auto func = AggregateFunction::unaryAggregate<CountState,string_t,uint64_t,CountOperation>(name, type, LogicalTypeId::UBIGINT);
                 return function_ptr_t(new AggregateFunction(func));
             }
+            case LogicalTypeId::DATE: {
+                auto func = AggregateFunction::unaryAggregate<CountState,date_t,uint64_t,CountOperation>(name, type, LogicalTypeId::UBIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::TIMESTAMP: {
+                auto func = AggregateFunction::unaryAggregate<CountState,timestamp_t,uint64_t,CountOperation>(name, type, LogicalTypeId::UBIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::BOOLEAN: {
+                auto func = AggregateFunction::unaryAggregate<CountState,bool,uint64_t,CountOperation>(name, type, LogicalTypeId::UBIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
+            case LogicalTypeId::ADDRESS: {
+                auto func = AggregateFunction::unaryAggregate<CountState,uint64_t,uint64_t,CountOperation>(name, type, LogicalTypeId::UBIGINT);
+                return function_ptr_t(new AggregateFunction(func));
+            }
 
             default:
-                ErrorHandler::errorNotImplemented("Unimplemented type for min operation!");
+                ErrorHandler::errorNotImplemented("Unimplemented type for count operation!");
         }
         return nullptr;
     }
-
-    // register the functions
 
     // register the functions
     static void registerFunction(FunctionRegister& funcRegister) {

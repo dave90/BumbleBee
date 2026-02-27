@@ -1015,6 +1015,10 @@ search_atom
     {
         director.getBuilder()->onSQLPredicate();
     }
+    | predicate_value_expr binop PARAM_OPEN sql_query PARAM_CLOSE
+    {
+        director.getBuilder()->onSQLWhereSubqueryPredicate();
+    }
     | where_group
     ;
 

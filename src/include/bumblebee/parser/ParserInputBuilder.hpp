@@ -138,6 +138,7 @@ public:
 	void onSQLSelect();
 	void onSQLSubQuery();
 	void onSQLStart();
+	void onSQLWhereSubqueryPredicate();
 	void onSQLExtTable();
 	void onSQLExtTableName(char*);
 	void onSQLExtTableNameString(char*);
@@ -212,6 +213,15 @@ protected:
 	vector<sql::Predicate> predicates_;
 	sql::Predicate sqlPredicate_;
 	vector<sql::SQLStatement> sqlStatements_;
+
+	// Saved outer predicate context for WHERE scalar subquery parsing.
+	// When entering a nested SELECT (inside a WHERE subquery), the inner WHERE
+	// parsing would overwrite sqlPredicate_. We save and restore it here.
+	struct SubqueryPredicateContext {
+		sql::Predicate predicate;
+		Binop binop;
+	};
+	vector<SubqueryPredicateContext> subqueryPredicateContextStack_;
 
 	string sqlExportFilePath_;
 

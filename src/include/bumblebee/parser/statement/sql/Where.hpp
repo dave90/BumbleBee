@@ -25,6 +25,10 @@
 namespace bumblebee{
 namespace sql {
 
+// Forward declaration to break circular include
+// (SQLStatement.hpp includes Where.hpp, SubqueryPredicate needs SQLStatement)
+class SQLStatement;
+
 enum SQLOperator {
     SQL_AND,
     SQL_OR,
@@ -80,6 +84,21 @@ private:
     ValueExpr value2_;
 };
 
+// A scalar subquery predicate: LHS_value OP (SELECT agg FROM ...)
+// Uses unique_ptr<SQLStatement> to break the circular include dependency.
+struct SubqueryPredicate {
+    SubqueryPredicate();
+    SubqueryPredicate(const SubqueryPredicate&);
+    SubqueryPredicate(SubqueryPredicate&&) noexcept;
+    SubqueryPredicate& operator=(const SubqueryPredicate&);
+    SubqueryPredicate& operator=(SubqueryPredicate&&) noexcept;
+    ~SubqueryPredicate();
+
+    SQLBinop op_{SQL_NONE_OP};
+    ValueExpr value_;                          // Left-hand side (column reference)
+    std::unique_ptr<SQLStatement> subquery_;   // Inner SELECT (scalar subquery)
+};
+
 // Forward-declare Where so WhereGroup can hold a unique_ptr<Where>
 class Where;
 
@@ -102,8 +121,8 @@ private:
     std::unique_ptr<Where> where_;
 };
 
-// A WhereItem is either a flat Predicate or a parenthesized WhereGroup.
-using WhereItem = std::variant<Predicate, WhereGroup>;
+// A WhereItem is a flat Predicate, a parenthesized WhereGroup, or a scalar SubqueryPredicate.
+using WhereItem = std::variant<Predicate, WhereGroup, SubqueryPredicate>;
 using predicate_vector_t = std::vector<WhereItem>;
 
 class Where {
@@ -117,6 +136,7 @@ public:
 
     void addItem(Predicate& condition);
     void addGroup(WhereGroup group);
+    void addSubqueryPredicate(SubqueryPredicate sp);
     void addOperator(SQLOperator op);
 
     predicate_vector_t & getItems();

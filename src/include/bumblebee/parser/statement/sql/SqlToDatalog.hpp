@@ -62,6 +62,10 @@ public:
 
     explicit SqlQueryNormalizer(SQLQuery &query);
 
+    // Provide an outer-scope column map so that correlated subquery references
+    // (columns from outer tables not present in the inner FROM) can be resolved.
+    void setOuterColumnsMap(const std::unordered_map<string, std::unordered_set<string>>& outerMap);
+
     void normalize();
 private:
     void assignAliasesAndCollectColumns(sql::SQLStatement& statement);
@@ -70,6 +74,7 @@ private:
     void removeUnusedCols(sql::SQLStatement& statement);
 
     SQLQuery& query_;
+    const std::unordered_map<string, std::unordered_set<string>>* outerColumnsMap_{nullptr};
 };
 
 class DatalogGenerator {

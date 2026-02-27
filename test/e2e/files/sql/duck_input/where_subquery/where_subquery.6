@@ -1,0 +1,3 @@
+SELECT INDEX, COUNTRY
+FROM "./files/csv/customers-1.csv"
+WHERE INDEX = (SELECT MAX(INDEX) FROM "./files/csv/customers-1.csv" WHERE INDEX < 50)

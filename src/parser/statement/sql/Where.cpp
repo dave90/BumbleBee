@@ -17,9 +17,32 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #include "bumblebee/parser/statement/sql/Where.hpp"
+#include "bumblebee/parser/statement/sql/SQLStatement.hpp"
 
 namespace bumblebee{
 namespace sql {
+
+// ---- SubqueryPredicate implementation ----
+
+SubqueryPredicate::SubqueryPredicate() = default;
+
+SubqueryPredicate::SubqueryPredicate(const SubqueryPredicate& other)
+    : op_(other.op_), value_(other.value_),
+      subquery_(other.subquery_ ? std::make_unique<SQLStatement>(*other.subquery_) : nullptr) {}
+
+SubqueryPredicate::SubqueryPredicate(SubqueryPredicate&& other) noexcept = default;
+
+SubqueryPredicate& SubqueryPredicate::operator=(const SubqueryPredicate& other) {
+    if (this == &other) return *this;
+    op_ = other.op_;
+    value_ = other.value_;
+    subquery_ = other.subquery_ ? std::make_unique<SQLStatement>(*other.subquery_) : nullptr;
+    return *this;
+}
+
+SubqueryPredicate& SubqueryPredicate::operator=(SubqueryPredicate&& other) noexcept = default;
+
+SubqueryPredicate::~SubqueryPredicate() = default;
 
 
 Predicate::Predicate(const Predicate &other): op_(other.op_),
@@ -140,6 +163,10 @@ void Where::addGroup(WhereGroup group) {
     items_.push_back(std::move(group));
 }
 
+void Where::addSubqueryPredicate(SubqueryPredicate sp) {
+    items_.push_back(std::move(sp));
+}
+
 void Where::addOperator(SQLOperator op) {
     ops_.push_back(op);
 }
@@ -164,6 +191,9 @@ static void collectQualifiedNamesFromItem(vector<QualifiedName>& names, WhereIte
         if constexpr (std::is_same_v<T, Predicate>) {
             collectQualifiedNames(names, wi.getValue1());
             collectQualifiedNames(names, wi.getValue2());
+        } else if constexpr (std::is_same_v<T, SubqueryPredicate>) {
+            // Only collect the outer LHS column reference; the subquery has its own scope.
+            collectQualifiedNames(names, const_cast<ValueExpr&>(wi.value_));
         } else { // WhereGroup
             for (auto& inner: wi.getWhere().getItems())
                 collectQualifiedNamesFromItem(names, inner);
@@ -207,6 +237,9 @@ string Where::toStringCondition() const {
             using T = std::decay_t<decltype(wi)>;
             if constexpr (std::is_same_v<T, Predicate>) {
                 return wi.toString();
+            } else if constexpr (std::is_same_v<T, SubqueryPredicate>) {
+                string opStr = getBinopStr(toCoreBinop(wi.op_));
+                return wi.value_.toString() + " " + opStr + " (SELECT ...)";
             } else { // WhereGroup
                 return "(" + wi.getWhere().toStringCondition() + ")";
             }

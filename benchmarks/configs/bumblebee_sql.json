@@ -217,8 +217,22 @@
       "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
     },
     {
+      "test": "TPCH Q02 Parquet",
+      "input_file": "tpch_q02.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
+    },
+    {
       "test": "TPCH Q03 Parquet",
       "input_file": "tpch_q03.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
+    },
+    {
+      "test": "TPCH Q04 Parquet",
+      "input_file": "tpch_q04.parquet.sql",
       "sql_export_csv": true,
       "timeout": 600,
       "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
@@ -233,6 +247,13 @@
     {
       "test": "TPCH Q10 Parquet",
       "input_file": "tpch_q10.parquet.sql",
+      "sql_export_csv": true,
+      "timeout": 600,
+      "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]
+    },
+    {
+      "test": "TPCH MQ07 Parquet",
+      "input_file": "tpch_mq07.parquet.sql",
       "sql_export_csv": true,
       "timeout": 600,
       "commands": ["../cmake-build-release/BumbleBee -t 50 -i $file"]

@@ -968,8 +968,39 @@ void ParserInputBuilder::onSQLSelect() {
 
 void ParserInputBuilder::onSQLStart() {
     isSql_ = true;
-    whereContextStack_.clear();
+    if (sqlStatements_.empty()) {
+        // Outermost query: clear WHERE group context stack.
+        whereContextStack_.clear();
+    } else {
+        // Nested subquery: save the outer predicate state so the inner WHERE
+        // parsing doesn't clobber sqlPredicate_ and binop_. Also clear the
+        // WHERE-group context stack — the inner query has its own independent
+        // WHERE structure and no outer groups should carry over.
+        subqueryPredicateContextStack_.push_back({sqlPredicate_, binop_});
+        whereContextStack_.clear();
+    }
     sqlStatements_.emplace_back();
+}
+
+void ParserInputBuilder::onSQLWhereSubqueryPredicate() {
+    if (foundASafetyError_) return;
+    if (sqlStatements_.size() <= 1 || subqueryPredicateContextStack_.empty()) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Internal error: WHERE subquery predicate context mismatch";
+        return;
+    }
+
+    // Restore the outer predicate state that was saved when the inner query started.
+    auto ctx = std::move(subqueryPredicateContextStack_.back());
+    subqueryPredicateContextStack_.pop_back();
+
+    sql::SubqueryPredicate sp;
+    sp.op_      = sql::toSQLBinop(ctx.binop);
+    sp.value_   = ctx.predicate.getValue1();
+    sp.subquery_ = std::make_unique<sql::SQLStatement>(std::move(sqlStatements_.back()));
+    sqlStatements_.pop_back();
+
+    sqlStatements_.back().getWhere().addSubqueryPredicate(std::move(sp));
 }
 
 void ParserInputBuilder::onSQLSubQuery() {

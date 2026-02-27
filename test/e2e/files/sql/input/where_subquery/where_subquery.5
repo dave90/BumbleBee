@@ -1,0 +1,4 @@
+%@sql
+SELECT INDEX, COUNTRY
+FROM "./files/csv/customers-1.csv"
+WHERE COUNTRY = 'Norway' AND INDEX = (SELECT MAX(INDEX) FROM "./files/csv/customers-1.csv" WHERE COUNTRY = 'Norway')
