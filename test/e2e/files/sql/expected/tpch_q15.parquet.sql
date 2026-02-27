@@ -1,0 +1,2 @@
+s_suppkey,s_name,TOTAL_REVENUE
+677,"Supplier#000000677",1614410.2928

@@ -706,9 +706,11 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         if (nextAtom.getType() != BUILTIN)break; // If a classical atom is found, stop the process as all possible built-ins have been evaluated
         if (nextAtom.getBinop() == ASSIGNMENT) continue;
         if (nextAtom.isOrBuiltin()) continue;
-        // check the size of conditions, for now is allowed only simplified condition
-        // TODO allow expression with arith
-        for (auto &bt : atom.getBuiltinTerms()) {
+        // Only absorb EQUAL conditions: PhysicalRowLayoutHashJoin only uses
+        // equality conditions as hash keys; non-equal conditions (NEQ, GT, etc.)
+        // must remain as separate generatePhysicalExpression filter atoms.
+        if (nextAtom.getBinop() != EQUAL) continue;
+        for (auto &bt : nextAtom.getBuiltinTerms()) {
             auto &left = bt.left;
             auto &right = bt.right;
             if (left.getType() != VARIABLE || right.getType() != VARIABLE) continue;
@@ -717,6 +719,11 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
 
             if (varMap.contains( rvar) && varMap.contains( lvar)) {
                 // skip this binop as the condition does not involve left side
+                continue;
+            }
+            if (!varMap.contains(rvar) && !varMap.contains(lvar)) {
+                // Both variables are from the pipeline, not this join atom.
+                // Leave this filter for generatePhysicalExpression to handle.
                 continue;
             }
             if (varMap.contains( rvar) ) {

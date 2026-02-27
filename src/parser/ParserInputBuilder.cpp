@@ -1006,9 +1006,15 @@ void ParserInputBuilder::onSQLWhereSubqueryPredicate() {
 void ParserInputBuilder::onSQLSubQuery() {
     BB_ASSERT(sqlStatements_.size() > 1);
     auto& last = sqlStatements_.back();
-    sqlStatements_[0].getFrom().addSubqueries(last, alias_);
+    auto parentIdx = sqlStatements_.size() - 2;
+    BB_ASSERT(parentIdx < sqlStatements_.size());
+    sqlStatements_[parentIdx].getFrom().addSubqueries(last, alias_);
     alias_.clear();
     sqlStatements_.pop_back();
+    // onSQLStart() for this derived table pushed to subqueryPredicateContextStack_;
+    // discard that entry since derived-table subqueries have no WHERE-predicate context.
+    BB_ASSERT(!subqueryPredicateContextStack_.empty());
+    subqueryPredicateContextStack_.pop_back();
 }
 
 void ParserInputBuilder::onSQLExtTableName(char* name) {

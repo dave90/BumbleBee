@@ -86,9 +86,9 @@ public:
     }
 
     void generate();
+    void generateRules(sql::SQLStatement& statement);
 private:
 
-    void generateRules(sql::SQLStatement& statement);
     void generateExportRule(sql::SQLStatement& statement);
 
     SQLQuery& query_;

@@ -205,11 +205,33 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
     for (auto& item: statement.getWhere().getItems()) {
         fillWhereQTable(item, colsTableMap, result_.errorMessage_);
     }
+
+    // Build a map from SELECT alias -> actual column qualifier so that GROUP BY
+    // clauses can reference SELECT aliases (e.g. GROUP BY SUPPLIER_NO where
+    // SUPPLIER_NO is an alias for L_SUPPKEY).
+    std::unordered_map<string, sql::QualifiedName> selectAliasMap;
+    for (auto& ve: statement.getSelect().getItems()) {
+        if (!ve.getAlias().empty() && ve.getValues().size() == 1
+                && !ve.getValues()[0].isSubExpr() && !ve.getValues()[0].isIsConstant()) {
+            auto& q = ve.getValues()[0].getQualifier();
+            if (!q.table_.empty() && ve.getAlias() != q.name_)
+                selectAliasMap[ve.getAlias()] = q;
+        }
+    }
+
     // fill the groupo by values
     for (auto& ve: statement.getGroupby().getItems()) {
         // se the table information if empty
-        for (auto& vi: ve.getValues())
-            fillQTable(vi, colsTableMap, result_.errorMessage_);
+        for (auto& vi: ve.getValues()) {
+            auto& q = vi.getQualifier();
+            if (!vi.isSubExpr() && !vi.isIsConstant() && q.table_.empty()
+                    && selectAliasMap.count(q.name_)) {
+                // GROUP BY references a SELECT alias; replace with the actual column qualifier
+                vi.setQualifier(selectAliasMap[q.name_]);
+            } else {
+                fillQTable(vi, colsTableMap, result_.errorMessage_);
+            }
+        }
     }
 
 }
@@ -739,6 +761,32 @@ static vector<Atom> generateInnerBodyFromSubquery(
 
     // Generate FROM body atoms.
     vector<Atom> body;
+
+    // Handle derived tables (subqueries) in the inner FROM clause,
+    // mirroring the logic in DatalogGenerator::generateRules.
+    for (auto& sq: inner.getFrom().getSubQueries()) {
+        DatalogGenerator subqGen(outerQuery);
+        subqGen.generateRules(sq);
+        if (subqGen.result_.foundAnError()) {
+            errorMessage = subqGen.result_.errorMessage_;
+            return {};
+        }
+        for (auto& r: subqGen.result_.rules_)
+            result.rules_.push_back(std::move(r));
+
+        string sqAlias = sq.getAlias();
+        BB_ASSERT(outerQuery.tableColumnsMap_.contains(sqAlias));
+        vector<Term> sqTerms;
+        for (auto& item: sq.getSelect().getItems()) {
+            const auto& colAlias = item.getAlias();
+            auto t = Term::createVariable(outerQuery.getVariableName(sqAlias, colAlias));
+            sqTerms.push_back(std::move(t));
+        }
+        auto sqPred = outerQuery.context_.defaultSchema_.createPredicate(
+            &outerQuery.context_, sqAlias.c_str(), sqTerms.size());
+        body.push_back(Atom::createClassicalAtom(sqPred, std::move(sqTerms)));
+    }
+
     idx_t tableIdx = 0;
     for (auto& fi: inner.getFrom().getItems()) {
         if (tableIdx == 0 && fi.getType() == sql::FromItemType::EXTERNAL) {
@@ -1224,33 +1272,14 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     auto& defaultSchema = query_.context_.defaultSchema_;
     vector<Atom> body;
 
-    // first generate rules from subqueries
-    for (auto& sq: statement.getFrom().getSubQueries()) {
-        generateRules(sq);
-        if (result_.foundAnError()) return;
-        // Construct the body atom for the sub-query alias using SELECT item order.
-        // The inner rule's head is built in SELECT item order, so the body atom must
-        // match those positions. Using unordered_set iteration (via generateAtomFromTable)
-        // can produce wrong positional bindings (e.g. VOLUME bound to SUPP_NATION slot).
-        string alias = sq.getAlias();
-        BB_ASSERT(!alias.empty());
-        BB_ASSERT(query_.tableColumnsMap_.contains(alias));
-        auto& keptCols = query_.tableColumnsMap_[alias];
-        vector<Term> sqTerms;
-        for (auto& item: sq.getSelect().getItems()) {
-            const auto& colAlias = item.getAlias();
-            if (!keptCols.contains(colAlias)) continue;
-            auto t = Term::createVariable(query_.getVariableName(alias, colAlias));
-            sqTerms.push_back(std::move(t));
-        }
-        auto sqPred = query_.context_.defaultSchema_.createPredicate(
-            &query_.context_, alias.c_str(), sqTerms.size());
-        auto atom = Atom::createClassicalAtom(sqPred, std::move(sqTerms));
-        if (result_.foundAnError()) return;
-        body.push_back(std::move(atom));
-    }
+    // External FROM items (file tables) must appear first in the body so the
+    // physical optimizer uses them as the pipeline source.  Derived-table subqueries
+    // come second and are hash-joined against the source via the WHERE equality
+    // predicates that follow.  Reversing this order would make a derived table the
+    // source and leave the file scan as a broken pipeline atom that doesn't propagate
+    // columns from earlier atoms.
 
-    // generate body atoms
+    // Step 1: generate external (file-scan) body atoms first.
     idx_t i=0;
     for (auto& fi: statement.getFrom().getItems()) {
         // for the first table do not create additional rule
@@ -1276,6 +1305,32 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
         body.push_back(std::move(atom));
         if (result_.foundAnError()) return;
         ++i;
+    }
+
+    // Step 2: generate classical body atoms from derived-table subqueries.
+    for (auto& sq: statement.getFrom().getSubQueries()) {
+        generateRules(sq);
+        if (result_.foundAnError()) return;
+        // Construct the body atom for the sub-query alias using SELECT item order.
+        // The inner rule's head is built in SELECT item order (all SELECT items),
+        // so the body atom must match those positions without filtering by keptCols.
+        // Filtering by keptCols would reduce arity below the inner rule's head arity,
+        // causing a predicate mismatch (no results). Extra variables in the body that
+        // are not projected to the outer head are safe in Datalog (existentially bound).
+        string alias = sq.getAlias();
+        BB_ASSERT(!alias.empty());
+        BB_ASSERT(query_.tableColumnsMap_.contains(alias));
+        vector<Term> sqTerms;
+        for (auto& item: sq.getSelect().getItems()) {
+            const auto& colAlias = item.getAlias();
+            auto t = Term::createVariable(query_.getVariableName(alias, colAlias));
+            sqTerms.push_back(std::move(t));
+        }
+        auto sqPred = query_.context_.defaultSchema_.createPredicate(
+            &query_.context_, alias.c_str(), sqTerms.size());
+        auto atom = Atom::createClassicalAtom(sqPred, std::move(sqTerms));
+        if (result_.foundAnError()) return;
+        body.push_back(std::move(atom));
     }
 
     // aggregates atoms information
@@ -1335,8 +1390,9 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
 
     if (statement.getSelect().containsAggregations()){
         vector<Rule> additionalRules;
-        // generate the aggregated rules
-        string headPredName = query_.generatePredicateName();
+        // Use the statement's own alias as the head predicate name so that outer
+        // queries can reference the derived table by alias (e.g. REVENUE0(...)).
+        string headPredName = alias;
         auto aggRule = generateAggRules(groupVars, aggVars, query_, statement, rule, headPredName, additionalRules, result_.errorMessage_);
         // call the order generator only on aggregates rules
         if (!statement.getOrderby().empty())

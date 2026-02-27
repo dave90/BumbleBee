@@ -230,6 +230,12 @@
       "commands": ["duckdb -c \" $(cat $file)\""]
     },
     {
+      "test": "TPCH Q15 Parquet",
+      "input_file": "tpch_q15.parquet.sql",
+      "sql_export_csv": true,
+      "commands": ["duckdb -c \" $(cat $file)\""]
+    },
+    {
       "test": "TPCH MQ07 Parquet",
       "input_file": "tpch_mq07.parquet.sql",
       "sql_export_csv": true,
