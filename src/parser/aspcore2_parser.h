@@ -99,12 +99,14 @@
      SQL_DESC = 316,
      SQL_LIMIT = 317,
      SQL_LIKE = 318,
-     SQL_SUM = 319,
-     SQL_MIN = 320,
-     SQL_MAX = 321,
-     SQL_AVG = 322,
-     SQL_COUNT = 323,
-     SQL_DIALECT = 324
+     SQL_IN = 319,
+     SQL_NOT = 320,
+     SQL_SUM = 321,
+     SQL_MIN = 322,
+     SQL_MAX = 323,
+     SQL_AVG = 324,
+     SQL_COUNT = 325,
+     SQL_DIALECT = 326
    };
 #endif
 
@@ -155,7 +157,7 @@ typedef union YYSTYPE
     int integer;
 }
 /* Line 2616 of glr.c.  */
-#line 159 "src/parser/aspcore2_parser.h"
+#line 161 "src/parser/aspcore2_parser.h"
 	YYSTYPE;
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1

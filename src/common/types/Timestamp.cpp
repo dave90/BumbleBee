@@ -56,6 +56,10 @@ void Timestamp::convert(int64_t timestamp, int32_t &out_date, int64_t &out_time)
     out_time = timestamp - (int64_t(out_date) * int64_t(MICROS_PER_DAY));
 }
 
+int64_t Timestamp::fromDatetime(date_t date) {
+    return date * MICROS_PER_DAY;
+}
+
 idx_t Timestamp::length(int32_t time[], char micro_buffer[]) {
     // format is HH:MM:DD.MS
     // microseconds come after the time with a period separator

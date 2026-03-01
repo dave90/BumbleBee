@@ -44,6 +44,29 @@ SubqueryPredicate& SubqueryPredicate::operator=(SubqueryPredicate&& other) noexc
 
 SubqueryPredicate::~SubqueryPredicate() = default;
 
+// ---- InPredicate implementation ----
+
+InPredicate::InPredicate() = default;
+
+InPredicate::InPredicate(const InPredicate& other)
+    : isNotIn_(other.isNotIn_), value_(other.value_), values_(other.values_),
+      subquery_(other.subquery_ ? std::make_unique<SQLStatement>(*other.subquery_) : nullptr) {}
+
+InPredicate::InPredicate(InPredicate&& other) noexcept = default;
+
+InPredicate& InPredicate::operator=(const InPredicate& other) {
+    if (this == &other) return *this;
+    isNotIn_ = other.isNotIn_;
+    value_ = other.value_;
+    values_ = other.values_;
+    subquery_ = other.subquery_ ? std::make_unique<SQLStatement>(*other.subquery_) : nullptr;
+    return *this;
+}
+
+InPredicate& InPredicate::operator=(InPredicate&& other) noexcept = default;
+
+InPredicate::~InPredicate() = default;
+
 
 Predicate::Predicate(const Predicate &other): op_(other.op_),
                                                   value1_(other.value1_),
@@ -167,6 +190,10 @@ void Where::addSubqueryPredicate(SubqueryPredicate sp) {
     items_.push_back(std::move(sp));
 }
 
+void Where::addInPredicate(InPredicate ip) {
+    items_.push_back(std::move(ip));
+}
+
 void Where::addOperator(SQLOperator op) {
     ops_.push_back(op);
 }
@@ -194,6 +221,11 @@ static void collectQualifiedNamesFromItem(vector<QualifiedName>& names, WhereIte
         } else if constexpr (std::is_same_v<T, SubqueryPredicate>) {
             // Only collect the outer LHS column reference; the subquery has its own scope.
             collectQualifiedNames(names, const_cast<ValueExpr&>(wi.value_));
+        } else if constexpr (std::is_same_v<T, InPredicate>) {
+            // Collect the outer LHS column; the constant list and subquery have their own scope.
+            collectQualifiedNames(names, wi.value_);
+            for (auto& ve: wi.values_)
+                collectQualifiedNames(names, const_cast<ValueExpr&>(ve));
         } else { // WhereGroup
             for (auto& inner: wi.getWhere().getItems())
                 collectQualifiedNamesFromItem(names, inner);
@@ -240,6 +272,19 @@ string Where::toStringCondition() const {
             } else if constexpr (std::is_same_v<T, SubqueryPredicate>) {
                 string opStr = getBinopStr(toCoreBinop(wi.op_));
                 return wi.value_.toString() + " " + opStr + " (SELECT ...)";
+            } else if constexpr (std::is_same_v<T, InPredicate>) {
+                string s = wi.value_.toString() + (wi.isNotIn_ ? " NOT IN " : " IN ");
+                if (wi.subquery_) {
+                    s += "(SELECT ...)";
+                } else {
+                    s += "(";
+                    for (idx_t i = 0; i < wi.values_.size(); ++i) {
+                        if (i > 0) s += ", ";
+                        s += wi.values_[i].toString();
+                    }
+                    s += ")";
+                }
+                return s;
             } else { // WhereGroup
                 return "(" + wi.getWhere().toStringCondition() + ")";
             }

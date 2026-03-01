@@ -120,6 +120,14 @@ static void fillWhereQTable(sql::WhereItem& item,
             // The subquery's internal columns are handled during inner normalization.
             for (auto& vi: wi.value_.getValues())
                 fillQTable(vi, colsTableMap, errorMessage);
+        } else if constexpr (std::is_same_v<T, sql::InPredicate>) {
+            // Fill table qualifier for outer LHS column and constant list.
+            // The subquery's internal columns are handled during inner normalization.
+            for (auto& vi: wi.value_.getValues())
+                fillQTable(vi, colsTableMap, errorMessage);
+            for (auto& ve: wi.values_)
+                for (auto& vi: const_cast<sql::ValueExpr&>(ve).getValues())
+                    fillQTable(vi, colsTableMap, errorMessage);
         } else { // sql::WhereGroup
             for (auto& inner: wi.getWhere().getItems())
                 fillWhereQTable(inner, colsTableMap, errorMessage);
@@ -331,6 +339,13 @@ static void collectInnerSubqueryColNames(sql::SQLStatement& stmt, std::unordered
                         names.insert(vp.getQualifier().name_);
             } else if constexpr (std::is_same_v<T, sql::SubqueryPredicate>) {
                 collectInnerSubqueryColNames(*wi.subquery_, names);
+            } else if constexpr (std::is_same_v<T, sql::InPredicate>) {
+                // Collect LHS column name (may be a correlated outer reference).
+                for (auto& vp: wi.value_.getValues())
+                    if (!vp.isIsConstant() && !vp.isSubExpr())
+                        names.insert(vp.getQualifier().name_);
+                if (wi.subquery_)
+                    collectInnerSubqueryColNames(*wi.subquery_, names);
             }
             // WhereGroup: groups are only at the outer level; ignore for now.
         }, item);
@@ -353,9 +368,13 @@ void SqlQueryNormalizer::removeUnusedCols(sql::SQLStatement &statement) {
     // outer-scope columns are not erroneously pruned (they appear only inside
     // the subquery at this point, not at the outer predicate level).
     std::unordered_set<string> innerSubqueryColNames;
-    for (auto& item: statement.getWhere().getItems())
+    for (auto& item: statement.getWhere().getItems()) {
         if (auto* sp = std::get_if<sql::SubqueryPredicate>(&item))
             collectInnerSubqueryColNames(*sp->subquery_, innerSubqueryColNames);
+        else if (auto* ip = std::get_if<sql::InPredicate>(&item))
+            if (ip->subquery_)
+                collectInnerSubqueryColNames(*ip->subquery_, innerSubqueryColNames);
+    }
 
     // Only prune tables that are directly in THIS statement's FROM clause.
     // Sub-query result aliases (e.g. SHIPPING) and inner tables (N1, N2, lineitem,
@@ -701,11 +720,16 @@ static vector<Atom> generateInnerBodyFromSubquery(
 static vector<Atom> generateWhereSubqueryAtoms(
     sql::SubqueryPredicate& sp, SQLQuery& query, TranslationResult& result, string& errorMessage);
 
+static vector<Atom> generateWhereInSubqueryAtoms(
+    sql::InPredicate& ip, SQLQuery& query, TranslationResult& result, string& errorMessage);
+
 static CNF generateWhereListCNF(sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
     bool likeForbidden, vector<Atom>& likeBody, SQLQuery& query, TranslationResult& result, string& errorMessage);
 
 void generateBinopAtoms(vector<Atom>& body, sql::predicate_vector_t& items, vector<sql::SQLOperator>& ops,
     SQLQuery& query, TranslationResult& result, string& errorMessage);
+
+static CNF generateInListCNF(sql::InPredicate& ip, SQLQuery& query, string& errorMessage);
 
 // ---- Subquery validation ----
 
@@ -828,6 +852,23 @@ static vector<Atom> generateInnerBodyFromSubquery(
             generateBinopAtoms(body, grp->getWhere().getItems(), grp->getWhere().getOps(),
                 outerQuery, result, errorMessage);
             if (!errorMessage.empty()) return {};
+        } else if (auto* ip2 = std::get_if<sql::InPredicate>(&item)) {
+            if (ip2->subquery_) {
+                auto atoms = generateWhereInSubqueryAtoms(*ip2, outerQuery, result, errorMessage);
+                if (!errorMessage.empty()) return {};
+                for (auto& atom: atoms)
+                    body.push_back(std::move(atom));
+            } else {
+                auto cnf = generateInListCNF(*ip2, outerQuery, errorMessage);
+                if (!errorMessage.empty()) return {};
+                for (auto& clause: cnf) {
+                    if (clause.empty()) continue;
+                    if (clause.size() == 1)
+                        body.push_back(std::move(clause[0]));
+                    else
+                        body.push_back(Atom::createOrBuiltinAtom(clause));
+                }
+            }
         } else if (auto* sp2 = std::get_if<sql::SubqueryPredicate>(&item)) {
             // Nested subquery: generate auxiliary predicate rule.
             validateWhereSubquery(*sp2->subquery_, errorMessage);
@@ -944,6 +985,10 @@ static vector<string> findCorrelatedVarNamesFromWhere(
                     inspect(inner_pred->getValue2());
                 }
             }
+        } else if (auto* ip = std::get_if<sql::InPredicate>(&item)) {
+            // The LHS of IN may be a correlated outer reference.
+            inspect(ip->value_);
+            // Don't recurse into ip->subquery_ (handled separately during inner normalization).
         }
     }
     return corrVarNames;
@@ -1093,6 +1138,137 @@ static vector<Atom> generateWhereSubqueryAtoms(
     return resultAtoms;
 }
 
+// ---- IN / NOT IN constant list CNF generation ----
+// IN (c1, c2, ...): one clause with one OR-builtin atom (col=c1 OR col=c2 OR ...).
+// NOT IN (c1, c2, ...): one clause per value with UNEQUAL atom (col!=c1 AND col!=c2 AND ...).
+static CNF generateInListCNF(sql::InPredicate& ip, SQLQuery& query, string& errorMessage) {
+    auto lhsTerm = generateTermFromValueExpr(ip.value_, "", query, errorMessage);
+    if (!errorMessage.empty()) return {};
+
+    if (ip.isNotIn_) {
+        // NOT IN: one UNEQUAL atom per value (each becomes its own CNF clause → AND)
+        CNF cnf;
+        for (auto& valExpr: ip.values_) {
+            auto rhsTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(valExpr),
+                "", query, errorMessage);
+            if (!errorMessage.empty()) return {};
+            Term lhsCopy = lhsTerm;
+            terms_vector_t terms = {std::move(lhsCopy), std::move(rhsTerm)};
+            auto atom = Atom::createBuiltinAtom(std::move(terms), Binop::UNEQUAL);
+            cnf.emplace_back();
+            cnf.back().push_back(std::move(atom));
+        }
+        return cnf;
+    } else {
+        // IN: one OR-builtin atom covering all values
+        if (ip.values_.size() == 1) {
+            auto rhsTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(ip.values_[0]),
+                "", query, errorMessage);
+            if (!errorMessage.empty()) return {};
+            terms_vector_t terms = {std::move(lhsTerm), std::move(rhsTerm)};
+            auto atom = Atom::createBuiltinAtom(std::move(terms), Binop::EQUAL);
+            CNF cnf;
+            cnf.emplace_back();
+            cnf.back().push_back(std::move(atom));
+            return cnf;
+        }
+        vector<Atom> builtinAtoms;
+        for (auto& valExpr: ip.values_) {
+            auto rhsTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(valExpr),
+                "", query, errorMessage);
+            if (!errorMessage.empty()) return {};
+            Term lhsCopy = lhsTerm;
+            terms_vector_t terms = {std::move(lhsCopy), std::move(rhsTerm)};
+            builtinAtoms.push_back(Atom::createBuiltinAtom(std::move(terms), Binop::EQUAL));
+        }
+        auto orAtom = Atom::createOrBuiltinAtom(builtinAtoms);
+        CNF cnf;
+        cnf.emplace_back();
+        cnf.back().push_back(std::move(orAtom));
+        return cnf;
+    }
+}
+
+// ---- IN / NOT IN subquery translation ----
+// Sub-case A (no aggregation): auxiliary predicate for set membership.
+// Sub-case B (aggregation): reuse scalar subquery logic via SubqueryPredicate.
+static vector<Atom> generateWhereInSubqueryAtoms(
+    sql::InPredicate& ip, SQLQuery& query, TranslationResult& result, string& errorMessage) {
+
+    BB_ASSERT(ip.subquery_);
+    auto& inner = *ip.subquery_;
+
+    if (inner.getSelect().getItems().size() != 1) {
+        errorMessage = "IN/NOT IN subquery must return exactly one column";
+        return {};
+    }
+
+    AggregateFunctionType aggFunc = inner.getSelect().getAggFunctions()[0];
+
+    if (aggFunc != NONE) {
+        // Sub-case B: aggregation → reuse scalar subquery logic.
+        // Temporarily transfer subquery ownership to build a synthetic SubqueryPredicate.
+        sql::SubqueryPredicate syntheticSp;
+        syntheticSp.op_      = ip.isNotIn_ ? sql::SQL_UNEQUAL : sql::SQL_EQUAL;
+        syntheticSp.value_   = ip.value_;
+        syntheticSp.subquery_ = std::move(ip.subquery_);
+
+        auto atoms = generateWhereSubqueryAtoms(syntheticSp, query, result, errorMessage);
+
+        ip.subquery_ = std::move(syntheticSp.subquery_);
+        return atoms;
+    }
+
+    // Sub-case A: no aggregation → set membership via auxiliary predicate.
+
+    // Snapshot outer aliases BEFORE generateInnerBodyFromSubquery merges inner aliases.
+    auto outerAliasesSnapshot = query.tableColumnsMap_;
+
+    auto innerBodyAtoms = generateInnerBodyFromSubquery(inner, query, result, errorMessage);
+    if (!errorMessage.empty()) return {};
+
+    // Get the inner SELECT column variable (what is being checked for membership).
+    auto& innerSelectItem = inner.getSelect().getItems()[0];
+    auto innerColTerm = generateTermFromValueExpr(
+        const_cast<sql::ValueExpr&>(innerSelectItem), "", query, errorMessage);
+    if (!errorMessage.empty()) return {};
+
+    // Collect correlated (outer-scope) variable names.
+    auto corrVarNames = findCorrelatedVarNamesFromWhere(inner, outerAliasesSnapshot);
+
+    // Build aux head terms: corrVars... + innerCol
+    terms_vector_t auxHeadTerms;
+    for (auto& name: corrVarNames)
+        auxHeadTerms.push_back(Term::createVariable(name.c_str()));
+    auxHeadTerms.push_back(std::move(innerColTerm));
+
+    // Create auxiliary predicate and rule: #aux(corrVars..., innerCol) :- innerBodyAtoms
+    string auxPredName = query.generatePredicateName();
+    auto auxPred = query.context_.defaultSchema_.createPredicate(
+        &query.context_, auxPredName.c_str(), auxHeadTerms.size());
+    auto auxHead = Atom::createClassicalAtom(auxPred, std::move(auxHeadTerms));
+    Rule auxRule(auxHead, innerBodyAtoms);
+    result.rules_.push_back(std::move(auxRule));
+
+    // Build LHS term for the outer classical atom (the column being tested).
+    auto lhsTerm = generateTermFromValueExpr(ip.value_, "", query, errorMessage);
+    if (!errorMessage.empty()) return {};
+
+    // Build outer classical atom: #aux(corrVars..., lhsTerm)
+    terms_vector_t classTerms;
+    for (auto& name: corrVarNames)
+        classTerms.push_back(Term::createVariable(name.c_str()));
+    classTerms.push_back(std::move(lhsTerm));
+
+    auto classAtom = Atom::createClassicalAtom(auxPred, std::move(classTerms));
+    if (ip.isNotIn_)
+        classAtom.setNegative(true);
+
+    vector<Atom> resultAtoms;
+    resultAtoms.push_back(std::move(classAtom));
+    return resultAtoms;
+}
+
 // ---- WHERE CNF generation (updated to thread TranslationResult through) ----
 
 // Generate a CNF for a single WhereItem.
@@ -1135,6 +1311,23 @@ static CNF generateWhereItemCNF(sql::WhereItem& item, bool likeForbidden,
             cnf.back().push_back(std::move(atom));
         }
         return cnf;
+    } else if (auto* ip = std::get_if<sql::InPredicate>(&item)) {
+        if (ip->subquery_) {
+            if (likeForbidden) {
+                errorMessage = "IN/NOT IN subquery inside grouped WHERE conditions is not supported";
+                return {};
+            }
+            auto atoms = generateWhereInSubqueryAtoms(*ip, query, result, errorMessage);
+            if (!errorMessage.empty()) return {};
+            CNF cnf;
+            for (auto& atom: atoms) {
+                cnf.emplace_back();
+                cnf.back().push_back(std::move(atom));
+            }
+            return cnf;
+        } else {
+            return generateInListCNF(*ip, query, errorMessage);
+        }
     } else { // sql::WhereGroup
         auto& group = std::get<sql::WhereGroup>(item);
         auto& w = group.getWhere();

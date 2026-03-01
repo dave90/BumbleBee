@@ -99,6 +99,21 @@ struct SubqueryPredicate {
     std::unique_ptr<SQLStatement> subquery_;   // Inner SELECT (scalar subquery)
 };
 
+// An IN / NOT IN predicate: LHS_value [NOT] IN (const_list | subquery)
+struct InPredicate {
+    InPredicate();
+    InPredicate(const InPredicate&);
+    InPredicate(InPredicate&&) noexcept;
+    InPredicate& operator=(const InPredicate&);
+    InPredicate& operator=(InPredicate&&) noexcept;
+    ~InPredicate();
+
+    bool isNotIn_{false};
+    ValueExpr value_;                          // Left-hand side (column reference)
+    vector<ValueExpr> values_;                 // Constant list (empty if subquery)
+    std::unique_ptr<SQLStatement> subquery_;   // Inner SELECT (nullptr if constant list)
+};
+
 // Forward-declare Where so WhereGroup can hold a unique_ptr<Where>
 class Where;
 
@@ -121,8 +136,9 @@ private:
     std::unique_ptr<Where> where_;
 };
 
-// A WhereItem is a flat Predicate, a parenthesized WhereGroup, or a scalar SubqueryPredicate.
-using WhereItem = std::variant<Predicate, WhereGroup, SubqueryPredicate>;
+// A WhereItem is a flat Predicate, a parenthesized WhereGroup, a scalar SubqueryPredicate,
+// or an IN/NOT IN predicate.
+using WhereItem = std::variant<Predicate, WhereGroup, SubqueryPredicate, InPredicate>;
 using predicate_vector_t = std::vector<WhereItem>;
 
 class Where {
@@ -137,6 +153,7 @@ public:
     void addItem(Predicate& condition);
     void addGroup(WhereGroup group);
     void addSubqueryPredicate(SubqueryPredicate sp);
+    void addInPredicate(InPredicate ip);
     void addOperator(SQLOperator op);
 
     predicate_vector_t & getItems();

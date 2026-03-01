@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/orders.parquet"
+WHERE O_CUSTKEY IN (SELECT C_CUSTKEY FROM "./files/parquet/tpch/customer.parquet" WHERE C_MKTSEGMENT = "BUILDING") AND O_ORDERSTATUS NOT IN ("F", "P")

@@ -1003,6 +1003,48 @@ void ParserInputBuilder::onSQLWhereSubqueryPredicate() {
     sqlStatements_.back().getWhere().addSubqueryPredicate(std::move(sp));
 }
 
+void ParserInputBuilder::onSQLInListValue() {
+    if (foundASafetyError_) return;
+    if (valueExpr_.getValues().empty()) {
+        BB_ASSERT(!sqlValuePrimary_.empty());
+        valueExpr_.addValuePrimary(sqlValuePrimary_.back());
+        sqlValuePrimary_.pop_back();
+    }
+    inListValues_.push_back(valueExpr_);
+    valueExpr_.clear();
+}
+
+void ParserInputBuilder::onSQLInListPredicate(bool isNotIn) {
+    if (foundASafetyError_) return;
+    sql::InPredicate ip;
+    ip.isNotIn_ = isNotIn;
+    ip.value_   = sqlPredicate_.getValue1();
+    ip.values_  = std::move(inListValues_);
+    inListValues_.clear();
+    sqlStatements_.back().getWhere().addInPredicate(std::move(ip));
+}
+
+void ParserInputBuilder::onSQLInSubqueryPredicate(bool isNotIn) {
+    if (foundASafetyError_) return;
+    if (sqlStatements_.size() <= 1 || subqueryPredicateContextStack_.empty()) {
+        foundASafetyError_ = true;
+        safetyErrorMessage = "Internal error: IN WHERE subquery predicate context mismatch";
+        return;
+    }
+
+    // Restore the outer predicate state that was saved when the inner query started.
+    auto ctx = std::move(subqueryPredicateContextStack_.back());
+    subqueryPredicateContextStack_.pop_back();
+
+    sql::InPredicate ip;
+    ip.isNotIn_  = isNotIn;
+    ip.value_    = ctx.predicate.getValue1();
+    ip.subquery_ = std::make_unique<sql::SQLStatement>(std::move(sqlStatements_.back()));
+    sqlStatements_.pop_back();
+
+    sqlStatements_.back().getWhere().addInPredicate(std::move(ip));
+}
+
 void ParserInputBuilder::onSQLSubQuery() {
     BB_ASSERT(sqlStatements_.size() > 1);
     auto& last = sqlStatements_.back();

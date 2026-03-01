@@ -75,7 +75,7 @@ bool queryFound=false;
 
 
 /* --- SQL tokens --- */
-%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT SQL_LIKE
+%token SQL_SELECT SQL_FROM SQL_WHERE SQL_GROUP SQL_BY SQL_AS SQL_COPY SQL_TO SQL_ORDER SQL_ASC SQL_DESC SQL_LIMIT SQL_LIKE SQL_IN SQL_NOT
 %token <string> SQL_SUM SQL_MIN SQL_MAX SQL_AVG SQL_COUNT
 %token <string> SQL_DIALECT
 
@@ -1015,6 +1015,13 @@ search_condition
     }
     ;
 
+in_value_list
+    : value_expr
+        { director.getBuilder()->onSQLInListValue(); }
+    | in_value_list COMMA value_expr
+        { director.getBuilder()->onSQLInListValue(); }
+    ;
+
 search_atom
     : predicate
     {
@@ -1023,6 +1030,22 @@ search_atom
     | predicate_value_expr binop PARAM_OPEN sql_query PARAM_CLOSE
     {
         director.getBuilder()->onSQLWhereSubqueryPredicate();
+    }
+    | predicate_value_expr SQL_IN PARAM_OPEN in_value_list PARAM_CLOSE
+    {
+        director.getBuilder()->onSQLInListPredicate(false);
+    }
+    | predicate_value_expr SQL_NOT SQL_IN PARAM_OPEN in_value_list PARAM_CLOSE
+    {
+        director.getBuilder()->onSQLInListPredicate(true);
+    }
+    | predicate_value_expr SQL_IN PARAM_OPEN sql_query PARAM_CLOSE
+    {
+        director.getBuilder()->onSQLInSubqueryPredicate(false);
+    }
+    | predicate_value_expr SQL_NOT SQL_IN PARAM_OPEN sql_query PARAM_CLOSE
+    {
+        director.getBuilder()->onSQLInSubqueryPredicate(true);
     }
     | where_group
     ;

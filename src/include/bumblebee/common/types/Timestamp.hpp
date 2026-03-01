@@ -64,6 +64,7 @@ public:
 
 	static void convert(int64_t dtime, int32_t &hour, int32_t &min, int32_t &sec, int32_t &micros);
 	static void convert(int64_t timestamp, int32_t &out_date, int64_t &out_time);
+	static int64_t fromDatetime(date_t date);
 
 	static idx_t length(int32_t time[], char micro_buffer[]);
 	static int32_t formatMicros(uint32_t microseconds, char micro_buffer[]);

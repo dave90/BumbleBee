@@ -213,6 +213,8 @@ NUMBER              ([0-9]+(\.[0-9]+)?)
 <SQL>[Tt][Oo]                           { return SQL_TO; }
 <SQL>[Ll][Ii][Mm][Ii][Tt]               { return SQL_LIMIT; }
 <SQL>[Ll][Ii][Kk][Ee]                   { return SQL_LIKE; }
+<SQL>[Ii][Nn]                           { return SQL_IN; }
+<SQL>[Nn][Oo][Tt]                       { return SQL_NOT; }
 
 <SQL>[Ss][Uu][Mm]                       {
                                             yylval.string=new char[strlen(yytext)+1];

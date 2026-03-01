@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/part.parquet"
+WHERE P_RETAILPRICE IN (SELECT MAX(P_RETAILPRICE) FROM "./files/parquet/tpch/part.parquet")

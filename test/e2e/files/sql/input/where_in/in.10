@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/orders.parquet"
+WHERE O_CUSTKEY NOT IN (SELECT C_CUSTKEY FROM "./files/parquet/tpch/customer.parquet" WHERE C_ACCTBAL > (SELECT AVG(C_ACCTBAL) FROM "./files/parquet/tpch/customer.parquet" WHERE C_NATIONKEY IN (1, 2, 3, 4, 5)))

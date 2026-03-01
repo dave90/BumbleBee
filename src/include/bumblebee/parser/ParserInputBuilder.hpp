@@ -139,6 +139,9 @@ public:
 	void onSQLSubQuery();
 	void onSQLStart();
 	void onSQLWhereSubqueryPredicate();
+	void onSQLInListValue();
+	void onSQLInListPredicate(bool isNotIn);
+	void onSQLInSubqueryPredicate(bool isNotIn);
 	void onSQLExtTable();
 	void onSQLExtTableName(char*);
 	void onSQLExtTableNameString(char*);
@@ -201,6 +204,7 @@ protected:
 	// SQL parser
 	bool isSql_{false};
 	vector<sql::ValuePrimary> sqlValuePrimary_;
+	vector<sql::ValueExpr> inListValues_;
 	string alias_;
 	sql::ValueExpr valueExpr_;
 	sql::ValueExpr mulExpr_;

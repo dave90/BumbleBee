@@ -1,0 +1,3 @@
+SELECT COUNT(*) AS cnt
+FROM './files/parquet/tpch/lineitem.parquet'
+WHERE l_returnflag IN ('A', 'R') AND l_shipmode NOT IN ('AIR', 'TRUCK', 'RAIL')
