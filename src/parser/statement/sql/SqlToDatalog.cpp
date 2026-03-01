@@ -555,7 +555,7 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
         std::move(aggTerms), std::move(aggBodyAtoms), std::move(aggGroupTerms));
     else  {
         Term ug;
-        aggregateAtom = Atom::createAggregateAtom(aggFunctions[0], Binop::EQUAL, Binop::NONE_OP,
+        aggregateAtom = Atom::createAggregateAtom(aggFunctions[0], Binop::ASSIGNMENT, Binop::NONE_OP,
             assignmentTerms[0], ug, std::move(aggTerms),
             std::move(aggBodyAtoms), std::move(aggGroupTerms));
     }
@@ -853,6 +853,13 @@ static vector<Atom> generateInnerBodyFromSubquery(
                 aggTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(si),
                     sp2->subquery_->getAlias(), outerQuery, errorMessage);
                 if (!errorMessage.empty()) return {};
+                // Handle arithmetic-wrapped aggregate (e.g. 0.2 * avg(col))
+                if (aggTerm.getType() == ARITH) {
+                    auto arithVar = Term::createVariable(outerQuery.generateVarName());
+                    terms_vector_t builtinTerms = {arithVar, std::move(aggTerm)};
+                    innermostBody.push_back(Atom::createBuiltinAtom(std::move(builtinTerms), Binop::ASSIGNMENT));
+                    aggTerm = arithVar;
+                }
             }
 
             // Fresh guard variable for assignment in the auxiliary rule.
@@ -989,6 +996,13 @@ static vector<Atom> generateWhereSubqueryAtoms(
         aggTerm = generateTermFromValueExpr(const_cast<sql::ValueExpr&>(si),
             inner.getAlias(), query, errorMessage);
         if (!errorMessage.empty()) return {};
+        // Handle arithmetic-wrapped aggregate (e.g. 0.2 * avg(col))
+        if (aggTerm.getType() == ARITH) {
+            auto arithVar = Term::createVariable(query.generateVarName());
+            terms_vector_t builtinTerms = {arithVar, std::move(aggTerm)};
+            innerBodyAtoms.push_back(Atom::createBuiltinAtom(std::move(builtinTerms), Binop::ASSIGNMENT));
+            aggTerm = arithVar;
+        }
     }
 
     terms_vector_t aggTerms;

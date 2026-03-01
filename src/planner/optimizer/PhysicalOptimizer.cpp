@@ -527,7 +527,7 @@ void PhysicalOptimizer::generatePhysicalAgg(Atom& atom, vector<idx_t>& cols, pat
 }
 
 void PhysicalOptimizer::generatePhysicalAggSource(Atom& atom, vector<idx_t>& cols, patom_ptr_t& source) {
-    BB_ASSERT(atom.getType() == AGGREGATE && atom.hasExplicitGroups());
+    BB_ASSERT(atom.getType() == AGGREGATE);
     BB_ASSERT(atom.getAggsAtoms().size() == 1);
 
     auto& pt = context_.defaultSchema_.getPredicateTable(atom.getAggsAtoms()[0].getPredicate());
@@ -925,7 +925,7 @@ prule_ptr_vector_t PhysicalOptimizer::createPhysicalRules(Rule &rule) {
         firstAtom.getVariables(vars);
         PredFunction* func  = (PredFunction*)context_.functionRegister_.getFunction(firstAtom.getExternalFunctionName(), firstAtom.getInputValuesType() ).get();
         source = patom_ptr_t(new PhysicalPredFunction(context_, types_,cols_[0],  selectedCols_[0], (PredFunction*) func, externalBindData_[0]));
-    } else if (firstAtom.getType() == AGGREGATE && firstAtom.hasExplicitGroups()) {
+    } else if (firstAtom.getType() == AGGREGATE) {
         firstAtom.getVariables(vars);
         generatePhysicalAggSource(firstAtom, cols_[0], source);
     }

@@ -826,7 +826,12 @@ aggregate_function
 
 sql
     : sql_query
+    | sql_query SEMICOLON
     | SQL_COPY PARAM_OPEN sql_query PARAM_CLOSE sql_copy_to sql_copy_params
+    {
+         director.getBuilder()->onSQLCopy();
+    }
+    | SQL_COPY PARAM_OPEN sql_query PARAM_CLOSE sql_copy_to sql_copy_params SEMICOLON
     {
          director.getBuilder()->onSQLCopy();
     }

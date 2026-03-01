@@ -130,12 +130,37 @@ struct DecimalCommonCastInput {
     int resultScale_{0};
 };
 
+struct MixedDecimalFloatInput {
+    explicit MixedDecimalFloatInput(int decimalScale) : decimalScale_(decimalScale) {}
+    int decimalScale_{0};
+};
+
+template<class LEFT_DECIMAL_INT, class RIGHT_FLOAT, class RESULT_FLOAT, class OP>
+struct DecimalFloatCast {
+    static inline RESULT_FLOAT operation(LEFT_DECIMAL_INT left, RIGHT_FLOAT right, idx_t, void* dataptr) {
+        auto input = (MixedDecimalFloatInput*)dataptr;
+        auto leftAsFloat = static_cast<RESULT_FLOAT>(left) /
+                           static_cast<RESULT_FLOAT>(NumericHelper::POWERS_OF_TEN[input->decimalScale_]);
+        return OP::operation(leftAsFloat, static_cast<RESULT_FLOAT>(right));
+    }
+};
+
+template<class LEFT_FLOAT, class RIGHT_DECIMAL_INT, class RESULT_FLOAT, class OP>
+struct FloatDecimalCast {
+    static inline RESULT_FLOAT operation(LEFT_FLOAT left, RIGHT_DECIMAL_INT right, idx_t, void* dataptr) {
+        auto input = (MixedDecimalFloatInput*)dataptr;
+        auto rightAsFloat = static_cast<RESULT_FLOAT>(right) /
+                            static_cast<RESULT_FLOAT>(NumericHelper::POWERS_OF_TEN[input->decimalScale_]);
+        return OP::operation(static_cast<RESULT_FLOAT>(left), rightAsFloat);
+    }
+};
+
 template<class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OP>
 struct DecimalCommonCast {
     static inline RESULT_TYPE operation(LEFT_TYPE left, RIGHT_TYPE right, idx_t i, void* dataptr) {
         auto input = (DecimalCommonCastInput*)dataptr;
-        RESULT_TYPE leftResultType = static_cast<RESULT_TYPE>(left);
-        RESULT_TYPE rightResultType = static_cast<RESULT_TYPE>(right);
+        auto leftResultType = static_cast<RESULT_TYPE>(left);
+        auto rightResultType = static_cast<RESULT_TYPE>(right);
 
         // If leftScale < resultScale, multiply by 10^(resultScale-leftScale), otherwise divide it
         if (input->resultScale_ >= input->leftScale_)
@@ -245,6 +270,8 @@ struct DecimalCommonCast<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, Division> {
 
 template <class LEFT_TYPE, class RIGHT_TYPE,  class RESULT_TYPE, class OP>
 void templatedExecuteOperationSwitchDecimalMaxScale(Vector &left, Vector &right, Vector &result, idx_t count) {
+    BB_ASSERT(left.getLogicalTypeId() == LogicalTypeId::DECIMAL);
+    BB_ASSERT(right.getLogicalTypeId() == LogicalTypeId::DECIMAL);
     int sl = left.getLogicalType().getDecimalData().scale_;
     int sr = right.getLogicalType().getDecimalData().scale_;
     int sres = result.getLogicalType().getDecimalData().scale_;
@@ -253,6 +280,46 @@ void templatedExecuteOperationSwitchDecimalMaxScale(Vector &left, Vector &right,
     BinaryExecution::genericExecute<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, DecimalCommonCast<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OP>>(left, right, result, count, &input);
 }
 
+
+template<class LEFT_DECIMAL_INT, class OP>
+void templatedExecuteOperationDecimalFloat(Vector& left, Vector& right, Vector& result, idx_t count) {
+    BB_ASSERT(left.getLogicalTypeId() == LogicalTypeId::DECIMAL);
+    BB_ASSERT(result.getLogicalTypeId() == LogicalTypeId::DOUBLE);
+    int scale = left.getLogicalType().getDecimalData().scale_;
+    MixedDecimalFloatInput input(scale);
+    switch (right.getLogicalTypeId()) {
+        case LogicalTypeId::FLOAT:
+            BinaryExecution::genericExecute<LEFT_DECIMAL_INT, float, double,
+                DecimalFloatCast<LEFT_DECIMAL_INT, float, double, OP>>(left, right, result, count, &input);
+            break;
+        case LogicalTypeId::DOUBLE:
+            BinaryExecution::genericExecute<LEFT_DECIMAL_INT, double, double,
+                DecimalFloatCast<LEFT_DECIMAL_INT, double, double, OP>>(left, right, result, count, &input);
+            break;
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented right type for decimal-float operation!");
+    }
+}
+
+template<class RIGHT_DECIMAL_INT, class OP>
+void templatedExecuteOperationFloatDecimal(Vector& left, Vector& right, Vector& result, idx_t count) {
+    BB_ASSERT(right.getLogicalTypeId() == LogicalTypeId::DECIMAL);
+    BB_ASSERT(result.getLogicalTypeId() == LogicalTypeId::DOUBLE);
+    int scale = right.getLogicalType().getDecimalData().scale_;
+    MixedDecimalFloatInput input(scale);
+    switch (left.getLogicalTypeId()) {
+        case LogicalTypeId::FLOAT:
+            BinaryExecution::genericExecute<float, RIGHT_DECIMAL_INT, double,
+                FloatDecimalCast<float, RIGHT_DECIMAL_INT, double, OP>>(left, right, result, count, &input);
+            break;
+        case LogicalTypeId::DOUBLE:
+            BinaryExecution::genericExecute<double, RIGHT_DECIMAL_INT, double,
+                FloatDecimalCast<double, RIGHT_DECIMAL_INT, double, OP>>(left, right, result, count, &input);
+            break;
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented left type for float-decimal operation!");
+    }
+}
 
 template <class LEFT_TYPE, class RIGHT_TYPE,  class OP>
 void templatedExecuteOperationSwitchResult(Vector &left, Vector &right, Vector &result, idx_t count) {
@@ -347,21 +414,27 @@ void templatedExecuteOperationSwitchRight(Vector &left, Vector &right, Vector &r
         case LogicalTypeId::DOUBLE:
             templatedExecuteOperationSwitchResult<LEFT_TYPE,double, OP>(left, right, result, count);
             break;
-        case LogicalTypeId::DECIMAL:
+        case LogicalTypeId::DECIMAL: {
+            const bool leftIsFloat = left.getLogicalTypeId() == LogicalTypeId::FLOAT
+                                  || left.getLogicalTypeId() == LogicalTypeId::DOUBLE;
             switch (right.getType()) {
                 case PhysicalType::SMALLINT:
-                    templatedExecuteOperationSwitchResult<LEFT_TYPE,int16_t, OP>(left, right, result, count);
+                    leftIsFloat ? templatedExecuteOperationFloatDecimal<int16_t, OP>(left, right, result, count)
+                                : templatedExecuteOperationSwitchResult<LEFT_TYPE, int16_t, OP>(left, right, result, count);
                     break;
                 case PhysicalType::INTEGER:
-                    templatedExecuteOperationSwitchResult<LEFT_TYPE,int32_t, OP>(left, right, result, count);
+                    leftIsFloat ? templatedExecuteOperationFloatDecimal<int32_t, OP>(left, right, result, count)
+                                : templatedExecuteOperationSwitchResult<LEFT_TYPE, int32_t, OP>(left, right, result, count);
                     break;
                 case PhysicalType::BIGINT:
-                    templatedExecuteOperationSwitchResult<LEFT_TYPE,int64_t, OP>(left, right, result, count);
+                    leftIsFloat ? templatedExecuteOperationFloatDecimal<int64_t, OP>(left, right, result, count)
+                                : templatedExecuteOperationSwitchResult<LEFT_TYPE, int64_t, OP>(left, right, result, count);
                     break;
                 default:
                     ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
             }
             break;
+        }
         default:
             ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
     }
@@ -402,16 +475,21 @@ void templatedExecuteOperationSwitchLeft(Vector &left, Vector &right, Vector &re
         case LogicalTypeId::DOUBLE:
             templatedExecuteOperationSwitchRight<double, OP>(left, right, result, count);
             break;
-        case LogicalTypeId::DECIMAL:{
+        case LogicalTypeId::DECIMAL: {
+            const bool rightIsFloat = right.getLogicalTypeId() == LogicalTypeId::FLOAT
+                                   || right.getLogicalTypeId() == LogicalTypeId::DOUBLE;
             switch (left.getType()) {
                 case PhysicalType::SMALLINT:
-                    templatedExecuteOperationSwitchRight<int16_t, OP>(left, right, result, count);
+                    rightIsFloat ? templatedExecuteOperationDecimalFloat<int16_t, OP>(left, right, result, count)
+                                 : templatedExecuteOperationSwitchRight<int16_t, OP>(left, right, result, count);
                     break;
                 case PhysicalType::INTEGER:
-                    templatedExecuteOperationSwitchRight<int32_t, OP>(left, right, result, count);
+                    rightIsFloat ? templatedExecuteOperationDecimalFloat<int32_t, OP>(left, right, result, count)
+                                 : templatedExecuteOperationSwitchRight<int32_t, OP>(left, right, result, count);
                     break;
                 case PhysicalType::BIGINT:
-                    templatedExecuteOperationSwitchRight<int64_t, OP>(left, right, result, count);
+                    rightIsFloat ? templatedExecuteOperationDecimalFloat<int64_t, OP>(left, right, result, count)
+                                 : templatedExecuteOperationSwitchRight<int64_t, OP>(left, right, result, count);
                     break;
                 default:
                     ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");

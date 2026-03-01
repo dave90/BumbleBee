@@ -105,6 +105,18 @@ struct DecimalCastOperator {
     }
 };
 
+// Casts DECIMAL (stored as scaled integer) to a floating-point type by dividing by the scale factor
+struct DecimalToFloatCastOp {
+    template <class INPUT_TYPE, class RESULT_TYPE>
+    static RESULT_TYPE operation(INPUT_TYPE input, void *dataptr) {
+        auto data = (DecimalCastInput *)dataptr;
+        if (data->scale_ == 0) return static_cast<RESULT_TYPE>(input);
+        if (data->scale_ > 0)
+            return static_cast<RESULT_TYPE>((long double)input / (long double)NumericHelper::POWERS_OF_TEN[data->scale_]);
+        return static_cast<RESULT_TYPE>((long double)input * (long double)NumericHelper::POWERS_OF_TEN[-data->scale_]);
+    }
+};
+
 
 template <class SRC, class DST, class OP>
 bool vectorCastLoop(Vector &source, Vector &result, idx_t count, string *errorMessage) {
@@ -243,6 +255,18 @@ static bool decimalCastSwitch(Vector &source, Vector &result, idx_t count, strin
 	                ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");
 	        }
 	        return false;
+	    }
+	    case LogicalTypeId::FLOAT: {
+	        auto& decimalData = source.getLogicalType().getDecimalData();
+	        DecimalCastInput input(result, decimalData.width_, decimalData.scale_);
+	        UnaryExecution::genericExecute<INPUT_TYPE, float, DecimalToFloatCastOp>(source, result, count, (void*)&input);
+	        return true;
+	    }
+	    case LogicalTypeId::DOUBLE: {
+	        auto& decimalData = source.getLogicalType().getDecimalData();
+	        DecimalCastInput input(result, decimalData.width_, decimalData.scale_);
+	        UnaryExecution::genericExecute<INPUT_TYPE, double, DecimalToFloatCastOp>(source, result, count, (void*)&input);
+	        return true;
 	    }
 	default:
         ErrorHandler::errorNotImplemented("Unimplemented type for execute operation!");

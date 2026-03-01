@@ -257,6 +257,7 @@ def download_files(urls):
     return saved_paths
 
 def process_test(test, config, config_name, comparison_results, previous_results):
+    defaults = config.get("defaults", {})
     test_name = test["test"]
     input_file = test["input_file"]
     input_path = Path(config["input_folder"]) / input_file
@@ -278,7 +279,7 @@ def process_test(test, config, config_name, comparison_results, previous_results
         actual_input_path = str(input_path)
         query_preds = set()
 
-    sql_export_csv = test.get("sql_export_csv", False)
+    sql_export_csv = test.get("sql_export_csv", defaults.get("sql_export_csv", False))
     output_csv_file = None
     if sql_export_csv:
         output_csv_file = output_folder / f"{test_name.replace(' ', '_')}.csv"
@@ -288,11 +289,11 @@ def process_test(test, config, config_name, comparison_results, previous_results
             actual_input_path = tmp_input.name
 
     command_results = []
-    for cmd in test["commands"]:
+    for cmd in test.get("commands", defaults.get("commands", [])):
         resolved_cmd = cmd.replace("$file", actual_input_path)
         output_path = output_folder / f"{test_name.replace(' ', '_')}.txt"
-        num_tries = test["num_tries"] if "num_tries" in test else None
-        timeout = test["timeout"] if "timeout" in test else None
+        num_tries = test.get("num_tries", defaults.get("num_tries"))
+        timeout = test.get("timeout", defaults.get("timeout"))
         times = run_test_multiple_times(resolved_cmd, output_path, num_tries=num_tries, timeout=timeout)
 
         if clean_predicates and query_preds:
