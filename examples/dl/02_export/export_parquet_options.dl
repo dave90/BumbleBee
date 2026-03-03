@@ -1,0 +1,17 @@
+% Parquet Export with Options
+% &write_parquet supports these parameters:
+%   columns     : custom column names (comma-separated)
+%   codec       : compression codec: "UNCOMPRESSED", "SNAPPY", "GZIP", "ZSTD"
+%   mode        : "overwrite" or "append"
+%   single_file : 1 for single output file (otherwise one file per thread)
+
+employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE) :-
+    &read_csv("./data/employees.csv"; auto_detect=1, header=1; ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE).
+
+&write_parquet("./output/employees_snappy.parquet";
+    single_file=1,
+    codec="SNAPPY",
+    columns="Name,Salary",
+    mode="overwrite";
+    NAME, SALARY) :-
+    employee(_, NAME, _, SALARY, _).

@@ -1,0 +1,14 @@
+% Basic CSV Import
+% Import a CSV file using &read_csv with auto-detection.
+% CSV column names are normalized to UPPERCASE (e.g., "hire_date" -> HIRE_DATE).
+%
+% The path can be:
+%   - A single file:   "./data/employees.csv"
+%   - A directory:     "./data/"         (imports all CSV files in the folder)
+%   - A glob pattern:  "./data/*.csv"    (imports all matching files)
+
+employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE) :-
+    &read_csv("./data/employees.csv"; auto_detect=1, header=1; ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE).
+
+% Query: print all employees
+employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE)?

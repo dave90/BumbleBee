@@ -1,0 +1,6 @@
+dept_id,dept_name,location,budget
+1,Engineering,New York,500000
+2,Marketing,Chicago,300000
+3,Sales,San Francisco,250000
+4,HR,New York,150000
+5,Finance,Chicago,350000

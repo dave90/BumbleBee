@@ -45,3 +45,5 @@ test/e2e/files/csv/tpch/lineitem.csv
 test.*
 plan.*
 prompt.*
+examples/actual/*
+examples/output/*

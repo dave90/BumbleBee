@@ -1,0 +1,16 @@
+reachable(3).
+reachable(7).
+reachable(2).
+reachable(6).
+reachable(5).
+reachable(4).
+reachable(8).
+start(1).
+edge(1,2).
+edge(2,3).
+edge(3,4).
+edge(4,5).
+edge(1,6).
+edge(6,7).
+edge(7,3).
+edge(5,8).

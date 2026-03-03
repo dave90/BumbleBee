@@ -1,0 +1,35 @@
+% Basic Aggregation
+% Supported aggregates: #sum, #count, #min, #max, #avg
+%
+% Implicit groups: variables shared between the rule body and aggregate body
+% become the GROUP BY columns automatically.
+%
+% Explicit groups: use #agg{terms ; group_vars : body} when there are no
+% prior body atoms or you need to control grouping.
+
+% Sample data: scores(Student, Subject, Score)
+scores("Alice", "Math", 90).
+scores("Alice", "Science", 85).
+scores("Alice", "English", 92).
+scores("Bob", "Math", 78).
+scores("Bob", "Science", 88).
+scores("Bob", "English", 75).
+scores("Carol", "Math", 95).
+scores("Carol", "Science", 91).
+scores("Carol", "English", 88).
+
+% Total score per student (explicit group on Student)
+total(Student, S) :- S = #sum{Score ; Student : scores(Student, _, Score)}.
+
+% Count of subjects per student
+subject_count(Student, C) :- C = #count{Subject ; Student : scores(Student, Subject, _)}.
+
+% Min and Max score per student
+min_score(Student, M) :- M = #min{Score ; Student : scores(Student, _, Score)}.
+max_score(Student, M) :- M = #max{Score ; Student : scores(Student, _, Score)}.
+
+% Queries: print all results
+total(Student, S)?
+subject_count(Student, C)?
+min_score(Student, M)?
+max_score(Student, M)?

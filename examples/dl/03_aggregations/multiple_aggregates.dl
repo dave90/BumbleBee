@@ -1,0 +1,21 @@
+% Multiple Aggregates (Multi-Aggregate Syntax)
+% Compute multiple aggregates in a single expression using #[agg1,agg2,...]{...}
+% Each aggregate needs its own term in the aggregate term list.
+% Result is assigned as: (Var1, Var2, ...) = #[agg1, agg2, ...]{term1, term2, ... : body}
+
+% Sample data
+sales("Electronics", 100).
+sales("Electronics", 200).
+sales("Electronics", 150).
+sales("Clothing", 50).
+sales("Clothing", 75).
+sales("Clothing", 60).
+sales("Home", 30).
+sales("Home", 45).
+
+% Compute min, sum, and count of Amount per Category in one expression
+stats(Category, Min, Sum, Count) :-
+    (Min, Sum, Count) = #[min, sum, count]{Amount, Amount, Amount ; Category : sales(Category, Amount)}.
+
+% Query: print aggregated stats per category
+stats(Category, Min, Sum, Count)?
