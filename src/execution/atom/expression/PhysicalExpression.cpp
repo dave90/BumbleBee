@@ -111,7 +111,8 @@ AtomResultType PhysicalExpression::execute(ThreadContext& context, DataChunk &in
         expression.executeBinop(leftResult, rightResult, sel, count, trueSel, falseSel, falseCount);
         // add the true sel to the matched
         BB_ASSERT(count >= falseCount);
-        for (idx_t i = 0; i < count - falseCount; ++i)
+        idx_t trueCount = count - falseCount;
+        for (idx_t i = 0; i < trueCount; ++i)
             matchSel.setIndex(matchCount++, trueSel.getIndex(i));
         if (falseCount == 0) break; // all matches stop the expr evaluation
         // add the false sel to the next iteration

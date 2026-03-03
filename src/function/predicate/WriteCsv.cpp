@@ -28,16 +28,6 @@
 
 namespace bumblebee{
 
-static string getUUID() {
-	uuid_t uuid;
-	uuid_generate(uuid); // Generate UUID
-
-	char uuid_str[37]; // 36 chars + null terminator
-	uuid_unparse(uuid, uuid_str);
-
-	string uuid_string(uuid_str);
-	return uuid_string;
-}
 
 static bool requiresQuotes(WriteCSVData &data, const char *str, idx_t len) {
 
@@ -141,7 +131,7 @@ string WriteCSVData::getFileToWrite(const vector<string>& partitionValues) {
 	auto id = std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id()));
 	lock_guard lock(mutex_);
 
-	string filename = getUUID() + "_" + id + tmpExtension_;
+	string filename = StringUtils::getUUID() + "_" + id + tmpExtension_;
 	auto file = folder_ + separator + filename;
 	if (isSingleFile_) {
 		// single file change the id and the file pointing to the same file

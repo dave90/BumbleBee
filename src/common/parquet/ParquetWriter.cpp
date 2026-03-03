@@ -132,7 +132,7 @@ ParquetWriter::ParquetWriter(FileSystem &fs, string file_name, vector<LogicalTyp
     vector<string> names, format::CompressionCodec::type codec)
     :fileName_(std::move(file_name)), sqlTypes_(std::move(types)), columnNames_(std::move(names)), codec_(codec), allOne_(LogicalTypeId::UBIGINT, STANDARD_VECTOR_SIZE) {
     // initialize the file writer
-    writer_ = std::make_unique<BufferedFileWriter>(fs, file_name.c_str(), FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_FILE_CREATE_NEW);
+    writer_ = std::make_unique<BufferedFileWriter>(fs, fileName_.c_str(), FileFlags::FILE_FLAGS_WRITE | FileFlags::FILE_FLAGS_FILE_CREATE_NEW);
     // parquet files start with the string "PAR1"
     writer_->writeData((const_data_ptr_t) "PAR1", 4);
     thrift::protocol::TCompactProtocolFactoryT<MyTransport> tproto_factory;

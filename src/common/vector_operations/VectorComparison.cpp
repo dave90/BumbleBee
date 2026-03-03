@@ -85,24 +85,49 @@ idx_t templatedSelectOperationDecimal(Vector &left, Vector &right, const Selecti
     // we need to cast the other vector as decimal
     Vector lSelVector(left);
     Vector rSelVector(right);
+
+    // When sel is non-incremental, the inner comparison (called with nullptr sel after slicing)
+    // writes sliced indices (0..count-1) to trueSel/falseSel instead of the original chunk
+    // indices from sel. Save original indices before slicing so we can remap them afterwards.
+    // Note: sel may alias falseSel's buffer (via SelectionVector::initialize in the OR-eval loop),
+    // so the inner comparison may corrupt sel's buffer — savedBuf is an independent copy.
+    const bool needRemap = sel && sel->getData() != nullptr;
+    sel_t savedBuf[STANDARD_VECTOR_SIZE];
+    if (needRemap) {
+        for (idx_t i = 0; i < count; i++)
+            savedBuf[i] = sel->getIndex(i);
+    }
+
     if (sel) {
         lSelVector.slice(*sel, count);
         rSelVector.slice(*sel, count);
     }
+    idx_t trueCount;
     if (lSelVector.getLogicalTypeId() == LogicalTypeId::DECIMAL) {
         BB_ASSERT(rSelVector.getLogicalTypeId() != LogicalTypeId::DECIMAL);
         string errorMsg;
         Vector castVec(lSelVector.getLogicalType()); // same type of the decimal type
         if (!VectorOperations::tryCast(rSelVector, castVec, count, &errorMsg))
             ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
-        return templatedSelectOperationSwitchEqualType<OP>(lSelVector, castVec, nullptr, count, trueSel, falseSel, falseCount);
+        trueCount = templatedSelectOperationSwitchEqualType<OP>(lSelVector, castVec, nullptr, count, trueSel, falseSel, falseCount);
+    } else {
+        BB_ASSERT(rSelVector.getLogicalTypeId() == LogicalTypeId::DECIMAL);
+        string errorMsg;
+        Vector castVec(rSelVector.getLogicalType()); // same type of the decimal type
+        if (!VectorOperations::tryCast(lSelVector, castVec, count, &errorMsg))
+            ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
+        trueCount = templatedSelectOperationSwitchEqualType<OP>(castVec, rSelVector, nullptr, count, trueSel, falseSel, falseCount);
     }
-    BB_ASSERT(rSelVector.getLogicalTypeId() == LogicalTypeId::DECIMAL);
-    string errorMsg;
-    Vector castVec(rSelVector.getLogicalType()); // same type of the decimal type
-    if (!VectorOperations::tryCast(lSelVector, castVec, count, &errorMsg))
-        ErrorHandler::errorNotImplemented("Unimplemented type for select operation!");
-    return templatedSelectOperationSwitchEqualType<OP>(castVec, rSelVector, nullptr, count, trueSel, falseSel, falseCount);
+    // Remap sliced indices (0..count-1) back to original chunk indices using savedBuf.
+    if (needRemap) {
+        if (trueSel)
+            for (idx_t i = 0; i < trueCount; i++)
+                trueSel->setIndex(i, savedBuf[trueSel->getIndex(i)]);
+        if (falseSel)
+            for (idx_t i = 0; i < falseCount; i++)
+                falseSel->setIndex(i, savedBuf[falseSel->getIndex(i)]);
+    }
+    return trueCount;
 }
 
 

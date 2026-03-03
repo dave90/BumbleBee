@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/lineitem.parquet"
+WHERE (L_QUANTITY <= 1 OR L_QUANTITY <= 2 OR L_QUANTITY <= 3)

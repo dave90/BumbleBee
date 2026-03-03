@@ -1,0 +1,4 @@
+SELECT COUNT(*) AS cnt
+FROM './files/parquet/tpch/part.parquet'
+WHERE (p_brand NOT IN ('Brand#11', 'Brand#12') AND p_size < 5)
+   OR (p_brand NOT IN ('Brand#44', 'Brand#45') AND p_size > 45)

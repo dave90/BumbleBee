@@ -30,6 +30,7 @@
 #include "bumblebee/function/predicate/ReadParquet.hpp"
 #include "bumblebee/function/predicate/StringLike.hpp"
 #include "bumblebee/function/predicate/WriteCsv.hpp"
+#include "bumblebee/function/predicate/WriteParquet.hpp"
 #include "bumblebee/storage/InMemoryBlockManager.hpp"
 
 namespace bumblebee{
@@ -65,6 +66,7 @@ void ClientContext::registerFunctions() {
     ReadParquetFunc::registerFunction(functionRegister_);
     GenIdFunc::registerFunction(functionRegister_);
     StringLikeFunc::registerFunction(functionRegister_);
+    WriteParquetFunc::registerFunction(functionRegister_);
 }
 
 void ClientContext::initFileSystem() {

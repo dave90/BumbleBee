@@ -1,13 +1,9 @@
 ## TODOLIST
-- sql to datalog allow : WHERE total_revenue = (SELECT max(total_revenue) ... ) q02
 - SQL to datalog allow CASE WHEN
-- SQL IN and NOT IN (constant and not contant)
-- TPCH add more queries
-- parquet write
 - Specify predicate tables types
 - NULL values in operations
 - LEFT and RIGHT JOIN
-
+- Many OR and AND can generate explosion of body atoms
 
 ## Next
 - CICD

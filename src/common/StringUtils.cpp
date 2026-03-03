@@ -19,6 +19,7 @@
 #include "bumblebee/common/StringUtils.hpp"
 
 #include <sstream>
+#include <uuid/uuid.h>
 
 namespace bumblebee{
 
@@ -395,4 +396,17 @@ std::unordered_map<string,string> StringUtils::parseColMapping(const string &col
 	}
 	return realColumnNames;
 }
+
+
+string StringUtils::getUUID() {
+	uuid_t uuid;
+	uuid_generate(uuid); // Generate UUID
+
+	char uuid_str[37]; // 36 chars + null terminator
+	uuid_unparse(uuid, uuid_str);
+
+	string uuid_string(uuid_str);
+	return uuid_string;
+}
+
 }

@@ -670,8 +670,16 @@ Atom Atom::createExternalAtom(std::unordered_map<string, Value> &namedParams, ve
 Atom Atom::createOrBuiltinAtom(vector<Atom>& builtins) {
     Atom newAtom;
     newAtom.setType(BUILTIN);
-    for (auto& builtin: builtins)
-        newAtom.addBuiltin(builtin);
+    for (auto& builtin: builtins) {
+        if (builtin.isOrBuiltin()) {
+            // Flatten nested OR-builtin: absorb all its sub-conditions directly.
+            // This happens when OR-distributing CNF groups that each contain IN clauses.
+            for (auto b : builtin.binops_) newAtom.binops_.push_back(b);
+            for (auto& t : builtin.terms_) newAtom.terms_.push_back(std::move(t));
+        } else {
+            newAtom.addBuiltin(builtin);
+        }
+    }
     return newAtom;
 }
 

@@ -49,6 +49,7 @@ public:
     static string normalizeColumnName(const string &col_name);
     static char characterToLower(char c);
     static std::unordered_map<string,string> parseColMapping(const string &columns, const vector<string> &varNames);
+    static string getUUID();
 
     template <typename... Args>
     static std::string format(std::string_view fmt, Args&&... args) {
