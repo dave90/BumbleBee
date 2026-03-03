@@ -17,6 +17,57 @@ and queries using either Datalog or SQL, offering full transparency and extensib
 - Supports data sources including CSV and Parquet files
 - **Connect to any data source via the Python client**: through DataFrame compatibility, you can pass any pandas (or compatible) DataFrame directly as input to BumbleBee queries — meaning you can load data from virtually any source (databases, APIs, Excel files, in-memory structures, etc.) before handing it off for analysis, similar to DuckDB's relation API
 
+## Quick Start
+
+### Prerequisites
+
+- CMake 3.20+
+- C++20-compatible compiler (GCC 11+ or Clang 13+)
+- Ninja or Make
+
+### Build
+
+```bash
+# Configure (release)
+cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+
+# Compile
+cmake --build cmake-build-release --target BumbleBee -j 8
+
+# Verify
+./cmake-build-release/BumbleBee --help
+```
+
+### Run your first query
+
+The `examples/` folder contains ready-to-run queries and sample data. For instance, to load and print all rows from a CSV file:
+
+**Datalog** (`examples/dl/01_import/basic_csv_import.dl`):
+
+```datalog
+employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE) :-
+    &read_csv("./data/employees.csv"; auto_detect=1, header=1; ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE).
+
+employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE)?
+```
+
+```bash
+cd examples
+../cmake-build-release/BumbleBee -i dl/01_import/basic_csv_import.dl
+```
+
+**SQL** (`examples/sql/01_import/basic_csv_import.sql`):
+
+```sql
+SELECT * FROM "./data/employees.csv"
+```
+
+```bash
+cd examples
+../cmake-build-release/BumbleBee -i sql/01_import/basic_csv_import.sql
+```
+
+
 ## Examples
 
 Check out the [`examples/`](./examples) folder for practical examples on how to use BumbleBee DB, including query patterns, data loading, and integration scenarios.
