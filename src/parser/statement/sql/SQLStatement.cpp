@@ -130,6 +130,10 @@ void SQLStatement::setAlias(const string &alias) {
     alias_ = alias;
 }
 
+void SQLStatement::setAlias(const char *alias) {
+    alias_ = alias;
+}
+
 string SQLStatement::getAlias() const {
     return alias_;
 }

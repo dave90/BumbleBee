@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <iostream>
 #include "bumblebee/common/types/DataChunk.hpp"
 #include "bumblebee/parser/statement/Atom.hpp"
 #include "bumblebee/common/Mutex.hpp"

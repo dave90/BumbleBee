@@ -41,6 +41,7 @@ SQL files start with `%@sql` to indicate SQL mode.
 | `04_order_by/` | ORDER BY with LIMIT (ORDER BY requires LIMIT) |
 | `05_in_clause/` | IN and NOT IN with constants and subqueries |
 | `06_subqueries/` | Scalar subqueries in WHERE clauses |
+| `07_like/` | LIKE pattern matching with `%` wildcards |
 
 ## Datalog Examples (`dl/`)
 
@@ -51,6 +52,7 @@ SQL files start with `%@sql` to indicate SQL mode.
 | `03_aggregations/` | Aggregates (`#sum`, `#count`, `#min`, `#max`), multi-aggregates, explicit groups |
 | `04_recursion/` | Recursive rules: transitive closure, graph reachability |
 | `05_order_by/` | `#order_by` and `#limit` directives |
+| `06_like/` | Filter strings with `&like` pattern matching |
 
 ## Sample Data (`data/`)
 

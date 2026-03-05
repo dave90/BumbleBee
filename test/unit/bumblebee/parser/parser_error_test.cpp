@@ -64,7 +64,8 @@ protected:
         auto logPath = initTestLogger();
         auto path = createTempFile(fileName, input);
         ParserInputDirector pid(TEXT, context);
-        int result = pid.parse({path.string()});
+        vector<string> files = {path};
+        int result = pid.parse(files);
         EXPECT_EQ(result, -1);
 
         std::string log = readLogFile(logPath);
@@ -135,56 +136,65 @@ TEST_F(ParserErrorTest, MultipleNewLinesResetColumn) {
 TEST_F(ParserErrorTest, ParseSimpleFact) {
     auto path = createTempFile("valid_fact.dl", "a(1,2).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseMultipleFacts) {
     auto path = createTempFile("multi_facts.dl", "a(1).\nb(2).\nc(3,4,5).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseSimpleRule) {
     auto path = createTempFile("valid_rule.dl", "b(X,Y) :- a(X,Y).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseRuleWithMultipleBodyAtoms) {
     auto path = createTempFile("multi_body.dl", "c(X,Z) :- a(X,Y), b(Y,Z).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseRuleWithBuiltins) {
     auto path = createTempFile("builtins.dl", "b(X) :- a(X), X > 10.\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseRuleWithStringConstant) {
     auto path = createTempFile("string_const.dl", "a(\"hello\",1).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseRuleWithNegation) {
     auto path = createTempFile("negation.dl", "b(X) :- a(X), not c(X).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseRuleWithAnonymousVar) {
     auto path = createTempFile("anon_var.dl", "b(X) :- a(X,_).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseWithComments) {
     auto path = createTempFile("comments.dl",
         "% this is a comment\na(1).\n%another comment\nb(2).\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    vector<string> files = {path};
+    EXPECT_EQ(pid.parse(files), 0);
 }
 
 TEST_F(ParserErrorTest, ParseEmptyFileReturnsError) {
@@ -194,22 +204,18 @@ TEST_F(ParserErrorTest, ParseEmptyFileReturnsError) {
 }
 
 TEST_F(ParserErrorTest, ParseRuleWithArithmetic) {
-    auto path = createTempFile("arith.dl", "b(X,Z) :- a(X,Y), Z = X + Y.\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    EXPECT_EQ(pid.parse("b(X,Z) :- a(X,Y), Z = X + Y.\n"), 0);
 }
 
 TEST_F(ParserErrorTest, ParseMultipleRulesAndFacts) {
-    auto path = createTempFile("mixed.dl",
-        "a(1,2).\na(3,4).\nb(X,Y) :- a(X,Y).\nc(X) :- b(X,_), X > 1.\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    EXPECT_EQ(pid.parse("a(1,2).\na(3,4).\nb(X,Y) :- a(X,Y).\nc(X) :- b(X,_), X > 1.\n"), 0);
 }
 
 TEST_F(ParserErrorTest, ParseValidSql) {
-    auto path = createTempFile("valid_sql.dl", "%@sql\nSELECT * FROM a\n");
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({path.string()}), 0);
+    EXPECT_EQ(pid.parse("%@sql\nSELECT * FROM a\n"), 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +248,8 @@ TEST_F(ParserErrorTest, InvalidSqlReturnsError) {
 
 TEST_F(ParserErrorTest, NonExistentFileReturnsError) {
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse({"/tmp/nonexistent_bumble_test_xyz.dl"}), -1);
+    vector<string> files = {"/tmp/nonexistent_bumble_test_xyz.dl"};
+    EXPECT_EQ(pid.parse(files), -1);
 }
 
 TEST_F(ParserErrorTest, ErrorOnLaterLine) {

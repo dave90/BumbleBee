@@ -34,7 +34,8 @@ inline rules_vector_t getRulesFromFile(string testFileName) {
     ClientContext context;
     ParserInputDirector pid(TEXT, context);
     path dataFilePath = TEST_FILE_PATH.parent_path() / "data" / testFileName;
-    pid.parse({dataFilePath.c_str()});
+    std::vector<string> fiels = {dataFilePath.c_str()};
+    pid.parse(fiels);
     auto program = std::move(pid.getBuilder()->getProgram());
     return program;
 }

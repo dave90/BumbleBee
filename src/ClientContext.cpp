@@ -40,7 +40,6 @@ ClientContext::ClientContext():
     threads_(1),
     printAll_(false),
     printProfiling_(false),
-    singleShot_(true),
     maxMemory_((idx_t)-1),
     tempDirectory_(DEFAULT_TMP_DIR),
     distinct_(false),

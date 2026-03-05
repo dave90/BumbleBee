@@ -100,6 +100,17 @@ int ParserInputDirector::parse(const char *filename, FILE *file) {
     return 0;
 }
 
+int ParserInputDirector::parse(const std::string& program) {
+    FILE* mem = fmemopen(const_cast<char*>(program.data()), program.size(), "r");
+    if (!mem) {
+        onError("Failed to open in-memory buffer for parsing.");
+        return -1;
+    }
+    const int res = parse("<string>", mem);
+    fclose(mem);
+    return res;
+}
+
 int ParserInputDirector::parse() {
     yyin = stdin;
     parserFile_ = "STDIN";

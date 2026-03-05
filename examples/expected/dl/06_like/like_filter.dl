@@ -1,0 +1,17 @@
+result("Alice Johnson",95000).
+result("Dan Wilson",105000).
+employee("Alice Johnson",95000).
+employee("Bob Smith",88000).
+employee("Carol Davis",72000).
+employee("Dan Wilson",105000).
+employee("Eve Brown",67000).
+employee("Frank Miller",78000).
+employee("Grace Lee",62000).
+employee("Hank Taylor",71000).
+employee("Ivy Chen",85000).
+employee("Jack White",92000).
+employee("Karen Adams",74000).
+employee("Leo Martin",69000).
+employee("Mia Garcia",58000).
+employee("Nick Thomas",91000).
+employee("Olivia Clark",110000).

@@ -33,8 +33,7 @@ static void log_error(const char* error, const std::string& message) {
 void ErrorHandler::errorParsing( const std::string& message )
 {
     log_error(ERROR_PARSING, message);
-    BB_ASSERT(false);
-    exit( ERROR_PARSING_CODE );
+    throw ParsingException(message);
 }
 
 void ErrorHandler::errorParsing( const char* message )
@@ -45,8 +44,7 @@ void ErrorHandler::errorParsing( const char* message )
 void ErrorHandler::errorGeneric( const std::string& message )
 {
     log_error(ERROR_GENERIC, message);
-    BB_ASSERT(false);
-    exit( ERROR_GENERIC_CODE );
+    throw GenericException(message);
 }
 
 void ErrorHandler::errorGeneric( const char* message )
@@ -61,15 +59,13 @@ void ErrorHandler::errorNotImplemented(const char *message) {
 void ErrorHandler::errorNotImplemented( const std::string& message )
 {
     log_error(ERROR_NOT_IMPLEMENTED, message);
-    BB_ASSERT(false);
-    exit( ERROR_NOT_IMPLEMENTED_CODE );
+    throw NotImplementedException(message);
 }
 
 void ErrorHandler::outOfMemory( const std::string& message )
 {
     log_error(ERROR_OUT_OF_MEMORY, message);
-    BB_ASSERT(false);
-    exit( ERROR_OUT_OF_MEMORY_CODE );
+    throw OutOfMemoryException(message);
 }
 
 void ErrorHandler::outOfMemory( const char* message )

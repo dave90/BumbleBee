@@ -56,6 +56,27 @@ Predicate * Schema::getFASOPredicate() {
     return createPredicate(nullptr, Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);
 }
 
+void Schema::deletePredicate(const char *predicateName, unsigned arity) {
+    PredicateMapEntry entry{predicateName, arity};
+    auto it = ptables_.find(entry);
+    if (it != ptables_.end()) {
+        ptables_.erase(it);
+    }
+}
+
+void Schema::deleteInternalPredicates() {
+    // collect names of all internal predicates (as string copies to avoid dangling pointers after erase)
+    vector<std::pair<std::string, unsigned>> toDelete;
+    for (auto& [key, value] : ptables_) {
+        auto* p = value->predicate_.get();
+        if (p->isInternal() && p->getName() != Predicate::INTERNAL_SOURCE_ONE_ROW)
+            toDelete.emplace_back(std::string(p->getName()), p->getArity());
+    }
+    for (auto& [name, arity] : toDelete) {
+        deletePredicate(name.c_str(), arity);
+    }
+}
+
 void Schema::initDefaultPredicates() {
     // pass null context as will not be used in INTERNAL_SOURCE_ONE_ROW predicate
     auto p = createPredicate(nullptr, Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);

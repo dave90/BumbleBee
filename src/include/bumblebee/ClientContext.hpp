@@ -33,7 +33,6 @@ public:
     std::string logFilename_;
     vector<std::string> inputFiles_;
     bool printLog_;
-    bool singleShot_;
     Schema& defaultSchema_;
     idx_t threads_;
     bool printAll_;

@@ -153,6 +153,7 @@ public:
 	void onSqlOrderModifier(char*);
 	void onSqlOrderCol();
 	void onSQLLimit(char*);
+	void onSQLTopLevelAlias();
 
 protected:
 	OutputBuilder output_builder_{NONE_OUTPUT};

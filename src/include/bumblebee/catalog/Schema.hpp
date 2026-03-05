@@ -38,6 +38,8 @@ public:
     predicate_table_ptr_t& getPredicateTable(Predicate*);
     vector<Predicate*> getPredicates();
     Predicate* getFASOPredicate();
+    void deletePredicate(const char* predicateName, unsigned arity);
+    void deleteInternalPredicates();
 
 private:
     void initDefaultPredicates();

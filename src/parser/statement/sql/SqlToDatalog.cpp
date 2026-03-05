@@ -19,6 +19,7 @@
 #include "bumblebee/parser/statement/sql/SqlToDatalog.hpp"
 
 #include "CLI11.hpp"
+#include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/StringUtils.hpp"
 #include "bumblebee/function/PredFunction.hpp"
 
@@ -48,7 +49,7 @@ void SqlQueryNormalizer::setOuterColumnsMap(
 }
 
 void SqlQueryNormalizer::normalize() {
-    assignAliasesAndCollectColumns(query_.statement_);
+    assignAliasesAndCollectColumns(query_.statement_, true);
     expandSelectStars(query_.statement_);
     validateGroupBy(query_.statement_);
     removeUnusedCols(query_.statement_);
@@ -135,7 +136,7 @@ static void fillWhereQTable(sql::WhereItem& item,
     }, item);
 }
 
-void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& statement) {
+void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& statement, bool isTopLevel) {
     // process from items
     // register the columns of the tables
     // and create alias if is empty
@@ -182,9 +183,12 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
                     colsTableMap[col].push_back(alias);
     }
 
-    if (statement.getAlias().empty())
-        // generate alias
-        statement.setAlias(query_.generatePredicateName());
+    if (statement.getAlias().empty()) {
+        if (isTopLevel)
+            statement.setAlias(QUERY_RESULT_PRED_NAME);
+        else
+            statement.setAlias(query_.generatePredicateName());
+    }
 
     // fill the alias and table information
     for (auto& ve: statement.getSelect().getItems()) {
@@ -402,13 +406,23 @@ void SqlQueryNormalizer::removeUnusedCols(sql::SQLStatement &statement) {
 void DatalogGenerator::generate() {
     generateRules(query_.statement_);
     if (result_.foundAnError()) return;
-    // The last rule contains the answer so set the predicate as non internal
-    if (!query_.statement_.getExportPath().empty()) {
-        generateExportRule(query_.statement_);
-    }else if (!result_.rules_.empty()) {
-        auto& program = result_.rules_;
-        BB_ASSERT(program.back().getHead().size() == 1);
-        program.back().getHead()[0].getPredicate()->setInternal(false);
+
+    if (!result_.rules_.empty()) {
+        // Mark all intermediate predicates as internal
+        for (size_t i = 0; i + 1 < result_.rules_.size(); ++i) {
+            for (auto& headAtom : result_.rules_[i].getHead()) {
+                headAtom.getPredicate()->setInternal(true);
+            }
+        }
+
+        // The last rule contains the answer so set the predicate as non internal
+        if (!query_.statement_.getExportPath().empty()) {
+            generateExportRule(query_.statement_);
+        } else {
+            auto& program = result_.rules_;
+            BB_ASSERT(program.back().getHead().size() == 1);
+            program.back().getHead()[0].getPredicate()->setInternal(false);
+        }
     }
 }
 

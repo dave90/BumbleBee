@@ -1,0 +1,18 @@
+[build-system]
+requires = ["scikit-build-core>=0.3", "pybind11>=3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "bumblebee"
+version = "0.1.0"
+description = "BumbleBee Datalog analytics engine Python bindings"
+requires-python = ">=3.9"
+
+[tool.scikit-build]
+# Build only the Python extension (bumblebee_lib is a dependency, built automatically)
+build.targets = ["pyBumbleBee"]
+cmake.build-type = "Release"
+# Only install the 'python' component — skips googletest and other targets
+install.components = ["python"]
+# No Python-side package — the extension module is the whole package
+wheel.packages = []

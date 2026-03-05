@@ -58,6 +58,8 @@ struct SQLQuery {
 
 class SqlQueryNormalizer {
 public:
+    static constexpr char QUERY_RESULT_PRED_NAME[] = "query";
+
     TranslationResult result_;
 
     explicit SqlQueryNormalizer(SQLQuery &query);
@@ -68,7 +70,7 @@ public:
 
     void normalize();
 private:
-    void assignAliasesAndCollectColumns(sql::SQLStatement& statement);
+    void assignAliasesAndCollectColumns(sql::SQLStatement& statement, bool isTopLevel = false);
     void expandSelectStars(sql::SQLStatement& statement);
     void validateGroupBy(sql::SQLStatement& statement);
     void removeUnusedCols(sql::SQLStatement& statement);

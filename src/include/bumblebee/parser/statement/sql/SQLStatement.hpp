@@ -49,6 +49,7 @@ public:
     idx_t getNumAggregations();
 
     void setAlias(const string &alias);
+    void setAlias(const char* alias);
     string getAlias() const;
 
     void clearGroupBy();

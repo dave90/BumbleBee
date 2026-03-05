@@ -1,4 +1,17 @@
 cmake_minimum_required(VERSION 3.31)
+
+# When building via pip (scikit-build-core sets SKBUILD) on macOS, prefer
+# Apple's system Clang over any Homebrew LLVM that may appear first in PATH.
+# Must be set before the first project() call.
+if(SKBUILD AND APPLE)
+    if(NOT DEFINED CMAKE_C_COMPILER)
+        set(CMAKE_C_COMPILER /usr/bin/clang CACHE FILEPATH "" FORCE)
+    endif()
+    if(NOT DEFINED CMAKE_CXX_COMPILER)
+        set(CMAKE_CXX_COMPILER /usr/bin/clang++ CACHE FILEPATH "" FORCE)
+    endif()
+endif()
+
 project(BumbleBee)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -31,10 +44,11 @@ target_include_directories(bumblebee_lib PUBLIC
         ${PROJECT_SOURCE_DIR}/src/include
 )
 
-# Disable asserts in Release
+# Disable asserts in Release; set log level to WARNING in Release
 target_compile_definitions(bumblebee_lib
         PRIVATE
         $<$<CONFIG:Release>:NDEBUG>
+        $<$<CONFIG:Release>:LOG_LEVEL=2>
 )
 
 # ----------------------------------------
@@ -73,3 +87,46 @@ target_include_directories(unit_tests PRIVATE
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+
+# ----------------------------------------
+# Python binding module (optional)
+# ----------------------------------------
+
+# First attempt: use whatever is cached
+find_package(pybind11 CONFIG QUIET)
+
+# If not found, ask python3/python for the cmake dir and retry.
+# Running detection AFTER the first find_package ensures it triggers on every
+# re-configure where the cache is stale (e.g. auto-reconfigure from cmake --build).
+if(NOT pybind11_FOUND)
+    foreach(_python_cmd python3 python)
+        execute_process(
+            COMMAND ${_python_cmd} -c "import pybind11; print(pybind11.get_cmake_dir())"
+            OUTPUT_VARIABLE _pybind11_cmake_dir
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE _pybind11_result
+        )
+        if(_pybind11_result EQUAL 0 AND _pybind11_cmake_dir)
+            set(pybind11_DIR "${_pybind11_cmake_dir}" CACHE PATH "pybind11 cmake dir (auto-detected)" FORCE)
+            break()
+        endif()
+    endforeach()
+    if(_pybind11_cmake_dir)
+        find_package(pybind11 CONFIG QUIET)
+    endif()
+endif()
+
+if(pybind11_FOUND)
+    file(GLOB_RECURSE PYTHON_SRC_FILES ${PROJECT_SOURCE_DIR}/python/src/*.cpp)
+    pybind11_add_module(pyBumbleBee ${PYTHON_SRC_FILES})
+    set_target_properties(pyBumbleBee PROPERTIES OUTPUT_NAME bumblebee)
+    target_link_libraries(pyBumbleBee PRIVATE bumblebee_lib)
+    target_include_directories(pyBumbleBee PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/include
+        ${PROJECT_SOURCE_DIR}/python/src
+        ${PROJECT_SOURCE_DIR}/third_party   # resolves <pybind11/pybind11.h>
+    )
+    message(STATUS "Python bindings target 'pyBumbleBee' configured (pybind11 ${pybind11_VERSION})")
+    install(TARGETS pyBumbleBee DESTINATION . COMPONENT python)
+endif()

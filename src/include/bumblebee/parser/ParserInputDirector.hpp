@@ -40,6 +40,7 @@ public:
     // Parsing functions
     int parse( vector<std::string> files);
     int parse( const char* filename, FILE *file );
+    int parse( const std::string& program );
     int parse( );
 
     int onError(const char* msg);

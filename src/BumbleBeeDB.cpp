@@ -40,7 +40,6 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
     app.add_option("-l,--log-file", context_.logFilename_, "Log file")->default_val(DEFAULT_LOG_FILE);
     app.add_flag("-p,--print-log", context_.printLog_, "Print log")->default_val(0);
     app.add_flag("--print-program", context_.printProgram_, "Print only the datalog program")->default_val(0);
-    // app.add_flag("-s,--single-shot", context_.singleShot_, "Single shot run")->default_val(1);
     app.add_option("-i,--input-files", context_.inputFiles_, "Single shot run")->expected(1, -1);
     app.add_option("-t,--threads", context_.threads_, "Numbers of threads")->expected(1, INT_MAX)->default_val(threads);
     app.add_flag("-a,--print-all", context_.printAll_, "Print all predicates")->default_val(0);
@@ -53,20 +52,24 @@ int BumbleBeeDB::parseArgs(int argc, char **argv) {
     return 0;
 }
 
+Schema& BumbleBeeDB::getSchema() { return context_.defaultSchema_; }
+
 void BumbleBeeDB::printArgs() {
-    LOG_INFO("Arguments:\n\tLog Filename: %s\n\tPrint Log: %d\n\tSingle shot: %d \n\tThreads:%d \n\tPrint all predicates:%d \n\tDistinct:%d",
+    LOG_INFO("Arguments:\n\tLog Filename: %s\n\tPrint Log: %d\n\tThreads:%d \n\tPrint all predicates:%d \n\tDistinct:%d",
         context_.logFilename_.c_str(),
         context_.printLog_,
-        context_.singleShot_,
         context_.threads_,
         context_.printAll_,
         context_.distinct_);
 }
 
-void BumbleBeeDB::parseProgram(rules_vector_t &program) {
+void BumbleBeeDB::parseProgram(rules_vector_t &program, const string& inputProgram ) {
     // Parse the program
     ParserInputDirector inputDirector(TEXT, context_); // DEFAULT TEXT output
-    auto res = inputDirector.parse(context_.inputFiles_);
+    auto res = (inputProgram.empty())
+                ? inputDirector.parse(context_.inputFiles_)
+                : inputDirector.parse(inputProgram);
+
     // Check errors during parsing
     if (inputDirector.getBuilder()->isFoundASafetyError() || res != 0) {
         if (inputDirector.getBuilder()->isFoundASafetyError()) {
@@ -101,11 +104,6 @@ void BumbleBeeDB::parseProgram(rules_vector_t &program) {
 
 
 void BumbleBeeDB::run() {
-    if (!context_.singleShot_) {
-        LOG_ERROR("Error, only single shot mode is avaliable.");
-        ErrorHandler::errorGeneric("Error, only single shot mode is avaliable.");
-    }
-
     rules_vector_t program;
     parseProgram(program);
     if (context_.printProgram_) {
@@ -123,6 +121,24 @@ void BumbleBeeDB::run() {
     executor.stopThreadsAndJoin();
 
     print();
+}
+
+void BumbleBeeDB::runFromInputString(const string &inputProgram) {
+    rules_vector_t program;
+    parseProgram(program, inputProgram);
+    if (context_.printProgram_) {
+        // print the program and exist
+        printProgram(program);
+        return;
+    }
+
+    LOG_DEBUG("Starting scheduler and executors");
+    Scheduler scheduler(context_);
+    TaskExecutor executor(scheduler.queue_, context_.threads_);
+    executor.startThreads();
+
+    processProgram(program, scheduler);
+    executor.stopThreadsAndJoin();
 }
 
 void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) {

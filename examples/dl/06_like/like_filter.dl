@@ -1,0 +1,11 @@
+% LIKE Filter
+% Filter rows using the &like predicate function.
+% Syntax: &like("pattern";;Variable)
+%   - '%' matches any sequence of characters
+
+employee(NAME, SALARY) :- &read_csv("./data/employees.csv"; auto_detect=1, header=1, columns_mapping="NAME:NAME;SALARY:SALARY"; NAME, SALARY).
+
+% Filter employees whose name contains "son"
+result(NAME, SALARY) :- employee(NAME, SALARY), &like("%son%";;NAME).
+
+result(NAME, SALARY)?

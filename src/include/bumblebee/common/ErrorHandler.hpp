@@ -19,11 +19,46 @@
 #pragma once
 
 #include <string>
-#include <iostream>
+#include <exception>
 
 #include "Constants.hpp"
 
 namespace bumblebee {
+
+class BumbleBeeException : public std::exception {
+public:
+    explicit BumbleBeeException(std::string message, int code)
+        : message_(std::move(message)), code_(code) {}
+    const char* what() const noexcept override { return message_.c_str(); }
+    int code() const noexcept { return code_; }
+private:
+    std::string message_;
+    int code_;
+};
+
+class ParsingException : public BumbleBeeException {
+public:
+    explicit ParsingException(const std::string& message)
+        : BumbleBeeException(message, ERROR_PARSING_CODE) {}
+};
+
+class GenericException : public BumbleBeeException {
+public:
+    explicit GenericException(const std::string& message)
+        : BumbleBeeException(message, ERROR_GENERIC_CODE) {}
+};
+
+class NotImplementedException : public BumbleBeeException {
+public:
+    explicit NotImplementedException(const std::string& message)
+        : BumbleBeeException(message, ERROR_NOT_IMPLEMENTED_CODE) {}
+};
+
+class OutOfMemoryException : public BumbleBeeException {
+public:
+    explicit OutOfMemoryException(const std::string& message)
+        : BumbleBeeException(message, ERROR_OUT_OF_MEMORY_CODE) {}
+};
 
 class ErrorHandler
 {

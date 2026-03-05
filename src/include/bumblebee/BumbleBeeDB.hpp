@@ -32,21 +32,24 @@ public:
     int parseArgs(int, char **);
     void printArgs();
 
-    void parseProgram(rules_vector_t &program);
-    void processProgram(rules_vector_t& program, Scheduler& scheduler);
-
-
     void run();
+
+    void runFromInputString(const string& program);
+
+    Schema& getSchema();
+
     void print();
     void printProgram(rules_vector_t& program);
 
 private:
+    void parseProgram(rules_vector_t &program, const string& inputProgram = "");
+    void processProgram(rules_vector_t& program, Scheduler& scheduler);
+
     void processBucketRules( RulesBucket & bucket, Scheduler& scheduler);
     void processExit(RulesBucket &bucket, Scheduler &scheduler);
     void processRecursive(RulesBucket &bucket, Scheduler &scheduler);
 
     ClientContext context_;
     string profilingReport_;
-
 };
 } // bumblebee

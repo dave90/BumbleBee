@@ -1198,6 +1198,12 @@ void ParserInputBuilder::onSqlOrderCol() {
     sqlStatements_.back().getOrderby().addColModifier(colModifier);
 }
 
+void ParserInputBuilder::onSQLTopLevelAlias() {
+    BB_ASSERT(!sqlStatements_.empty());
+    sqlStatements_[0].setAlias(alias_);
+    alias_.clear();
+}
+
 void ParserInputBuilder::onSQLLimit(char *number) {
     if (foundASafetyError_)return;
     parseLimitDirective(number);
