@@ -1,0 +1,2 @@
+SELECT SUM(c1."Index") AS TOTAL, COUNT(*) AS CNT, MIN(c2."Index") AS MIN_VAL, MAX(c2."Index") AS MAX_VAL
+FROM read_csv_auto('./files/csv/customers-1.csv') AS c1, read_csv_auto('./files/csv/customers-1.csv') AS c2

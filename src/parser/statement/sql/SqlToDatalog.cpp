@@ -436,12 +436,12 @@ void SqlQueryNormalizer::removeUnusedCols(sql::SQLStatement &statement) {
     for (auto& [table, cols]: query_.tableColumnsMap_) {
         if (!directTables.contains(table)) continue;
         for (auto it = cols.begin(); it != cols.end(); ) {
+            if (cols.size() <= 1) break; // keep at least one column
             if (usedCols.contains(table + "." + *it) || innerSubqueryColNames.contains(*it)) {
                 ++it;
             } else {
                 it = cols.erase(it); // erase returns the next valid iterator
             }
-            if (cols.size() <= 1) break; // keep at least one column
         }
     }
 }
@@ -493,7 +493,8 @@ Atom generateFirstExtAtomFromTable(sql::FromItem& fi, SQLQuery& query, string& e
         columnMappingValue += t.toString()+":" + col+ ";";
         terms.push_back(std::move(t));
     }
-    columnMappingValue.pop_back();
+    if (!columnMappingValue.empty())
+        columnMappingValue.pop_back();
     // add the columns_mapping parameter
     auto& namedParams = fi.getNamedParameters();
     namedParams["columns_mapping"] = columnMappingValue;
@@ -608,8 +609,9 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
     for (auto& [agg, vars]: aggVars) {
         assignmentTerms.push_back(Term::createVariable(select.getItems()[agg].getAlias()));
         aggFunctions.push_back(select.getAggFunctions()[agg]);
-        // aggregation term is the first var
-        aggTerms.push_back(Term::createVariable(vars[0].c_str()));
+        // add all vars as aggregate terms (multiple for COUNT(*) with cross products)
+        for (auto& v : vars)
+            aggTerms.push_back(Term::createVariable(v.c_str()));
     }
     // let's add the ID to avoid the distinct calculation
     auto t = Term::createVariable(query.ID_VAR);
@@ -701,17 +703,25 @@ void getAggregatesInformation(sql::SQLStatement &statement, SQLQuery& query,
             }
 
             if (var.empty()) {
-                // add another var as aggregation because we have only count(*) as aggregation
-                // otherwise optimizer we will keep only the ID in the body
+                // COUNT(*) with no other select items: pick one variable per FROM table
+                // so the aggregate auxiliary rule head includes all tables, preserving
+                // cross products (otherwise the VariablesRewriter removes unused tables).
                 auto qNames = getAllQualifiedNames(statement, query.tableColumnsMap_);
                 BB_ASSERT(!qNames.empty());
-                var = query.getVariableName(qNames[0].table_, qNames[0].name_);
-                if (!headVars.contains(var)) {
-                    headVars.insert(var);
-                    headTerms.push_back(Term::createVariable(var.c_str()));
+                std::unordered_set<string> seenTables;
+                for (auto& qn : qNames) {
+                    if (seenTables.contains(qn.table_)) continue;
+                    seenTables.insert(qn.table_);
+                    auto v = query.getVariableName(qn.table_, qn.name_);
+                    if (!headVars.contains(v)) {
+                        headVars.insert(v);
+                        headTerms.push_back(Term::createVariable(v.c_str()));
+                    }
+                    aggVars[i].push_back(v);
                 }
+            } else {
+                aggVars[i].push_back(var);
             }
-            aggVars[i].push_back(var);
             continue;
         }
         auto t = generateTermFromValueExpr( si, statement.getAlias(), query, errorMessage);
@@ -734,6 +744,28 @@ void getAggregatesInformation(sql::SQLStatement &statement, SQLQuery& query,
             continue;
         headVars.insert(t.getVariable());
         headTerms.push_back(std::move(t));
+    }
+
+    // Ensure all FROM tables have at least one variable in aggregate terms
+    // to preserve cross products in the auxiliary rule.
+    if (!aggVars.empty() && statement.getFrom().getItems().size() > 1) {
+        // Collect tables already represented in aggVars
+        std::unordered_set<string> representedTables;
+        for (auto& [_, vars] : aggVars)
+            for (auto& v : vars)
+                for (auto& [table, cols] : query.tableColumnsMap_)
+                    for (auto& col : cols)
+                        if (query.getVariableName(table, col) == v)
+                            representedTables.insert(table);
+
+        // Add one variable from each missing FROM table
+        auto qNames = getAllQualifiedNames(statement, query.tableColumnsMap_);
+        for (auto& qn : qNames) {
+            if (representedTables.contains(qn.table_)) continue;
+            representedTables.insert(qn.table_);
+            auto v = query.getVariableName(qn.table_, qn.name_);
+            aggVars.begin()->second.push_back(v);
+        }
     }
 
     // add the group by cols in head terms

@@ -7542,4 +7542,4 @@ mz_bool mz_zip_end(mz_zip_archive *pZip)
 
 
 #endif /*#ifndef MINIZ_NO_ARCHIVE_APIS*/
-} // namespace duckdb_miniz
+}

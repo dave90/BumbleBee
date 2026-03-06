@@ -199,10 +199,12 @@ void templatedUpdateState(RowLayout &layout, AggregateFunction &aggr, Vector &ad
     if (input.getVectorType() == VectorType::CONSTANT_VECTOR &&
             addresses.getVectorType() == VectorType::CONSTANT_VECTOR) {
 
-        // regular constant: get first state
+        // constant input and constant address: update for each row
         auto idata = ConstantVector::getData<INPUT_TYPE>(input);
         auto sdata = ConstantVector::getData<data_ptr_t>(addresses);
-        aggr.update_( (data_ptr_t)(idata), sdata[0] + agg_offset);
+        auto state = sdata[0] + agg_offset;
+        for (idx_t i = 0; i < count; ++i)
+            aggr.update_( (data_ptr_t)(idata), state);
 
     } else if (input.getVectorType() == VectorType::FLAT_VECTOR &&
                        addresses.getVectorType() == VectorType::FLAT_VECTOR) {

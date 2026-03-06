@@ -36,7 +36,7 @@ namespace bumblebee {
 namespace format {
 class FileMetaData;
 }
-} // namespace duckdb_parquet
+}
 
 namespace bumblebee {
 class Allocator;

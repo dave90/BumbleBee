@@ -15,7 +15,7 @@ def _find_module_dir() -> Path:
         if any(candidate.glob("bumblebee*.so")):
             return candidate
     raise RuntimeError(
-        "bumblebee*.so not found under cmake-build-debug. "
+        "bumblebee*.so not found under cmake-build-release. "
         "Run: cmake --build cmake-build-release --target bumblebee -j 8"
     )
 

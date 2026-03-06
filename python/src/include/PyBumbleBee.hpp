@@ -8,6 +8,16 @@
 #include <vector>
 
 namespace bumblebee::python {
+class RegisteredObject {
+public:
+    explicit RegisteredObject(pybind11::object obj_p) : obj_(std::move(obj_p)) {
+    }
+    virtual ~RegisteredObject() {
+        obj_ = pybind11::none();
+    }
+
+    pybind11::object obj_;
+};
 
 class PyBumbleBee {
 public:
@@ -24,8 +34,9 @@ public:
 private:
     BumbleBeeDB db_;
     std::map<std::string, std::string> args_;
+    std::unordered_map<string, std::unique_ptr<RegisteredObject>> registeredObjects_;
 
-    bumblebee::Schema& getSchema();
+    Schema& getSchema();
     void applyArgs(const std::map<std::string, std::string>& args);
 };
 

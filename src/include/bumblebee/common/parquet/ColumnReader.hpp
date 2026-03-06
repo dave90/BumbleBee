@@ -166,4 +166,4 @@ public:
 											 idx_t max_repeat);
 };
 
-} // namespace duckdb
+}

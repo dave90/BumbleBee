@@ -26,6 +26,10 @@ int64_t Timestamp::fromEpochMs(int64_t ms) {
     return result;
 }
 
+int64_t Timestamp::fromEpochNano(int64_t ns) {
+    return timestamp_t(ns / 1000);
+}
+
 int64_t Timestamp::getTime(int64_t timestamp) {
     auto days = Timestamp::getDate(timestamp);
     return timestamp - (int64_t(days) * int64_t(MICROS_PER_DAY));

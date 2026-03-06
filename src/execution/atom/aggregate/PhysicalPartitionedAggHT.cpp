@@ -269,7 +269,10 @@ void PhysicalPartitionedAggHT::finalize(ThreadContext &context, GlobalPhysicalAt
 
     if (type_ == COLLECT) {
         // populate the type columns of the predicate table
-        pt_->setTypes(cgstate.pht_.getTypes());
+        auto htTypes = cgstate.pht_.getTypes();
+        if (htTypes.size() == pt_->getTypes().size()) {
+            pt_->setTypes(htTypes);
+        }
         // merge the partitions if data is small
         if (cgstate.pht_.getSize() < MORSEL_SIZE)
             cgstate.pht_.finalize();

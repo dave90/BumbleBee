@@ -92,30 +92,24 @@ gtest_discover_tests(unit_tests)
 # Python binding module (optional)
 # ----------------------------------------
 
-# First attempt: use whatever is cached
-find_package(pybind11 CONFIG QUIET)
 
-# If not found, ask python3/python for the cmake dir and retry.
-# Running detection AFTER the first find_package ensures it triggers on every
-# re-configure where the cache is stale (e.g. auto-reconfigure from cmake --build).
-if(NOT pybind11_FOUND)
-    foreach(_python_cmd python3 python)
-        execute_process(
-            COMMAND ${_python_cmd} -c "import pybind11; print(pybind11.get_cmake_dir())"
-            OUTPUT_VARIABLE _pybind11_cmake_dir
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-            RESULT_VARIABLE _pybind11_result
-        )
-        if(_pybind11_result EQUAL 0 AND _pybind11_cmake_dir)
-            set(pybind11_DIR "${_pybind11_cmake_dir}" CACHE PATH "pybind11 cmake dir (auto-detected)" FORCE)
-            break()
-        endif()
-    endforeach()
-    if(_pybind11_cmake_dir)
-        find_package(pybind11 CONFIG QUIET)
+# If pybind11_DIR was not provided via command line, auto-detect it from Python.
+#if(NOT pybind11_DIR OR pybind11_DIR STREQUAL "pybind11_DIR-NOTFOUND")
+foreach(_python_cmd python3 python)
+    execute_process(
+        COMMAND ${_python_cmd} -c "import pybind11; print(pybind11.get_cmake_dir())"
+        OUTPUT_VARIABLE _pybind11_cmake_dir
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE _pybind11_result
+    )
+    if(_pybind11_result EQUAL 0 AND _pybind11_cmake_dir)
+        set(pybind11_DIR "${_pybind11_cmake_dir}" CACHE PATH "pybind11 cmake dir (auto-detected)" FORCE)
+        break()
     endif()
-endif()
+endforeach()
+#endif()
+find_package(pybind11 CONFIG QUIET)
 
 if(pybind11_FOUND)
     file(GLOB_RECURSE PYTHON_SRC_FILES ${PROJECT_SOURCE_DIR}/python/src/*.cpp)

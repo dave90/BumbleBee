@@ -58,6 +58,7 @@ public:
 
 public:
 	static int64_t fromEpochMs(int64_t ms);
+	static int64_t fromEpochNano(int64_t ms);
 	static int64_t getTime(int64_t timestamp);
 	static int32_t getDate(int64_t timestamp);
 	static int64_t fromEpochMicroSeconds(int64_t micros);
