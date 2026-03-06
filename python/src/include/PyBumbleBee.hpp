@@ -14,6 +14,7 @@ public:
     explicit PyBumbleBee(const std::map<std::string, std::string>& args = {});
 
     void run(const std::string& program);
+    void sql(const std::string& program, const std::string& alias = "");
     void runFile(const std::string& filepath);
 
     pybind11::list getOutputPredicates();

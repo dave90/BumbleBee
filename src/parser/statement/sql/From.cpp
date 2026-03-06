@@ -33,10 +33,16 @@ FromItem::FromItem(vector<Value> &input_values, string &ext_table_name,
                                                                 namedParameters_(std::move(named_parameters)), type_(EXTERNAL) {
 }
 
+FromItem::FromItem(const string &pred_name, int arity, vector<string> columns):
+    tableName_(pred_name), predicateArity_(arity), predicateColumns_(std::move(columns)), type_(PREDICATE_TABLE) {
+}
+
 FromItem::FromItem(const FromItem &other): tableName_(other.tableName_),
                                            extTableName_(other.extTableName_),
                                            alias_(other.alias_),
-                                           type_(other.type_) {
+                                           type_(other.type_),
+                                           predicateArity_(other.predicateArity_),
+                                           predicateColumns_(other.predicateColumns_) {
     if (other.statement_)
         statement_ = std::make_unique<SQLStatement>(*other.statement_);
     for (auto& v:other.inputValues_)
@@ -54,6 +60,8 @@ FromItem & FromItem::operator=(const FromItem &other) {
     extTableName_ = other.extTableName_;
     alias_ = other.alias_;
     type_ = other.type_;
+    predicateArity_ = other.predicateArity_;
+    predicateColumns_ = other.predicateColumns_;
     for (auto& v:other.inputValues_)
         inputValues_.push_back(v.clone());
     for (auto & [k,v] : other.namedParameters_)
@@ -66,7 +74,9 @@ FromItem::FromItem(FromItem &&other) noexcept: statement_(std::move(other.statem
                                                alias_(std::move(other.alias_)), type_(other.type_),
                                                extTableName_(std::move(other.extTableName_)),
                                                inputValues_(std::move(other.inputValues_)),
-                                               namedParameters_(std::move(other.namedParameters_)){
+                                               namedParameters_(std::move(other.namedParameters_)),
+                                               predicateArity_(other.predicateArity_),
+                                               predicateColumns_(std::move(other.predicateColumns_)){
 }
 
 FromItem &FromItem::operator=(FromItem &&other) noexcept {
@@ -79,6 +89,8 @@ FromItem &FromItem::operator=(FromItem &&other) noexcept {
     extTableName_ = std::move(other.extTableName_);
     inputValues_ = std::move(other.inputValues_);
     namedParameters_ = std::move(other.namedParameters_);
+    predicateArity_ = other.predicateArity_;
+    predicateColumns_ = std::move(other.predicateColumns_);
     return *this;
 }
 
@@ -123,12 +135,43 @@ string FromItem::toString() const{
             }
 
             result += ")";
+            break;
+        }
+        case PREDICATE_TABLE: {
+            result = tableName_;
+            if (predicateArity_ >= 0)
+                result += "/" + std::to_string(predicateArity_);
+            else if (!predicateColumns_.empty()) {
+                result += "(";
+                for (idx_t i = 0; i < predicateColumns_.size(); ++i) {
+                    if (i > 0) result += ", ";
+                    result += predicateColumns_[i];
+                }
+                result += ")";
+            }
+            break;
         }
     }
     if (!alias_.empty())
         result += " AS " + alias_;
 
     return result;
+}
+
+string FromItem::getTableName() const {
+    return tableName_;
+}
+
+int FromItem::getPredicateArity() const {
+    return predicateArity_;
+}
+
+void FromItem::setPredicateArity(int arity) {
+    predicateArity_ = arity;
+}
+
+const vector<string>& FromItem::getPredicateColumns() const {
+    return predicateColumns_;
 }
 
 FromItemType FromItem::getType() const {

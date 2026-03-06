@@ -880,7 +880,7 @@ void ParserInputBuilder::onSQLAlias(char *alias) {
 }
 
 void ParserInputBuilder::onSQLTableRef(char *table) {
-    fromItems_.emplace_back(table);
+    sqlTableRefName_ = table;
 }
 
 void ParserInputBuilder::onSQLFromItem() {
@@ -890,6 +890,25 @@ void ParserInputBuilder::onSQLFromItem() {
     for (auto& fi: fromItems_)
         sqlStatements_.back().getFrom().addItem(fi);
     fromItems_.clear();
+}
+
+void ParserInputBuilder::onSQLPredicateArity(char *arity) {
+    sqlPredicateArity_ = std::stoi(arity);
+}
+
+void ParserInputBuilder::onSQLPredicateColumn(char *col) {
+    sqlPredicateCols_.push_back(col);
+}
+
+void ParserInputBuilder::onSQLPredicateFromItem() {
+    sql::FromItem fi(sqlTableRefName_, sqlPredicateArity_, sqlPredicateCols_);
+    if (!alias_.empty())
+        fi.setAlias(alias_);
+    alias_.clear();
+    sqlStatements_.back().getFrom().addItem(fi);
+    sqlTableRefName_.clear();
+    sqlPredicateArity_ = -1;
+    sqlPredicateCols_.clear();
 }
 
 void ParserInputBuilder::onSQLPredicateValueExpr() {

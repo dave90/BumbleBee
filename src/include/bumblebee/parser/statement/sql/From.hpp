@@ -29,7 +29,8 @@ class SQLStatement;
 enum FromItemType {
     TABLE,
     SUBQUERY,
-    EXTERNAL
+    EXTERNAL,
+    PREDICATE_TABLE
 };
 
 class FromItem {
@@ -38,6 +39,7 @@ public:
     explicit FromItem(std::unique_ptr<SQLStatement> &statement);
     FromItem(vector<Value> &input_values, string &ext_table_name,
         std::unordered_map<string, Value> &named_parameters);
+    FromItem(const string &pred_name, int arity, vector<string> columns);
 
     FromItem(const FromItem &other);
 
@@ -62,6 +64,14 @@ public:
 
     FromItemType getType() const;
 
+    string getTableName() const;
+
+    int getPredicateArity() const;
+
+    void setPredicateArity(int arity);
+
+    const vector<string>& getPredicateColumns() const;
+
 private:
     std::unique_ptr<SQLStatement> statement_;
 
@@ -73,6 +83,9 @@ private:
 
     string alias_;
     FromItemType type_;
+
+    int predicateArity_{-1};
+    vector<string> predicateColumns_;
 };
 
 using from_items_t = vector<FromItem>;

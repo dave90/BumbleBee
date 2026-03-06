@@ -39,7 +39,13 @@ void PyBumbleBee::applyArgs(const std::map<std::string, std::string>& args) {
 void PyBumbleBee::run(const std::string& program) {
     db_.runFromInputString(program);
     getSchema().deleteInternalPredicates();
+}
 
+void PyBumbleBee::sql(const std::string& program, const std::string& alias) {
+    string query = alias.empty() ? program : "(" + program + ") AS " + alias;
+    string sqlProgram = "%@sql\n" + query;
+    db_.runFromInputString(sqlProgram);
+    getSchema().deleteInternalPredicates();
 }
 
 void PyBumbleBee::runFile(const std::string& filepath) {

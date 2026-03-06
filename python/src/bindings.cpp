@@ -24,7 +24,7 @@ PYBIND11_MODULE(bumblebee, m) {
              return t.tuples().size();
          });
 
-    py::class_<PyBumbleBee>(m, "BumbleBeeDB",
+    py::class_<PyBumbleBee>(m, "db",
         "BumbleBee Datalog/SQL analytics engine.\n\n"
         "Instantiate with an optional dict of CLI flags, e.g. "
         "{'-t': '4', '-d': '', '-a': ''}.\n"
@@ -40,7 +40,12 @@ args: dict mapping CLI flags to values, e.g. {"-t": "4", "-d": "", "-a": ""}
 Boolean flags (like --distinct, --print-all) use an empty string as value.
 )doc")
         .def("run",                   &PyBumbleBee::run,
-             py::arg("program"),      "Run a Datalog/ASP/SQL program given as a string.")
+             py::arg("program"),      "Run a Datalog/SQL program given as a string.")
+        .def("sql",                   &PyBumbleBee::sql,
+             py::arg("program"),
+             py::arg("alias") = "",
+             "Run a SQL program given as a string (no %@sql prefix needed). "
+             "If alias is provided, wraps the query as (query) AS alias.")
 
         .def("run_file",              &PyBumbleBee::runFile,
              py::arg("filepath"),     "Run a program from a file.")

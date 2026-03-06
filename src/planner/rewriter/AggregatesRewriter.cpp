@@ -149,9 +149,7 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
             bool createAuxRule = info.predName_.empty();
             string newPredName = info.createAggPredicateName(newPredCounter_, terms);
             Predicate *predicate = clientContext_.defaultSchema_.createPredicate(&clientContext_, newPredName.c_str(), info.terms_.size());
-            if (clientContext_.printAll_) {
-                predicate->setInternal(false);
-            }
+            predicate->setInternal(true);
             if (createAuxRule) {
                 Atom head = Atom::createClassicalAtom(predicate, std::move(vector(terms)));
                 Rule newRule;

@@ -923,13 +923,36 @@ from_item
     {
         director.getBuilder()->onSQLExtTable();
     }
-    | table_ref opt_alias
+    | predicate_ref opt_alias
     {
-        director.getBuilder()->onSQLFromItem();
+        director.getBuilder()->onSQLPredicateFromItem();
     }
     | PARAM_OPEN sql PARAM_CLOSE opt_alias     /* subquery in FROM */
     {
         director.getBuilder()->onSQLSubQuery();
+    }
+    ;
+
+predicate_ref
+    : table_ref
+    | table_ref SLASH NUMBER
+    {
+        director.getBuilder()->onSQLPredicateArity($3);
+        delete[] $3;
+    }
+    | table_ref PARAM_OPEN predicate_col_list PARAM_CLOSE
+    ;
+
+predicate_col_list
+    : identifier
+    {
+        director.getBuilder()->onSQLPredicateColumn($1);
+        delete[] $1;
+    }
+    | predicate_col_list COMMA identifier
+    {
+        director.getBuilder()->onSQLPredicateColumn($3);
+        delete[] $3;
     }
     ;
 

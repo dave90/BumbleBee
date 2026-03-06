@@ -125,6 +125,9 @@ public:
 	void onSQLAlias(char*);
 	void onSQLTableRef(char*);
 	void onSQLFromItem();
+	void onSQLPredicateArity(char*);
+	void onSQLPredicateColumn(char*);
+	void onSQLPredicateFromItem();
 	void onSQLPredicate();
 	void onSQLPredicateValueExpr();
 	void onSQLPredicateValueExprOp();
@@ -229,6 +232,11 @@ protected:
 	vector<SubqueryPredicateContext> subqueryPredicateContextStack_;
 
 	string sqlExportFilePath_;
+
+	// Predicate-table FROM item scratch state
+	string sqlTableRefName_;
+	int sqlPredicateArity_{-1};
+	vector<string> sqlPredicateCols_;
 
 	// Stack of outer WHERE contexts saved when entering a parenthesized WHERE group.
 	// onSQLWhereGroupBegin() pushes the current WHERE onto this stack and starts a

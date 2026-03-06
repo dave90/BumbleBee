@@ -18,6 +18,7 @@
  */
 #include "bumblebee/parser/statement/sql/SqlToDatalog.hpp"
 
+#include <set>
 #include "CLI11.hpp"
 #include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/StringUtils.hpp"
@@ -150,6 +151,49 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
 
     std::unordered_map<string, vector<string>> colsTableMap;
     for (auto& fi: statement.getFrom().getItems()) {
+        if (fi.getType() == sql::FromItemType::PREDICATE_TABLE) {
+            // Determine columns in order
+            vector<string> cols;
+            if (!fi.getPredicateColumns().empty()) {
+                cols = fi.getPredicateColumns();
+            } else {
+                int arity = fi.getPredicateArity();
+                if (arity < 0) {
+                    // Look up in schema — collect all predicates matching name
+                    string predName = fi.getTableName();
+                    std::set<unsigned> arities;
+                    for (auto* p : query_.context_.defaultSchema_.getPredicates())
+                        if (string(p->getName()) == predName)
+                            arities.insert(p->getArity());
+                    if (arities.empty()) {
+                        result_.errorMessage_ = "Predicate '" + predName + "' not found in schema.";
+                        return;
+                    }
+                    if (arities.size() > 1) {
+                        result_.errorMessage_ = "Predicate '" + predName + "' is ambiguous: multiple arities exist. Use '" + predName + "/N' to specify arity.";
+                        return;
+                    }
+                    arity = (int)*arities.begin();
+                }
+                // Store the resolved arity back so generatePredicateTableAtom
+                // can produce the correct number of terms even after column pruning.
+                fi.setPredicateArity(arity);
+                for (int j = 1; j <= arity; ++j)
+                    cols.push_back("V" + std::to_string(j));
+            }
+            // Assign alias if empty
+            if (fi.getAlias().empty())
+                fi.setAlias(query_.generatePredicateName());
+            if (query_.tableColumnsMap_.contains(fi.getAlias())) {
+                result_.errorMessage_ = "Table " + fi.getAlias() + " already exists.";
+                return;
+            }
+            for (auto& col : cols) {
+                colsTableMap[col].push_back(fi.getAlias());
+                query_.tableColumnsMap_[fi.getAlias()].insert(col);
+            }
+            continue;
+        }
         if (fi.getType() != sql::FromItemType::EXTERNAL) {
             result_.errorMessage_ = "Only  ext table are supported :(";
             return;
@@ -726,6 +770,10 @@ vector<vector<Atom>> distributeBinopAtoms(vector<vector<Atom>>& cnf1,vector<vect
 
 using CNF = vector<vector<Atom>>;
 
+// ---- Forward declarations ----
+
+Atom generatePredicateTableAtom(sql::FromItem& fi, SQLQuery& query, string& errorMessage);
+
 // ---- Forward declarations for mutually recursive subquery helpers ----
 
 static vector<Atom> generateInnerBodyFromSubquery(
@@ -827,7 +875,11 @@ static vector<Atom> generateInnerBodyFromSubquery(
 
     idx_t tableIdx = 0;
     for (auto& fi: inner.getFrom().getItems()) {
-        if (tableIdx == 0 && fi.getType() == sql::FromItemType::EXTERNAL) {
+        if (fi.getType() == sql::FromItemType::PREDICATE_TABLE) {
+            auto atom = generatePredicateTableAtom(fi, outerQuery, errorMessage);
+            if (!errorMessage.empty()) return {};
+            body.push_back(std::move(atom));
+        } else if (tableIdx == 0 && fi.getType() == sql::FromItemType::EXTERNAL) {
             auto extAtom = generateFirstExtAtomFromTable(fi, outerQuery, errorMessage);
             if (!errorMessage.empty()) return {};
             body.push_back(std::move(extAtom));
@@ -1489,6 +1541,41 @@ void convertToSourcingRuleVars(Atom& atom, const string& tableAlias,
     }
 }
 
+Atom generatePredicateTableAtom(sql::FromItem& fi, SQLQuery& query, string& errorMessage) {
+    string predName = fi.getTableName();
+    string alias = fi.getAlias();
+    BB_ASSERT(!alias.empty());
+    BB_ASSERT(query.tableColumnsMap_.contains(alias));
+
+    const auto& cols = fi.getPredicateColumns();
+    vector<Term> terms;
+    if (!cols.empty()) {
+        // Custom column names: iterate in declaration order.
+        // Columns that were pruned by removeUnusedCols are replaced by anonymous variables.
+        for (auto& col : cols) {
+            Term t = query.tableColumnsMap_[alias].count(col)
+                ? Term::createVariable(query.getVariableName(alias, col))
+                : Term::createVariable(Term::anonymous_variable);
+            terms.push_back(std::move(t));
+        }
+    } else {
+        // Default V1..VN columns: iterate over the full arity in numeric order.
+        // fi.getPredicateArity() holds the resolved arity (set during assignAliasesAndCollectColumns).
+        // Columns pruned by removeUnusedCols are replaced by anonymous variables.
+        idx_t arity = static_cast<idx_t>(fi.getPredicateArity());
+        for (idx_t j = 1; j <= arity; ++j) {
+            string col = "V" + std::to_string(j);
+            Term t = query.tableColumnsMap_[alias].count(col)
+                ? Term::createVariable(query.getVariableName(alias, col))
+                : Term::createVariable(Term::anonymous_variable);
+            terms.push_back(std::move(t));
+        }
+    }
+    auto pred = query.context_.defaultSchema_.createPredicate(
+        &query.context_, predName.c_str(), terms.size());
+    return Atom::createClassicalAtom(pred, std::move(terms));
+}
+
 void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     auto& defaultSchema = query_.context_.defaultSchema_;
     vector<Atom> body;
@@ -1503,6 +1590,15 @@ void DatalogGenerator::generateRules(sql::SQLStatement &statement) {
     // Step 1: generate external (file-scan) body atoms first.
     idx_t i=0;
     for (auto& fi: statement.getFrom().getItems()) {
+        // Predicate table references generate a classical atom directly (no auxiliary rule)
+        if (fi.getType() == sql::FromItemType::PREDICATE_TABLE) {
+            auto atom = generatePredicateTableAtom(fi, query_, result_.errorMessage_);
+            body.push_back(std::move(atom));
+            if (result_.foundAnError()) return;
+            ++i;
+            continue;
+        }
+
         // for the first table do not create additional rule
         if (i == 0 && fi.getType() == sql::FromItemType::EXTERNAL) {
             auto extAtom = generateFirstExtAtomFromTable(fi, query_, result_.errorMessage_);
