@@ -338,7 +338,7 @@ void ParserInputBuilder::onTermDash() {
     term.setNegative(true);
     if (term.getType() == CONSTANT && term.getPhysicalType() != PhysicalType::STRING) {
         // multiply the constant numeric value to -1
-        auto newValue = term.getValue().cast(PhysicalType::BIGINT).getNumericValue<int64_t>() * -1;
+        long long newValue = term.getValue().cast(PhysicalType::BIGINT).getNumericValue<int64_t>() * -1;
         Term::setConstantNumericTerm(term, newValue);
         return;
     }
@@ -784,11 +784,11 @@ void ParserInputBuilder::onSQLValue(char *value) {
     if (num >= 0) {
         // Positive number
         unsigned long long unum = strtoull(value, nullptr, 10);
-        Value v(unum);
+        Value v(static_cast<uint64_t>(unum));
         sqlValuePrimary_.emplace_back(v);
         return;
     }
-    Value v(num);
+    Value v(static_cast<int64_t>(num));
     sqlValuePrimary_.emplace_back(v);
 
 }

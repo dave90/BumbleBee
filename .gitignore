@@ -47,3 +47,4 @@ plan.*
 prompt.*
 examples/actual/*
 examples/output/*
+cmake-build-*/

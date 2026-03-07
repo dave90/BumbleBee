@@ -43,6 +43,9 @@ add_library(bumblebee_lib ${SRC_FILES})
 target_include_directories(bumblebee_lib PUBLIC
         ${PROJECT_SOURCE_DIR}/src/include
 )
+if(NOT APPLE)
+    target_link_libraries(bumblebee_lib PUBLIC uuid)
+endif()
 
 # Disable asserts in Release; set log level to WARNING in Release
 target_compile_definitions(bumblebee_lib

@@ -149,7 +149,7 @@ TEST_F(SortKeysTest, CreateSortKeysThreeColsFloatUintStrMixedTest) {
 
 TEST_F(SortKeysTest, CreateSortKeysFiveColsMixedTypesTest) {
     vector<vector<Value>> data;
-    addData(data, vector<long long>{10, 10, 5, 10, 5}); // BIGINT
+    addData(data, vector<int64_t>{10, 10, 5, 10, 5}); // BIGINT
     addData(data, vector<short>{1, 0, 2, 1, 2}); // SMALLINT
     addData(data, vector<double>{0.1, -1.0, 0.1, 2.0, 0.1});
     addData(data, vector<string>{"x", "x", "a", "y", "a"});

@@ -22,7 +22,7 @@ and queries using either Datalog or SQL, offering full transparency and extensib
 ### Prerequisites
 
 - CMake 3.20+
-- C++20-compatible compiler (GCC 11+ or Clang 13+)
+- C++20-compatible compiler (GCC 13+ or Clang 18+ with libc++)
 - Ninja or Make
 
 ### Build
