@@ -1,6 +1,7 @@
 """
-Add the built bumblebee .so to sys.path.
+Shared helpers and fixtures for the bumblebee Python test suite.
 
+Also adds the built bumblebee .so to sys.path.
 Searches cmake-build-release first (preferred), then cmake-build-debug.
 Run from any directory; the project root is resolved relative to this file.
 """
@@ -22,3 +23,15 @@ def _find_module_dir() -> Path:
 _module_dir = _find_module_dir()
 if str(_module_dir) not in sys.path:
     sys.path.insert(0, str(_module_dir))
+
+DATA_DIR = Path(__file__).parent / "data"
+
+
+def _rows(db, name, arity):
+    """Return a sorted list of tuples for the given predicate."""
+    return sorted(db.get_table(name, arity).tuples())
+
+
+def _sql(query: str) -> str:
+    """Helper to build a SQL program string."""
+    return "%@sql\n" + query.strip()

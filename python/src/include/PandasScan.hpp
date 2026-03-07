@@ -17,23 +17,49 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "VectorConversion.hpp"
 #include "bumblebee/function/Function.hpp"
 #include "bumblebee/function/FunctionRegister.hpp"
 #include "bumblebee/function/PredFunction.hpp"
+#include "pybind11/pytypes.h"
 
 namespace bumblebee::python {
 
 struct PandasScanDataChunk {
-
+    // inclusive start and end
+    idx_t start_;
+    idx_t end_;  // if 0 no data to read
 };
 
 struct PandasScanData : public FunctionData {
+    PandasScanData(const pybind11::handle &df, idx_t row_count, vector<PandasColumnBindData> &bind_data,
+        const vector<LogicalType> &types)
+        : df(df),
+          rowCount_(row_count),
+          linesCount_(0),
+          bindData_(std::move(bind_data)),
+          types_(types) {
+    }
+
+    ~PandasScanData() override {
+        pybind11::gil_scoped_acquire acquire;
+        bindData_.clear();
+    }
+
     idx_t getMaxThread();
     PandasScanDataChunk getNextFileToRead() ;
+
+    pybind11::handle df;
+    idx_t rowCount_;
+    idx_t linesCount_;
+    vector<PandasColumnBindData> bindData_;
+    vector<LogicalType> types_;
+    std::mutex mutex_;
 };
 
 struct PandasScanOperatorData : public FunctionOperatorData {
-
+    PandasScanDataChunk chunkToRead_;
+    DataChunk chunk_;
 };
 
 

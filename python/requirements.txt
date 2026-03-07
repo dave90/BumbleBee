@@ -1,7 +1,7 @@
 # Build dependencies (required to compile the bumblebee C++ extension)
 scikit-build-core>=0.3
 pybind11>=3.0
-numpy
+pandas
 
 # Test dependencies
 pytest>=7.0

@@ -56,6 +56,11 @@ Boolean flags (like --distinct, --print-all) use an empty string as value.
         .def("get_table",             &PyBumbleBee::getTable,
              py::arg("name"), py::arg("arity") = -1,
              "Return a PredicateTable for the given predicate name and arity. "
-             "Call .tuples() on the result to materialize the rows.");
+             "Call .tuples() on the result to materialize the rows.")
+
+        .def("load_df",               &PyBumbleBee::loadDataframe,
+             py::arg("df"), py::arg("alias"),
+             "Load a pandas DataFrame as a predicate with the given alias name. "
+             "The alias must start with a lowercase letter [a-z].");
 
 }

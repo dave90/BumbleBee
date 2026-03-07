@@ -26,6 +26,8 @@ namespace bumblebee {
 
 class BumbleBeeDB {
 public:
+    ClientContext context_;
+
     BumbleBeeDB() = default;
     ~BumbleBeeDB();
 
@@ -49,7 +51,6 @@ private:
     void processExit(RulesBucket &bucket, Scheduler &scheduler);
     void processRecursive(RulesBucket &bucket, Scheduler &scheduler);
 
-    ClientContext context_;
     string profilingReport_;
 };
 } // bumblebee

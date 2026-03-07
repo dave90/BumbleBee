@@ -27,6 +27,8 @@ public:
     void sql(const std::string& program, const std::string& alias = "");
     void runFile(const std::string& filepath);
 
+    void loadDataframe(pybind11::object df, const std::string& alias);
+
     pybind11::list getOutputPredicates();
     PyPredicateTable getTable(const std::string& name, int arity = -1);
     pybind11::dict getAllResults();
