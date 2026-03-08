@@ -368,4 +368,8 @@ bool Date::tryConvertDate(const char *buf, idx_t len, idx_t &pos, date_t &result
 int64_t Date::epoch(int32_t date) {
     return ((int64_t)date) * Timestamp::SECS_PER_DAY;
 }
+
+int64_t Date::epochNanoseconds(date_t date) {
+    return ((int64_t)date) * (Timestamp::MICROS_PER_DAY * 1000);
+}
 }

@@ -1,5 +1,7 @@
 import pytest
 import pandas as pd
+import numpy as np
+from datetime import date, time, timedelta
 import bumblebee
 from conftest import _rows
 
@@ -149,3 +151,105 @@ class TestLoadDataframe:
         assert _rows(db, "total_staff", 1) == [(5,)]
         assert sorted(_rows(db, "staff_per_dept", 2)) == [(1, 2), (2, 2), (3, 1)]
         assert _rows(db, "eng_dept", 2) == [(1, "eng")]
+
+    # ---- Edge-case pandas types ----
+
+    def test_timestamp_columns(self):
+        """Load a DataFrame with datetime64[ns] (timestamp) columns."""
+        df = pd.DataFrame({
+            "id": [1, 2, 3],
+            "ts": pd.to_datetime(["2024-01-15 10:30:00", "2024-06-20 14:00:00", "2024-12-31 23:59:59"]),
+        })
+        db = bumblebee.db()
+        db.load_df(df, "events")
+        db.run("out(X, Y) :- events(X, Y). out(X, Y)?")
+        rows = sorted(_rows(db, "out", 2))
+        assert len(rows) == 3
+        # timestamps are stored as TIMESTAMP (microseconds since epoch)
+        # and returned as string representation via valueToPython
+        assert rows[0][0] == 1
+        assert rows[1][0] == 2
+        assert rows[2][0] == 3
+        # verify all three timestamps were loaded (exact format depends on Timestamp::toString)
+        assert len(str(rows[0][1])) > 0
+        assert len(str(rows[1][1])) > 0
+        assert len(str(rows[2][1])) > 0
+
+    def test_timedelta_columns(self):
+        """Load a DataFrame with timedelta64[ns] (interval) columns."""
+        df = pd.DataFrame({
+            "label": ["short", "medium", "long"],
+            "duration": pd.to_timedelta(["1 days", "5 days", "30 days"]),
+        })
+        db = bumblebee.db()
+        db.load_df(df, "durations")
+        db.run("out(X, Y) :- durations(X, Y). out(X, Y)?")
+        rows = sorted(_rows(db, "out", 2))
+        assert len(rows) == 3
+        # timedelta is stored as BIGINT (nanoseconds)
+        one_day_ns = 86400 * 10**9
+        assert rows[1][1] == 5 * one_day_ns  # "medium" = 5 days
+        assert rows[0][1] == 30 * one_day_ns  # "long" = 30 days
+        assert rows[2][1] == 1 * one_day_ns   # "short" = 1 day
+
+    def test_categorical_string_columns(self):
+        """Load a DataFrame with Categorical (enum) string columns.
+
+        Pandas Categorical columns with string categories are converted to
+        plain STRING type in BumbleBee — the enum metadata is not preserved,
+        category codes are resolved to their string labels during scan.
+        """
+        df = pd.DataFrame({
+            "id": [1, 2, 3, 4],
+            "color": pd.Categorical(["red", "green", "blue", "red"]),
+        })
+        db = bumblebee.db()
+        db.load_df(df, "items")
+        db.run("out(X, Y) :- items(X, Y). out(X, Y)?")
+        rows = sorted(_rows(db, "out", 2))
+        # enum values are converted to regular strings
+        assert rows == [(1, "red"), (2, "green"), (3, "blue"), (4, "red")]
+
+    def test_categorical_int_columns(self):
+        """Load a DataFrame with Categorical integer columns (non-string enum)."""
+        df = pd.DataFrame({
+            "id": [1, 2, 3],
+            "level": pd.Categorical([10, 20, 10]),
+        })
+        db = bumblebee.db()
+        db.load_df(df, "levels")
+        db.run("out(X, Y) :- levels(X, Y). out(X, Y)?")
+        rows = sorted(_rows(db, "out", 2))
+        assert rows == [(1, 10), (2, 20), (3, 10)]
+
+    def test_date_object_columns(self):
+        """Load a DataFrame with datetime.date objects (stored as object dtype)."""
+        df = pd.DataFrame({
+            "id": [1, 2, 3],
+            "d": [date(2024, 1, 15), date(2024, 6, 20), date(2024, 12, 31)],
+        })
+        db = bumblebee.db()
+        db.load_df(df, "dates")
+        db.run("out(X, Y) :- dates(X, Y). out(X, Y)?")
+        rows = sorted(_rows(db, "out", 2))
+        assert len(rows) == 3
+        # date objects are converted to strings via object path
+        assert rows[0] == (1, "2024-01-15")
+        assert rows[1] == (2, "2024-06-20")
+        assert rows[2] == (3, "2024-12-31")
+
+    def test_time_object_columns(self):
+        """Load a DataFrame with datetime.time objects (stored as object dtype)."""
+        df = pd.DataFrame({
+            "id": [1, 2, 3],
+            "t": [time(10, 30, 0), time(14, 0, 0), time(23, 59, 59)],
+        })
+        db = bumblebee.db()
+        db.load_df(df, "times")
+        db.run("out(X, Y) :- times(X, Y). out(X, Y)?")
+        rows = sorted(_rows(db, "out", 2))
+        assert len(rows) == 3
+        # time objects are converted to strings via object path
+        assert rows[0] == (1, "10:30:00")
+        assert rows[1] == (2, "14:00:00")
+        assert rows[2] == (3, "23:59:59")

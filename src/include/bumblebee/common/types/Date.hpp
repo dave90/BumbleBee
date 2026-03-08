@@ -59,6 +59,7 @@ public:
 	static bool isValid(int32_t year, int32_t month, int32_t day);
 	static bool tryFromDate(int32_t year, int32_t month, int32_t day, date_t &result);
 	static int64_t epoch(int32_t date);
+	static int64_t epochNanoseconds(date_t date);
 
 	static bool tryConvertDate(const char *buf, idx_t len, idx_t &pos, date_t &result, bool strict);
 

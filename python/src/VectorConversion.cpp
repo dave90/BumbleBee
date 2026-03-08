@@ -342,8 +342,9 @@ void python::VectorConversion::bindPandas(pybind11::handle original_df, vector<P
 			bind_data.mask_ = std::make_unique<NumPyArrayWrapper>(get_fun(df_columns[col_idx]).attr("array").attr("_mask"));
 			convertPandasType(col_type, bb_col_type, bind_data.pandasType_);
 		} else if (StringUtils::startsWith(col_type, "datetime64[ns") || col_type == "<M8[ns]") {
-			// timestamp type
-			bind_data.numpyCol_ = get_fun(df_columns[col_idx]).attr("array").attr("_data");
+			// timestamp type – get underlying int64 nanosecond values
+			auto numpy_arr = pybind11::array(get_fun(df_columns[col_idx]).attr("to_numpy")());
+			bind_data.numpyCol_ = pybind11::array(numpy_arr.attr("view")("int64"));
 			bind_data.mask_ = nullptr;
 			bb_col_type = LogicalTypeId::TIMESTAMP;
 			bind_data.pandasType_ = PandasType::TIMESTAMP;
@@ -354,16 +355,21 @@ void python::VectorConversion::bindPandas(pybind11::handle original_df, vector<P
 				// for category types, we create an ENUM type for string or use the converted numpy type for the rest
 				BB_ASSERT(pybind11::hasattr(column, "cat"));
 				BB_ASSERT(pybind11::hasattr(column.attr("cat"), "categories"));
-				auto categories = pybind11::array(column.attr("cat").attr("categories"));
-				auto category_type = string(pybind11::str(categories.attr("dtype")));
+				auto cat_index = column.attr("cat").attr("categories");
+				auto category_type = string(pybind11::str(cat_index.attr("dtype")));
 				if (category_type == "object") {
 					// Let's hope the object type is a string.
 					bind_data.pandasType_ = PandasType::CATEGORY;
 					auto enum_name = string(pybind11::str(df_columns[col_idx]));
-					vector<string> enum_entries = pybind11::cast<vector<string>>(categories);
+					auto cat_list = pybind11::list(cat_index.attr("tolist")());
+					vector<string> enum_entries;
+					enum_entries.reserve(pybind11::len(cat_list));
+					for (size_t i = 0; i < pybind11::len(cat_list); i++) {
+						enum_entries.push_back(string(pybind11::str(cat_list[i])));
+					}
 					BB_ASSERT(pybind11::hasattr(column.attr("cat"), "codes"));
 					bb_col_type = LogicalTypeId::STRING;
-					bind_data.numpyCol_ = pybind11::array(column.attr("cat").attr("codes"));
+					bind_data.numpyCol_ = pybind11::array(column.attr("cat").attr("codes").attr("to_numpy")());
 					bind_data.mask_ = nullptr;
 					bind_data.enumEntries_ = enum_entries;
 					BB_ASSERT(pybind11::hasattr(bind_data.numpyCol_, "dtype"));

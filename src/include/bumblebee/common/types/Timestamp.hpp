@@ -62,6 +62,7 @@ public:
 	static int64_t getTime(int64_t timestamp);
 	static int32_t getDate(int64_t timestamp);
 	static int64_t fromEpochMicroSeconds(int64_t micros);
+	static int64_t getEpochNanoSeconds(timestamp_t timestamp);
 
 	static void convert(int64_t dtime, int32_t &hour, int32_t &min, int32_t &sec, int32_t &micros);
 	static void convert(int64_t timestamp, int32_t &out_date, int64_t &out_time);

@@ -44,6 +44,11 @@ int64_t Timestamp::fromEpochMicroSeconds(int64_t micros) {
     return micros;
 }
 
+int64_t Timestamp::getEpochNanoSeconds(timestamp_t timestamp) {
+    int64_t ns_in_us = 1000;
+    return timestamp * ns_in_us;
+}
+
 void Timestamp::convert(int64_t dtime, int32_t &hour, int32_t &min, int32_t &sec, int32_t &micros) {
     int64_t time = dtime;
     hour = int32_t(time / MICROS_PER_HOUR);
