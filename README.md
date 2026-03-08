@@ -2,7 +2,7 @@
   <img src="./logo/bumblebee4.png"  width=50% />
 </p>
 
-# BumbleBee DB (VISION)
+# BumbleBee DB
 BumbleBee DB aims to become a lightweight, high-performance In-memory Datalog-based analytics engine that empowers 
 data engineers and researchers to analyze massive datasets on a single machine. 
 Inspired by the architecture of modern OLAP systems, BumbleBee combines efficient execution models and flexible data sourcing to deliver fast and expressive analytics workflows. 

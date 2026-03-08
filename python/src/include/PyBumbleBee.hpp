@@ -32,6 +32,7 @@ public:
     pybind11::list getOutputPredicates();
     PyPredicateTable getTable(const std::string& name, int arity = -1);
     pybind11::dict getAllResults();
+    void removePredicate(const std::string& name, int arity);
 
 private:
     BumbleBeeDB db_;

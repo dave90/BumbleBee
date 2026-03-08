@@ -80,3 +80,42 @@ class TestAPI:
 
     def test_docstring_accessible(self):
         assert bumblebee.db.__doc__ is not None
+
+    def test_remove_table(self):
+        """remove_table removes a predicate by name and arity."""
+        db = bumblebee.db({"-a": ""})
+        db.run("a(1). a(2). b(X) :- a(X).")
+        assert len([p for p in db.get_output_predicates() if p[0] == "b"]) == 1
+        db.remove_table("b", 1)
+        names = [p[0] for p in db.get_output_predicates()]
+        assert "b" not in names
+        assert "a" in names
+
+    def test_remove_table_not_found_raises(self):
+        """remove_table raises RuntimeError for a nonexistent predicate."""
+        db = bumblebee.db()
+        db.run("a(1). a(X)?")
+        with pytest.raises(RuntimeError, match="Predicate not found"):
+            db.remove_table("nonexist", 1)
+
+    def test_remove_table_wrong_arity_raises(self):
+        """remove_table raises RuntimeError when the arity does not match."""
+        db = bumblebee.db({"-a": ""})
+        db.run("a(1).")
+        with pytest.raises(RuntimeError, match="Predicate not found"):
+            db.remove_table("a", 2)
+
+    def test_remove_table_negative_arity_raises(self):
+        """remove_table raises ValueError on negative arity."""
+        db = bumblebee.db()
+        with pytest.raises(Exception):
+            db.remove_table("a", -1)
+
+    def test_remove_table_then_reuse_name(self):
+        """After removing a predicate, the same name can be redefined."""
+        db = bumblebee.db({"-a": ""})
+        db.run("out(1). out(2).")
+        assert sorted(db.get_table("out", 1).tuples()) == [(1,), (2,)]
+        db.remove_table("out", 1)
+        db.run("out(10). out(20). out(30).")
+        assert sorted(db.get_table("out", 1).tuples()) == [(10,), (20,), (30,)]

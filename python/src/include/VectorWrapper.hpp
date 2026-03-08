@@ -54,11 +54,11 @@ public:
 
 class NumpyResultConversion {
 public:
-    NumpyResultConversion(vector<LogicalType> &types, idx_t initial_capacity);
+    NumpyResultConversion(const vector<LogicalType> &types, idx_t initial_capacity);
 
-    void append(DataChunk &chunk, std::unordered_map<idx_t, pybind11::list> *categories = nullptr);
+    void append(DataChunk &chunk);
 
-    py::object toArray(idx_t col_idx) {
+    pybind11::object toArray(idx_t col_idx) {
         return data_[col_idx].toArray();
     }
 

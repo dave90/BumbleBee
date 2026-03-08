@@ -29,6 +29,7 @@ public:
     ClientContext context_;
 
     BumbleBeeDB() = default;
+    explicit BumbleBeeDB(std::unique_ptr<Schema> ownedSchema);
     ~BumbleBeeDB();
 
     int parseArgs(int, char **);

@@ -77,6 +77,11 @@ void Schema::deleteInternalPredicates() {
     }
 }
 
+void Schema::clear() {
+    ptables_.clear();
+    initDefaultPredicates();
+}
+
 void Schema::initDefaultPredicates() {
     // pass null context as will not be used in INTERNAL_SOURCE_ONE_ROW predicate
     auto p = createPredicate(nullptr, Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);

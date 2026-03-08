@@ -33,6 +33,7 @@ public:
     std::string logFilename_;
     vector<std::string> inputFiles_;
     bool printLog_;
+    std::unique_ptr<Schema> ownedSchema_;
     Schema& defaultSchema_;
     idx_t threads_;
     bool printAll_;
@@ -49,8 +50,10 @@ public:
     atomic<unsigned long long> counter_;
 
     ClientContext();
+    ClientContext(std::unique_ptr<Schema> ownedSchema);
 
 private:
+    void init();
     void registerFunctions();
     void initFileSystem();
 };

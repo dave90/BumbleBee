@@ -40,6 +40,7 @@ public:
     Predicate* getFASOPredicate();
     void deletePredicate(const char* predicateName, unsigned arity);
     void deleteInternalPredicates();
+    void clear();
 
 private:
     void initDefaultPredicates();

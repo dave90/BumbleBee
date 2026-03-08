@@ -55,7 +55,7 @@ void PredicateTables::addFact(Atom &atom) {
     }
 }
 
-vector<LogicalType> PredicateTables::getTypes() {
+vector<LogicalType> PredicateTables::getTypes() const{
     return types_;
 }
 

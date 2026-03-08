@@ -331,7 +331,7 @@ void VectorWrapper::resize(idx_t new_capacity) {
 void VectorWrapper::append(idx_t current_offset, Vector &input, idx_t count) {
 	auto dataptr = data_->data_;
 	BB_ASSERT(dataptr);
-	BB_ASSERT(input.getType() == data_->type_);
+	BB_ASSERT(input.getLogicalTypeId() == data_->type_.type());
 
 	VectorData idata;
 	input.orrify(count, idata);
@@ -370,7 +370,7 @@ void VectorWrapper::append(idx_t current_offset, Vector &input, idx_t count) {
 		convertColumnRegular<double>(current_offset, dataptr,  idata, count);
 		break;
 	case LogicalTypeId::DECIMAL:
-		convertDecimal(input.getType(), current_offset, dataptr,  idata, count);
+		convertDecimal(input.getLogicalType(), current_offset, dataptr,  idata, count);
 		break;
 	case LogicalTypeId::TIMESTAMP:
 		convertColumn<timestamp_t, int64_t, TimestampConvert>(
@@ -399,14 +399,14 @@ pybind11::object VectorWrapper::toArray() const {
 }
 
 
-NumpyResultConversion::NumpyResultConversion(vector<LogicalType> &types, idx_t initial_capacity) : count_(0), capacity_(0) {
+NumpyResultConversion::NumpyResultConversion(const vector<LogicalType> &types, idx_t initial_capacity) : count_(0), capacity_(0) {
 	data_.reserve(types.size());
 	for (auto &type : types) {
 		data_.emplace_back(type);
 	}
 	resize(initial_capacity);
 }
-void NumpyResultConversion::append(DataChunk &chunk, std::unordered_map<idx_t, pybind11::list> *categories) {
+void NumpyResultConversion::append(DataChunk &chunk) {
 	if (count_ + chunk.getSize() > capacity_) {
 		resize(capacity_ * 2);
 	}

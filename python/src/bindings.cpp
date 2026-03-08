@@ -16,6 +16,9 @@ PYBIND11_MODULE(bumblebee, m) {
     )
         .def("tuples", &PyPredicateTable::tuples,
              "Materialize and return the rows as a list of tuples.")
+          .def("to_df", &PyPredicateTable::toDf,
+          py::arg("col_names") = std::vector<std::string>{},
+             "Materialize and return the rows as a pandas dataframe.")
         .def_property_readonly("name", &PyPredicateTable::getName,
              "Predicate name.")
         .def_property_readonly("arity", &PyPredicateTable::getArity,
@@ -61,6 +64,11 @@ Boolean flags (like --distinct, --print-all) use an empty string as value.
         .def("load_df",               &PyBumbleBee::loadDataframe,
              py::arg("df"), py::arg("alias"),
              "Load a pandas DataFrame as a predicate with the given alias name. "
-             "The alias must start with a lowercase letter [a-z].");
+             "The alias must start with a lowercase letter [a-z].")
+
+        .def("remove_table",          &PyBumbleBee::removePredicate,
+             py::arg("name"), py::arg("arity"),
+             "Remove a predicate table by name and arity. "
+             "Raises RuntimeError if the predicate does not exist.");
 
 }

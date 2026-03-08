@@ -32,6 +32,10 @@
 #include "bumblebee/planner/rewriter/AggregatesRewriter.hpp"
 
 namespace bumblebee {
+
+BumbleBeeDB::BumbleBeeDB(std::unique_ptr<Schema> ownedSchema)
+    : context_(std::move(ownedSchema)) {}
+
 int BumbleBeeDB::parseArgs(int argc, char **argv) {
     CLI::App app{NAME};
 
@@ -333,7 +337,14 @@ void BumbleBeeDB::printProgram(rules_vector_t &program) {
 }
 
 BumbleBeeDB::~BumbleBeeDB() {
-    Catalog::instance().dropCatalog();
+    if (context_.ownedSchema_) {
+        // Destroy the schema before ClientContext members are destroyed.
+        // PredicateTables' hash tables reference context_.bufferManager_,
+        // which is declared after ownedSchema_ and would be destroyed first.
+        context_.ownedSchema_.reset();
+    } else {
+        Catalog::instance().dropCatalog();
+    }
 }
 
 } // bumblebee

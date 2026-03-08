@@ -4,6 +4,7 @@
 #include "bumblebee/common/TypeDefs.hpp"
 #include "bumblebee/common/types/DataChunk.hpp"
 #include "bumblebee/execution/PartitionedPRLHashTable.hpp"
+#include "include/VectorWrapper.hpp"
 
 namespace py = pybind11;
 
@@ -39,22 +40,14 @@ static py::object valueToPython(const Value& v, const LogicalType& lt) {
     }
 }
 
-static py::list collectRows(PredicateTables& pt) {
-    py::list rows;
-    idx_t arity = pt.columnCount();
+template <typename F>
+static void collectRows(PredicateTables& pt, F&& callback) {
     pt.initializeChunks();
 
     if (!pt.isDistinct() || !pt.existPartitionedPRLHashTable()) {
         for (idx_t i = 0; i < pt.chunkCount(); ++i) {
             DataChunk& chunk = pt.getChunk(i);
-            auto types = chunk.getTypes();
-            for (idx_t row = 0; row < chunk.getSize(); ++row) {
-                py::tuple t(arity);
-                for (idx_t col = 0; col < arity; ++col) {
-                    t[col] = valueToPython(chunk.getValue(col, row), types[col]);
-                }
-                rows.append(t);
-            }
+            callback(chunk, chunk.getTypes());
         }
     } else {
         auto& ht = pt.getPartitionedPRLHashTable();
@@ -65,18 +58,12 @@ static py::list collectRows(PredicateTables& pt) {
         while (offset < pt.getCount()) {
             result.setCardinality(0);
             ht->scan(offset, result);
-            for (idx_t row = 0; row < result.getSize(); ++row) {
-                py::tuple t(arity);
-                for (idx_t col = 0; col < arity; ++col) {
-                    t[col] = valueToPython(result.getValue(col, row), types[col]);
-                }
-                rows.append(t);
-            }
+            callback(result, types);
             offset += STANDARD_VECTOR_SIZE;
         }
     }
-    return rows;
 }
+
 
 // ---------------------------------------------------------------------------
 // PyPredicateTable
@@ -87,10 +74,51 @@ PyPredicateTable::PyPredicateTable(std::string name, int arity,
     : name_(std::move(name)), arity_(arity), pt_(pt) {}
 
 pybind11::list PyPredicateTable::tuples() const {
-    if (!cached_) {
-        cached_ = collectRows(*pt_);
+    py::list rows;
+    idx_t arity = pt_->columnCount();
+    collectRows(*pt_, [&](DataChunk& chunk, const std::vector<LogicalType>& types) {
+        for (idx_t row = 0; row < chunk.getSize(); ++row) {
+            py::tuple t(arity);
+            for (idx_t col = 0; col < arity; ++col) {
+                t[col] = valueToPython(chunk.getValue(col, row), types[col]);
+            }
+            rows.append(t);
+        }
+    });
+    return rows;
+}
+
+pybind11::dict PyPredicateTable::fetchNumpyInternal(const vector<string>& names) const{
+    if (names.size() != pt_->getTypes().size()) {
+        throw std::invalid_argument("col_names size (" + std::to_string(names.size()) +
+            ") does not match column count (" + std::to_string(pt_->getTypes().size()) + ")");
     }
-    return *cached_;
+
+    std::unique_ptr<NumpyResultConversion> conversion;
+    collectRows(*pt_, [&](DataChunk& chunk, const std::vector<LogicalType>& types) {
+        if (!conversion) {
+            conversion = std::make_unique<NumpyResultConversion>(types, std::max(pt_->getCount(), (idx_t)STANDARD_VECTOR_SIZE));
+        }
+        conversion->append(chunk);
+    });
+    py::dict res;
+    if (!conversion) {
+        conversion = std::make_unique<NumpyResultConversion>(pt_->getTypes(), 0);
+    }
+    for (idx_t col_idx = 0; col_idx < names.size(); col_idx++) {
+        res[names[col_idx].c_str()] = conversion->toArray(col_idx);
+    }
+    return res;
+}
+
+
+pybind11::object PyPredicateTable::toDf(const vector<string>& names) const {
+    auto finalNames = names;
+    if (finalNames.empty()) {
+        for (idx_t i=0;i<pt_->getTypes().size();++i)
+            finalNames.emplace_back("COL_"+std::to_string(i));
+    }
+    return py::module::import("pandas").attr("DataFrame").attr("from_dict")(fetchNumpyInternal(finalNames));
 }
 
 const std::string& PyPredicateTable::getName() const {

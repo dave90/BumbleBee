@@ -28,7 +28,6 @@ Schema & Catalog::getDefaultSchema() {
 }
 
 void Catalog::dropCatalog() {
-    // delete the catalog instance
     instance_ = nullptr;
 }
 }

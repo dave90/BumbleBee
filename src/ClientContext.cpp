@@ -45,7 +45,25 @@ ClientContext::ClientContext():
     distinct_(false),
     printProgram_(false),
     blockManager_(new InMemoryBlockManager()){
+    init();
+}
 
+ClientContext::ClientContext(std::unique_ptr<Schema> ownedSchema):
+    ownedSchema_(std::move(ownedSchema)),
+    defaultSchema_(*ownedSchema_),
+    printLog_(false),
+    threads_(1),
+    printAll_(false),
+    printProfiling_(false),
+    maxMemory_((idx_t)-1),
+    tempDirectory_(DEFAULT_TMP_DIR),
+    distinct_(false),
+    printProgram_(false),
+    blockManager_(new InMemoryBlockManager()){
+    init();
+}
+
+void ClientContext::init() {
     bufferManager_ = buffer_mngr_ptr_ptr_t(new BufferManager(*this,tempDirectory_,maxMemory_));
     registerFunctions();
     initFileSystem();

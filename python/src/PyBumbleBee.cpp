@@ -1,5 +1,6 @@
 #include "include/PyBumbleBee.hpp"
 #include "bumblebee/catalog/PredicateTables.hpp"
+#include "bumblebee/catalog/Schema.hpp"
 #include "bumblebee/common/StringUtils.hpp"
 #include <vector>
 
@@ -14,7 +15,7 @@ namespace bumblebee::python {
 // ---------------------------------------------------------------------------
 
 PyBumbleBee::PyBumbleBee(const std::map<std::string, std::string>& args)
-    : args_(args) {
+    : db_(std::make_unique<Schema>("default")), args_(args) {
     applyArgs(args_);
 
     // register python functions
@@ -145,6 +146,25 @@ py::dict PyBumbleBee::getAllResults() {
         results[py::str(key)] = pt.tuples();
     }
     return results;
+}
+
+void PyBumbleBee::removePredicate(const std::string& name, int arity) {
+    if (arity < 0) {
+        throw std::invalid_argument("arity must be >= 0");
+    }
+    // Check the predicate exists before deleting
+    bool found = false;
+    for (auto* pred : getSchema().getPredicates()) {
+        if (pred->getName() == name && pred->getArity() == static_cast<unsigned>(arity)) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        throw std::runtime_error("Predicate not found: " + name + "/" + std::to_string(arity));
+    }
+    getSchema().deletePredicate(name.c_str(), static_cast<unsigned>(arity));
+    registeredObjects_.erase(name);
 }
 
 } // namespace bumblebee::python

@@ -31,7 +31,7 @@ namespace bumblebee {
 
 
 ParserInputBuilder::ParserInputBuilder(OutputType type, ClientContext& context):
-    currentSchema_(Catalog::instance().getDefaultSchema()),
+    currentSchema_(context.defaultSchema_),
     hiddenNewPredicate(!context.printAll_),
     distinctNewPredicate_(context.distinct_),
     bufferManager_(*context.bufferManager_),

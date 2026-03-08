@@ -98,7 +98,7 @@ public:
     }
 
     // Return the Constat types for each column
-    vector<LogicalType> getTypes();
+    vector<LogicalType> getTypes() const;
 
     // Return a join hash table with the same keys. If does not exist create it
     joinht_ptr_t& getJoinHashTable(const vector<idx_t>& keys, const vector<idx_t>& payloads);
