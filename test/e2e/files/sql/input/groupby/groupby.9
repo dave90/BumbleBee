@@ -3,9 +3,9 @@ SELECT
     L_ORDERKEY AS l_orderkey,
     COUNT(*) as c
 FROM
-    "/Users/davidefusca/git/BumbleBee/test/e2e/files/csv/tpch/customer.csv",
-    "/Users/davidefusca/git/BumbleBee/test/e2e/files/csv/tpch/orders.csv",
-    "/Users/davidefusca/git/BumbleBee/test/e2e/files/csv/tpch/lineitem_2.csv"
+    "./files/csv/tpch/customer.csv",
+    "./files/csv/tpch/orders.csv",
+    "./files/csv/tpch/lineitem_2.csv"
 WHERE
    C_CUSTKEY = O_CUSTKEY
   AND L_ORDERKEY = O_ORDERKEY
