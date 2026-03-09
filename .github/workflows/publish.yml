@@ -45,7 +45,7 @@ jobs:
           CIBW_ARCHS_MACOS: "native"
           # Linux: install LLVM 20 (Clang + libc++) inside manylinux_2_34 (Fedora-based)
           CIBW_BEFORE_ALL_LINUX: >
-            dnf install -y uuid-devel wget tar xz &&
+            dnf install -y libuuid-devel wget tar xz &&
             ARCH=$(uname -m) && if [ "$ARCH" = "x86_64" ]; then LLVM_ARCH=X64; else LLVM_ARCH=ARM64; fi &&
             wget -qO /tmp/llvm.tar.xz "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.0/LLVM-20.1.0-Linux-${LLVM_ARCH}.tar.xz" &&
             mkdir -p /opt/llvm && tar -xf /tmp/llvm.tar.xz -C /opt/llvm --strip-components=1 &&
