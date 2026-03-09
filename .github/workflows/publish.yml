@@ -54,8 +54,9 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: >
             PATH=/opt/llvm/bin:$PATH
             CC=clang CXX=clang++
+            CFLAGS="-fPIC"
             CXXFLAGS="-stdlib=libc++ -fPIC"
-            LDFLAGS="-stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
+            LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
           # macOS: install LLVM 20 via Homebrew
           CIBW_BEFORE_ALL_MACOS: "brew install llvm@20 || brew install llvm"
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
