@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-13, macos-14]
-        # macos-13 = x86_64, macos-14 = arm64
+        os: [ubuntu-24.04, macos-14]
+        # macos-14 = arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.22.0
+        run: pip install cibuildwheel==2.23.3
 
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
@@ -43,10 +43,20 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           # macOS: native arch per runner
           CIBW_ARCHS_MACOS: "native"
-          # Linux build dependencies (installed inside manylinux container)
-          CIBW_BEFORE_BUILD_LINUX: >
-            pip install pybind11 &&
-            yum install -y uuid-devel || apk add --no-cache util-linux-dev
+          # Linux: install Clang 21 + libc++ (matching ci.yml) inside manylinux_2_28
+          CIBW_BEFORE_ALL_LINUX: >
+            dnf install -y uuid-devel wget tar xz &&
+            wget -qO /tmp/llvm.tar.xz
+              "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.0.0/clang+llvm-21.0.0-$(uname -m)-linux-gnu.tar.xz" &&
+            tar -xf /tmp/llvm.tar.xz -C /opt &&
+            ln -sf /opt/clang+llvm-21.0.0-$(uname -m)-linux-gnu /opt/llvm &&
+            rm /tmp/llvm.tar.xz
+          CIBW_BEFORE_BUILD_LINUX: "pip install pybind11"
+          CIBW_ENVIRONMENT_LINUX: >
+            PATH=/opt/llvm/bin:$PATH
+            CC=clang CXX=clang++
+            CXXFLAGS="-stdlib=libc++ -fPIC"
+            LDFLAGS="-stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
           # macOS build dependencies
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
           # Test the built wheel
