@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.24.0
+        run: pip install cibuildwheel==3.4.0
 
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
