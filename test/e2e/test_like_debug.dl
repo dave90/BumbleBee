@@ -1,1 +1,0 @@
-result(FIRST_NAME, LAST_NAME) :- &read_csv("./files/csv/username.csv";columns_mapping=FIRST_NAME:FIRST_NAME;LAST_NAME:LAST_NAME;FIRST_NAME, LAST_NAME), &like("%son";;LAST_NAME).

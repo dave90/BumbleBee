@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import date, time, timedelta
-import bumblebee
+import bumblebeedb as bb
 from conftest import _rows
 
 
@@ -12,7 +12,7 @@ class TestLoadDataframe:
     def test_basic_int_columns(self):
         """Load a simple integer DataFrame and query it."""
         df = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "nums")
         db.run("out(X, Y) :- nums(X, Y). out(X, Y)?")
         assert sorted(_rows(db, "out", 2)) == [(1, 10), (2, 20), (3, 30)]
@@ -20,7 +20,7 @@ class TestLoadDataframe:
     def test_string_columns(self):
         """Load a DataFrame with string columns."""
         df = pd.DataFrame({"name": ["alice", "bob", "carol"]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "people")
         db.run("out(X) :- people(X). out(X)?")
         assert sorted(_rows(db, "out", 1)) == [("alice",), ("bob",), ("carol",)]
@@ -28,7 +28,7 @@ class TestLoadDataframe:
     def test_mixed_types(self):
         """Load a DataFrame with mixed int and string columns."""
         df = pd.DataFrame({"id": [1, 2], "name": ["alice", "bob"]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "mixed")
         db.run("out(X, Y) :- mixed(X, Y). out(X, Y)?")
         assert sorted(_rows(db, "out", 2)) == [(1, "alice"), (2, "bob")]
@@ -36,7 +36,7 @@ class TestLoadDataframe:
     def test_float_columns(self):
         """Load a DataFrame with float columns."""
         df = pd.DataFrame({"val": [1.5, 2.75, 3.0]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "floats")
         db.run("out(X) :- floats(X). out(X)?")
         rows = sorted(_rows(db, "out", 1))
@@ -45,7 +45,7 @@ class TestLoadDataframe:
     def test_filter_on_loaded_df(self):
         """Apply a Datalog filter on a loaded DataFrame."""
         df = pd.DataFrame({"x": [1, 2, 3, 4, 5], "y": [10, 20, 30, 40, 50]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "data")
         db.run("big(X, Y) :- data(X, Y), X > 3. big(X, Y)?")
         assert sorted(_rows(db, "big", 2)) == [(4, 40), (5, 50)]
@@ -53,7 +53,7 @@ class TestLoadDataframe:
     def test_join_with_datalog_facts(self):
         """Join a loaded DataFrame with Datalog facts."""
         df = pd.DataFrame({"id": [1, 2, 3], "name": ["alice", "bob", "carol"]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "emp")
         db.run('score(1, 85). score(2, 92). score(3, 78). score(X, Y)?')
         db.run("result(N, S) :- emp(ID, N), score(ID, S). result(X, Y)?")
@@ -62,7 +62,7 @@ class TestLoadDataframe:
     def test_sql_on_loaded_df(self):
         """Query a loaded DataFrame using SQL."""
         df = pd.DataFrame({"id": [1, 2, 3], "name": ["alice", "bob", "carol"]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "emp")
         db.sql("SELECT V1, V2 FROM emp WHERE V1 > 1", alias="result")
         assert sorted(_rows(db, "result", 2)) == [(2, "bob"), (3, "carol")]
@@ -71,7 +71,7 @@ class TestLoadDataframe:
         """Load a large DataFrame (>STANDARD_VECTOR_SIZE rows) to test batching."""
         n = 2048
         df = pd.DataFrame({"val": list(range(n))})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "big")
         db.run("out(X) :- big(X). out(X)?")
         rows = sorted(_rows(db, "out", 1))
@@ -82,7 +82,7 @@ class TestLoadDataframe:
     def test_duplicate_alias_raises(self):
         """Loading a second DataFrame with the same alias should raise."""
         df = pd.DataFrame({"a": [1]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "dup")
         with pytest.raises(RuntimeError, match="already exist"):
             db.load_df(df, "dup")
@@ -90,14 +90,14 @@ class TestLoadDataframe:
     def test_invalid_alias_raises(self):
         """Alias must start with lowercase letter."""
         df = pd.DataFrame({"a": [1]})
-        db = bumblebee.db()
+        db = bb.db()
         with pytest.raises(RuntimeError, match="lower case"):
             db.load_df(df, "Upper")
 
     def test_empty_alias_raises(self):
         """Empty alias should raise."""
         df = pd.DataFrame({"a": [1]})
-        db = bumblebee.db()
+        db = bb.db()
         with pytest.raises(RuntimeError, match="lower case"):
             db.load_df(df, "")
 
@@ -105,7 +105,7 @@ class TestLoadDataframe:
         """Load two DataFrames and join them with Datalog."""
         employees = pd.DataFrame({"id": [1, 2, 3], "name": ["alice", "bob", "carol"]})
         salaries = pd.DataFrame({"id": [1, 2, 3], "salary": [50000, 60000, 55000]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(employees, "emp")
         db.load_df(salaries, "sal")
         db.run("rich(N, S) :- emp(ID, N), sal(ID, S), S > 55000. rich(X, Y)?")
@@ -120,7 +120,7 @@ class TestLoadDataframe:
         products = pd.DataFrame({"pid": [1, 2, 3], "name": ["widget", "gadget", "gizmo"]})
         orders = pd.DataFrame({"oid": [10, 11, 12, 13], "pid": [1, 2, 1, 3], "qty": [5, 3, 2, 7]})
         customers = pd.DataFrame({"oid": [10, 11, 12, 13], "cname": ["alice", "bob", "carol", "alice"]})
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(products, "products")
         db.load_df(orders, "orders")
         db.load_df(customers, "customers")
@@ -142,7 +142,7 @@ class TestLoadDataframe:
             "did": [1, 1, 2, 2, 3],
             "score": [90, 85, 70, 95, 80],
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(dept, "dept")
         db.load_df(staff, "staff")
         db.sql("SELECT COUNT(*) AS CNT FROM staff", alias="total_staff")
@@ -160,7 +160,7 @@ class TestLoadDataframe:
             "id": [1, 2, 3],
             "ts": pd.to_datetime(["2024-01-15 10:30:00", "2024-06-20 14:00:00", "2024-12-31 23:59:59"]),
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "events")
         db.run("out(X, Y) :- events(X, Y). out(X, Y)?")
         rows = sorted(_rows(db, "out", 2))
@@ -181,7 +181,7 @@ class TestLoadDataframe:
             "label": ["short", "medium", "long"],
             "duration": pd.to_timedelta(["1 days", "5 days", "30 days"]),
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "durations")
         db.run("out(X, Y) :- durations(X, Y). out(X, Y)?")
         rows = sorted(_rows(db, "out", 2))
@@ -203,7 +203,7 @@ class TestLoadDataframe:
             "id": [1, 2, 3, 4],
             "color": pd.Categorical(["red", "green", "blue", "red"]),
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "items")
         db.run("out(X, Y) :- items(X, Y). out(X, Y)?")
         rows = sorted(_rows(db, "out", 2))
@@ -216,7 +216,7 @@ class TestLoadDataframe:
             "id": [1, 2, 3],
             "level": pd.Categorical([10, 20, 10]),
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "levels")
         db.run("out(X, Y) :- levels(X, Y). out(X, Y)?")
         rows = sorted(_rows(db, "out", 2))
@@ -228,7 +228,7 @@ class TestLoadDataframe:
             "id": [1, 2, 3],
             "d": [date(2024, 1, 15), date(2024, 6, 20), date(2024, 12, 31)],
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "dates")
         db.run("out(X, Y) :- dates(X, Y). out(X, Y)?")
         rows = sorted(_rows(db, "out", 2))
@@ -244,7 +244,7 @@ class TestLoadDataframe:
             "id": [1, 2, 3],
             "t": [time(10, 30, 0), time(14, 0, 0), time(23, 59, 59)],
         })
-        db = bumblebee.db()
+        db = bb.db()
         db.load_df(df, "times")
         db.run("out(X, Y) :- times(X, Y). out(X, Y)?")
         rows = sorted(_rows(db, "out", 2))

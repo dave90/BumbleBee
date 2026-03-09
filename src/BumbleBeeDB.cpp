@@ -330,6 +330,16 @@ void BumbleBeeDB::print() {
     }
 }
 
+std::string BumbleBeeDB::explainFromInputString(const string &inputProgram) {
+    rules_vector_t program;
+    parseProgram(program, inputProgram);
+    std::string result;
+    for (auto& rule : program) {
+        result += rule.toString() + "\n";
+    }
+    return result;
+}
+
 void BumbleBeeDB::printProgram(rules_vector_t &program) {
     for (auto& rule : program) {
         std::cout << rule.toString() << std::endl;

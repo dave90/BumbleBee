@@ -1,10 +1,10 @@
-import bumblebee
+import bumblebeedb as bb
 from conftest import _rows
 
 
 class TestRecursion:
     def test_transitive_closure(self):
-        db = bumblebee.db()
+        db = bb.db()
         db.run("""
             edge(1,2). edge(2,3). edge(3,4).
             reach(X,Y) :- edge(X,Y).
@@ -21,7 +21,7 @@ class TestRecursion:
 
     def test_path_count(self):
         """reach should have exactly 6 tuples for a 4-node chain."""
-        db = bumblebee.db()
+        db = bb.db()
         db.run("""
             edge(1,2). edge(2,3). edge(3,4).
             reach(X,Y) :- edge(X,Y).

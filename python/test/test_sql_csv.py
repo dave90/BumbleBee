@@ -1,4 +1,4 @@
-import bumblebee
+import bumblebeedb as bb
 from conftest import _rows, _sql, DATA_DIR
 
 
@@ -8,7 +8,7 @@ class TestSQLCSV:
     def test_count_rows(self):
         """COUNT(*) over customers-1.csv returns the row count."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""
             SELECT COUNT(*) AS CNT
             FROM "{csv}"
@@ -18,7 +18,7 @@ class TestSQLCSV:
     def test_where_filter(self):
         """Filter rows by a string equality condition."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""
             SELECT FIRST_NAME, LAST_NAME
             FROM "{csv}"
@@ -29,7 +29,7 @@ class TestSQLCSV:
     def test_group_by_count(self):
         """GROUP BY with COUNT(*) produces one row per group."""
         csv = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""
             SELECT L_RETURNFLAG, COUNT(*) AS CNT
             FROM "{csv}"
@@ -41,7 +41,7 @@ class TestSQLCSV:
     def test_sum_aggregate(self):
         """SUM aggregate over a numeric column."""
         csv = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""
             SELECT SUM(L_QUANTITY) AS TOTAL
             FROM "{csv}"
@@ -52,7 +52,7 @@ class TestSQLCSV:
     def test_user_alias(self):
         """Wrapping the query in (SELECT ...) AS name uses that name as result predicate."""
         csv = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""
             (SELECT L_RETURNFLAG, COUNT(*) AS CNT
              FROM "{csv}"
@@ -65,7 +65,7 @@ class TestSQLCSV:
     def test_select_multiple_columns(self):
         """SELECT with multiple projected columns returns correct arity."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""
             SELECT FIRST_NAME, LAST_NAME, COUNTRY
             FROM "{csv}"
@@ -76,7 +76,7 @@ class TestSQLCSV:
     def test_multiple_runs(self):
         """Multiple runs of SQL query."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
         db.run(_sql(f"""(
                 SELECT FIRST_NAME, LAST_NAME, COUNTRY
                 FROM "{csv}"

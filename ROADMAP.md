@@ -1,4 +1,6 @@
 ## TODOLIST
+- remove specific predicate
+
 - SQL to datalog allow CASE WHEN
 - Specify predicate tables types
 - NULL values in operations
@@ -9,7 +11,6 @@
 - CICD
 - Default minimum integer (small int or int 32 bit not tiny as now)
 - Test ldbc_snb_interactive_v1_impls https://github.com/ldbc/ldbc_snb_interactive_v1_impls/blob/main/duckdb/queries/interactive-complex-6.sql
-- Python embedding (like duckdb) and interoperability with pandas dataframe https://github.com/pybind/pybind11
 - Join with sort
 
 ## Next of Next
@@ -17,7 +18,6 @@
 - Planner with statistics better optimizer and rule ordering
 - functions
 - Perfect hash join
-- better profiling
 
 ## 0.1
 - CSV

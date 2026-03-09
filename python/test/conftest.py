@@ -1,7 +1,7 @@
 """
-Shared helpers and fixtures for the bumblebee Python test suite.
+Shared helpers and fixtures for the bumblebeedb Python test suite.
 
-Also adds the built bumblebee .so to sys.path.
+Also adds the built bumblebeedb .so to sys.path.
 Searches cmake-build-release first (preferred), then cmake-build-debug.
 Run from any directory; the project root is resolved relative to this file.
 """
@@ -13,11 +13,11 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 def _find_module_dir() -> Path:
     for build_dir in [ "cmake-build-release"]:
         candidate = _PROJECT_ROOT / build_dir
-        if any(candidate.glob("bumblebee*.so")):
+        if any(candidate.glob("bumblebeedb*.so")):
             return candidate
     raise RuntimeError(
-        "bumblebee*.so not found under cmake-build-release. "
-        "Run: cmake --build cmake-build-release --target bumblebee -j 8"
+        "bumblebeedb*.so not found under cmake-build-release. "
+        "Run: cmake --build cmake-build-release --target bumblebeedb -j 8"
     )
 
 _module_dir = _find_module_dir()

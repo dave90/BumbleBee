@@ -26,6 +26,7 @@ public:
     void run(const std::string& program);
     void sql(const std::string& program, const std::string& alias = "");
     void runFile(const std::string& filepath);
+    std::string explain(const std::string& program);
 
     void loadDataframe(pybind11::object df, const std::string& alias);
 

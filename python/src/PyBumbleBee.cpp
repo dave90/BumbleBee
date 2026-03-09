@@ -63,6 +63,10 @@ void PyBumbleBee::runFile(const std::string& filepath) {
         getSchema().deleteInternalPredicates();
 }
 
+std::string PyBumbleBee::explain(const std::string& program) {
+    return db_.explainFromInputString(program);
+}
+
 void PyBumbleBee::loadDataframe(pybind11::object df, const std::string &alias) {
 
     if (alias.empty() || alias[0] < 'a' || alias[0] > 'z') {

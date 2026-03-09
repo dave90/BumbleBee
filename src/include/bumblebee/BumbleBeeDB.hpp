@@ -38,6 +38,7 @@ public:
     void run();
 
     void runFromInputString(const string& program);
+    std::string explainFromInputString(const string& program);
 
     Schema& getSchema();
 

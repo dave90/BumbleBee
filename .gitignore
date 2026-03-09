@@ -48,3 +48,7 @@ prompt.*
 examples/actual/*
 examples/output/*
 cmake-build-*/
+build/
+.cache/
+dist/
+python/_version.py

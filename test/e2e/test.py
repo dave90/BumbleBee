@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from test.e2e.utils import run_process_on_file, compare_files_no_duplicates, contains_query, compare_files, create_tmp_input_file, compare_csv
 
-EXE_PATH = os.path.join("..","..","cmake-build-debug","BumbleBee")
+EXE_PATH = os.environ.get("BUMBLEBEE_EXE", os.path.join("..","..","cmake-build-debug","BumbleBee"))
 EXE_PATH_ABS = str(Path(EXE_PATH).resolve())
 # ASP
 input_folder_asp = Path(os.path.join("files","asp","input"))

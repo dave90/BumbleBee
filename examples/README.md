@@ -2,7 +2,46 @@
 
 This folder contains example queries demonstrating BumbleBee DB's features in both SQL and Datalog.
 
-## Running Examples
+
+## Python Examples (`python/`)
+
+Use BumbleBee as a Python library: load DataFrames, run SQL/Datalog, and get results back as DataFrames.
+
+**Prerequisites:**
+
+Install the `bumblebeedb` package from PyPI:
+```bash
+pip install bumblebeedb
+```
+
+Or install from source (from the project root):
+```bash
+pip install .
+```
+
+**Running:** All scripts use relative paths to `./data/`, so run from the `examples/` directory:
+```bash
+cd examples
+python python/01_getting_started.py
+```
+
+| Script | Description |
+|--------|-------------|
+| `01_getting_started.py` | Query CSV files with SQL, retrieve results as pandas DataFrames |
+| `02_dataframe_analytics.py` | Load pandas DataFrames and run Datalog/SQL aggregations |
+| `03_multi_source_join.py` | Join CSV file data with in-memory DataFrames |
+| `04_recursive_analysis.py` | Graph reachability with recursive Datalog rules |
+| `05_iterative_queries.py` | Interactive session: multiple queries, inspect state, redefine predicates |
+
+
+
+## Running SQL/DL Examples
+
+**Prerequisites:** Build BumbleBee first (from the project root):
+```bash
+cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release --target BumbleBee -j 8
+```
 
 All examples use **relative paths** to `./data/`, so run BumbleBee from the `examples/` directory:
 
@@ -28,6 +67,7 @@ cd examples
 | `-t N` | Use N threads (default: all cores) |
 | `-r` | Print profiling data |
 | `--print-program` | Print the generated Datalog program and exit |
+
 
 ## SQL Examples (`sql/`)
 

@@ -3,86 +3,158 @@
 </p>
 
 # BumbleBee DB
-BumbleBee DB aims to become a lightweight, high-performance In-memory Datalog-based analytics engine that empowers 
-data engineers and researchers to analyze massive datasets on a single machine. 
-Inspired by the architecture of modern OLAP systems, BumbleBee combines efficient execution models and flexible data sourcing to deliver fast and expressive analytics workflows. 
-Whether your data lives in CSV files or Parquet files, BumbleBee lets you define powerful transformations
-and queries using either Datalog or SQL, offering full transparency and extensibility for advanced users.
+
+**A high-performance Datalog-based analytics engine — with SQL support — from Python.**
+
+BumbleBee DB is a lightweight, in-memory analytics engine powered by **Datalog** — a declarative logic language that makes recursive queries, graph analysis, and complex joins natural to express. It also supports **SQL** as an alternative query language, so you can mix and match both in the same session. Query CSV files, Parquet files, and pandas DataFrames through a simple Python API. Built in C++ with push-based execution, columnar storage, and multithreading, it delivers serious performance on a single machine.
+
+## Quick Start
+
+### Install
+
+```bash
+pip install bumblebeedb
+```
+
+### Your first query
+
+```python
+import bumblebeedb as bb
+
+db = bb.db()
+
+# Query a CSV file with SQL — alias names the output predicate
+db.sql("""
+    SELECT DEPARTMENT_ID, COUNT(*) AS CNT, SUM(SALARY) AS TOTAL
+    FROM "examples/data/employees.csv"
+    GROUP BY DEPARTMENT_ID
+""", alias="dept_stats")
+
+# Get results as a pandas DataFrame
+# 3 is the arity (number of columns) of the dept_stats predicate
+df = db.get_table("dept_stats", 3).to_df(
+    col_names=["dept_id", "count", "total_salary"]
+)
+print(df)
+```
+
+### Recursive Datalog — something SQL can't easily do
+
+BumbleBee supports recursive Datalog rules, enabling graph analysis, transitive closure, and hierarchical queries with a clean, declarative syntax:
+
+```python
+import bumblebeedb as bb
+import pandas as pd
+
+hierarchy = pd.DataFrame({
+    "manager": ["alice", "alice", "bob", "bob", "carol", "dave"],
+    "report":  ["bob",   "carol", "dave", "eve", "frank", "grace"],
+})
+
+db = bb.db()
+
+# Load a pandas DataFrame as a predicate that can be queried
+db.load_df(hierarchy, "manages")
+
+# Recursive Datalog: compute all direct and indirect reports
+db.run("""
+    reports_to(M, R) :- manages(M, R).
+    reports_to(M, R) :- manages(M, X), reports_to(X, R).
+    reports_to(X, Y)?
+""")
+
+df = db.get_table("reports_to", 2).to_df(col_names=["manager", "report"])
+print("reports_to:")
+print(df.sort_values(["manager", "report"]).to_string(index=False))
+print()
+
+# You can also run SQL on top of Datalog results — count reports per manager
+db.sql("""
+    SELECT V1, COUNT(*) AS CNT
+    FROM reports_to
+    GROUP BY V1
+""", alias="report_count")
+
+df2 = db.get_table("report_count", 2).to_df(col_names=["manager", "num_reports"])
+print("num_reports:")
+print(df2.sort_values("num_reports", ascending=False).to_string(index=False))
+print()
+```
 
 ## Features
 
-- Datalog as input language
-- High-performance engine with code generation, push-based execution, columnar storage, and multithreading
-- Available as a command-line interface (CLI) and a Python client library
-- Supports data sources including CSV and Parquet files
-- **Connect to any data source via the Python client**: through DataFrame compatibility, you can pass any pandas (or compatible) DataFrame directly as input to BumbleBee queries — meaning you can load data from virtually any source (databases, APIs, Excel files, in-memory structures, etc.) before handing it off for analysis, similar to DuckDB's relation API
+- **Python client library** — `pip install bumblebeedb`, query and get DataFrames back
+- **Dual query languages** — SQL and Datalog, including recursive Datalog
+- **High-performance engine** — push-based execution, columnar storage, multithreading
+- **Read and write CSV and Parquet** — import data from and export results to CSV and Parquet files
+- **DataFrame interop** — load any pandas DataFrame as input via `db.load_df()`, meaning you can connect to virtually any data source (databases, APIs, Excel, in-memory structures) before handing it off for analysis
+- **Command-line interface** — run queries directly from the terminal
 
-## Quick Start
+## Python API
+
+| Method | Description |
+|--------|-------------|
+| `db = bb.db(args={})` | Create a new engine instance (only one per session). Optional `args` dict for CLI flags, e.g. `{"-t": "4", "-d": ""}` |
+| `db.run(program)` | Run a Datalog program |
+| `db.sql(query, alias="")` | Run a SQL query. If `alias` is provided, wraps the query as `(query) AS alias` |
+| `db.run_file(filepath)` | Run a program from a file |
+| `db.load_df(df, alias)` | Load a pandas DataFrame as a predicate. Alias must start with a lowercase letter |
+| `db.explain(program)` | Return the generated Datalog rules as a string without executing |
+| `db.get_output_predicates()` | List all output predicates as `(name, arity)` tuples |
+| `db.get_table(name, arity=-1)` | Get a result table. Arity is optional |
+| `table.tuples()` | Get results as a list of tuples |
+| `table.to_df(col_names=[])` | Get results as a pandas DataFrame. Column names are optional |
+| `db.remove_table(name, arity)` | Remove a predicate from the engine |
+
+## Examples
+
+Check out the [`examples/`](./examples) folder for a collection of ready-to-use examples in Python, SQL, and Datalog, covering data imports, aggregations, joins, recursion, exports, and more.
+
+## CLI Quick Start
+
+BumbleBee is also available as a standalone command-line tool.
 
 ### Prerequisites
 
 - CMake 3.20+
 - C++20-compatible compiler (GCC 13+ or Clang 18+ with libc++)
-- Ninja or Make
 
 ### Build
 
 ```bash
-# Configure (release)
 cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
-
-# Compile
 cmake --build cmake-build-release --target BumbleBee -j 8
-
-# Verify
 ./cmake-build-release/BumbleBee --help
 ```
 
-### Run your first query
-
-The `examples/` folder contains ready-to-run queries and sample data. For instance, to load and print all rows from a CSV file:
-
-**Datalog** (`examples/dl/01_import/basic_csv_import.dl`):
-
-```datalog
-employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE) :-
-    &read_csv("./data/employees.csv"; auto_detect=1, header=1; ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE).
-
-employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE)?
-```
+### Run a query
 
 ```bash
 cd examples
-../cmake-build-release/BumbleBee -i dl/01_import/basic_csv_import.dl
-```
 
-**SQL** (`examples/sql/01_import/basic_csv_import.sql`):
-
-```sql
-SELECT * FROM "./data/employees.csv"
-```
-
-```bash
-cd examples
+# SQL
 ../cmake-build-release/BumbleBee -i sql/01_import/basic_csv_import.sql
+
+# Datalog
+../cmake-build-release/BumbleBee -i dl/01_import/basic_csv_import.dl -a
 ```
 
-
-## Examples
-
-Check out the [`examples/`](./examples) folder for practical examples on how to use BumbleBee DB, including query patterns, data loading, and integration scenarios.
+| Flag | Description |
+|------|-------------|
+| `-a` | Print all predicates |
+| `-t N` | Use N threads (default: all cores) |
+| `-r` | Print profiling data |
+| `--print-program` | Print the generated Datalog program and exit |
 
 ## Optimizer
 
 BumbleBee DB includes a rule-based query optimizer that applies logical rewrites such as filter push-down and column pruning. The current optimizer does **not** reorder joins — the execution order follows the join sequence as written in the query. A cost-based join reordering optimizer is planned as a future enhancement.
 
-## Work in Progress
+## Roadmap
 
-- **Python client**: adoption of a Python client library to interact with BumbleBee DB programmatically, making it easy to embed analytics queries directly in Python workflows
-- **Code generation**:  code generation to cover complex AND and OR clause combinations in filter expressions
-- **Predicate table types**: currently all predicate table types are automatically deduced at runtime; future versions will allow users to explicitly declare column types for predicates
-- **Left and right joins**: support for LEFT JOIN and RIGHT JOIN in addition to the existing inner join
-- **Sort-merge join**: implementation of a sort-merge join operator as an alternative to hash joins, beneficial for pre-sorted or range-based workloads
-- **NULL handling**: support for NULL values across all operators, including NULL-safe comparisons and aggregations
-- **Cost-based join optimizer**: upgrading the current rule-based optimizer to a cost-based one capable of reordering joins based on cardinality estimates, significantly improving performance on complex multi-join queries
-
+- **Code generation**: cover complex AND and OR clause combinations in filter expressions
+- **Predicate table types**: allow users to explicitly declare column types for predicates (currently auto-deduced at runtime)
+- **Left and right joins**: support for LEFT JOIN and RIGHT JOIN
+- **Sort-merge join**: alternative to hash joins for pre-sorted or range-based workloads
+- **NULL handling**: NULL values across all operators, including NULL-safe comparisons and aggregations
+- **Cost-based join optimizer**: reorder joins based on cardinality estimates

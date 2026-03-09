@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BumbleBee DB is a high-performance Datalog-based analytics engine written in C++20. It supports both Datalog and SQL as input languages, with push-based execution, columnar storage, and multithreading. Data sources include CSV, Parquet, and ASP files.
+BumbleBee DB is a high-performance Datalog-based analytics engine written in C++20. It supports both Datalog and SQL as input languages, with push-based execution, columnar storage, and multithreading. Data sources include CSV, Parquet, and ASP files. A Python package (`bumblebeedb`) provides bindings via pybind11.
 
 ## Build Commands
 
@@ -30,6 +30,51 @@ cmake --build cmake-build-debug --target BumbleBee -j 8 --verbose
 #   --print-program       Print the Datalog program and exit
 ```
 
+## Python Package
+
+### Building the Python Extension
+
+```bash
+# Via pip (uses scikit-build-core + CMake under the hood)
+pip install .
+
+# Or build wheel directly
+pip install build
+python -m build
+```
+
+### Python API
+
+```python
+import bumblebeedb as bb
+
+db = bb.db()                          # create engine instance
+db.run("a(1,2). b(X,Y) :- a(X,Y). b(X,Y)?")  # run Datalog
+db.sql('(SELECT * FROM "file.csv") AS tbl')    # run SQL (no %@sql prefix needed)
+db.load_df(pandas_df, "alias")                 # load a pandas DataFrame as a predicate
+db.explain("program...")                       # print generated Datalog without executing
+db.run_file("path/to/file.dl")                 # run from file
+
+# Retrieve results
+db.get_output_predicates()   # list of (name, arity) tuples
+tbl = db.get_table("name", arity)
+tbl.tuples()                 # list of tuples
+tbl.to_df(col_names=["a","b"])  # pandas DataFrame
+db.remove_table("name", arity)  # remove a predicate
+```
+
+### PyPI Publishing
+
+```bash
+pip install build twine
+python -m build
+twine check dist/*
+twine upload dist/*               # upload to PyPI
+twine upload --repository testpypi dist/*  # or TestPyPI first
+```
+
+The wheel is platform-specific (C++ extension built with scikit-build-core). Configuration is in `pyproject.toml`.
+
 ## Testing
 
 ```bash
@@ -41,6 +86,9 @@ cd cmake-build-debug && ctest -R <test_name>
 
 # E2E tests (requires pytest, duckdb, clingo)
 cd test/e2e && pytest test.py
+
+# Python tests (requires release build with bumblebeedb*.so)
+pytest python/test/test_examples.py -v
 
 # Generate ASP expected output for E2E tests
 cd test/e2e && python gen_asp_test.py
@@ -75,6 +123,9 @@ Or
 - `src/planner/` - Logical DAG, rewriters, physical plan generation
 - `src/parallel/` - Task scheduling and thread pool execution
 - `src/storage/` - Storage management (block manager, buffer manager, statistics, etc.)
+- `python/src/` - pybind11 bindings (PyBumbleBee, PyPredicateTable, PandasScan, VectorConversion)
+- `python/test/` - Python test suite (`conftest.py` auto-finds `bumblebeedb*.so` in `cmake-build-release/`)
+- `examples/python/` - Example scripts (01–05) demonstrating the Python API
 
 ### Recursion Handling
 
@@ -168,6 +219,7 @@ Do not modify any code until the user has reviewed and approved the plan.
   -  `cd test/e2e && pytest test.py`
   -  `cd test/e2e && pytest test.py -k "test_sql"` to run only the sql tests
   -  `cd test/e2e && pytest test.py -k "test_asp"` to run only the asp tests
+- **Run Python tests**: `pytest python/test/test_examples.py -v` (requires release build)
 - **Use `-p -r` flags** for detailed debugging:
   - `-p`: Print debug logs
   - `-r`: Print profiling/timing data for each rule

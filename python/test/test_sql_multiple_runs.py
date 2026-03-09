@@ -1,4 +1,4 @@
-import bumblebee
+import bumblebeedb as bb
 from conftest import _rows, DATA_DIR
 
 
@@ -11,7 +11,7 @@ class TestSQLMultipleRuns:
         """Two runs with distinct aliases produce two independent predicates."""
         csv = DATA_DIR / "customers-1.csv"
         li  = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{csv}"', alias="customer_count")
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{li}"',  alias="lineitem_count")
@@ -24,7 +24,7 @@ class TestSQLMultipleRuns:
         csv = DATA_DIR / "customers-1.csv"
         li  = DATA_DIR / "tpch" / "lineitem_2.csv"
         pq  = DATA_DIR / "data_decimal.parquet"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{csv}"', alias="csv_count")
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{li}"',  alias="li_count")
@@ -37,7 +37,7 @@ class TestSQLMultipleRuns:
     def test_default_query_predicate_accumulates(self):
         """Three runs without alias all land in the default ``query`` predicate."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         # No alias → results accumulate in the default 'query' predicate
         db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'")
@@ -53,7 +53,7 @@ class TestSQLMultipleRuns:
     def test_four_aggregates_different_aliases(self):
         """Four aggregate queries on the same CSV, each stored under its own alias."""
         li = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(f'SELECT COUNT(*) AS CNT       FROM "{li}"', alias="total_rows")
         db.sql(f'SELECT MIN(L_QUANTITY) AS V  FROM "{li}"', alias="min_qty")
@@ -69,7 +69,7 @@ class TestSQLMultipleRuns:
     def test_two_group_by_queries_different_aliases(self):
         """Two GROUP BY queries on the same table stored under different aliases."""
         li = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(
             f'SELECT L_RETURNFLAG, COUNT(*) AS CNT FROM "{li}" GROUP BY L_RETURNFLAG',
@@ -87,7 +87,7 @@ class TestSQLMultipleRuns:
         """A CSV filter run followed by a parquet filter run; both results accessible."""
         csv = DATA_DIR / "customers-1.csv"
         pq  = DATA_DIR / "data_decimal.parquet"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Norway'",
                alias="norway")
@@ -106,7 +106,7 @@ class TestSQLMultipleRuns:
     def test_in_constants_and_not_in_constants(self):
         """IN and NOT IN with constant lists produce complementary results."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(
             f"SELECT FIRST_NAME, COUNTRY FROM \"{csv}\""
@@ -129,7 +129,7 @@ class TestSQLMultipleRuns:
     def test_in_and_not_in_combined_in_same_where(self):
         """IN and NOT IN filters combined in the same WHERE clause."""
         li = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(
             f"SELECT L_RETURNFLAG, COUNT(*) AS CNT FROM \"{li}\""
@@ -150,7 +150,7 @@ class TestSQLMultipleRuns:
     def test_in_subquery_no_agg(self):
         """IN with a non-aggregate subquery filtered by a constant."""
         csv = DATA_DIR / "customers-1.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(
             f'SELECT FIRST_NAME, LAST_NAME FROM "{csv}" AS c'
@@ -170,7 +170,7 @@ class TestSQLMultipleRuns:
     def test_in_subquery_with_agg_and_not_in_subquery_with_agg(self):
         """IN / NOT IN whose subquery contains an aggregate (SELECT MAX(...))."""
         li = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(
             f'SELECT COUNT(*) AS CNT FROM "{li}"'
@@ -191,7 +191,7 @@ class TestSQLMultipleRuns:
     def test_three_independent_aggregate_predicates(self):
         """Three aggregate queries (COUNT, SUM, MIN+MAX) each in its own predicate."""
         li = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{li}"', alias="row_count")
         db.sql(f'SELECT SUM(L_QUANTITY) AS TOTAL FROM "{li}"', alias="qty_sum")
@@ -206,7 +206,7 @@ class TestSQLMultipleRuns:
     def test_aggregate_then_in_parquet(self):
         """Aggregate on parquet followed by IN filter on same parquet file."""
         pq = DATA_DIR / "data_decimal.parquet"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.sql(
             f'SELECT COUNT(*) AS CNT FROM "{pq}"'
@@ -229,7 +229,7 @@ class TestSQLMultipleRuns:
 
     def test_datalog_like_predicate_from_two_runs(self):
         """2 runs: Datalog facts queried via SQL predicate FROM with explicit arity + LIKE."""
-        db = bumblebee.db()
+        db = bb.db()
 
         db.run('product("apple", "fruit"). product("apricot", "fruit"). '
                'product("banana", "fruit"). product("bean", "veggie"). '
@@ -242,7 +242,7 @@ class TestSQLMultipleRuns:
 
     def test_datalog_predicate_no_arity_two_runs(self):
         """2 runs: SQL FROM without arity (auto-lookup from schema) + equality filter."""
-        db = bumblebee.db()
+        db = bb.db()
 
         db.run('city("Paris"). city("London"). city("Berlin"). city("Rome"). city(X)?')
         db.sql("SELECT V1 FROM city WHERE V1 = 'Paris'", alias="paris_only")
@@ -251,7 +251,7 @@ class TestSQLMultipleRuns:
 
     def test_datalog_predicate_custom_cols_three_runs(self):
         """3 runs: Datalog facts, SQL FROM pred(X,Y) with custom column names, GROUP BY."""
-        db = bumblebee.db()
+        db = bb.db()
 
         db.run('person("Alice", "Smith"). person("Bob", "Jones"). '
                'person("Carol", "Smith"). person("Dave", "Jones"). '
@@ -268,7 +268,7 @@ class TestSQLMultipleRuns:
 
     def test_datalog_aggregate_like_three_runs(self):
         """3 runs: Datalog facts, custom column filter, LIKE aggregate."""
-        db = bumblebee.db()
+        db = bb.db()
 
         db.run('score("Alice", 85). score("Bob", 92). score("Carol", 78). '
                'score("Dave", 88). score("Eve", 91). score(X,Y)?')
@@ -284,7 +284,7 @@ class TestSQLMultipleRuns:
         """4 runs: Datalog predicate query (auto-arity), CSV filter, Parquet LIKE."""
         csv = DATA_DIR / "customers-1.csv"
         pq  = DATA_DIR / "data_decimal.parquet"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.run('score("Alice", 85). score("Bob", 92). score("Carol", 78). '
                'score("Dave", 88). score("Eve", 91). score(X,Y)?')
@@ -302,7 +302,7 @@ class TestSQLMultipleRuns:
         """5 runs: all three predicate FROM syntaxes + CSV GROUP BY + CSV NOT IN."""
         csv = DATA_DIR / "customers-1.csv"
         li  = DATA_DIR / "tpch" / "lineitem_2.csv"
-        db = bumblebee.db()
+        db = bb.db()
 
         db.run('item("apple", "fruit"). item("apricot", "fruit"). item("banana", "fruit"). '
                'item("bean", "veggie"). item("avocado", "fruit"). item("broccoli", "veggie"). '

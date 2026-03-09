@@ -117,7 +117,7 @@ find_package(pybind11 CONFIG QUIET)
 if(pybind11_FOUND)
     file(GLOB_RECURSE PYTHON_SRC_FILES ${PROJECT_SOURCE_DIR}/python/src/*.cpp)
     pybind11_add_module(pyBumbleBee ${PYTHON_SRC_FILES})
-    set_target_properties(pyBumbleBee PROPERTIES OUTPUT_NAME bumblebee)
+    set_target_properties(pyBumbleBee PROPERTIES OUTPUT_NAME bumblebeedb)
     target_link_libraries(pyBumbleBee PRIVATE bumblebee_lib)
     target_include_directories(pyBumbleBee PRIVATE
         ${PROJECT_SOURCE_DIR}/src/include

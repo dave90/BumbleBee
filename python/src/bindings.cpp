@@ -7,7 +7,7 @@
 namespace py = pybind11;
 using namespace bumblebee::python;
 
-PYBIND11_MODULE(bumblebee, m) {
+PYBIND11_MODULE(bumblebeedb, m) {
     m.doc() = "BumbleBee Datalog analytics engine Python bindings";
 
     py::class_<PyPredicateTable>(m, "PredicateTable",
@@ -49,6 +49,11 @@ Boolean flags (like --distinct, --print-all) use an empty string as value.
              py::arg("alias") = "",
              "Run a SQL program given as a string (no %@sql prefix needed). "
              "If alias is provided, wraps the query as (query) AS alias.")
+
+        .def("explain",               &PyBumbleBee::explain,
+             py::arg("program"),
+             "Parse a Datalog/SQL program and return the generated Datalog rules as a string "
+             "without executing them (equivalent to --print-program CLI flag).")
 
         .def("run_file",              &PyBumbleBee::runFile,
              py::arg("filepath"),     "Run a program from a file.")
