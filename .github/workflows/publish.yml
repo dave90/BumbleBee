@@ -30,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.23.3
+        run: pip install cibuildwheel==2.24.0
 
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
@@ -46,8 +46,7 @@ jobs:
           # Linux: install Clang 21 + libc++ (matching ci.yml) inside manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: >
             dnf install -y uuid-devel wget tar xz &&
-            wget -qO /tmp/llvm.tar.xz
-              "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.0.0/clang+llvm-21.0.0-$(uname -m)-linux-gnu.tar.xz" &&
+            wget -qO /tmp/llvm.tar.xz "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.0.0/clang+llvm-21.0.0-$(uname -m)-linux-gnu.tar.xz" &&
             tar -xf /tmp/llvm.tar.xz -C /opt &&
             ln -sf /opt/clang+llvm-21.0.0-$(uname -m)-linux-gnu /opt/llvm &&
             rm /tmp/llvm.tar.xz
