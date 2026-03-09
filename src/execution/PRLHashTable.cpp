@@ -44,7 +44,9 @@ void PRLHashTable::initialize(const vector<LogicalType> &types, idx_t capacity, 
     layout_.initialize(types);
     tupleSize_ = layout_.getRowWidth();
     BB_ASSERT(tupleSize_ < Storage::BLOCK_SIZE);
-    tuplesPerBlock_ = Storage::BLOCK_SIZE / tupleSize_;
+    // tupleSize_ can be 0 when types is empty (e.g. total aggregation);
+    // AggregatePRLHashTable will re-initialize with aggregate state slots.
+    tuplesPerBlock_ = tupleSize_ > 0 ? Storage::BLOCK_SIZE / tupleSize_ : 0;
 
     hashes_ = bufferManager_.allocate(Storage::BLOCK_SIZE);
     hashesPtr_ = hashes_->ptr();

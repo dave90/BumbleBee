@@ -18,15 +18,15 @@ jobs:
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc
           . /etc/os-release
-          echo "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-19 main" | sudo tee /etc/apt/sources.list.d/llvm-19.list
+          echo "deb http://apt.llvm.org/${UBUNTU_CODENAME}/ llvm-toolchain-${UBUNTU_CODENAME}-21 main" | sudo tee /etc/apt/sources.list.d/llvm-19.list
 
       - name: Install system packages
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            clang-19 \
-            libc++-19-dev \
-            libc++abi-19-dev \
+            clang-21 \
+            libc++-21-dev \
+            libc++abi-21-dev \
             uuid-dev \
             make \
             python3 \
@@ -49,8 +49,8 @@ jobs:
       # ── Configure & build (Release) ──
       - name: Configure Release build
         env:
-          CC: clang-19
-          CXX: clang++-19
+          CC: clang-21
+          CXX: clang++-21
         run: |
           cmake -B cmake-build-release \
             -DCMAKE_BUILD_TYPE=Release \
@@ -58,7 +58,7 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++"
 
       - name: Build Release
-        run: cmake --build cmake-build-release -j 2
+        run: cmake --build cmake-build-release -j $(nproc)
 
       # ── Run tests ──
       - name: Create test output directories
@@ -67,6 +67,11 @@ jobs:
       - name: Unit tests
         working-directory: cmake-build-release
         run: ctest -j $(nproc) --output-on-failure
+
+      - name: Unzip test data
+        run: |
+          unzip -o test/e2e/files/csv/mini_hits.zip
+          cd test/e2e && unzip -o files/csv/tpch/lineitem.zip
 
       - name: E2E tests
         working-directory: test/e2e

@@ -895,7 +895,7 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
         auto modifiers = rule.getModifiers();
         if (modifiers.empty()) {
             // create modifiers from the first var
-            modifiers.push_back({.col_ = 0, .modifier_ = OrderType::ASCENDING});
+            modifiers.push_back({.modifier_ = OrderType::ASCENDING, .col_ = 0});
         }
         sink = patom_ptr_t(new PhysicalTopNHOutput(types, headCols, ptSink.get(), rule.getModifiers(), rule.getLimit()));
     }
