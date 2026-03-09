@@ -65,6 +65,7 @@ jobs:
             CXXFLAGS="-stdlib=libc++ -fPIC"
             LDFLAGS="-stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
+          CIBW_ENVIRONMENT_PASS_MACOS: "CC CXX CXXFLAGS LDFLAGS"
           # Test the built wheel
           CIBW_TEST_REQUIRES: "pytest pandas pyarrow"
           CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
