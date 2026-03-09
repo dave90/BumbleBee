@@ -68,6 +68,7 @@ jobs:
             /opt/homebrew/opt/llvm@20/bin/clang --version
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
           CIBW_ENVIRONMENT_MACOS: >
+            MACOSX_DEPLOYMENT_TARGET=14.0
             SDKROOT=$(xcrun --show-sdk-path)
             CC=/opt/homebrew/opt/llvm@20/bin/clang
             CXX=/opt/homebrew/opt/llvm@20/bin/clang++
