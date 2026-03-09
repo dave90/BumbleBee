@@ -1,5 +1,4 @@
 ## TODOLIST
-- remove specific predicate
 
 - SQL to datalog allow CASE WHEN
 - Specify predicate tables types
@@ -8,7 +7,6 @@
 - Many OR and AND can generate explosion of body atoms
 
 ## Next
-- CICD
 - Default minimum integer (small int or int 32 bit not tiny as now)
 - Test ldbc_snb_interactive_v1_impls https://github.com/ldbc/ldbc_snb_interactive_v1_impls/blob/main/duckdb/queries/interactive-complex-6.sql
 - Join with sort
@@ -19,24 +17,14 @@
 - functions
 - Perfect hash join
 
-## 0.1
-- CSV
-- python lib
-- sql (basic)
-- directives
-- profiling
-- hash + aggregate
-- recursion
-- vectorize ,multithread , SIMD and push
-- parquet
 
 ## 0.2
 - sql (full)
 - plugin agg functions
-- DB (postegress ,mysql, sqlite)
+- DB (postgres ,mysql, sqlite)?
 - multi schema
-- compiled operators?
-- cascade?
+- compiled operators
+- cascade
 - multi join predicates
 - list + array?
 - ASP?
