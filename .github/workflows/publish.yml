@@ -58,20 +58,17 @@ jobs:
             CXXFLAGS="-stdlib=libc++ -fPIC"
             LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
             CMAKE_ARGS="-DCMAKE_C_COMPILER=/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/llvm/bin/clang++"
-          # macOS: install LLVM 20 via Homebrew and symlink to /opt/llvm-mac
+          # macOS: install LLVM 20 via Homebrew
           CIBW_BEFORE_ALL_MACOS: >
             brew install llvm@20 &&
-            ln -sfn $(brew --prefix llvm@20) /opt/llvm-mac ||
-            (brew install llvm &&
-            ln -sfn $(brew --prefix llvm) /opt/llvm-mac) &&
-            /opt/llvm-mac/bin/clang --version
+            /opt/homebrew/opt/llvm@20/bin/clang --version
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
           CIBW_ENVIRONMENT_MACOS: >
-            CC=/opt/llvm-mac/bin/clang
-            CXX=/opt/llvm-mac/bin/clang++
+            CC=/opt/homebrew/opt/llvm@20/bin/clang
+            CXX=/opt/homebrew/opt/llvm@20/bin/clang++
             CXXFLAGS="-stdlib=libc++"
-            LDFLAGS="-stdlib=libc++ -L/opt/llvm-mac/lib/c++ -Wl,-rpath,/opt/llvm-mac/lib/c++"
-            CMAKE_ARGS="-DCMAKE_C_COMPILER=/opt/llvm-mac/bin/clang -DCMAKE_CXX_COMPILER=/opt/llvm-mac/bin/clang++"
+            LDFLAGS="-stdlib=libc++ -L/opt/homebrew/opt/llvm@20/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@20/lib/c++"
+            CMAKE_ARGS="-DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@20/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@20/bin/clang++"
           # Test the built wheel
           CIBW_TEST_REQUIRES: "pytest pandas pyarrow"
           CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
