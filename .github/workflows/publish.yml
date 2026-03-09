@@ -56,8 +56,12 @@ jobs:
             CC=clang CXX=clang++
             CFLAGS="-fPIC"
             CXXFLAGS="-stdlib=libc++ -fPIC"
-            LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
+            LDFLAGS="-fuse-ld=lld --rtlib=compiler-rt -stdlib=libc++ -L/opt/llvm/lib -L/opt/llvm/lib/$(uname -m)-unknown-linux-gnu -Wl,-rpath,/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib/$(uname -m)-unknown-linux-gnu"
+            LD_LIBRARY_PATH="/opt/llvm/lib:/opt/llvm/lib/$(uname -m)-unknown-linux-gnu"
             CMAKE_ARGS="-DCMAKE_C_COMPILER=/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/llvm/bin/clang++"
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            LD_LIBRARY_PATH=/opt/llvm/lib:/opt/llvm/lib/$(uname -m)-unknown-linux-gnu
+            auditwheel repair -w {dest_dir} {wheel}
           # macOS: install LLVM 20 via Homebrew
           CIBW_BEFORE_ALL_MACOS: >
             brew install llvm@20 &&
