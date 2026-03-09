@@ -32,9 +32,17 @@ jobs:
       - name: Install cibuildwheel
         run: pip install cibuildwheel==3.4.0
 
+      - name: Install LLVM 20 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm@20 || brew install llvm
+
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
         env:
+          CC: ${{ runner.os == 'macOS' && '/opt/homebrew/opt/llvm@20/bin/clang' || '' }}
+          CXX: ${{ runner.os == 'macOS' && '/opt/homebrew/opt/llvm@20/bin/clang++' || '' }}
+          CXXFLAGS: ${{ runner.os == 'macOS' && '-stdlib=libc++' || '' }}
+          LDFLAGS: ${{ runner.os == 'macOS' && '-stdlib=libc++ -L/opt/homebrew/opt/llvm@20/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@20/lib/c++' || '' }}
           # Build for CPython 3.9–3.13
           CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
           # Skip 32-bit, musl, and PyPy
@@ -43,9 +51,9 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           # macOS: native arch per runner
           CIBW_ARCHS_MACOS: "native"
-          # Linux: install LLVM 20 (Clang + libc++) inside manylinux_2_35 (Debian-based)
+          # Linux: install LLVM 20 (Clang + libc++) inside manylinux_2_34 (Fedora-based)
           CIBW_BEFORE_ALL_LINUX: >
-            apt-get update && apt-get install -y uuid-dev wget xz-utils &&
+            dnf install -y uuid-devel wget tar xz &&
             ARCH=$(uname -m) && if [ "$ARCH" = "x86_64" ]; then LLVM_ARCH=X64; else LLVM_ARCH=ARM64; fi &&
             wget -qO /tmp/llvm.tar.xz "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.0/LLVM-20.1.0-Linux-${LLVM_ARCH}.tar.xz" &&
             mkdir -p /opt/llvm && tar -xf /tmp/llvm.tar.xz -C /opt/llvm --strip-components=1 &&
@@ -56,15 +64,13 @@ jobs:
             CC=clang CXX=clang++
             CXXFLAGS="-stdlib=libc++ -fPIC"
             LDFLAGS="-stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
-          # macOS: install LLVM 20 via Homebrew for full C++20 constexpr string support
-          CIBW_BEFORE_BUILD_MACOS: "(brew install llvm@20 || brew install llvm) && pip install pybind11"
-          CIBW_ENVIRONMENT_MACOS: "PATH=/opt/homebrew/opt/llvm/bin:$PATH CC=/opt/homebrew/opt/llvm/bin/clang CXX=/opt/homebrew/opt/llvm/bin/clang++ CXXFLAGS='-stdlib=libc++' LDFLAGS='-stdlib=libc++ -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++'"
+          CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
           # Test the built wheel
           CIBW_TEST_REQUIRES: "pytest pandas pyarrow"
           CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
-          # manylinux_2_35 provides glibc 2.35 needed by LLVM 20 pre-built binaries
-          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_35"
-          CIBW_MANYLINUX_AARCH64_IMAGE: "manylinux_2_35"
+          # manylinux_2_34 provides glibc 2.34 needed by LLVM 20 pre-built binaries
+          CIBW_MANYLINUX_X86_64_IMAGE: "quay.io/pypa/manylinux_2_34_x86_64"
+          CIBW_MANYLINUX_AARCH64_IMAGE: "quay.io/pypa/manylinux_2_34_aarch64"
 
       - uses: actions/upload-artifact@v4
         with:
