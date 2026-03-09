@@ -120,14 +120,13 @@ TEST_F(PhysicalExpressionTest, PhysicalExpressionAssignmentMultiOpTest) {
     auto gstate = pe.getGlobalState();
     auto state = pe.getState();
 
-    auto input = createChunkWithValue(count, 0);
-    std::cout << input.toString() <<std::endl;
+    // offset 1 to avoid division by zero on v2
+    auto input = createChunkWithValue(count, 1);
 
     DataChunk output;
     output.initializeEmpty(testTypes);
 
     pe.execute(context, input, output, *state);
-    std::cout << output.toString() <<std::endl;
     EXPECT_EQ(output.getSize(), input.getSize());
     for (idx_t i = 0; i < count; ++i) {
         auto v1 = input.getValue(1, i).getNumericValue<uint32_t>();
