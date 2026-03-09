@@ -43,12 +43,12 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           # macOS: native arch per runner
           CIBW_ARCHS_MACOS: "native"
-          # Linux: install Clang 21 + libc++ (matching ci.yml) inside manylinux_2_28
+          # Linux: install LLVM 20 (Clang + libc++) inside manylinux_2_28
           CIBW_BEFORE_ALL_LINUX: >
             dnf install -y uuid-devel wget tar xz &&
-            wget -qO /tmp/llvm.tar.xz "https://github.com/llvm/llvm-project/releases/download/llvmorg-21.0.0/clang+llvm-21.0.0-$(uname -m)-linux-gnu.tar.xz" &&
-            tar -xf /tmp/llvm.tar.xz -C /opt &&
-            ln -sf /opt/clang+llvm-21.0.0-$(uname -m)-linux-gnu /opt/llvm &&
+            ARCH=$(uname -m) && if [ "$ARCH" = "x86_64" ]; then LLVM_ARCH=X64; else LLVM_ARCH=ARM64; fi &&
+            wget -qO /tmp/llvm.tar.xz "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.0/LLVM-20.1.0-Linux-${LLVM_ARCH}.tar.xz" &&
+            mkdir -p /opt/llvm && tar -xf /tmp/llvm.tar.xz -C /opt/llvm --strip-components=1 &&
             rm /tmp/llvm.tar.xz
           CIBW_BEFORE_BUILD_LINUX: "pip install pybind11"
           CIBW_ENVIRONMENT_LINUX: >
@@ -56,8 +56,15 @@ jobs:
             CC=clang CXX=clang++
             CXXFLAGS="-stdlib=libc++ -fPIC"
             LDFLAGS="-stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
-          # macOS build dependencies
+          # macOS: install LLVM 20 via Homebrew for full C++20 constexpr string support
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install llvm@20 || brew install llvm
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
+          CIBW_ENVIRONMENT_MACOS: >
+            PATH=$(brew --prefix llvm)/bin:$PATH
+            CC=clang CXX=clang++
+            CXXFLAGS="-stdlib=libc++"
+            LDFLAGS="-stdlib=libc++ -L$(brew --prefix llvm)/lib/c++ -Wl,-rpath,$(brew --prefix llvm)/lib/c++"
           # Test the built wheel
           CIBW_TEST_REQUIRES: "pytest pandas pyarrow"
           CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
