@@ -32,17 +32,9 @@ jobs:
       - name: Install cibuildwheel
         run: pip install cibuildwheel==3.4.0
 
-      - name: Install LLVM 20 (macOS)
-        if: runner.os == 'macOS'
-        run: brew install llvm@20 || brew install llvm
-
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
         env:
-          CC: ${{ runner.os == 'macOS' && '/opt/homebrew/opt/llvm@20/bin/clang' || '' }}
-          CXX: ${{ runner.os == 'macOS' && '/opt/homebrew/opt/llvm@20/bin/clang++' || '' }}
-          CXXFLAGS: ${{ runner.os == 'macOS' && '-stdlib=libc++' || '' }}
-          LDFLAGS: ${{ runner.os == 'macOS' && '-stdlib=libc++ -L/opt/homebrew/opt/llvm@20/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@20/lib/c++' || '' }}
           # Build for CPython 3.9–3.13
           CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
           # Skip 32-bit, musl, and PyPy
@@ -64,8 +56,14 @@ jobs:
             CC=clang CXX=clang++
             CXXFLAGS="-stdlib=libc++ -fPIC"
             LDFLAGS="-stdlib=libc++ -L/opt/llvm/lib -Wl,-rpath,/opt/llvm/lib"
+          # macOS: install LLVM 20 via Homebrew
+          CIBW_BEFORE_ALL_MACOS: "brew install llvm@20 || brew install llvm"
           CIBW_BEFORE_BUILD_MACOS: "pip install pybind11"
-          CIBW_ENVIRONMENT_PASS_MACOS: "CC CXX CXXFLAGS LDFLAGS"
+          CIBW_ENVIRONMENT_MACOS: >
+            CC=/opt/homebrew/opt/llvm@20/bin/clang
+            CXX=/opt/homebrew/opt/llvm@20/bin/clang++
+            CXXFLAGS="-stdlib=libc++"
+            LDFLAGS="-stdlib=libc++ -L/opt/homebrew/opt/llvm@20/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm@20/lib/c++"
           # Test the built wheel
           CIBW_TEST_REQUIRES: "pytest pandas pyarrow"
           CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
