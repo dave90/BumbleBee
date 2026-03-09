@@ -1,0 +1,18 @@
+% CSV Import with Options
+% Use &read_csv with explicit parameters.
+% Available options:
+%   sep (or delim)   : column delimiter
+%   header           : 1 if first row is header
+%   auto_detect      : 1 to auto-detect types and delimiter
+%   quote            : quote character
+%   escape           : escape character
+%   columns          : explicit column definitions (e.g., "col1:STRING;col2:INTEGER")
+%   sample_size      : number of rows to sample for auto-detect
+%   all_varchar      : 1 to treat all columns as strings
+%   columns_mapping  : map variable names to column names (quoted, e.g., "Var:COLUMN_NAME;Var2:COL2")
+
+% Import only specific columns using columns_mapping
+emp(NAME, SALARY) :- &read_csv("./data/employees.csv"; separator=",", header=1, auto_detect=1, columns_mapping="NAME:NAME;SALARY:SALARY"; NAME, SALARY).
+
+% Query: print all imported employees
+emp(NAME, SALARY)?

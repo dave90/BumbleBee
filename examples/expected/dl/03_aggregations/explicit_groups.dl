@@ -1,0 +1,11 @@
+sales("Alice","Electronics",100).
+sales("Alice","Clothing",50).
+sales("Alice","Electronics",200).
+sales("Bob","Electronics",150).
+sales("Bob","Clothing",75).
+sales("Bob","Home",30).
+total_by_customer("Alice",350).
+total_by_customer("Bob",255).
+total_by_category("Electronics",450).
+total_by_category("Clothing",125).
+total_by_category("Home",30).

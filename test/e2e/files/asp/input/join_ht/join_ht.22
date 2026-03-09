@@ -1,0 +1,17 @@
+
+% Numeric lane (all ints)
+d2(2..5, 20..23).
+d4(20..23, 200..203).
+gateK(100). gateK(202). gateK(203).
+
+
+% Helper numeric derivations
+nj2( I2, J2, K2 ) :- d2( I2, J2 ), d4( J2, K2 ).
+pass( K ) :- gateK( K ).
+
+
+% Long rule (5 joins): two numeric paths + string path + arithmetic */
+ans5( J2, J2, I2) :-
+  nj2( I2, J2, K2 ),
+  pass( K2 ).
+

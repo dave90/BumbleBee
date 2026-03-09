@@ -1,0 +1,10 @@
+%@sql
+SELECT
+    SUM(L_EXTENDEDPRICE * L_DISCOUNT) AS revenue
+FROM
+    "./files/csv/tpch/lineitem.csv"
+WHERE
+    L_SHIPDATE >= "1994-01-01"
+  AND L_SHIPDATE < "1995-01-01"
+  AND L_DISCOUNT >= 0.05 AND L_DISCOUNT <= 0.07
+  AND L_QUANTITY < 24

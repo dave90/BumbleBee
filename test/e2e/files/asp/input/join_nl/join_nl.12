@@ -1,0 +1,12 @@
+a(Name, Score, Grade)?
+
+students("alice", 85).
+students("bob", 92).
+students("carol", 78).
+students("dave", 92).
+
+grades(85, "B").
+grades(92, "A").
+grades(78, "C").
+
+a(Name, Score, Grade) :- students(Name, Score), grades(Score, Grade), Name > "a", Score > 80, Grade < "C".

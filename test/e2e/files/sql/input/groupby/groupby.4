@@ -1,0 +1,4 @@
+%@sql
+SELECT LAST_NAME, FIRST_NAME, COUNT(*) as COUNT, MAX(IDENTIFIER) as id
+FROM "./files/csv/username.csv"
+GROUP BY LAST_NAME, FIRST_NAME

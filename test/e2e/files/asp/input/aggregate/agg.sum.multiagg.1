@@ -1,0 +1,14 @@
+% Facts for multi-aggregate test
+p(1,2). p(1,3). p(2,1). p(2,2). p(3,0).
+q(1,10). q(2,20). q(3,30).
+r(1). r(2). r(3).
+s(1,5). s(2,7).
+
+% Rule 1: Two aggregates in the body, with join and filter
+agg1(X,Sum1,Sum2) :- r(X), p(X,Y), q(X,Z), #sum{Y: p(X,Y)} = Sum1, #sum{Z: q(X,Z)} = Sum2, Sum1 > 2.
+
+% Rule 2: Three aggregates, with join and filter
+agg2(X,SumP,SumQ,SumS) :- p(X,Y), q(X,Z), s(X,W), #sum{Y: p(X,Y)} = SumP, #sum{Z: q(X,Z)} = SumQ, #sum{W: s(X,W)} = SumS, SumQ < 40.
+
+% Rule 3: Two aggregates, one with a filter
+agg3(X,SumP,SumQ) :- p(X,Y), q(X,Z), #sum{Y: p(X,Y), Y > 1} = SumP, #sum{Z: q(X,Z)} = SumQ, SumP >= 2.

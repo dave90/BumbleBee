@@ -1,0 +1,25 @@
+% ==== Test 1: Single-rule, mixed join with arithmetic guard ====
+% Goal: stress one big hash-join over 5 inputs (2 string, 3 numeric) in a single rule.
+
+% String side
+u("alpha"). u("beta"). u("γ").          % include unicode
+tag("alpha","A"). tag("beta","B"). tag("γ","A").
+class("A","ok"). class("B","skip").
+
+% Numeric side
+e(1..4, 10..13).            % edges (X,Y)
+w(10, 100). w(11, 111). w(12, 144). w(13, 169).   % Y -> weight (Y^2-ish)
+gate(100). gate(144). gate(169).                  % allow only some weights
+idmap("alpha",1). idmap("beta",2). idmap("γ",4).  % string->int bridge
+
+% Single, long rule (4 joins + guard); expect only records that:
+% - are 'ok' class,
+% - join through idmap to e/2,
+% - chain through w/2 to gate/1,
+% - and satisfy X+Y is even (stresses guard evaluation order)
+ans_join_single(S, X, Y, W) :-
+  u(S), tag(S,T), class(T,"ok"),
+  idmap(S,X),
+  e(X,Y),
+  w(Y,W), gate(W),
+  X + Y  > 0.

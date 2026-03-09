@@ -1,0 +1,4 @@
+%@sql
+SELECT SEARCHPHRASE as SEARCHPHRASE
+FROM './files/csv/mini_hits.csv'
+WHERE SEARCHPHRASE != ''

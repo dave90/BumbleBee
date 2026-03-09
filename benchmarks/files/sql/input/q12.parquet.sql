@@ -1,0 +1,7 @@
+%@sql
+SELECT SEARCHPHRASE as s, COUNT(*) as c
+FROM "downloads/hits.parquet"
+WHERE SEARCHPHRASE <> ""
+GROUP BY SEARCHPHRASE
+ORDER BY c DESC, s DESC
+LIMIT 6

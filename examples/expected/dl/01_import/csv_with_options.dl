@@ -1,0 +1,15 @@
+emp("Alice Johnson",95000).
+emp("Bob Smith",88000).
+emp("Carol Davis",72000).
+emp("Dan Wilson",105000).
+emp("Eve Brown",67000).
+emp("Frank Miller",78000).
+emp("Grace Lee",62000).
+emp("Hank Taylor",71000).
+emp("Ivy Chen",85000).
+emp("Jack White",92000).
+emp("Karen Adams",74000).
+emp("Leo Martin",69000).
+emp("Mia Garcia",58000).
+emp("Nick Thomas",91000).
+emp("Olivia Clark",110000).

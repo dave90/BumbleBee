@@ -1,0 +1,11 @@
+URL,c
+http://liver.ru/belgorod/page/1006.jки/доп_приборы,12933
+http://kinopoisk.ru,2759
+http://video.yandex,1816
+http://liver.ru/place_rukodel=365115eb7bbb90,1256
+http://viktori-decord,1252
+"http://irr.ru/index.php?showalbum/login-leniya7777294,938303130",1149
+http://liver.ru/saint-peterburg,949
+http://video.yandex.ru/search/?jenre=50&s_yers,936
+http://fitness/building,889
+http://smeshariki.ru/?id=6,808

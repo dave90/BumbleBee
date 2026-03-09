@@ -1,0 +1,4 @@
+SELECT COL4, SUM(COL1) as COL1
+FROM "./files/parquet/data_decimal.parquet"
+GROUP BY COL4
+

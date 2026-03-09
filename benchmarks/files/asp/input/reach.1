@@ -1,0 +1,6 @@
+edge(1,2).
+
+edge(Y,Z) :- edge(X,Y), Z = Y +1, Z < 4000.
+
+reach(X,Y) :- edge(X,Y).
+reach(X,Z) :- reach(X,Y), edge(Y,Z).

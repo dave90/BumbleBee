@@ -1,0 +1,12 @@
+% Basic CSV Export
+% Use &write_csv in the head to write results to a CSV file.
+% Read employees, filter high earners, and write to CSV.
+%
+% Note: Without single_file=1, BumbleBee writes one file per thread
+% into the output directory. Use single_file=1 to get a single output file.
+
+employee(ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE) :-
+    &read_csv("./data/employees.csv"; auto_detect=1, header=1; ID, NAME, DEPARTMENT_ID, SALARY, HIRE_DATE).
+
+&write_csv("./output/high_earners.csv"; single_file=1, header=1, columns="NAME,SALARY"; NAME, SALARY) :-
+    employee(_, NAME, _, SALARY, _), SALARY > 80000.

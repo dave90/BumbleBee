@@ -1,0 +1,7 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/lineitem.parquet",
+     "./files/parquet/tpch/part.parquet"
+WHERE (P_PARTKEY = L_PARTKEY AND P_BRAND = 'Brand#12' AND P_CONTAINER IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND L_SHIPMODE IN ('AIR', 'AIR REG'))
+   OR (P_PARTKEY = L_PARTKEY AND P_BRAND = 'Brand#23' AND P_CONTAINER IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') AND L_SHIPMODE IN ('AIR', 'AIR REG'))
+   OR (P_PARTKEY = L_PARTKEY AND P_BRAND = 'Brand#34' AND P_CONTAINER IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') AND L_SHIPMODE IN ('AIR', 'AIR REG'))

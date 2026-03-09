@@ -1,0 +1,7 @@
+% Test 24: Count combined with sum and min
+a(1,10).
+a(1,20).
+a(1,30).
+a(2,5).
+a(2,15).
+c(X,Cnt,Min,Sum) :- (Cnt,Min,Sum) = #[count,min,sum]{Y,Y,Y;X:a(X,Y)}.

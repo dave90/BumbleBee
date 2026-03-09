@@ -1,0 +1,14 @@
+% Test 11: Same variable used in all agg terms (min, max, sum, count)
+a(1,10).
+a(1,20).
+a(1,30).
+a(1,40).
+a(1,50).
+a(1,60).
+a(1,70).
+a(2,5).
+a(2,15).
+a(2,25).
+a(2,35).
+a(2,45).
+c(Min,Max,Sum,Cnt) :- (Min,Max,Sum,Cnt) = #[min,max,sum,count]{Y,Y,Y,Y:a(X,Y)}.

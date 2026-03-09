@@ -1,0 +1,10 @@
+% Test 3: Two agg functions, no groups (global aggregate)
+a(10).
+a(20).
+a(30).
+a(40).
+a(50).
+a(60).
+a(70).
+a(80).
+c(Min,Sum) :- (Min,Sum) = #[min,sum]{X,X:a(X)}.

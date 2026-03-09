@@ -1,0 +1,21 @@
+a(1,2).
+a(1,3).
+a(2,1).
+a(2,2).
+a(3,0).
+
+d(1,1).
+d(2,2).
+d(3,3).
+
+% Edge case: SUM with join, filter, and multiple rules
+p(1,2). p(1,3). p(2,1). p(2,2). p(3,0).
+q(1,10). q(2,20). q(3,30).
+r(1). r(2).
+
+% Join p and q, filter on r, aggregate sum
+s(X,Sum) :- r(X), p(X,Y), q(X,Z), #sum{Y: p(X,Y), q(X,_)} = Sum.
+% Aggregate with filter on value
+s2(X,Sum) :- p(X,Y), Y > 1, #sum{Y: p(X,Y)} = Sum.
+% Aggregate with join and filter
+s3(X,Sum) :- p(X,Y), q(X,Z), Y < Z, #sum{Y: p(X,Y), q(X,Z)} = Sum.

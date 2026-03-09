@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) as count, MAX(FIRST_NAME) as FIRST_NAME
+FROM "./files/csv/customers-1.csv"
+WHERE INDEX > 5

@@ -1,0 +1,13 @@
+% Basic Parquet Import
+% Import a Parquet file using &read_parquet.
+%
+% The path can be:
+%   - A single file:   "./data/nations.parquet"
+%   - A directory:     "./data/"                  (imports all Parquet files in the folder)
+%   - A glob pattern:  "./data/**/*.parquet"      (imports all matching files recursively)
+
+nation(N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT) :-
+    &read_parquet("./data/nations.parquet";; N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT).
+
+% Query: print all nations
+nation(N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT)?

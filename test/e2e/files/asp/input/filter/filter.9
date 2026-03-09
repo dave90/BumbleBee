@@ -1,0 +1,11 @@
+a(X, Y)?
+
+b("apple", "banana").
+b("cherry", "date").
+b("fig", "grape").
+b("kiwi", "lemon").
+
+c("banana").
+c("grape").
+
+a(X, Y) :- b(X, Y), X < Y, X > "b", Y < "m".

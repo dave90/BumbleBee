@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/part.parquet"
+WHERE P_BRAND NOT IN ("Brand#11", "Brand#12", "Brand#13")

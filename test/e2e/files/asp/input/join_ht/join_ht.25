@@ -1,0 +1,33 @@
+% ==== Test 3: Multiple rules, strings heavy, edgey keys (case, spaces, empty, unicode) ====
+% We model authors, aliases, and article topics. We join across normalized keys.
+
+% People and canonical ids
+person("Ada"). person(" ada "). person(""). person("Боб").
+canon("Ada","ADA"). canon(" ada ","ADA"). canon("","EMPTY"). canon("Боб","BOB").
+
+% Aliases mapping to emails (test case-sensitivity and trimming behavior via explicit facts)
+email("ADA","ada@ex"). email("BOB","bob@ex"). email("EMPTY","noreply@ex").
+
+% Topics by author handle (mix strings and ints via length guard)
+topic("ADA","db"). topic("BOB","olap"). topic("EMPTY","misc").
+art("db",  101). art("olap", 202). art("misc", 303).
+
+% Bridge facts with tricky keys
+alias("Ada","ADA"). alias(" ada ","ADA"). alias("Боб","BOB"). alias("","EMPTY").
+label("ADA","ok"). label("BOB","ok"). label("EMPTY","skip").
+
+% Normalize then join; ensure we don't trust whitespace/case (we rely on canon/alias)
+norm(H,C) :- canon(H,C).
+okC(C) :- label(C,"ok").
+
+% Authors with email on ok canon ids
+auth(C,E) :- okC(C), email(C,E).
+
+% Articles reachable from topics of ok authors
+auth_topic(C,T) :- auth(C,_), topic(C,T).
+auth_art(C,T,ID) :- auth_topic(C,T), art(T,ID).
+
+% Final answer: expose person handles that can map -> canon -> email -> topic -> article
+% plus length guard to ensure string/int cross-check path is exercised
+ans_join_string_multi(H, C, E, T, ID) :-
+  person(H), norm(H,C), auth(C,E), topic(C,T), art(T,ID).

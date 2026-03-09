@@ -1,0 +1,11 @@
+top_scores("Grace",97).
+top_scores("Carol",95).
+top_scores("Alice",92).
+score("Alice",92).
+score("Bob",78).
+score("Carol",95).
+score("Dan",88).
+score("Eve",91).
+score("Frank",73).
+score("Grace",97).
+score("Hank",85).

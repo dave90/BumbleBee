@@ -1,0 +1,4 @@
+%@sql
+SELECT p.FIRST_NAME, p.LAST_NAME, p.IDENTIFIER
+FROM "./files/csv/username.csv" AS p
+WHERE p.LAST_NAME LIKE 'J%' AND p.IDENTIFIER > 5000

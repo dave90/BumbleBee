@@ -1,0 +1,11 @@
+# Build dependencies (required to compile the bumblebeedb C++ extension)
+scikit-build-core>=0.3
+pybind11>=3.0
+pandas<3.0.0
+pyarrow
+
+# Test dependencies
+pytest>=7.0
+
+twine
+build

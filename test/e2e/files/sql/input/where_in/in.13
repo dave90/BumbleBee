@@ -1,0 +1,5 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/part.parquet"
+WHERE (P_CONTAINER IN ('SM CASE', 'SM BOX') AND P_SIZE NOT IN (1, 2))
+   OR (P_CONTAINER IN ('LG CASE', 'LG BOX') AND P_SIZE NOT IN (49, 50))

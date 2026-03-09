@@ -1,0 +1,7 @@
+SELECT
+    c1."LAST NAME" as X1,
+    c1."FIRST NAME" as X2,
+    c2."FIRST NAME" as X3,
+    c2.USERNAME as X4
+FROM read_csv_auto('./files/csv/username.csv') AS c1
+, read_csv_auto('./files/csv/username.csv') AS c2

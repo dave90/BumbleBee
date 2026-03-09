@@ -1,0 +1,95 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "bumblebee/catalog/Schema.hpp"
+
+namespace bumblebee{
+Schema::Schema(const std::string &name): name_(name) {
+    initDefaultPredicates();
+}
+
+Predicate * Schema::createPredicate(ClientContext* context, const char *predicateName, unsigned arity) {
+    PredicateMapEntry entry{.name_ = predicateName, .arity_ = arity};
+    auto it = ptables_.find(entry);
+    if (it != ptables_.end()) {
+        return it->second.get()->predicate_.get();
+    }
+    // create new predicate table
+    auto pt = predicate_table_ptr_t(new PredicateTables(context, predicateName, arity));
+    Predicate *p = pt.get()->predicate_.get();
+    entry.name_ = p->getName();
+    ptables_.emplace(entry, std::move(pt));
+    return p;
+}
+
+predicate_table_ptr_t & Schema::getPredicateTable(Predicate* p){
+    PredicateMapEntry pe {p->getName(), p->getArity()};
+    auto it = ptables_.find(pe);
+    BB_ASSERT(it != ptables_.end());
+    return it->second;
+}
+
+vector<Predicate*> Schema::getPredicates() {
+    vector<Predicate*> predicates;
+    for (auto& [key, value] : ptables_) {
+        predicates.push_back(value->predicate_.get());
+    }
+    return predicates;
+}
+
+Predicate * Schema::getFASOPredicate() {
+    return createPredicate(nullptr, Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);
+}
+
+void Schema::deletePredicate(const char *predicateName, unsigned arity) {
+    PredicateMapEntry entry{predicateName, arity};
+    auto it = ptables_.find(entry);
+    if (it != ptables_.end()) {
+        ptables_.erase(it);
+    }
+}
+
+void Schema::deleteInternalPredicates() {
+    // collect names of all internal predicates (as string copies to avoid dangling pointers after erase)
+    vector<std::pair<std::string, unsigned>> toDelete;
+    for (auto& [key, value] : ptables_) {
+        auto* p = value->predicate_.get();
+        if (p->isInternal() && p->getName() != Predicate::INTERNAL_SOURCE_ONE_ROW)
+            toDelete.emplace_back(std::string(p->getName()), p->getArity());
+    }
+    for (auto& [name, arity] : toDelete) {
+        deletePredicate(name.c_str(), arity);
+    }
+}
+
+void Schema::clear() {
+    ptables_.clear();
+    initDefaultPredicates();
+}
+
+void Schema::initDefaultPredicates() {
+    // pass null context as will not be used in INTERNAL_SOURCE_ONE_ROW predicate
+    auto p = createPredicate(nullptr, Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);
+    auto& pt = getPredicateTable(p);
+    terms_vector_t terms;
+    terms.emplace_back(0);
+    auto atom = Atom::createClassicalAtom(p, std::move(terms));
+    pt->addFact(atom); // add one row with one column
+}
+
+}

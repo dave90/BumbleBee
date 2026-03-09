@@ -1,0 +1,22 @@
+% ORDER BY with LIMIT
+% Use #limit and #order_by directives before a rule.
+% #order_by requires #limit to be specified.
+% Syntax: #order_by Var1 [asc|desc], Var2 [asc|desc]
+
+% Sample data
+score("Alice", 92).
+score("Bob", 78).
+score("Carol", 95).
+score("Dan", 88).
+score("Eve", 91).
+score("Frank", 73).
+score("Grace", 97).
+score("Hank", 85).
+
+% Get the top 3 highest scores
+#limit 3
+#order_by S desc
+top_scores(Name, S) :- score(Name, S).
+
+% Query: print the top scores
+top_scores(Name, S)?

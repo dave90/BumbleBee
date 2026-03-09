@@ -1,0 +1,8 @@
+% Test 22: Cross-product with multi-aggregate
+b(1).
+b(2).
+a(10,100).
+a(10,200).
+a(20,50).
+a(20,150).
+c(V,Y,Min,Sum) :- b(V), (Min,Sum) = #[min,sum]{X,X;Y:a(Y,X)}.

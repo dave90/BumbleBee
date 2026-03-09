@@ -1,0 +1,3 @@
+%@sql
+SELECT USERNAME, IDENTIFIER FROM "./files/csv/username.csv"
+WHERE (IDENTIFIER > 5000)

@@ -1,0 +1,25 @@
+nation(0,"ALGERIA").
+nation(1,"ARGENTINA").
+nation(2,"BRAZIL").
+nation(3,"CANADA").
+nation(4,"EGYPT").
+nation(5,"ETHIOPIA").
+nation(6,"FRANCE").
+nation(7,"GERMANY").
+nation(8,"INDIA").
+nation(9,"INDONESIA").
+nation(10,"IRAN").
+nation(11,"IRAQ").
+nation(12,"JAPAN").
+nation(13,"JORDAN").
+nation(14,"KENYA").
+nation(15,"MOROCCO").
+nation(16,"MOZAMBIQUE").
+nation(17,"PERU").
+nation(18,"CHINA").
+nation(19,"ROMANIA").
+nation(20,"SAUDI ARABIA").
+nation(21,"VIETNAM").
+nation(22,"RUSSIA").
+nation(23,"UNITED KINGDOM").
+nation(24,"UNITED STATES").

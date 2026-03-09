@@ -1,0 +1,11 @@
+stats("Electronics",100,450,3).
+stats("Clothing",50,185,3).
+stats("Home",30,75,2).
+sales("Electronics",100).
+sales("Electronics",200).
+sales("Electronics",150).
+sales("Clothing",50).
+sales("Clothing",75).
+sales("Clothing",60).
+sales("Home",30).
+sales("Home",45).

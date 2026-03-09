@@ -1,0 +1,24 @@
+% Graph Reachability
+% Find all nodes reachable from a starting node in a directed graph.
+
+% Graph edges
+edge(1, 2).
+edge(2, 3).
+edge(3, 4).
+edge(4, 5).
+edge(1, 6).
+edge(6, 7).
+edge(7, 3).
+edge(5, 8).
+
+% Starting node
+start(1).
+
+% Base case: nodes directly connected from start are reachable
+reachable(Y) :- start(X), edge(X, Y).
+
+% Recursive case: if Y is reachable and there is an edge from Y to Z, then Z is reachable
+reachable(Z) :- reachable(Y), edge(Y, Z).
+
+% Query: print all reachable nodes
+reachable(Z)?

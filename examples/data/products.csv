@@ -1,0 +1,11 @@
+product_id,product_name,category,price
+1,Laptop,Electronics,999.99
+2,Smartphone,Electronics,1299.99
+3,T-Shirt,Clothing,49.99
+4,Jeans,Clothing,79.99
+5,Sneakers,Clothing,29.99
+6,Candle,Home,14.99
+7,Mug,Home,19.99
+8,Backpack,Accessories,199.99
+9,Monitor,Electronics,599.99
+10,Notebook,Office,39.99

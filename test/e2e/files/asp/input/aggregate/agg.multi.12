@@ -1,0 +1,13 @@
+% Test 12: Multi-agg combined with filter
+a(1,5).
+a(1,10).
+a(1,15).
+a(1,20).
+a(1,25).
+a(1,30).
+a(2,8).
+a(2,12).
+a(2,18).
+a(2,22).
+a(2,28).
+c(X,Min,Sum) :- (Min,Sum) = #[min,sum]{Y,Y;X:a(X,Y), Y > 10}.

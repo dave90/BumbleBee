@@ -1,0 +1,7 @@
+% Test 25: Global multi-aggregate (total aggregation) with 4 functions
+a(10).
+a(20).
+a(30).
+a(40).
+a(50).
+c(Min,Max,Sum,Cnt) :- (Min,Max,Sum,Cnt) = #[min,max,sum,count]{X,X,X,X:a(X)}.

@@ -1,0 +1,30 @@
+agg1(A, S, M)?
+agg2(A, MX, MN)?
+agg3(A, S, MX)?
+agg4(A, MN, MX)?
+
+% Very complex test: 5 rules, multiple aggregates, joins, 6+ atoms in body, strings and numbers
+input("x", 1, 10).
+input("x", 2, -3).
+input("y", 1, 7).
+input("y", 2, 2).
+input("z", 1, 8).
+input("z", 2, -12).
+input("x", 3, 4).
+input("y", 3, 15).
+input("z", 3, 0).
+
+% Rule 1: join and filter
+join1(A, B, V) :- input(A, B, V), V > 0, input(A, B, _), input(A, _, _), input(_, B, _), input(_, _, V), input(A, _, V).
+
+% Rule 2: sum and min in same rule
+agg1(A, S, M) :- join1(A, _, _), S = #sum{V : join1(A, _, V)}, M = #min{V : join1(A, _, V)}, input(A, _, _), input(_, _, _), join1(A, _, _).
+
+% Rule 3: max and min in same rule, more joins
+agg2(A, MX, MN) :- input(A, _, _), join1(A, _, _), MX = #max{V : join1(A, _, V)}, MN = #min{V : join1(A, _, V)}, input(_, _, _), join1(_, _, _).
+
+% Rule 4: sum and max, with more joins and filters
+agg3(A, S, MX) :- input(A, B, V), V < 10, join1(A, B, V), S = #sum{V : join1(A, _, V)}, MX = #max{V : join1(A, _, V)}, input(_, _, _), join1(_, _, _).
+
+% Rule 5: min and max, with 6 atoms in body, negative and positive numbers
+agg4(A, MN, MX) :- input(A, B, V), V <= 10, join1(A, B, V), MN = #min{V : join1(A, _, V)}, MX = #max{V : join1(A, _, V)}, input(_, _, _), join1(_, _, _).

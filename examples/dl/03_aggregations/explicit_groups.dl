@@ -1,0 +1,23 @@
+% Explicit Groups
+% Format: #agg{agg_terms ; group_terms : body_atoms}
+% Use explicit groups when there are no prior atoms in the rule body
+% or when you want to control grouping independently.
+
+% Sample data
+sales("Alice", "Electronics", 100).
+sales("Alice", "Clothing", 50).
+sales("Alice", "Electronics", 200).
+sales("Bob", "Electronics", 150).
+sales("Bob", "Clothing", 75).
+sales("Bob", "Home", 30).
+
+% Sum of Amount grouped explicitly by Customer
+% No prior body atoms, so groups must be specified after the semicolon.
+total_by_customer(Customer, S) :- S = #sum{Amount ; Customer : sales(Customer, _, Amount)}.
+
+% Sum of Amount grouped explicitly by Category
+total_by_category(Category, S) :- S = #sum{Amount ; Category : sales(_, Category, Amount)}.
+
+% Queries: print results
+total_by_customer(Customer, S)?
+total_by_category(Category, S)?

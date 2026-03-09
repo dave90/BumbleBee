@@ -1,0 +1,3 @@
+SELECT COUNT(*) AS cnt
+FROM './files/parquet/tpch/orders.parquet'
+WHERE o_custkey IN (SELECT c_custkey FROM './files/parquet/tpch/customer.parquet' WHERE c_mktsegment = 'BUILDING')

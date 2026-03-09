@@ -1,0 +1,12 @@
+c2("Booker","Rachel",9012,"booker12").
+c2("Grey","Laura",2070,"grey07").
+c2("Johnson","Craig",4081,"johnson81").
+c2("Jenkins","Mary",9346,"jenkins46").
+c2("Smith","Jamie",5079,"smith79").
+c1("Booker","Rachel",9012,"booker12").
+c1("Grey","Laura",2070,"grey07").
+c1("Johnson","Craig",4081,"johnson81").
+c1("Jenkins","Mary",9346,"jenkins46").
+c1("Smith","Jamie",5079,"smith79").
+
+p0(FIRST_NAMEc1,FIRST_NAMEc2) :- c1(LAST_NAMEc1,FIRST_NAMEc1,IDENTIFIERc1,USERNAMEc1),c2(LAST_NAMEc2,FIRST_NAMEc2,IDENTIFIERc2,USERNAMEc2).

@@ -1,0 +1,20 @@
+c( X, Y, Z, W, K )?
+col(1,0,0,4,4).
+col(2,1,0,6,6).
+col(3,1,1,8,8).
+col(4,2,0,9,9).
+
+dx(0). dx(1). dx(2).
+dy(0). dy(1).
+gate(4). gate(6). gate(8). gate(9).
+
+okx( X ) :- dx( X ), X >= 1.
+oky( Y ) :- dy( Y ).
+pass( W ) :- gate( W ), W > 5.
+
+c( X, Y, Z, W, K ) :-
+  col( X, Y, Z, W, K ),
+  okx( Y ),
+  oky( Z ),
+  pass( W ),
+  X > Y, Y > Z + 1, W > X * 2, W = K.

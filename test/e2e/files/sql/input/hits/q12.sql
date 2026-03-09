@@ -1,0 +1,7 @@
+%@sql
+SELECT SEARCHPHRASE as s, COUNT(*) as c
+FROM "./files/csv/mini_hits.csv"
+WHERE SEARCHPHRASE <> ""
+GROUP BY SEARCHPHRASE
+ORDER BY c DESC
+LIMIT 6

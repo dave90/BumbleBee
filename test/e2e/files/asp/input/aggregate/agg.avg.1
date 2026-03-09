@@ -1,0 +1,5 @@
+% Simple test: #avg aggregate
+input(1, 10).
+input(2, 5).
+input(3, 6).
+avgval(A) :- A = #avg{V : input(_, V)}.

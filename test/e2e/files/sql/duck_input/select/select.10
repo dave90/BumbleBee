@@ -1,0 +1,3 @@
+SELECT SearchPhrase as SEARCHPHRASE
+FROM "./files/csv/mini_hits.csv"
+WHERE SearchPhrase <> ''

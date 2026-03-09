@@ -1,0 +1,3 @@
+SELECT COUNT(*) AS cnt
+FROM './files/parquet/tpch/part.parquet'
+WHERE p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG')

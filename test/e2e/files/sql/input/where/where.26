@@ -1,0 +1,3 @@
+%@sql
+SELECT L_ORDERKEY, L_QUANTITY FROM "./files/csv/tpch/lineitem_2.csv"
+WHERE (L_RETURNFLAG = "A" OR L_RETURNFLAG = "R") AND L_DISCOUNT < 0.05

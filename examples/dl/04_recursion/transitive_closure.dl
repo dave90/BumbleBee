@@ -1,0 +1,19 @@
+% Transitive Closure: Ancestor Relationship
+% Recursive rules are processed iteratively until a fixed-point is reached.
+% BumbleBee stops when no new data is produced.
+
+% Family tree
+parent("Alice", "Bob").
+parent("Bob", "Carol").
+parent("Carol", "Dan").
+parent("Carol", "Eve").
+parent("Dan", "Frank").
+
+% Base case: a parent is an ancestor
+ancestor(X, Y) :- parent(X, Y).
+
+% Recursive case: if X is parent of Z and Z is ancestor of Y, then X is ancestor of Y
+ancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).
+
+% Query: print all ancestor pairs
+ancestor(X, Y)?

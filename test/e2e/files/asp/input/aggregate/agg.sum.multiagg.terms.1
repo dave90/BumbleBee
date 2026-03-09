@@ -1,0 +1,25 @@
+% Facts with 5 and 6 terms
+atom5(1,2,3,4,5).
+atom5(2,3,4,5,6).
+atom5(3,4,5,6,7).
+atom6(1,2,3,4,5,6).
+atom6(2,3,4,5,6,7).
+atom6(3,4,5,6,7,8).
+
+% Aggregation on 2 terms
+agg2(A,B,Sum) :- atom5(A,B,_,_,_), #sum{B: atom5(A,B,_,_,_)} = Sum.
+
+% Aggregation on 3 terms
+agg3(A,B,C,Sum) :- atom5(A,B,C,_,_), #sum{C: atom5(A,B,C,_,_)} = Sum.
+
+% Aggregation on 4 terms
+agg4(A,B,C,D,Sum) :- atom6(A,B,C,D,_,_), #sum{D: atom6(A,B,C,D,_,_)} = Sum.
+
+% Aggregation on 5 terms
+agg5(A,B,C,D,E,Sum) :- atom6(A,B,C,D,E,_), #sum{E: atom6(A,B,C,D,E,_)} = Sum.
+
+% Aggregation on 6 terms (sum over last term)
+agg6(A,B,C,D,E,F,Sum) :- atom6(A,B,C,D,E,F), #sum{F: atom6(A,B,C,D,E,F)} = Sum.
+
+% Aggregation on combination of terms (sum over B+C)
+agg_sum_combo(A,Sum) :- atom5(A,B,C,_,_), #sum{B,C: atom5(A,B,C,_,_)} = Sum.

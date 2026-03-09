@@ -1,0 +1,300 @@
+/*
+ * Copyright (C) 2025 Davide Fuscà
+ *
+ * This file is part of BumbleBee.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "bumblebee/planner/rewriter/ArithRewriter.hpp"
+
+#include "bumblebee/common/types/Assert.hpp"
+
+namespace bumblebee{
+
+bool isConstantAssignment(Atom& builtin, vector<Atom>& body) {
+    if (!builtin.isConstantAssignment()) return false;
+    // now check if the variable is shared in the classical atoms in the body
+    // if is shared we need to decouple
+    string var;
+    if (builtin.getTerms()[0].getType() == VARIABLE)
+        var = builtin.getTerms()[0].getVariable();
+    else {
+        BB_ASSERT(builtin.getTerms()[1].getType() == VARIABLE);
+        var = builtin.getTerms()[1].getVariable();
+    }
+
+    set_term_variable_t vars;
+    for (auto& atom : body) {
+        atom.getVariables(vars);
+        if (vars.contains(var)) return false;
+    }
+    return true;
+}
+
+
+
+void ArithRewriter::rewrite(Rule &rule) {
+    vector<Atom> builtins ;
+    // extract arith term or constant
+    for (auto& atom: rule.getHead()) {
+        while (atom.containsArith() || atom.containsConstant()) {
+            auto builtinAtom = extractArith(atom);
+            builtins.push_back(std::move(builtinAtom));
+        }
+    }
+    // extract shared variables
+    for (auto& atom: rule.getHead()) {
+        string var;
+        while (containsSharedVariables(atom, var)) {
+            auto builtinAtoms = removeSharedVariables(atom, var);
+            for (auto& builtinAtom: builtinAtoms)
+                builtins.push_back(std::move(builtinAtom));
+        }
+    }
+
+    // separate the builtin with the classical atoms
+    // and put the arith in the builtins vector
+    vector<Atom> newBody;
+    for (auto& atom: rule.getBody()) {
+        if (atom.getType() == BUILTIN)
+            builtins.push_back(std::move(atom));
+        else
+            newBody.push_back(std::move(atom));
+    }
+    rule.setBody(newBody);
+
+
+    for (auto& atom: rule.getBody()) {
+        while (atom.containsArith() || atom.containsConstant()) {
+            auto builtinAtom = extractArith(atom);
+            builtins.push_back(std::move(builtinAtom));
+        }
+    }
+    for (auto& atom: rule.getBody()) {
+        string var;
+        while (containsSharedVariables(atom, var)) {
+            auto builtinAtoms = removeSharedVariables(atom, var);
+            for (auto& builtinAtom: builtinAtoms)
+                builtins.push_back(std::move(builtinAtom));
+        }
+    }
+    for (auto& atom: rule.getBody()) {
+        while (atom.getType() == AGGREGATE && !atom.isAggregateAssignment()) {
+            auto builtinAtoms = rewriteAggregate(atom);
+            for (auto& builtinAtom: builtinAtoms)
+                builtins.push_back(std::move(builtinAtom));
+        }
+    }
+
+    // extract nested ARITH sub-terms (from parenthesized expressions)
+    extractNestedArith(builtins);
+
+    // finally extract the constant in the arith formula
+    auto size = builtins.size(); // store the size because new atoms will be pushed
+    for (idx_t i = 0; i < size; ++i) {
+        auto& atom = builtins[i];
+        if (atom.getType() != BUILTIN || isConstantAssignment(atom, rule.getBody())) continue;
+        for(auto & bt: atom.getBuiltinTerms()) {
+            while (bt.left.containsOrIsConstant() || bt.right.containsOrIsConstant()) {
+                auto builtinAtom = extractConstantBuiltinArith(bt.left, bt.right);
+                builtins.push_back(std::move(builtinAtom));
+            }
+        }
+    }
+    for (auto& atom: builtins)
+        rule.addAtomInBody(std::move(atom));
+}
+
+Atom ArithRewriter::extractArith(Atom &atom) {
+    auto& terms = atom.getTerms();
+    idx_t arithTermIdx = terms.size();
+    for (idx_t i = 0; i < terms.size(); i++) {
+        auto & term = terms[i];
+        if (term.getType() == TermType::ARITH || term.getType() == TermType::CONSTANT) {
+            arithTermIdx = i;
+            break;
+        }
+    }
+    BB_ASSERT(arithTermIdx < terms.size());
+
+    terms_vector_t binopTerms;
+    auto newVarName1 = Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_);
+    auto newVarName2 = newVarName1;
+
+    binopTerms.emplace_back(Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_), true);
+    binopTerms.push_back(std::move(terms[arithTermIdx]));
+
+    Term newVariable(Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_), true);
+    terms[arithTermIdx] = std::move(newVariable);
+    counter_++;
+    return Atom::createBuiltinAtom(std::move(binopTerms), EQUAL);
+}
+
+bool ArithRewriter::containsSharedVariables(Atom &atom, string& sharedVar) {
+    if (atom.getType() == AGGREGATE) return false; // aggregate does not have shared variables
+    set_term_variable_t sharedVariables;
+    for (auto& term: atom.getTerms()) {
+        BB_ASSERT(term.getType() == TermType::VARIABLE);
+        if (term.isAnonymous())continue;
+        auto& var = term.getVariable();
+        if (sharedVariables.contains(var)) {
+            sharedVar = var;
+            return true;
+        }
+        sharedVariables.insert(var);
+    }
+    return false;
+}
+
+atoms_vector_t ArithRewriter::removeSharedVariables(Atom &atom, string& sharedVar) {
+    atoms_vector_t atoms;
+    idx_t counter = 0;
+    for (idx_t i = 0; i < atom.getTerms().size(); i++) {
+        auto& term = atom.getTerms()[i];
+        BB_ASSERT(term.getType() == TermType::VARIABLE);
+        if (term.getVariable() != sharedVar)continue;
+        if (counter == 0) {
+            // skip if it is the first time that we see the variable
+            ++counter;
+            continue;
+        }
+        // shared variable create an builtin atom and replace it
+        auto newVarName1 = Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_++);
+        auto newVarName2 = newVarName1;
+        string sharedVarName = sharedVar;
+
+        terms_vector_t binopTerms;
+        binopTerms.emplace_back(std::move(sharedVarName), true);
+        binopTerms.emplace_back(std::move(newVarName1), true);
+        auto newBuiltin = Atom::createBuiltinAtom(std::move(binopTerms), EQUAL);
+        atoms.push_back(std::move(newBuiltin));
+
+        Term newVariable(std::move(newVarName2), true);
+
+        atom.getTerms()[i] = std::move(newVariable);
+
+    }
+    BB_ASSERT(!atoms.empty());
+    return atoms;
+}
+
+atoms_vector_t ArithRewriter::rewriteAggregate(Atom &atom) {
+    atoms_vector_t builtins;
+    BB_ASSERT(!atom.isAggregateAssignment());
+    BB_ASSERT(!atom.getTerms().empty());
+    BB_ASSERT(atom.getTerms().size() > 1 || atom.getSecondBinop() == NONE_OP);
+    auto newVarName1 = Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_++);
+    if (atom.getBinop() != NONE_OP) {
+        auto binop = atom.getBinop();
+        terms_vector_t binopTerms;
+        binopTerms.emplace_back(atom.getTerms()[0].getVariable().c_str(), true);
+        binopTerms.emplace_back(std::move(string(newVarName1)), true);
+        auto newBuiltin = Atom::createBuiltinAtom(std::move(binopTerms), binop);
+        builtins.push_back(std::move(newBuiltin));
+    }
+    if (atom.getSecondBinop() != NONE_OP) {
+        auto binop = atom.getSecondBinop();
+        terms_vector_t binopTerms;
+        // first insert the agg variable
+        binopTerms.emplace_back(std::move(string(newVarName1)), true);
+        binopTerms.emplace_back(atom.getTerms()[1].getVariable().c_str(), true);
+        auto newBuiltin = Atom::createBuiltinAtom(std::move(binopTerms), binop);
+        builtins.push_back(std::move(newBuiltin));
+    }
+
+
+    atom.setSecondBinop(NONE_OP);
+    Term newVariable(std::move(newVarName1), true);
+    atom.getTerms()[0] = std::move(newVariable);
+    atom.setBinop(ASSIGNMENT);
+
+    return builtins;
+}
+
+Atom ArithRewriter::extractConstantBuiltinArith(Term& left, Term& right) {
+
+    // we do not want to have builtin with 2 contant, must be evaluated directly in the optimizer
+    BB_ASSERT(left.getType() != TermType::CONSTANT || right.getType() != TermType::CONSTANT );
+    Term cterm;
+    Term newVariable(Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_), true);
+
+    if (left.getType() == TermType::CONSTANT) {
+        cterm = std::move(left);
+        left = std::move(newVariable);
+    }
+    else if (right.getType() == TermType::CONSTANT) {
+        cterm = std::move(right);
+        right = std::move(newVariable);
+    }else {
+        bool foundConstant = false;
+        for (idx_t i = 0; i < left.getTerms().size(); i++) {
+            if (left.getTerms()[i].getType() == TermType::CONSTANT) {
+                cterm = std::move(left.getTerms()[i]);
+                left.getTerms()[i] = std::move(newVariable);
+                foundConstant = true;
+                break;
+            }
+        }
+        for (idx_t i = 0; i < right.getTerms().size() && !foundConstant; i++) {
+            if (right.getTerms()[i].getType() == TermType::CONSTANT) {
+                cterm = std::move(right.getTerms()[i]);
+                right.getTerms()[i] = std::move(newVariable);
+                break;
+            }
+        }
+    }
+
+    terms_vector_t binopTerms;
+    binopTerms.emplace_back(Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_), true);
+    binopTerms.push_back(std::move(cterm));
+    counter_++;
+
+    return Atom::createBuiltinAtom(std::move(binopTerms), ASSIGNMENT);
+}
+
+
+void ArithRewriter::extractNestedArith(vector<Atom>& builtins) {
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        auto size = builtins.size();
+        for (idx_t i = 0; i < size; ++i) {
+            auto& atom = builtins[i];
+            if (atom.getType() != BUILTIN) continue;
+            for (auto& bt : atom.getBuiltinTerms()) {
+                // Check left term for nested ARITH sub-terms
+                for (auto* termPtr : {&bt.left, &bt.right}) {
+                    auto& term = *termPtr;
+                    if (term.getType() != ARITH) continue;
+                    for (idx_t j = 0; j < term.getTerms().size(); ++j) {
+                        if (term.getTerms()[j].getType() != ARITH) continue;
+                        // Found nested ARITH - extract it
+                        auto newVarName = Predicate::INTERNAL_VARS_PREFIX + std::to_string(counter_);
+                        terms_vector_t binopTerms;
+                        binopTerms.emplace_back(std::string(newVarName), true);
+                        binopTerms.push_back(std::move(term.getTerms()[j]));
+                        Term newVariable(std::string(newVarName), true);
+                        term.getTerms()[j] = std::move(newVariable);
+                        counter_++;
+                        builtins.push_back(Atom::createBuiltinAtom(std::move(binopTerms), EQUAL));
+                        changed = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+ArithRewriter::~ArithRewriter() {}
+}

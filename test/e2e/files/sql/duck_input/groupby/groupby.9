@@ -1,0 +1,12 @@
+SELECT
+    L_ORDERKEY AS l_orderkey,
+    COUNT(*) as c
+FROM
+    './files/csv/tpch/customer.csv',
+    './files/csv/tpch/orders.csv',
+    './files/csv/tpch/lineitem_2.csv'
+WHERE
+  C_CUSTKEY = O_CUSTKEY
+  AND L_ORDERKEY = O_ORDERKEY
+GROUP BY
+    L_ORDERKEY

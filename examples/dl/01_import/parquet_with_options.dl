@@ -1,0 +1,10 @@
+% Parquet Import with Options
+% Use &read_parquet with explicit parameters.
+% Available options:
+%   binary_as_string : 1 to read binary columns as strings
+%   columns_mapping  : map variable names to column names (quoted)
+
+nation(KEY, NAME) :- &read_parquet("./data/nations.parquet"; binary_as_string=1, columns_mapping="KEY:N_NATIONKEY;NAME:N_NAME"; KEY, NAME).
+
+% Query: print all nations
+nation(KEY, NAME)?

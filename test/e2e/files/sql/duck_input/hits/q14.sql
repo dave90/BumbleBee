@@ -1,0 +1,1 @@
+SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM './files/csv/mini_hits.csv' WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10

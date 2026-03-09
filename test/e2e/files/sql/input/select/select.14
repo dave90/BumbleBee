@@ -1,0 +1,4 @@
+%@sql
+SELECT LAST_NAME, SUM(IDENTIFIER * (IDENTIFIER + 1)) as X
+FROM "./files/csv/username.csv"
+GROUP BY LAST_NAME

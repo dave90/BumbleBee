@@ -1,0 +1,2 @@
+SELECT Identifier, Identifier + 1 * 2 as X
+FROM read_csv('./files/csv/username.csv', delim=';', header=true, auto_detect=true)

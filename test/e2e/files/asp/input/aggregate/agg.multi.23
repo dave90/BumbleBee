@@ -1,0 +1,6 @@
+% Test 23: Same function (sum) on different payloads
+a(1,10,100).
+a(1,20,200).
+a(2,5,50).
+a(2,15,150).
+c(X,SumY,SumZ) :- (SumY,SumZ) = #[sum,sum]{Y,Z;X:a(X,Y,Z)}.

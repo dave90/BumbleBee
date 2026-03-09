@@ -1,0 +1,1 @@
+SELECT URL, COUNT(*) AS c FROM 'downloads/hits.parquet' GROUP BY URL ORDER BY c DESC LIMIT 10

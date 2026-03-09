@@ -1,0 +1,5 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/part.parquet"
+WHERE (P_CONTAINER IN ('SM CASE', 'SM BOX') AND P_BRAND = 'Brand#12')
+   OR (P_CONTAINER IN ('MED BAG', 'MED BOX') AND P_BRAND = 'Brand#23')

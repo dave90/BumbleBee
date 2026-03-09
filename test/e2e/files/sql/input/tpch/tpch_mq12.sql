@@ -1,0 +1,21 @@
+%@sql
+SELECT
+    L_SHIPMODE AS l_shipmode,
+    COUNT(*) AS c
+FROM
+    "./files/csv/tpch/orders.csv",
+    "./files/csv/tpch/lineitem.csv"
+WHERE
+    O_ORDERKEY = L_ORDERKEY
+  AND L_SHIPMODE = "MAIL"
+   OR L_SHIPMODE = "SHIP"
+  AND O_ORDERKEY = L_ORDERKEY
+  AND L_COMMITDATE < L_RECEIPTDATE
+  AND L_SHIPDATE < L_COMMITDATE
+  AND L_RECEIPTDATE >= "1994-01-01"
+  AND L_RECEIPTDATE < "1995-01-01"
+GROUP BY
+    L_SHIPMODE
+ORDER BY
+    l_shipmode
+LIMIT 10

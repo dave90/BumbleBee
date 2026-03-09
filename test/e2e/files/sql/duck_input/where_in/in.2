@@ -1,0 +1,3 @@
+SELECT COUNT(*) AS cnt
+FROM './files/parquet/tpch/part.parquet'
+WHERE p_brand NOT IN ('Brand#11', 'Brand#12', 'Brand#13')

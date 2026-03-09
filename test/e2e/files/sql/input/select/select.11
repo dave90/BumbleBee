@@ -1,0 +1,3 @@
+%@sql
+SELECT IDENTIFIER, (IDENTIFIER + 1) * 2 as X
+FROM "./files/csv/username.csv"

@@ -1,0 +1,4 @@
+%@sql
+SELECT COUNT(*) AS cnt
+FROM "./files/parquet/tpch/lineitem.parquet"
+WHERE L_RETURNFLAG IN ("A", "R") AND L_SHIPMODE NOT IN ("AIR", "TRUCK", "RAIL")

@@ -1,0 +1,15 @@
+a(1,2).
+a(1,3).
+a(2,1).
+a(2,2).
+a(3,0).
+
+b(1).b(3).
+
+% Edge case: SUM with join, filter, and multiple rules
+p(1,2). p(1,3). p(2,1). p(2,2). p(3,0).
+q(1,10). q(2,20). q(3,30).
+r(1). r(2). r(3).
+
+% Join p and q, filter on r, aggregate sum with >=
+s(X,Y,Z) :- r(X), p(X,Y), q(X,Z), #sum{Y: p(X,Y), q(X,_)} >= 5.

@@ -1,0 +1,4 @@
+%@sql
+SELECT INDEX, COUNTRY
+FROM "./files/csv/customers-1.csv"
+WHERE INDEX < (SELECT 0.5 * AVG(INDEX) FROM "./files/csv/customers-1.csv")
