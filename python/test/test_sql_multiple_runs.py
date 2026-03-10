@@ -234,7 +234,7 @@ class TestSQLMultipleRuns:
         db.run('product("apple", "fruit"). product("apricot", "fruit"). '
                'product("banana", "fruit"). product("bean", "veggie"). '
                'product("avocado", "fruit"). product("broccoli", "veggie"). product(X,Y)?')
-        db.sql("SELECT V1 FROM product/2 WHERE V1 LIKE 'a%'", alias="a_products")
+        db.sql("SELECT COL_0 FROM product/2 WHERE COL_0 LIKE 'a%'", alias="a_products")
 
         assert sorted(_rows(db, "a_products", 1)) == [
             ("apple",), ("apricot",), ("avocado",),
@@ -245,7 +245,7 @@ class TestSQLMultipleRuns:
         db = bb.db()
 
         db.run('city("Paris"). city("London"). city("Berlin"). city("Rome"). city(X)?')
-        db.sql("SELECT V1 FROM city WHERE V1 = 'Paris'", alias="paris_only")
+        db.sql("SELECT COL_0 FROM city WHERE COL_0 = 'Paris'", alias="paris_only")
 
         assert _rows(db, "paris_only", 1) == [("Paris",)]
 
@@ -258,7 +258,7 @@ class TestSQLMultipleRuns:
                'person("Eve", "Brown"). person(X,Y)?')
         db.sql("SELECT FNAME, LNAME FROM person(FNAME, LNAME) WHERE LNAME = 'Smith'",
                alias="smiths")
-        db.sql("SELECT V2, COUNT(*) AS CNT FROM person/2 GROUP BY V2",
+        db.sql("SELECT COL_1, COUNT(*) AS CNT FROM person/2 GROUP BY COL_1",
                alias="last_name_counts")
 
         assert sorted(_rows(db, "smiths", 2)) == [("Alice", "Smith"), ("Carol", "Smith")]
@@ -274,7 +274,7 @@ class TestSQLMultipleRuns:
                'score("Dave", 88). score("Eve", 91). score(X,Y)?')
         db.sql("SELECT STUDENT, GRADE FROM score(STUDENT, GRADE) WHERE GRADE > 88",
                alias="top_scores")
-        db.sql("SELECT COUNT(*) AS CNT FROM score/2 WHERE V1 LIKE '%e'",
+        db.sql("SELECT COUNT(*) AS CNT FROM score/2 WHERE COL_0 LIKE '%e'",
                alias="names_end_e")
 
         assert sorted(_rows(db, "top_scores", 2)) == [("Bob", 92), ("Eve", 91)]
@@ -288,7 +288,7 @@ class TestSQLMultipleRuns:
 
         db.run('score("Alice", 85). score("Bob", 92). score("Carol", 78). '
                'score("Dave", 88). score("Eve", 91). score(X,Y)?')
-        db.sql("SELECT V1, V2 FROM score WHERE V2 > 88",        alias="top_scorers")
+        db.sql("SELECT COL_0, COL_1 FROM score WHERE COL_1 > 88",        alias="top_scorers")
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{csv}" WHERE COUNTRY = \'Norway\'',
                alias="norway_count")
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{pq}" WHERE COL4 LIKE \'row_5%\'',
@@ -307,7 +307,7 @@ class TestSQLMultipleRuns:
         db.run('item("apple", "fruit"). item("apricot", "fruit"). item("banana", "fruit"). '
                'item("bean", "veggie"). item("avocado", "fruit"). item("broccoli", "veggie"). '
                'item(X,Y)?')
-        db.sql("SELECT V1, V2 FROM item/2 WHERE V1 LIKE 'b%'",
+        db.sql("SELECT COL_0, COL_1 FROM item/2 WHERE COL_0 LIKE 'b%'",
                alias="b_items")
         db.sql("SELECT NAME FROM item(NAME, CAT) WHERE CAT IN ('fruit') AND NAME LIKE 'a%'",
                alias="a_fruits")

@@ -64,7 +64,7 @@ class TestLoadDataframe:
         df = pd.DataFrame({"id": [1, 2, 3], "name": ["alice", "bob", "carol"]})
         db = bb.db()
         db.load_df(df, "emp")
-        db.sql("SELECT V1, V2 FROM emp WHERE V1 > 1", alias="result")
+        db.sql("SELECT COL_0, COL_1 FROM emp WHERE COL_0 > 1", alias="result")
         assert sorted(_rows(db, "result", 2)) == [(2, "bob"), (3, "carol")]
 
     def test_large_dataframe(self):
@@ -131,7 +131,7 @@ class TestLoadDataframe:
             ("bob", "gadget"), ("carol", "widget"),
         ]
         # SQL: aggregate total quantity per product
-        db.sql("SELECT V2, SUM(V3) AS TOTAL FROM orders GROUP BY V2", alias="qty_by_product")
+        db.sql("SELECT COL_1, SUM(COL_2) AS TOTAL FROM orders GROUP BY COL_1", alias="qty_by_product")
         assert sorted(_rows(db, "qty_by_product", 2)) == [(1, 7), (2, 3), (3, 7)]
 
     def test_two_dataframes_multiple_sql_queries(self):
@@ -146,8 +146,8 @@ class TestLoadDataframe:
         db.load_df(dept, "dept")
         db.load_df(staff, "staff")
         db.sql("SELECT COUNT(*) AS CNT FROM staff", alias="total_staff")
-        db.sql("SELECT V2, COUNT(*) AS CNT FROM staff GROUP BY V2", alias="staff_per_dept")
-        db.sql("SELECT V1, V2 FROM dept WHERE V2 = 'eng'", alias="eng_dept")
+        db.sql("SELECT COL_1, COUNT(*) AS CNT FROM staff GROUP BY COL_1", alias="staff_per_dept")
+        db.sql("SELECT COL_0, COL_1 FROM dept WHERE COL_1 = 'eng'", alias="eng_dept")
         assert _rows(db, "total_staff", 1) == [(5,)]
         assert sorted(_rows(db, "staff_per_dept", 2)) == [(1, 2), (2, 2), (3, 1)]
         assert _rows(db, "eng_dept", 2) == [(1, "eng")]

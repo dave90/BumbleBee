@@ -65,4 +65,7 @@ namespace bumblebee {
 
 #define DEFAULT_TMP_DIR "./bumblebee/"
 
+// Default column name prefix for predicate tables without explicit column names
+#define DEFAULT_COLUMN_PREFIX "COL_"
+
 }

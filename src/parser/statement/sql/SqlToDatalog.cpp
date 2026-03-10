@@ -178,8 +178,8 @@ void SqlQueryNormalizer::assignAliasesAndCollectColumns(sql::SQLStatement& state
                 // Store the resolved arity back so generatePredicateTableAtom
                 // can produce the correct number of terms even after column pruning.
                 fi.setPredicateArity(arity);
-                for (int j = 1; j <= arity; ++j)
-                    cols.push_back("V" + std::to_string(j));
+                for (int j = 0; j < arity; ++j)
+                    cols.push_back(DEFAULT_COLUMN_PREFIX + std::to_string(j));
             }
             // Assign alias if empty
             if (fi.getAlias().empty())
@@ -1591,12 +1591,12 @@ Atom generatePredicateTableAtom(sql::FromItem& fi, SQLQuery& query, string& erro
             terms.push_back(std::move(t));
         }
     } else {
-        // Default V1..VN columns: iterate over the full arity in numeric order.
+        // Default DEFAULT_COLUMN_PREFIX columns: iterate over the full arity in numeric order.
         // fi.getPredicateArity() holds the resolved arity (set during assignAliasesAndCollectColumns).
         // Columns pruned by removeUnusedCols are replaced by anonymous variables.
         idx_t arity = static_cast<idx_t>(fi.getPredicateArity());
-        for (idx_t j = 1; j <= arity; ++j) {
-            string col = "V" + std::to_string(j);
+        for (idx_t j = 0; j < arity; ++j) {
+            string col = DEFAULT_COLUMN_PREFIX + std::to_string(j);
             Term t = query.tableColumnsMap_[alias].count(col)
                 ? Term::createVariable(query.getVariableName(alias, col))
                 : Term::createVariable(Term::anonymous_variable);
