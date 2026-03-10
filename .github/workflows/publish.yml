@@ -35,8 +35,8 @@ jobs:
       - name: Build wheels
         run: cibuildwheel --output-dir wheelhouse
         env:
-          # Build for CPython 3.9–3.13
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
+          # Build for CPython 3.10–3.13
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           # Skip 32-bit, musl, and PyPy
           CIBW_SKIP: "*-manylinux_i686 *-musllinux_* pp*"
           # Linux: build for x86_64 and aarch64
