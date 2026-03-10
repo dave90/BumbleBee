@@ -67,7 +67,15 @@ void PyBumbleBee::run(const std::string& program) {
     getSchema().deleteInternalPredicates();
 }
 
-void PyBumbleBee::sql(const std::string& program, const std::string& alias) {
+void PyBumbleBee::sql(const std::string& program, const std::string& alias, bool overwrite) {
+    if (overwrite) {
+        const std::string predName = alias.empty() ? "query" : alias;
+        auto arity = getSchema().findArityByName(predName.c_str());
+        if (arity.has_value()) {
+            getSchema().deletePredicate(predName.c_str(), arity.value());
+        }
+    }
+
     string query = alias.empty() ? program : "(" + program + ") AS " + alias;
     string sqlProgram = "%@sql\n" + query;
     db_.runFromInputString(sqlProgram);

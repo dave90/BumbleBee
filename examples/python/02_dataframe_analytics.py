@@ -36,9 +36,9 @@ print()
 
 # --- SQL: revenue per quarter ---
 db.sql("""
-    (SELECT V4, SUM(V3) AS TOTAL
+    (SELECT COL_3, SUM(COL_2) AS TOTAL
      FROM sales
-     GROUP BY V4) AS quarterly
+     GROUP BY COL_3) AS quarterly
 """)
 
 df2 = db.get_table("quarterly", 2).to_df(col_names=["quarter", "total_revenue"])
@@ -48,9 +48,9 @@ print()
 
 # --- SQL: top product by total revenue ---
 db.sql("""
-    (SELECT V1, SUM(V3) AS TOTAL
+    (SELECT COL_0, SUM(COL_2) AS TOTAL
      FROM sales
-     GROUP BY V1
+     GROUP BY COL_0
      ORDER BY TOTAL DESC
      LIMIT 1) AS top_product
 """)

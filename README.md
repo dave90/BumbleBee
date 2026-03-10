@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo/bumblebee5.png"  width=30% />
+  <img src="./logo/bumblebee6.png"  width=30% />
 </p>
 
 # BumbleBee DB
@@ -72,9 +72,9 @@ print()
 
 # You can also run SQL on top of Datalog results — count reports per manager
 db.sql("""
-    SELECT V1, COUNT(*) AS CNT
+    SELECT COL_0, COUNT(*) AS CNT
     FROM reports_to
-    GROUP BY V1
+    GROUP BY COL_0
 """, alias="report_count")
 
 df2 = db.get_table("report_count", 2).to_df(col_names=["manager", "num_reports"])
@@ -98,7 +98,7 @@ print()
 |--------|-------------|
 | `db = bb.db(args={})` | Create a new engine instance (only one per session). Optional `args` dict for CLI flags, e.g. `{"-t": "4", "-d": ""}` |
 | `db.run(program)` | Run a Datalog program |
-| `db.sql(query, alias="")` | Run a SQL query. If `alias` is provided, wraps the query as `(query) AS alias` |
+| `db.sql(query, alias="", overwrite=True)` | Run a SQL query. If `alias` is provided, wraps the query as `(query) AS alias`. If `overwrite` is `True` (default), any existing predicate with the same alias is replaced |
 | `db.run_file(filepath)` | Run a program from a file |
 | `db.load_df(df, alias)` | Load a pandas DataFrame as a predicate. Alias must start with a lowercase letter |
 | `db.explain(program)` | Return the generated Datalog rules as a string without executing |

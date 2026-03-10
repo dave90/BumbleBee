@@ -35,19 +35,52 @@ class TestSQLMultipleRuns:
         assert _rows(db, "pq_count",  1) == [(100,)]
 
     def test_default_query_predicate_accumulates(self):
-        """Three runs without alias all land in the default ``query`` predicate."""
+        """Three runs without alias with overwrite=False accumulate in ``query``."""
         csv = DATA_DIR / "customers-1.csv"
         db = bb.db()
 
-        # No alias → results accumulate in the default 'query' predicate
-        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'")
-        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'")
-        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Belize'")
+        # overwrite=False → results accumulate in the default 'query' predicate
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'", overwrite=False)
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'", overwrite=False)
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Belize'", overwrite=False)
 
         assert _rows(db, "query", 2) == [
             ("Aimee",    "Hodge"),
             ("Kristina", "Ferrell"),
             ("Larry",    "Newton"),
+        ]
+
+    def test_reuse_alias_overwrites(self):
+        """Reusing an alias with default overwrite=True replaces previous result."""
+        csv = DATA_DIR / "customers-1.csv"
+        db = bb.db()
+
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'", alias="q1")
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'", alias="q1")
+
+        assert _rows(db, "q1", 2) == [("Aimee", "Hodge")]
+
+    def test_reuse_default_predicate_overwrites(self):
+        """Reusing default predicate with overwrite=True keeps only last result."""
+        csv = DATA_DIR / "customers-1.csv"
+        db = bb.db()
+
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'")
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'")
+
+        assert _rows(db, "query", 2) == [("Aimee", "Hodge")]
+
+    def test_reuse_alias_no_overwrite(self):
+        """With overwrite=False, results accumulate as before."""
+        csv = DATA_DIR / "customers-1.csv"
+        db = bb.db()
+
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'", alias="q1", overwrite=False)
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'", alias="q1", overwrite=False)
+
+        assert _rows(db, "q1", 2) == [
+            ("Aimee",    "Hodge"),
+            ("Kristina", "Ferrell"),
         ]
 
     def test_four_aggregates_different_aliases(self):

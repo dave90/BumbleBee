@@ -32,9 +32,9 @@ print()
 
 # Step 3: Revenue by category via SQL
 db.sql("""
-    (SELECT V4, SUM(V4 * V5) AS REV
+    (SELECT COL_3, SUM(COL_3 * COL_4) AS REV
      FROM sales
-     GROUP BY V4) AS rev_by_customer
+     GROUP BY COL_3) AS rev_by_customer
 """)
 
 df1 = db.get_table("rev_by_customer", 2).to_df(col_names=["customer", "revenue"])

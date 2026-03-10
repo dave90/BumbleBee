@@ -56,6 +56,15 @@ Predicate * Schema::getFASOPredicate() {
     return createPredicate(nullptr, Predicate::INTERNAL_SOURCE_ONE_ROW.c_str() ,1);
 }
 
+std::optional<unsigned> Schema::findArityByName(const char *predicateName) {
+    for (auto& [key, value] : ptables_) {
+        if (strcmp(key.name_, predicateName) == 0) {
+            return key.arity_;
+        }
+    }
+    return std::nullopt;
+}
+
 void Schema::deletePredicate(const char *predicateName, unsigned arity) {
     PredicateMapEntry entry{predicateName, arity};
     auto it = ptables_.find(entry);

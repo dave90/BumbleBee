@@ -66,8 +66,11 @@ Boolean flags (like --distinct, --print-all) use an empty string as value.
         .def("sql",                   &PyBumbleBee::sql,
              py::arg("program"),
              py::arg("alias") = "",
+             py::arg("overwrite") = true,
              "Run a SQL program given as a string (no %@sql prefix needed). "
-             "If alias is provided, wraps the query as (query) AS alias.")
+             "If alias is provided, wraps the query as (query) AS alias. "
+             "If overwrite is True (default), any existing predicate with the same alias "
+             "is deleted before executing the query.")
 
         .def("explain",               &PyBumbleBee::explain,
              py::arg("program"),
