@@ -16,6 +16,8 @@ BumbleBee DB is a lightweight, in-memory analytics engine powered by **Datalog**
 pip install bumblebeedb
 ```
 
+> **Platform support:** Pre-built wheels are available for **Linux x86_64** and **macOS ARM (Apple Silicon)**. If your platform is not supported, you can still use BumbleBee DB in [Google Colab](https://colab.research.google.com/drive/1EWIS0OxGdTE99p14ElXXHESbLb2bgrb7?usp=sharing).
+
 ### Your first query
 
 ```python

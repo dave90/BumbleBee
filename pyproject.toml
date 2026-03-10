@@ -9,9 +9,9 @@ description = "BumbleBee Datalog analytics engine"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 authors = [{name = "Davide Fuscà"}]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "pandas~=2.3.3",
+    "pandas>=2,<=2.3.3",
     "pyarrow",
 ]
 classifiers = [
@@ -20,7 +20,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
