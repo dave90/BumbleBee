@@ -19,11 +19,11 @@ jobs:
       - uses: actions/checkout@v4
 
       # Linux builds need QEMU for aarch64 cross-compilation
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
+      # - name: Set up QEMU
+      #   if: runner.os == 'Linux'
+      #   uses: docker/setup-qemu-action@v3
+      #   with:
+      #     platforms: arm64
 
       - uses: actions/setup-python@v5
         with:
@@ -40,7 +40,7 @@ jobs:
           # Skip 32-bit, musl, and PyPy
           CIBW_SKIP: "*-manylinux_i686 *-musllinux_* pp*"
           # Linux: build for x86_64 and aarch64
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_LINUX: "x86_64"
           # macOS: native arch per runner
           CIBW_ARCHS_MACOS: "native"
           # Linux: install LLVM 20 (Clang + libc++) inside manylinux_2_34 (Fedora-based)
@@ -80,7 +80,7 @@ jobs:
           CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
           # manylinux_2_34 provides glibc 2.34 needed by LLVM 20 pre-built binaries
           CIBW_MANYLINUX_X86_64_IMAGE: "quay.io/pypa/manylinux_2_34_x86_64"
-          CIBW_MANYLINUX_AARCH64_IMAGE: "quay.io/pypa/manylinux_2_34_aarch64"
+          # CIBW_MANYLINUX_AARCH64_IMAGE: "quay.io/pypa/manylinux_2_34_aarch64"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -115,7 +115,7 @@ jobs:
     if: github.event_name == 'release'
     environment:
       name: pypi
-      url: https://pypi.org/p/bumblebee
+      url: https://pypi.org/p/bumblebeedb
     permissions:
       id-token: write  # for trusted publishing
 
