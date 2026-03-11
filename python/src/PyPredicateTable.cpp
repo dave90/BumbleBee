@@ -21,6 +21,7 @@
 #include "bumblebee/catalog/PredicateTables.hpp"
 #include "bumblebee/common/types/Value.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/types/DataChunk.hpp"
 #include "bumblebee/execution/PartitionedPRLHashTable.hpp"
 #include "include/VectorWrapper.hpp"
@@ -135,7 +136,7 @@ pybind11::object PyPredicateTable::toDf(const vector<string>& names) const {
     auto finalNames = names;
     if (finalNames.empty()) {
         for (idx_t i=0;i<pt_->getTypes().size();++i)
-            finalNames.emplace_back("COL_"+std::to_string(i));
+            finalNames.emplace_back(DEFAULT_COLUMN_PREFIX+std::to_string(i));
     }
     return py::module::import("pandas").attr("DataFrame").attr("from_dict")(fetchNumpyInternal(finalNames));
 }

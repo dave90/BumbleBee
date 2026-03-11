@@ -77,9 +77,9 @@ class TestDataFrameAnalytics:
     def test_revenue_by_quarter(self):
         db = self._make_db()
         db.sql("""
-            (SELECT V4, SUM(V3) AS TOTAL
+            (SELECT COL_3, SUM(COL_2) AS TOTAL
              FROM sales
-             GROUP BY V4) AS quarterly
+             GROUP BY COL_3) AS quarterly
         """)
         rows = sorted(_rows(db, "quarterly", 2))
         # Q1: 1200+800+450=2450, Q2: 1350+750+500=2600, Q3: 1100+900+400=2400, Q4: 1400
@@ -88,9 +88,9 @@ class TestDataFrameAnalytics:
     def test_top_product(self):
         db = self._make_db()
         db.sql("""
-            (SELECT V1, SUM(V3) AS TOTAL
+            (SELECT COL_0, SUM(COL_2) AS TOTAL
              FROM sales
-             GROUP BY V1
+             GROUP BY COL_0
              ORDER BY TOTAL DESC
              LIMIT 1) AS top_product
         """)
@@ -223,6 +223,86 @@ class TestIterativeQueries:
         db.remove_table("temp", 2)
         preds = dict(db.get_output_predicates())
         assert "temp" not in preds
+
+
+class TestPredicateTableColumns:
+    """Tests that SQL queries on predicate tables use COL_0, COL_1, ... naming,
+    consistent with to_df() default column names."""
+
+    def test_sql_where_with_default_columns(self):
+        """COL_0, COL_1 should work in SQL WHERE on predicate tables."""
+        hierarchy = pd.DataFrame({
+            "manager": ["alice", "alice", "bob"],
+            "report":  ["bob",   "carol", "dave"],
+        })
+        db = bb.db()
+        db.load_df(hierarchy, "manages")
+        db.sql("""
+            (SELECT *
+             FROM manages
+             WHERE COL_0 = 'alice') AS alice_manages
+        """)
+        rows = sorted(_rows(db, "alice_manages", 2))
+        assert rows == [("alice", "bob"), ("alice", "carol")]
+
+    def test_sql_select_with_default_columns(self):
+        """COL_0, COL_1 should work in SQL SELECT on predicate tables."""
+        data = pd.DataFrame({
+            "name": ["alice", "bob"],
+            "score": [90, 85],
+        })
+        db = bb.db()
+        db.load_df(data, "scores")
+        db.sql("""
+            (SELECT COL_0, COL_1
+             FROM scores
+             WHERE COL_1 > 87) AS high_scores
+        """)
+        rows = _rows(db, "high_scores", 2)
+        assert rows == [("alice", 90)]
+
+    def test_to_df_columns_match_sql_columns(self):
+        """to_df() default column names should match SQL column names."""
+        data = pd.DataFrame({
+            "a": [1, 2, 3],
+            "b": [4, 5, 6],
+        })
+        db = bb.db()
+        db.load_df(data, "tbl")
+        df = db.get_table("tbl", 2).to_df()
+        assert list(df.columns) == ["COL_0", "COL_1"]
+
+    def test_sql_group_by_with_default_columns(self):
+        """COL_N columns should work in GROUP BY on predicate tables."""
+        data = pd.DataFrame({
+            "category": ["A", "A", "B", "B"],
+            "value": [10, 20, 30, 40],
+        })
+        db = bb.db()
+        db.load_df(data, "items")
+        db.sql("""
+            (SELECT COL_0, SUM(COL_1) AS TOTAL
+             FROM items
+             GROUP BY COL_0) AS grouped
+        """)
+        rows = sorted(_rows(db, "grouped", 2))
+        assert rows == [("A", 30), ("B", 70)]
+
+    def test_explicit_columns_still_work(self):
+        """FROM pred(COL1, COL2) with explicit names should still work."""
+        data = pd.DataFrame({
+            "x": [1, 2],
+            "y": [3, 4],
+        })
+        db = bb.db()
+        db.load_df(data, "tbl")
+        db.sql("""
+            (SELECT MY_A
+             FROM tbl(MY_A, MY_B)
+             WHERE MY_B > 3) AS filtered
+        """)
+        rows = _rows(db, "filtered", 1)
+        assert rows == [(2,)]
 
 
 class TestExplain:

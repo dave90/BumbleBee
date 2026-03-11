@@ -35,19 +35,52 @@ class TestSQLMultipleRuns:
         assert _rows(db, "pq_count",  1) == [(100,)]
 
     def test_default_query_predicate_accumulates(self):
-        """Three runs without alias all land in the default ``query`` predicate."""
+        """Three runs without alias with overwrite=False accumulate in ``query``."""
         csv = DATA_DIR / "customers-1.csv"
         db = bb.db()
 
-        # No alias → results accumulate in the default 'query' predicate
-        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'")
-        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'")
-        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Belize'")
+        # overwrite=False → results accumulate in the default 'query' predicate
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'", overwrite=False)
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'", overwrite=False)
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Belize'", overwrite=False)
 
         assert _rows(db, "query", 2) == [
             ("Aimee",    "Hodge"),
             ("Kristina", "Ferrell"),
             ("Larry",    "Newton"),
+        ]
+
+    def test_reuse_alias_overwrites(self):
+        """Reusing an alias with default overwrite=True replaces previous result."""
+        csv = DATA_DIR / "customers-1.csv"
+        db = bb.db()
+
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'", alias="q1")
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'", alias="q1")
+
+        assert _rows(db, "q1", 2) == [("Aimee", "Hodge")]
+
+    def test_reuse_default_predicate_overwrites(self):
+        """Reusing default predicate with overwrite=True keeps only last result."""
+        csv = DATA_DIR / "customers-1.csv"
+        db = bb.db()
+
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'")
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'")
+
+        assert _rows(db, "query", 2) == [("Aimee", "Hodge")]
+
+    def test_reuse_alias_no_overwrite(self):
+        """With overwrite=False, results accumulate as before."""
+        csv = DATA_DIR / "customers-1.csv"
+        db = bb.db()
+
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Andorra'", alias="q1", overwrite=False)
+        db.sql(f"SELECT FIRST_NAME, LAST_NAME FROM \"{csv}\" WHERE COUNTRY = 'Aruba'", alias="q1", overwrite=False)
+
+        assert _rows(db, "q1", 2) == [
+            ("Aimee",    "Hodge"),
+            ("Kristina", "Ferrell"),
         ]
 
     def test_four_aggregates_different_aliases(self):
@@ -234,7 +267,7 @@ class TestSQLMultipleRuns:
         db.run('product("apple", "fruit"). product("apricot", "fruit"). '
                'product("banana", "fruit"). product("bean", "veggie"). '
                'product("avocado", "fruit"). product("broccoli", "veggie"). product(X,Y)?')
-        db.sql("SELECT V1 FROM product/2 WHERE V1 LIKE 'a%'", alias="a_products")
+        db.sql("SELECT COL_0 FROM product/2 WHERE COL_0 LIKE 'a%'", alias="a_products")
 
         assert sorted(_rows(db, "a_products", 1)) == [
             ("apple",), ("apricot",), ("avocado",),
@@ -245,7 +278,7 @@ class TestSQLMultipleRuns:
         db = bb.db()
 
         db.run('city("Paris"). city("London"). city("Berlin"). city("Rome"). city(X)?')
-        db.sql("SELECT V1 FROM city WHERE V1 = 'Paris'", alias="paris_only")
+        db.sql("SELECT COL_0 FROM city WHERE COL_0 = 'Paris'", alias="paris_only")
 
         assert _rows(db, "paris_only", 1) == [("Paris",)]
 
@@ -258,7 +291,7 @@ class TestSQLMultipleRuns:
                'person("Eve", "Brown"). person(X,Y)?')
         db.sql("SELECT FNAME, LNAME FROM person(FNAME, LNAME) WHERE LNAME = 'Smith'",
                alias="smiths")
-        db.sql("SELECT V2, COUNT(*) AS CNT FROM person/2 GROUP BY V2",
+        db.sql("SELECT COL_1, COUNT(*) AS CNT FROM person/2 GROUP BY COL_1",
                alias="last_name_counts")
 
         assert sorted(_rows(db, "smiths", 2)) == [("Alice", "Smith"), ("Carol", "Smith")]
@@ -274,7 +307,7 @@ class TestSQLMultipleRuns:
                'score("Dave", 88). score("Eve", 91). score(X,Y)?')
         db.sql("SELECT STUDENT, GRADE FROM score(STUDENT, GRADE) WHERE GRADE > 88",
                alias="top_scores")
-        db.sql("SELECT COUNT(*) AS CNT FROM score/2 WHERE V1 LIKE '%e'",
+        db.sql("SELECT COUNT(*) AS CNT FROM score/2 WHERE COL_0 LIKE '%e'",
                alias="names_end_e")
 
         assert sorted(_rows(db, "top_scores", 2)) == [("Bob", 92), ("Eve", 91)]
@@ -288,7 +321,7 @@ class TestSQLMultipleRuns:
 
         db.run('score("Alice", 85). score("Bob", 92). score("Carol", 78). '
                'score("Dave", 88). score("Eve", 91). score(X,Y)?')
-        db.sql("SELECT V1, V2 FROM score WHERE V2 > 88",        alias="top_scorers")
+        db.sql("SELECT COL_0, COL_1 FROM score WHERE COL_1 > 88",        alias="top_scorers")
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{csv}" WHERE COUNTRY = \'Norway\'',
                alias="norway_count")
         db.sql(f'SELECT COUNT(*) AS CNT FROM "{pq}" WHERE COL4 LIKE \'row_5%\'',
@@ -307,7 +340,7 @@ class TestSQLMultipleRuns:
         db.run('item("apple", "fruit"). item("apricot", "fruit"). item("banana", "fruit"). '
                'item("bean", "veggie"). item("avocado", "fruit"). item("broccoli", "veggie"). '
                'item(X,Y)?')
-        db.sql("SELECT V1, V2 FROM item/2 WHERE V1 LIKE 'b%'",
+        db.sql("SELECT COL_0, COL_1 FROM item/2 WHERE COL_0 LIKE 'b%'",
                alias="b_items")
         db.sql("SELECT NAME FROM item(NAME, CAT) WHERE CAT IN ('fruit') AND NAME LIKE 'a%'",
                alias="a_fruits")

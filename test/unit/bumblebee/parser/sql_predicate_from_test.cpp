@@ -96,7 +96,7 @@ TEST_F(SqlPredicateFromTest, TranslateFromPredicateWithArity) {
     context.defaultSchema_.createPredicate(&context, "ancestor", 2);
 
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse("%@sql\nSELECT V1, V2 FROM ancestor/2\n"), 0);
+    EXPECT_EQ(pid.parse("%@sql\nSELECT COL_0, COL_1 FROM ancestor/2\n"), 0);
     EXPECT_TRUE(pid.getBuilder()->isSQL());
 
     auto stmt = std::move(pid.getBuilder()->getSqlStatement());
@@ -143,7 +143,7 @@ TEST_F(SqlPredicateFromTest, TranslateFromPredicateAutoArityLookup) {
 
     ParserInputDirector pid(TEXT, context);
     // No /N suffix — schema lookup should find arity=2
-    EXPECT_EQ(pid.parse("%@sql\nSELECT V1, V2 FROM edge\n"), 0);
+    EXPECT_EQ(pid.parse("%@sql\nSELECT COL_0, COL_1 FROM edge\n"), 0);
     EXPECT_TRUE(pid.getBuilder()->isSQL());
 
     auto stmt = std::move(pid.getBuilder()->getSqlStatement());
@@ -167,7 +167,7 @@ TEST_F(SqlPredicateFromTest, TranslateFromPredicateAutoArityLookup) {
 TEST_F(SqlPredicateFromTest, ErrorWhenPredicateNotFoundInSchema) {
     // Do not register any predicate — should return error
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse("%@sql\nSELECT V1 FROM nosuchpred\n"), 0);
+    EXPECT_EQ(pid.parse("%@sql\nSELECT COL_0 FROM nosuchpred\n"), 0);
     EXPECT_TRUE(pid.getBuilder()->isSQL());
 
     auto stmt = std::move(pid.getBuilder()->getSqlStatement());
@@ -187,7 +187,7 @@ TEST_F(SqlPredicateFromTest, ErrorWhenPredicateArityIsAmbiguous) {
     context.defaultSchema_.createPredicate(&context, "foo", 2);
 
     ParserInputDirector pid(TEXT, context);
-    EXPECT_EQ(pid.parse("%@sql\nSELECT V1 FROM foo\n"), 0);
+    EXPECT_EQ(pid.parse("%@sql\nSELECT COL_0 FROM foo\n"), 0);
     EXPECT_TRUE(pid.getBuilder()->isSQL());
 
     auto stmt = std::move(pid.getBuilder()->getSqlStatement());

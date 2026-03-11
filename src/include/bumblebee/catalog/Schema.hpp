@@ -18,6 +18,7 @@
  */
 #pragma once
 #include <map>
+#include <optional>
 #include <string>
 
 #include "PredicateTables.hpp"
@@ -38,6 +39,7 @@ public:
     predicate_table_ptr_t& getPredicateTable(Predicate*);
     vector<Predicate*> getPredicates();
     Predicate* getFASOPredicate();
+    std::optional<unsigned> findArityByName(const char* predicateName);
     void deletePredicate(const char* predicateName, unsigned arity);
     void deleteInternalPredicates();
     void clear();

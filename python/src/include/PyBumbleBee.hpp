@@ -43,7 +43,7 @@ public:
     explicit PyBumbleBee(const std::map<std::string, std::string>& args = {});
 
     void run(const std::string& program);
-    void sql(const std::string& program, const std::string& alias = "");
+    void sql(const std::string& program, const std::string& alias = "", bool overwrite = true);
     void runFile(const std::string& filepath);
     std::string explain(const std::string& program);
 
