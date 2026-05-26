@@ -93,6 +93,31 @@ void PredicateTables::createJoinRLHashTable(const vector<LogicalType> &types, co
     rlHTables_.push_back(std::move(ht));
 }
 
+sort_merge_index_ptr_t & PredicateTables::getSortMergeIndex(idx_t keyCol, const vector<idx_t> &payloads) {
+    for (auto& idx: sortMergeIndexes_)
+        if (idx->checkKeyAndPayloads(keyCol, payloads))
+            return idx;
+
+    auto idx = sort_merge_index_ptr_t(new SortMergeJoinIndex(*context_->bufferManager_, getTypes(), keyCol, payloads));
+    sortMergeIndexes_.push_back(std::move(idx));
+    return sortMergeIndexes_.back();
+}
+
+void PredicateTables::createSortMergeIndex(const vector<LogicalType> &types, idx_t keyCol,
+    const vector<idx_t> &payloads) {
+    if (existSortMergeIndex(keyCol, payloads)) return;
+    auto idx = sort_merge_index_ptr_t(new SortMergeJoinIndex(*context_->bufferManager_, types, keyCol, payloads));
+    sortMergeIndexes_.push_back(std::move(idx));
+}
+
+bool PredicateTables::existSortMergeIndex(idx_t keyCol, const vector<idx_t> &payloads) const {
+    for (auto& idx: sortMergeIndexes_)
+        if (idx->checkKeyAndPayloads(keyCol, payloads))
+            return true;
+
+    return false;
+}
+
 bool PredicateTables::existJoinRLHashTable(const vector<idx_t> &keys, const vector<idx_t> &payload) const {
     for (auto&ht: rlHTables_)
         if (ht->checkKeysAndPayloads(keys, payload))

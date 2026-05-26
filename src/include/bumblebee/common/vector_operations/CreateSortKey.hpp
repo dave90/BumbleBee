@@ -66,6 +66,7 @@ struct OrderModifiers {
 
 struct CreateSortKey {
     static void createSortKey(DataChunk &input, const vector<OrderModifiers> &modifiers, Vector &result);
+    static void createSortKey(Vector &input, idx_t size, const OrderModifiers &modifiers, Vector &result);
 };
 
 

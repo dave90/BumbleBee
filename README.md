@@ -157,6 +157,5 @@ BumbleBee DB includes a rule-based query optimizer that applies logical rewrites
 - **Code generation**: cover complex AND and OR clause combinations in filter expressions
 - **Predicate table types**: allow users to explicitly declare column types for predicates (currently auto-deduced at runtime)
 - **Left and right joins**: support for LEFT JOIN and RIGHT JOIN
-- **Sort-merge join**: alternative to hash joins for pre-sorted or range-based workloads
 - **NULL handling**: NULL values across all operators, including NULL-safe comparisons and aggregations
 - **Cost-based join optimizer**: reorder joins based on cardinality estimates

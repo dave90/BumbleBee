@@ -27,6 +27,7 @@
 #include "bumblebee/execution/atom/join/PhysicalCrossProduct.hpp"
 #include "bumblebee/execution/atom/join/PhysicalHashJoin.hpp"
 #include "bumblebee/execution/atom/join/PhysicalNestedLoop.hpp"
+#include "bumblebee/execution/atom/join/PhysicalPieceWiseSortMergeJoin.hpp"
 #include "bumblebee/execution/atom/output/PhysicalChunkOutput.hpp"
 #include "bumblebee/execution/atom/output/PhysicalNopeOutput.hpp"
 #include "bumblebee/execution/atom/scan/PhysicalChunkScan.hpp"
@@ -619,6 +620,34 @@ void PhysicalOptimizer::generateJoinRLHTBuildRules(PredicateTables* pred,
     if (priority == 0)priority = 1;
 }
 
+void PhysicalOptimizer::generateSortMergeBuildRules(PredicateTables* pred, idx_t buildKeyCol,
+                                                    vector<idx_t>& payloads, prule_ptr_vector_t& prules, idx_t& priority) {
+    // create the pt-owned sort-merge index (stores ALL columns; projects at output time)
+    pred->createSortMergeIndex(pred->getTypes(), buildKeyCol, payloads);
+
+    vector<idx_t> cols;
+    for (idx_t i = 0; i < pred->predicate_->getArity(); i++)
+        cols.push_back(i);
+
+    auto types = pred->getTypes();
+
+    patom_ptr_vector_t empty;
+    {
+        auto dbCols = cols, selCols = cols; // need to create a copy as constructor will move the data
+        patom_ptr_t source = patom_ptr_t(new PhysicalChunkScan(types, dbCols, selCols, pred));
+
+        dbCols = cols;
+        selCols = cols;
+        // COLLECT sink: build the sort-merge index from the full build columns
+        patom_ptr_t sink = patom_ptr_t(new PhysicalPieceWiseSortMergeJoin(context_, types, dbCols, selCols,
+                                                                          pred, buildKeyCol, payloads, COLLECT));
+
+        prule_ptr_t prule(new PhysicalRule(source, sink, empty, 0));
+        prules.push_back(std::move(prule));
+    }
+    if (priority == 0) priority = 1;
+}
+
 
 void PhysicalOptimizer::generateHTBuildRules(PredicateTables* pred,
     vector<idx_t>& keys, vector<idx_t>& payloads, prule_ptr_vector_t& prules, idx_t& priority) {
@@ -685,6 +714,8 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
     auto& terms = atom.getTerms();
     vector<Expression> joinConditions;
     std::unordered_map<string,idx_t> varMap; // for each variable the index term in the atom
+    vector<Expression> ineqConds;            // col-vs-col inequality candidates for the sort-merge join
+    vector<idx_t> ineqAtomIdx;               // body atom index of each inequality candidate
 
     for (idx_t i = 0; i < terms.size(); ++i) {
         if (terms[i].isAnonymous())continue;
@@ -706,10 +737,13 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
         if (nextAtom.getType() != BUILTIN)break; // If a classical atom is found, stop the process as all possible built-ins have been evaluated
         if (nextAtom.getBinop() == ASSIGNMENT) continue;
         if (nextAtom.isOrBuiltin()) continue;
-        // Only absorb EQUAL conditions: PhysicalRowLayoutHashJoin only uses
-        // equality conditions as hash keys; non-equal conditions (NEQ, GT, etc.)
-        // must remain as separate generatePhysicalExpression filter atoms.
-        if (nextAtom.getBinop() != EQUAL) continue;
+        // Absorb EQUAL conditions as hash-join keys. Collect col-vs-col inequality conditions
+        // (<, <=, >, >=) as sort-merge candidates: only ONE will be chosen as the merge key when
+        // there is no equality join; the rest stay as separate generatePhysicalExpression filters.
+        Binop bop = nextAtom.getBinop();
+        bool isEq = (bop == EQUAL);
+        bool isIneq = (bop == LESS || bop == GREATER || bop == LESS_OR_EQ || bop == GREATER_OR_EQ);
+        if (!isEq && !isIneq) continue;
         for (auto &bt : nextAtom.getBuiltinTerms()) {
             auto &left = bt.left;
             auto &right = bt.right;
@@ -726,25 +760,62 @@ void PhysicalOptimizer::generatePhysicalJoin(const set_term_variable_t& vars,
                 // Leave this filter for generatePhysicalExpression to handle.
                 continue;
             }
-            if (varMap.contains( rvar) ) {
-                BB_ASSERT(colsMap_.contains(lvar));
-                joinConditions.emplace_back(Expression::generateExpression(nextAtom.getBinop(), colsMap_[lvar], varMap[rvar] ));
-            } else {
-                // right var point to left join
-                // then swap the condition to set the left index in left side and right index in right side
-                BB_ASSERT(colsMap_.contains(rvar));
-                BB_ASSERT(varMap.contains(lvar));
-                joinConditions.emplace_back(Expression::generateExpression(getFlippedBinop(nextAtom.getBinop()), colsMap_[rvar], varMap[lvar] ));
-            }
             BB_ASSERT(colsMap_.contains(lvar));
             BB_ASSERT(colsMap_.contains(rvar));
-            skipAtom_[j] = true; // skip the creation of physical atom j
+            // orient the condition as (input/probe col, pt/build col)
+            Expression e = varMap.contains(rvar)
+                ? Expression::generateExpression(bop, colsMap_[lvar], varMap[rvar])
+                : Expression::generateExpression(getFlippedBinop(bop), colsMap_[rvar], varMap[lvar]);
+            if (isEq) {
+                joinConditions.push_back(e);
+                skipAtom_[j] = true; // skip the creation of physical atom j
+            } else {
+                ineqConds.push_back(e);
+                ineqAtomIdx.push_back(j);
+            }
         }
     }
 
 
     auto pred = schema.getPredicateTable(atom.getPredicate()).get();
     if (joinConditions.size() == 0 ) {
+        // No equality join condition. Prefer a piece-wise sort-merge join over an inequality
+        // (absorb ONE inequality as the merge key; any remaining inequalities stay as filter
+        // atoms) before falling back to the O(N*M) cross product. Only the non-recursive,
+        // non-negative case is handled by the sort-merge join.
+        if (!ineqConds.empty() && !atom.isNegative() && !recursiveRules_ && !pred->isRecursive()) {
+            vector<idx_t> payloads = selCols;
+            auto buildTypes = pred->getTypes();
+            // Choose the merge key among the candidates. The probe and build key columns must have
+            // the SAME type: sort keys are compared with memcmp and CreateSortKey encodes per type,
+            // so cross-type keys are not order-comparable. Among type-compatible candidates, prefer
+            // one whose build key column already has a sort-merge index (reuse it); else the first.
+            int chosen = -1;
+            for (idx_t c = 0; c < ineqConds.size(); ++c) {
+                idx_t pkc = ineqConds[c].left_.cols_[0];   // probe (input) column
+                idx_t bkc = ineqConds[c].right_.cols_[0];  // build (pt) column
+                if (types[pkc] != buildTypes[bkc]) continue; // type mismatch -> not a valid merge key
+                if (chosen < 0) chosen = (int)c;             // first compatible (fallback)
+                if (pred->existSortMergeIndex(bkc, payloads)) { chosen = (int)c; break; } // prefer reuse
+            }
+
+            if (chosen >= 0) {
+                auto& mergeCond = ineqConds[chosen];
+                idx_t probeKeyCol = mergeCond.left_.cols_[0];   // input (probe) column
+                idx_t buildKeyCol = mergeCond.right_.cols_[0];  // pt (build) column
+                Binop op = mergeCond.op_;                        // oriented as probe OP build
+                skipAtom_[ineqAtomIdx[chosen]] = true;           // absorb only the chosen inequality
+
+                if (!pred->existSortMergeIndex(buildKeyCol, payloads))
+                    generateSortMergeBuildRules(pred, buildKeyCol, payloads, prules, priority);
+                else if (priority == 0)
+                    priority = 1;
+ auto smj = patom_ptr_t(new PhysicalPieceWiseSortMergeJoin(
+                    context_, types, dcCols, selCols, pred, buildKeyCol, probeKeyCol, op, payloads));
+                patoms.push_back(std::move(smj));
+                return;
+            }
+        }
         // cross product join
         auto cp = patom_ptr_t(new PhysicalCrossProduct(types, dcCols, selCols, pred ));
         patoms.push_back(std::move(cp));

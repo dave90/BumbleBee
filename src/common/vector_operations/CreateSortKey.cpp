@@ -309,4 +309,9 @@ void CreateSortKey::createSortKey(DataChunk &input, const vector<OrderModifiers>
     createSortKeyInternal(sortKeyData, modifiers, result, input.getSize());
 }
 
+void CreateSortKey::createSortKey(Vector &input, idx_t size, const OrderModifiers &modifiers, Vector &result) {
+    vector<sort_key_data_ptr_t> sortKeyData;
+    sortKeyData.push_back(sort_key_data_ptr_t(new SortKeyVectorData(input, size)));
+    createSortKeyInternal(sortKeyData, {modifiers}, result, size);
+}
 }

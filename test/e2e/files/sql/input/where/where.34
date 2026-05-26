@@ -1,0 +1,4 @@
+%@sql
+SELECT t1.ID as a, t2.ID as b
+FROM "./files/csv/ineq_big.csv" as t1, "./files/csv/ineq_big.csv" as t2
+WHERE t1.B <= t2.A
