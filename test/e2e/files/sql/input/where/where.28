@@ -1,0 +1,4 @@
+%@sql
+SELECT c1.LAST_NAME, c2.USERNAME
+FROM "./files/csv/username.csv" as c1, "./files/csv/username.csv" as c2
+WHERE c1.FIRST_NAME <= c2.FIRST_NAME

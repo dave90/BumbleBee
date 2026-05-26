@@ -1,0 +1,3 @@
+SELECT t1.ID as a, t2.ID as b
+FROM "./files/csv/ineq_mix.csv" as t1, "./files/csv/ineq_mix.csv" as t2
+WHERE t1.D > t2.D
