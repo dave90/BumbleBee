@@ -66,7 +66,10 @@ public:
 		idx_t offset_idx = 0;
 		for (idx_t row_idx = 0; row_idx < num_values; row_idx++) {
 			if (hasDefines() && defines[row_idx + result_offset] != maxDefine_) {
-				// invalid data
+				// NULL: a definition level below the column max means the value is
+				// absent from the payload. Clear the validity bit and write the
+				// sentinel as defensive fill (never read once the bit is cleared).
+				result.setInvalid(row_idx + result_offset);
 				VALUE_TYPE val = VALUE_CONVERSION::null();
 				result_ptr[row_idx + result_offset] = val;
 				continue;
@@ -85,7 +88,10 @@ public:
 		auto result_ptr = FlatVector::getData<VALUE_TYPE>(result);
 		for (idx_t row_idx = 0; row_idx < num_values; row_idx++) {
 			if (hasDefines() && defines[row_idx + result_offset] != maxDefine_) {
-				// invalid data
+				// NULL: a definition level below the column max means the value is
+				// absent from the payload. Clear the validity bit and write the
+				// sentinel as defensive fill (never read once the bit is cleared).
+				result.setInvalid(row_idx + result_offset);
 				VALUE_TYPE val = VALUE_CONVERSION::null();
 				result_ptr[row_idx + result_offset] = val;
 				continue;

@@ -33,7 +33,7 @@ public:
 
     // The block handle
     block_handle_shared_ptr_t handle_;
-    //! The managed buffer node
+    // The managed buffer node
     FileBuffer *node_;
     data_ptr_t ptr() const {
         BB_ASSERT(node_->buffer_);

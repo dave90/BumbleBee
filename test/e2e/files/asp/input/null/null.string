@@ -1,0 +1,5 @@
+person("alice","Wonderland").
+person("bob",NULL).
+person("carol","Berlin").
+person(NULL,"Atlantis").
+person(X,Y)?

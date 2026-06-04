@@ -1,0 +1,4 @@
+%@sql
+SELECT ID
+FROM "./files/parquet/allnull_col.parquet"
+WHERE G > 0

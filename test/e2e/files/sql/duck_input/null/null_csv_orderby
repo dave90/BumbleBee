@@ -1,0 +1,4 @@
+SELECT id, score
+FROM "./files/csv/null_data.csv"
+ORDER BY score
+LIMIT 3

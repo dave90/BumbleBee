@@ -42,11 +42,16 @@ struct InitHashJoin {
 
 
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
-    static idx_t operation( LEFT_TYPE*__restrict ldata,const SelectionVector* ldatasel, RIGHT_TYPE*__restrict rdata,
+    static idx_t operation( LEFT_TYPE*__restrict ldata,const SelectionVector* ldatasel,
+        const ValidityMask* lvalidity, RIGHT_TYPE*__restrict rdata, const ValidityMask* rvalidity,
         uint64_t*__restrict hdata, const SelectionVector* hdatasel,
         uint64_t*__restrict bdata, const SelectionVector* bdatasel, uint64_t*__restrict directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector& lsel, SelectionVector& rsel) {
 
+        // NULL-excludes equi-join (decision #1): a NULL key on either side never matches.
+        // Fast paths: skip the bit read entirely when a side is known all-valid.
+        const bool l_all_valid = !lvalidity || lvalidity->allValid();
+        const bool r_all_valid = !rvalidity || rvalidity->allValid();
         idx_t result_count = 0;
         for (; lpos < lsize; lpos++) {
             auto bucket = bdata[bdatasel->getIndex(lpos)];
@@ -59,12 +64,16 @@ struct InitHashJoin {
             auto rend = JoinHashTable::dirEnd(directory, bucket);
             auto rsize = rend - roffset;
             idx_t lposition = ldatasel->getIndex(lpos);
+            // Probe-side NULL → no row in this bucket can match.
+            if (!l_all_valid && !lvalidity->rowIsValid(lposition)) { rpos = 0; continue; }
             for (;rpos < rsize; rpos++) {
                 if (result_count == STANDARD_VECTOR_SIZE) {
                     // out of space!
                     return result_count;
                 }
                 auto rposition = roffset + rpos;
+                // Build-side NULL at this row → never matches.
+                if (!r_all_valid && !rvalidity->rowIsValid(rposition)) continue;
                 if (OP::operation(ldata[lposition], rdata[rposition])) {
                     // emit tuple
                     lsel.setIndex(result_count, lpos);
@@ -91,13 +100,15 @@ struct InitHashJoin {
 
         auto ldata = (LEFT_TYPE*) left_data.data_;
         auto ldatasel = left_data.sel_;
+        auto lvalidity = left_data.validity_;
         auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
+        auto rvalidity = &right.validity();
         auto bdata = (uint64_t*) bucket_data.data_;
         auto bdatasel = bucket_data.sel_;
         auto hdata = (uint64_t*)hash_data.data_;
         auto hdatasel = hash_data.sel_;
 
-        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, rdata, hdata, hdatasel, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel);
+        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, lvalidity, rdata, rvalidity, hdata, hdatasel, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel);
     }
 };
 
@@ -106,16 +117,23 @@ struct RefineHashJoin {
 
     template <class LEFT_TYPE,class RIGHT_TYPE, class OP>
     static idx_t operation( LEFT_TYPE*__restrict ldata,const SelectionVector* ldatasel,
-        RIGHT_TYPE*__restrict rdata, uint64_t*__restrict hdata, const SelectionVector* hdatasel,
+        const ValidityMask* lvalidity, RIGHT_TYPE*__restrict rdata, const ValidityMask* rvalidity,
+        uint64_t*__restrict hdata, const SelectionVector* hdatasel,
         uint64_t*__restrict bdata, const SelectionVector* bdatasel, uint64_t*__restrict directory,
         idx_t lsize, idx_t &lpos, idx_t &rpos, SelectionVector& lsel, SelectionVector& rsel, idx_t currentMatch) {
 
+        // Refinement also honors NULL-excludes; if a refine condition's key is NULL on
+        // either side, the previously-emitted candidate row is dropped (3VL UNKNOWN ≠ TRUE).
+        const bool l_all_valid = !lvalidity || lvalidity->allValid();
+        const bool r_all_valid = !rvalidity || rvalidity->allValid();
         idx_t result_count = 0;
         for (idx_t i = 0; i < currentMatch; i++) {
             auto lidx = lsel.getIndex(i);
             auto ridx = rsel.getIndex(i);
             auto left_idx = ldatasel->getIndex(lidx);
             auto right_idx = ridx;
+            if (!l_all_valid && !lvalidity->rowIsValid(left_idx)) continue;
+            if (!r_all_valid && !rvalidity->rowIsValid(right_idx)) continue;
             if (OP::operation(ldata[left_idx], rdata[right_idx])) {
                 lsel.setIndex(result_count, lidx);
                 rsel.setIndex(result_count, ridx);
@@ -138,14 +156,16 @@ struct RefineHashJoin {
 
         auto ldata = (LEFT_TYPE*) left_data.data_;
         auto ldatasel = left_data.sel_;
+        auto lvalidity = left_data.validity_;
         auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
+        auto rvalidity = &right.validity();
         auto bdata = (uint64_t*)bucket_data.data_;
         auto bdatasel = bucket_data.sel_;
         auto hdata = (uint64_t*)hash_data.data_;
         auto hdatasel = hash_data.sel_;
 
 
-        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, rdata, hdata, hdatasel, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel, currentMatch);
+        return operation<LEFT_TYPE, RIGHT_TYPE, OP>(ldata, ldatasel, lvalidity, rdata, rvalidity, hdata, hdatasel, bdata, bdatasel, directory.get(), lsize, lpos, rpos, lsel, rsel, currentMatch);
     }
 };
 

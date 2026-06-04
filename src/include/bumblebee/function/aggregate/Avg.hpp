@@ -58,8 +58,11 @@ struct AvgOperation {
         ++state->count_;
     }
 
-    static void finalize(AvgState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    // Returns false (→ output NULL) when the group is empty — also avoids div-by-zero.
+    static bool finalize(AvgState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+        if (state->count_ == 0) return false;
         *result = (RESULT_TYPE)((RESULT_TYPE)state->value_ / (RESULT_TYPE)(state->count_));
+        return true;
     }
 };
 
@@ -67,9 +70,11 @@ struct AvgOperation {
 template <class INPUT_TYPE, class RESULT_TYPE, int SCALE>
 struct AvgDecimalOperation : AvgOperation<INPUT_TYPE, RESULT_TYPE> {
 
-    static void finalize(AvgState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    static bool finalize(AvgState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+        if (state->count_ == 0) return false;
         *result = (RESULT_TYPE)((RESULT_TYPE)state->value_ / (RESULT_TYPE)(state->count_));
         *result /= NumericHelper::POWERS_OF_TEN[SCALE];
+        return true;
     }
 };
 

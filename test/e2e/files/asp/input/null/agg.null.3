@@ -1,0 +1,19 @@
+% All groups have at least one non-NULL value EXCEPT group 99 which is all-NULL.
+% Verifies SUM/MIN/MAX finalize to NULL for the all-NULL group while still
+% producing correct values for groups with mixed NULLs.
+input(1, 5).
+input(1, NULL).
+input(2, 100).
+input(2, NULL).
+input(2, 50).
+input(99, NULL).
+input(99, NULL).
+input(99, NULL).
+
+r_sum(G, S) :- input(G, _), S = #sum{V : input(G, V)}.
+r_min(G, M) :- input(G, _), M = #min{V : input(G, V)}.
+r_max(G, M) :- input(G, _), M = #max{V : input(G, V)}.
+
+r_sum(X, Y)?
+r_min(X, Y)?
+r_max(X, Y)?

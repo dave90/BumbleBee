@@ -31,7 +31,11 @@ namespace py = pybind11;
 namespace bumblebee::python {
 
 static py::object valueToPython(const Value& v, const LogicalType& lt) {
+    // NULL Value surfaces as Python None regardless of the column's logical type.
+    if (v.isNull()) return py::none();
     switch (lt.type()) {
+        case LogicalTypeId::BOOLEAN:
+            return py::bool_(v.getNumericValue<uint8_t>() != 0);
         case LogicalTypeId::TINYINT:
         case LogicalTypeId::SMALLINT:
         case LogicalTypeId::INTEGER:
@@ -108,6 +112,42 @@ pybind11::list PyPredicateTable::tuples() const {
     return rows;
 }
 
+// Convert a numpy `values` array plus a parallel `mask` (true => null) into a
+// pandas-friendly object that surfaces NULLs as pd.NA / NaN / None, choosing the
+// appropriate nullable dtype per logical type.
+static py::object applyNullsToColumn(py::object values, py::object mask, const LogicalType &lt) {
+    auto pd = py::module::import("pandas");
+    auto np = py::module::import("numpy");
+    switch (lt.type()) {
+        case LogicalTypeId::TINYINT:
+        case LogicalTypeId::SMALLINT:
+        case LogicalTypeId::INTEGER:
+        case LogicalTypeId::BIGINT:
+        case LogicalTypeId::UTINYINT:
+        case LogicalTypeId::USMALLINT:
+        case LogicalTypeId::UINTEGER:
+        case LogicalTypeId::UBIGINT:
+            // Nullable Int*/UInt* pandas extension array; pd.NA at masked rows.
+            return pd.attr("arrays").attr("IntegerArray")(values, mask);
+        case LogicalTypeId::BOOLEAN:
+            return pd.attr("arrays").attr("BooleanArray")(values, mask);
+        case LogicalTypeId::FLOAT:
+        case LogicalTypeId::DOUBLE:
+        case LogicalTypeId::DECIMAL:
+            return pd.attr("arrays").attr("FloatingArray")(values, mask);
+        case LogicalTypeId::TIMESTAMP:
+        case LogicalTypeId::DATE: {
+            // numpy datetime64 supports NaT natively
+            auto nat = np.attr("datetime64")("NaT");
+            return np.attr("where")(mask, nat, values);
+        }
+        case LogicalTypeId::STRING:
+        default:
+            // Object array: substitute Python None at masked positions.
+            return np.attr("where")(mask, py::none(), values);
+    }
+}
+
 pybind11::dict PyPredicateTable::fetchNumpyInternal(const vector<string>& names) const{
     if (names.size() != pt_->getTypes().size()) {
         throw std::invalid_argument("col_names size (" + std::to_string(names.size()) +
@@ -125,8 +165,14 @@ pybind11::dict PyPredicateTable::fetchNumpyInternal(const vector<string>& names)
     if (!conversion) {
         conversion = std::make_unique<NumpyResultConversion>(pt_->getTypes(), 0);
     }
+    const auto &colTypes = pt_->getTypes();
     for (idx_t col_idx = 0; col_idx < names.size(); col_idx++) {
-        res[names[col_idx].c_str()] = conversion->toArray(col_idx);
+        py::object values = conversion->toArray(col_idx);
+        if (conversion->hasNulls(col_idx)) {
+            py::object mask = conversion->toMaskArray(col_idx);
+            values = applyNullsToColumn(values, mask, colTypes[col_idx]);
+        }
+        res[names[col_idx].c_str()] = values;
     }
     return res;
 }

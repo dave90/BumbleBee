@@ -221,9 +221,9 @@ block_ptr_t SingleFileBlockManager::createBlock(block_id_t block_id) {
 }
 
 void SingleFileBlockManager::read(Block &block) {
-	BB_ASSERT(block.id >= 0);
-	BB_ASSERT(std::find(freeList_.begin(), freeList_.end(), block.id) == freeList_.end());
-	block.readAndChecksum(*handle_, BLOCK_START + block.id * Storage::BLOCK_ALLOC_SIZE);
+	BB_ASSERT(block.id_ >= 0);
+	BB_ASSERT(std::find(freeList_.begin(), freeList_.end(), block.id_) == freeList_.end());
+	block.readAndChecksum(*handle_, BLOCK_START + block.id_ * Storage::BLOCK_ALLOC_SIZE);
 }
 
 void SingleFileBlockManager::write(FileBuffer &buffer, block_id_t block_id) {
@@ -299,8 +299,8 @@ void SingleFileBlockManager::writeHeader(DatabaseHeader header) {
 
 		FreeListBlockWriter writer(context_, free_list_blocks);
 
-		BB_ASSERT(writer.block_->id == free_list_blocks[0]);
-		header.free_list = writer.block_->id;
+		BB_ASSERT(writer.block_->id_ == free_list_blocks[0]);
+		header.free_list = writer.block_->id_;
 		for (auto &block_id : free_list_blocks) {
 			modifiedBlocks_.insert(block_id);
 		}

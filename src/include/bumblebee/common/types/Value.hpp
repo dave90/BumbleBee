@@ -51,6 +51,11 @@ public:
 	Value(const char* c);
 	~Value() = default;
 
+	// Construct a typeless NULL value. NULL is represented by the isNull_ flag,
+	// not by any sentinel stored in value_/stringValue_.
+	static Value null();
+	inline bool isNull() const { return isNull_; }
+
 	Value& operator=(Value&&) = default;
 	Value& operator=(Value& term) = delete;
 
@@ -139,6 +144,8 @@ private:
 	string stringValue_{};
 	// If constant the constant type
 	PhysicalType ctype_{PhysicalType::INTEGER};
+	// True when this value is SQL NULL (no meaningful value_/stringValue_)
+	bool isNull_{false};
 
 };
 

@@ -1,0 +1,3 @@
+SELECT id
+FROM "./files/csv/null_data.csv"
+WHERE score NOT IN (10.5, 40.0)

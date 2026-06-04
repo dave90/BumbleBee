@@ -42,7 +42,12 @@ void PredicateTables::addFact(Atom &atom) {
     if (atom.containsArith())
         ErrorHandler::errorNotImplemented("Arith term in fact not implemented!");
     auto types = atom.getTermsPhysicalTypes();
+    auto &atomTerms = atom.getTerms();
     for (idx_t i = 0; i < types.size(); i++) {
+        // NULL terms do not constrain the column type — the column's type is
+        // inferred from the first non-NULL fact (or defaults to INTEGER if all
+        // facts are NULL, see loadFacts).
+        if (i < atomTerms.size() && atomTerms[i].isNull()) continue;
         if (types[i] == types_[i].getPhysicalType()) continue;
         types_[i] = {getCommonType(types_[i], types[i])};
     }
@@ -204,20 +209,36 @@ void PredicateTables::loadFacts() {
     LOG_DEBUG("Loading facts of %s ...", predicate_->toString().c_str());
     auto types = getTypes();
     BB_ASSERT(types.size() == predicate_->getArity());
+    // Reject any column whose type could not be inferred. The most common cause
+    // is every fact providing NULL for that column, but it can also happen for
+    // other reasons — surface a hint and let the user verify.
+    for (idx_t col = 0; col < types.size(); ++col) {
+        if (types[col].getPhysicalType() == PhysicalType::UNKNOWN) {
+            ErrorHandler::errorParsing(
+                "Cannot infer type for column " + std::to_string(col) +
+                " of predicate '" + predicate_->getName() +
+                "'. Please check that not all facts have NULL in this column.");
+        }
+    }
     data_chunk_ptr_t chunk = data_chunk_ptr_t(new DataChunk());
     chunk->initialize(types);
 
     idx_t idx = 0;
     auto chunkCapacity = chunk->getCapacity();
     for (auto& fact : facts_) {
+        auto& factTerms = fact.getTerms();
         auto factTypes = fact.getTermsPhysicalTypes();
         // set all the columns
         for (auto col = 0;col < types.size();++col) {
-            if (types[col].getPhysicalType() != factTypes[col])
+            if (col < factTerms.size() && factTerms[col].isNull()) {
+                // a NULL term clears the validity bit; type need not match
+                chunk->setValue(col, idx, Value::null());
+            } else if (types[col].getPhysicalType() != factTypes[col]) {
                 // different column type cast it
                 chunk->setValue(col, idx, fact.getValue(col).cast(types[col].getPhysicalType()) );
-            else
+            } else {
                 chunk->setValue(col, idx, fact.getValue(col) );
+            }
         }
         ++idx;
         // check chunk capacity

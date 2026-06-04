@@ -27,19 +27,19 @@ namespace bumblebee::python {
 
 
 static void convertPandasType(const string &col_type, LogicalType &bb_col_type, PandasType &pandas_type) {
-	if (col_type == "bool") {
+	if (col_type == "bool" || col_type == "boolean") {
 		bb_col_type = LogicalTypeId::BOOLEAN;
 		pandas_type = PandasType::BOOLEAN;
-	} else if (col_type == "uint8" || col_type == "Uint8") {
+	} else if (col_type == "uint8" || col_type == "Uint8" || col_type == "UInt8") {
 		bb_col_type = LogicalTypeId::UTINYINT;
 		pandas_type = PandasType::UTINYINT;
-	} else if (col_type == "uint16" || col_type == "Uint16") {
+	} else if (col_type == "uint16" || col_type == "Uint16" || col_type == "UInt16") {
 		bb_col_type = LogicalTypeId::USMALLINT;
 		pandas_type = PandasType::USMALLINT;
-	} else if (col_type == "uint32" || col_type == "Uint32") {
+	} else if (col_type == "uint32" || col_type == "Uint32" || col_type == "UInt32") {
 		bb_col_type = LogicalTypeId::UINTEGER;
 		pandas_type = PandasType::UINTEGER;
-	} else if (col_type == "uint64" || col_type == "Uint64") {
+	} else if (col_type == "uint64" || col_type == "Uint64" || col_type == "UInt64") {
 		bb_col_type = LogicalTypeId::UBIGINT;
 		pandas_type = PandasType::UBIGINT;
 	} else if (col_type == "int8" || col_type == "Int8") {
@@ -54,10 +54,10 @@ static void convertPandasType(const string &col_type, LogicalType &bb_col_type, 
 	} else if (col_type == "int64" || col_type == "Int64") {
 		bb_col_type = LogicalTypeId::BIGINT;
 		pandas_type = PandasType::BIGINT;
-	} else if (col_type == "float32") {
+	} else if (col_type == "float32" || col_type == "Float32") {
 		bb_col_type = LogicalTypeId::FLOAT;
 		pandas_type = PandasType::FLOAT;
-	} else if (col_type == "float64") {
+	} else if (col_type == "float64" || col_type == "Float64") {
 		bb_col_type = LogicalTypeId::DOUBLE;
 		pandas_type = PandasType::DOUBLE;
 	} else if (col_type == "object") {
@@ -94,13 +94,13 @@ template <class T>
 void scanPandasNumeric(PandasColumnBindData &bind_data, idx_t count, idx_t offset, Vector &out) {
 	scanPandasColumn<T>(bind_data.numpyCol_, bind_data.numpyStride_, offset, out, count);
 	if (bind_data.mask_) {
+		// Pandas null mask -> clear the corresponding bit on the output Vector's
+		// ValidityMask. The raw data slot still holds whatever pandas had there
+		// (often NaN-equivalent or stale memory); the mask is now authoritative.
 		auto mask = (bool *)bind_data.mask_->numpyArray_.data();
-		auto ptr = (T *)FlatVector::getData(out);
 		for (idx_t i = 0; i < count; i++) {
-			auto is_null = mask[offset + i];
-			if (is_null) {
-				// Set null as max value
-				ptr[i] = NumericLimits<T>::maximum();
+			if (mask[offset + i]) {
+				out.setInvalid(i);
 			}
 		}
 	}
@@ -110,6 +110,14 @@ void scanPandasNumeric(PandasColumnBindData &bind_data, idx_t count, idx_t offse
 template <class T>
 void scanPandasFpColumn(T *src_ptr, idx_t count, idx_t offset, Vector &out) {
 	FlatVector::setData(out, (data_ptr_t)(src_ptr + offset));
+	// Plain float64/float32 pandas columns use NaN to mean missing. Mark those
+	// rows invalid on the ValidityMask so the engine treats them as SQL NULL.
+	auto data = (T *)FlatVector::getData(out);
+	for (idx_t i = 0; i < count; i++) {
+		if (std::isnan(data[i])) {
+			out.setInvalid(i);
+		}
+	}
 }
 
 
@@ -139,9 +147,10 @@ void scanPandasCategoryTemplated(pybind11::array &column, idx_t offset, Vector &
 	auto src_ptr = (T *)column.data();
 	for (idx_t i = 0; i < count; i++) {
 		auto idx = src_ptr[i + offset];
-		if (idx == -1 || idx >= enumEntries.size()) {
-			// Null value
+		if (idx == -1 || idx >= (T)enumEntries.size()) {
+			// pandas Categorical NaN / missing code -> SQL NULL.
 			tgt_ptr[i] = string_t("");
+			out.setInvalid(i);
 		} else {
 			tgt_ptr[i] = StringVector::addString(out, enumEntries[idx]);
 		}
@@ -167,6 +176,15 @@ void VectorConversion::numpyToBumbleBee(PandasColumnBindData &bind_data, pybind1
 switch (bind_data.pandasType_) {
 	case PandasType::BOOLEAN:
 		scanPandasColumn<bool>(numpy_col, bind_data.numpyStride_, offset, out, count);
+		// pandas `boolean` (nullable) extension dtype carries a parallel mask.
+		if (bind_data.mask_) {
+			auto mask = (bool *)bind_data.mask_->numpyArray_.data();
+			for (idx_t i = 0; i < count; i++) {
+				if (mask[offset + i]) {
+					out.setInvalid(i);
+				}
+			}
+		}
 		break;
 	case PandasType::UTINYINT:
 		scanPandasNumeric<uint8_t>(bind_data, count, offset, out);
@@ -206,9 +224,9 @@ switch (bind_data.pandasType_) {
 		for (idx_t row = 0; row < count; row++) {
 			auto source_idx = offset + row;
 			if (src_ptr[source_idx] <= NumericLimits<int64_t>::minimum()) {
-				// pandas Not a Time (NaT)
-				// flag it
+				// pandas Not a Time (NaT) -> SQL NULL on the validity mask.
 				tgt_ptr[row] = NumericLimits<int64_t>::maximum();
+				out.setInvalid(row);
 				continue;
 			}
 			tgt_ptr[row] = Timestamp::fromEpochNano(src_ptr[source_idx]);
@@ -219,18 +237,33 @@ switch (bind_data.pandasType_) {
 	case PandasType::OBJECT: {
 		auto src_ptr = (PyObject **)numpy_col.data();
 		auto tgt_ptr = FlatVector::getData<string_t>(out);
-		// TODO null object as empty string, find a better way :(
 		std::unique_ptr<PythonGILWrapper> gil;
+		// pandas.NA is a module-level singleton. Cache its raw pointer once per
+		// process: the lookup runs Python (`import`/attribute access) so it needs
+		// the GIL, but per-row detection is then just a pointer compare and stays
+		// GIL-free, matching the other checks in this loop.
+		static PyObject *pdNAPtr = []() -> PyObject * {
+			pybind11::gil_scoped_acquire acquire;
+			try {
+				return pybind11::module::import("pandas").attr("NA").ptr();
+			} catch (...) {
+				return nullptr;
+			}
+		}();
 		for (idx_t row = 0; row < count; row++) {
 			auto source_idx = offset + row;
 			PyObject *val = src_ptr[source_idx];
 			if (bind_data.pandasType_ == PandasType::OBJECT && !PyUnicode_CheckExact(val)) {
-				if (val == Py_None) {
+				if (val == Py_None || (pdNAPtr && val == pdNAPtr)) {
+					// Python None or pandas.NA -> SQL NULL.
 					tgt_ptr[row] = string_t("");
+					out.setInvalid(row);
 					continue;
 				}
 				if (pybind11::isinstance<pybind11::float_>(val) && std::isnan(PyFloat_AsDouble(val))) {
+					// NaN in an object column means missing.
 					tgt_ptr[row] = string_t("");
+					out.setInvalid(row);
 					continue;
 				}
 				if (!pybind11::isinstance<pybind11::str>(val)) {
@@ -335,9 +368,14 @@ void python::VectorConversion::bindPandas(pybind11::handle original_df, vector<P
 		LogicalType bb_col_type;
 		PandasColumnBindData bind_data;
 		auto col_type = string(pybind11::str(df_types[col_idx]));
-		if (col_type == "Int8" || col_type == "Int16" || col_type == "Int32" || col_type == "Int64") {
-			// numeric object
-			// fetch the internal data and mask array
+		// Pandas masked extension dtypes (capital-leading names) all share the
+		// same `_data` + `_mask` accessor layout. Treat them uniformly here.
+		bool isMaskedExtension =
+			col_type == "Int8"   || col_type == "Int16"   || col_type == "Int32"   || col_type == "Int64"   ||
+			col_type == "UInt8"  || col_type == "UInt16"  || col_type == "UInt32"  || col_type == "UInt64"  ||
+			col_type == "Float32" || col_type == "Float64" ||
+			col_type == "boolean";
+		if (isMaskedExtension) {
 			bind_data.numpyCol_ = get_fun(df_columns[col_idx]).attr("array").attr("_data");
 			bind_data.mask_ = std::make_unique<NumPyArrayWrapper>(get_fun(df_columns[col_idx]).attr("array").attr("_mask"));
 			convertPandasType(col_type, bb_col_type, bind_data.pandasType_);

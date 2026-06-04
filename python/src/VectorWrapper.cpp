@@ -313,6 +313,23 @@ void RawVectorWrapper::resize(idx_t new_capacity) {
 	vector<ssize_t> new_shape {ssize_t(new_capacity)};
 	array_.resize(new_shape, false);
 	data_ = (data_ptr_t)array_.mutable_data();
+	if (nullData_) {
+		nullArray_.resize(new_shape, false);
+		nullData_ = (bool *)nullArray_.mutable_data();
+	}
+}
+
+void RawVectorWrapper::ensureNullMask(idx_t capacity) {
+	if (nullData_) return;
+	// Match the data array's capacity so resize() can keep them in lock-step.
+	idx_t alloc = capacity;
+	if (array_.size() > 0 && (idx_t)array_.size() > alloc) {
+		alloc = array_.size();
+	}
+	// Allocate parallel numpy bool array, zero-initialized (no nulls).
+	nullArray_ = pybind11::array(pybind11::dtype("bool"), alloc);
+	nullData_ = (bool *)nullArray_.mutable_data();
+	std::memset(nullData_, 0, alloc);
 }
 
 
@@ -387,6 +404,18 @@ void VectorWrapper::append(idx_t current_offset, Vector &input, idx_t count) {
 		throw std::runtime_error("unsupported type " + input.getLogicalType().toString());
 	}
 
+	// Record per-row nullness, if the input carries any.
+	if (idata.validity_ && !idata.validity_->allValid()) {
+		data_->ensureNullMask(count);
+		for (idx_t i = 0; i < count; i++) {
+			idx_t src_idx = idata.sel_->getIndex(i);
+			if (!idata.validity_->rowIsValid(src_idx)) {
+				data_->nullData_[current_offset + i] = true;
+				data_->hasNulls_ = true;
+			}
+		}
+	}
+
 	data_->count_ += count;
 }
 
@@ -396,6 +425,19 @@ pybind11::object VectorWrapper::toArray() const {
 	// construct numpy arrays from the data and the mask
 	auto values = std::move(data_->array_);
 	return values;
+}
+
+pybind11::object VectorWrapper::toMaskArray() const {
+	if (!data_->nullData_) {
+		// no nulls recorded -> return an all-false mask of the right size
+		auto arr = pybind11::array(pybind11::dtype("bool"), data_->count_);
+		std::memset(arr.mutable_data(), 0, data_->count_);
+		return arr;
+	}
+	// shrink to the actual count and hand off
+	vector<ssize_t> new_shape {ssize_t(data_->count_)};
+	data_->nullArray_.resize(new_shape, false);
+	return std::move(data_->nullArray_);
 }
 
 

@@ -1,0 +1,3 @@
+SELECT id, score
+FROM "./files/csv/null_data.csv"
+WHERE score > 15

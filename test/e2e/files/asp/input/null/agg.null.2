@@ -1,0 +1,10 @@
+input(1, 10).
+input(1, 20).
+input(1, NULL).
+input(1, 30).
+input(2, NULL).
+input(2, 100).
+
+g_avg(G, A) :- input(G, _), A = #avg{V : input(G, V)}.
+
+g_avg(X, Y)?

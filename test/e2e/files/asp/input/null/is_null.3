@@ -1,0 +1,6 @@
+a(1,2).
+a(3,NULL).
+a(5,6).
+a(7,NULL).
+match(X,Y) :- a(X,Y), Y IS NULL OR Y > 5.
+match(X,Y)?

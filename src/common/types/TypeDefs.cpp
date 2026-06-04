@@ -172,6 +172,8 @@ std::string getBinopStr(Binop binop) {
         case LESS_OR_EQ:     return "<=";
         case GREATER_OR_EQ:  return ">=";
         case ASSIGNMENT:     return "=";
+        case IS_NULL:        return "IS NULL";
+        case IS_NOT_NULL:    return "IS NOT NULL";
     }
     ErrorHandler::errorNotImplemented("Binop not implemented");
     return "";
@@ -187,6 +189,9 @@ Binop getFlippedBinop(Binop binop) {
         case LESS_OR_EQ:     return GREATER_OR_EQ;
         case GREATER_OR_EQ:  return LESS_OR_EQ;
         case ASSIGNMENT:     return ASSIGNMENT;
+        // Unary predicates: there is no symmetric flip; keep as-is.
+        case IS_NULL:        return IS_NULL;
+        case IS_NOT_NULL:    return IS_NOT_NULL;
     }
     ErrorHandler::errorNotImplemented("Binop not implemented");
     return NONE_OP;

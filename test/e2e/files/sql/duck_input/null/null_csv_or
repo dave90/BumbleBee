@@ -1,0 +1,3 @@
+SELECT id
+FROM "./files/csv/null_data.csv"
+WHERE score > 50 OR active = 0

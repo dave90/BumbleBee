@@ -579,6 +579,18 @@ Atom generateBuiltinFromPredCondition(sql::Predicate &predicate, SQLQuery& query
     return Atom::createBuiltinAtom(std::move(terms), sql::toCoreBinop(predicate.getOp()));
 }
 
+// Unary IS NULL / IS NOT NULL: builds a builtin atom with the value-1 expression
+// on the left, a placeholder NULL term on the right (the runtime reads only the
+// left), and the IS_NULL or IS_NOT_NULL binop.
+Atom generateIsNullAtom(sql::Predicate& predicate, SQLQuery& query, string& errorMessage, bool isNot) {
+    auto t1 = generateTermFromValueExpr(predicate.getValue1(), "", query, errorMessage);
+    if (!errorMessage.empty()) return {};
+    vector<Term> terms;
+    terms.push_back(std::move(t1));
+    terms.push_back(Term::createNull());
+    return Atom::createBuiltinAtom(std::move(terms), isNot ? Binop::IS_NOT_NULL : Binop::IS_NULL);
+}
+
 Atom generateLikeAtom(sql::Predicate& predicate, SQLQuery& query, string& errorMessage) {
     auto colTerm = generateTermFromValueExpr(predicate.getValue1(), "", query, errorMessage);
 
@@ -603,23 +615,80 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
 
     auto& select = statement.getSelect();
     auto& headLastRule =  rule.getHead()[0];
+
+    // COUNT(*) counts every row incl. NULLs, but Datalog #count skips NULL inputs. Feed it a
+    // constant-1 column (never NULL) instead.
+    bool hasCountStar = false;
+    std::unordered_set<idx_t> countStarSelectIdxs;
+    for (auto& [agg, _] : aggVars) {
+        if (select.getItems()[agg].toString(false) == "*" &&
+            select.getAggFunctions()[agg] == COUNT) {
+            countStarSelectIdxs.insert(agg);
+            hasCountStar = true;
+        }
+    }
+
+    // Bind the constant-1 inline (`cstar = 1`) when the source is anchored (a GROUP BY column
+    // or another real-column aggregate keeps it alive) — no materialization, so the aggregate
+    // pipelines directly over the source. Otherwise (plain SELECT COUNT(*) FROM t) the inline
+    // constant would let the optimizer prune the column-less source, so materialize the body
+    // into an aux predicate carrying the constant to keep the source row stream.
+    bool anchored = !groupVars.empty() || aggVars.size() > countStarSelectIdxs.size();
+    bool countStarNeedsAux = hasCountStar && !anchored;
+
+    string cstarVarName;
+    Predicate* auxPred = nullptr;
+    if (hasCountStar)
+        cstarVarName = query.generateVarName();
+    if (countStarNeedsAux) {
+        set_term_variable_t bodyVars;
+        for (auto& atom : rule.getBody()) atom.getVariables(bodyVars);
+        vector<Term> auxHead;
+        for (auto& v : bodyVars) auxHead.push_back(Term::createVariable(v.c_str()));
+        auxHead.push_back(Term(int32_t(1)));
+        string auxName = query.generatePredicateName();
+        auxPred = query.context_.defaultSchema_.createPredicate(&query.context_, auxName.c_str(), auxHead.size());
+        auxPred->setInternal(true);
+        vector<Atom> auxBody;
+        for (auto& atom : rule.getBody()) auxBody.push_back(atom.clone());
+        additionalRules.push_back(Rule(Atom::createClassicalAtom(auxPred, std::move(auxHead)), auxBody));
+    }
+
     vector<Term> assignmentTerms;
     vector<AggregateFunctionType> aggFunctions;
     vector<Term> aggTerms;
     for (auto& [agg, vars]: aggVars) {
         assignmentTerms.push_back(Term::createVariable(select.getItems()[agg].getAlias()));
         aggFunctions.push_back(select.getAggFunctions()[agg]);
-        // add all vars as aggregate terms (multiple for COUNT(*) with cross products)
-        for (auto& v : vars)
-            aggTerms.push_back(Term::createVariable(v.c_str()));
+        // For COUNT(*), use the cstar variable (bound to the constant-1 column of the
+        // aux predicate); for all other aggregates use their picked column variable(s).
+        if (countStarSelectIdxs.contains(agg)) {
+            aggTerms.push_back(Term::createVariable(cstarVarName.c_str()));
+        } else {
+            for (auto& v : vars)
+                aggTerms.push_back(Term::createVariable(v.c_str()));
+        }
     }
     // let's add the ID to avoid the distinct calculation
     auto t = Term::createVariable(query.ID_VAR);
     aggTerms.push_back(std::move(t));
 
     vector<Atom> aggBodyAtoms;
-    for (auto& atom:rule.getBody())
-        aggBodyAtoms.push_back(atom.clone());
+    if (countStarNeedsAux) {
+        // Aggregate over the aux predicate; its last column (cstar) is the constant 1.
+        set_term_variable_t bodyVars;
+        for (auto& atom : rule.getBody()) atom.getVariables(bodyVars);
+        vector<Term> auxTerms;
+        for (auto& v : bodyVars) auxTerms.push_back(Term::createVariable(v.c_str()));
+        auxTerms.push_back(Term::createVariable(cstarVarName.c_str()));
+        aggBodyAtoms.push_back(Atom::createClassicalAtom(auxPred, std::move(auxTerms)));
+    } else {
+        for (auto& atom : rule.getBody()) aggBodyAtoms.push_back(atom.clone());
+        if (hasCountStar) {
+            vector<Term> cstarTerms = {Term::createVariable(cstarVarName.c_str()), Term(int32_t(1))};
+            aggBodyAtoms.push_back(Atom::createBuiltinAtom(std::move(cstarTerms), Binop::ASSIGNMENT));
+        }
+    }
 
     vector<Term> aggGroupTerms;
     for (auto& var: groupVars)
@@ -934,15 +1003,17 @@ static vector<Atom> generateInnerBodyFromSubquery(
     auto& whereOps   = inner.getWhere().getOps();
     for (auto& item: whereItems) {
         if (auto* pred = std::get_if<sql::Predicate>(&item)) {
+            Atom atom;
             if (pred->getOp() == sql::SQL_LIKE) {
-                auto atom = generateLikeAtom(*pred, outerQuery, errorMessage);
-                if (!errorMessage.empty()) return {};
-                body.push_back(std::move(atom));
+                atom = generateLikeAtom(*pred, outerQuery, errorMessage);
+            } else if (pred->getOp() == sql::SQL_IS_NULL || pred->getOp() == sql::SQL_IS_NOT_NULL) {
+                atom = generateIsNullAtom(*pred, outerQuery, errorMessage,
+                                           pred->getOp() == sql::SQL_IS_NOT_NULL);
             } else {
-                auto atom = generateBuiltinFromPredCondition(*pred, outerQuery, errorMessage);
-                if (!errorMessage.empty()) return {};
-                body.push_back(std::move(atom));
+                atom = generateBuiltinFromPredCondition(*pred, outerQuery, errorMessage);
             }
+            if (!errorMessage.empty()) return {};
+            body.push_back(std::move(atom));
         } else if (auto* grp = std::get_if<sql::WhereGroup>(&item)) {
             // Delegate grouped conditions to the CNF machinery (without subquery support
             // inside groups — subqueries inside grouped conditions would need auxiliary rules,
@@ -1388,6 +1459,15 @@ static CNF generateWhereItemCNF(sql::WhereItem& item, bool likeForbidden,
             // Return a CNF with one empty clause: acts as OR-identity in distributeBinopAtoms
             CNF cnf;
             cnf.emplace_back();
+            return cnf;
+        }
+        if (pred->getOp() == sql::SQL_IS_NULL || pred->getOp() == sql::SQL_IS_NOT_NULL) {
+            auto atom = generateIsNullAtom(*pred, query, errorMessage,
+                                            pred->getOp() == sql::SQL_IS_NOT_NULL);
+            if (!errorMessage.empty()) return {};
+            CNF cnf;
+            cnf.emplace_back();
+            cnf.back().push_back(std::move(atom));
             return cnf;
         }
         auto atom = generateBuiltinFromPredCondition(*pred, query, errorMessage);

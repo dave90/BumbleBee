@@ -33,23 +33,32 @@ struct RawVectorWrapper {
     LogicalType type_;
     idx_t width_;
     idx_t count_;
+    // Parallel per-element null mask (numpy bool array): true => null at that row.
+    // Stays empty (size 0) until the first null is actually recorded.
+    pybind11::array nullArray_;
+    bool *nullData_{nullptr};
+    bool hasNulls_{false};
 
 public:
     void initialize(idx_t capacity);
     void resize(idx_t new_capacity);
+    // Lazily allocate the null mask buffer (mirrors `initialize`'s sizing); no-op
+    // when called more than once.
+    void ensureNullMask(idx_t capacity);
 };
 
 struct VectorWrapper {
     explicit VectorWrapper(const LogicalType &type);
 
     std::unique_ptr<RawVectorWrapper> data_;
-    //TODO handle nulls
 
 public:
     void initialize(idx_t capacity);
     void resize(idx_t new_capacity);
     void append(idx_t current_offset, Vector &input, idx_t count);
     pybind11::object toArray() const;
+    pybind11::object toMaskArray() const; // numpy bool array, true => null
+    bool hasNulls() const { return data_->hasNulls_; }
 };
 
 class NumpyResultConversion {
@@ -61,6 +70,10 @@ public:
     pybind11::object toArray(idx_t col_idx) {
         return data_[col_idx].toArray();
     }
+    pybind11::object toMaskArray(idx_t col_idx) {
+        return data_[col_idx].toMaskArray();
+    }
+    bool hasNulls(idx_t col_idx) const { return data_[col_idx].hasNulls(); }
 
 private:
     void resize(idx_t new_capacity);

@@ -29,7 +29,10 @@ void RowLayout::initialize(vector<LogicalType> types, Aggregates aggregates, boo
     offsets_.clear();
     types_ = std::move(types);
 
-    rowWidth_ = 0;
+    // Per-row validity bitmap prefix at row offset 0 (one bit per data column; bit = 1 valid).
+    // Aggregate-only layouts (no data columns) skip the prefix entirely.
+    flagWidth_ = types_.empty() ? 0 : (types_.size() + 7) / 8;
+    rowWidth_ = flagWidth_;
     // Whether all columns are constant size.
     allConstant_ = true;
     for (const auto &type : types_) {

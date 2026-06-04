@@ -39,12 +39,30 @@ static void templatedGatherLoop(Vector &rows, const SelectionVector &row_sel, Ve
 }
 
 
+// Propagate the per-row validity prefix bit for col_no into col.validity().
+// Only writes when an invalid bit is seen — the all-valid path is zero writes (caller
+// resets col.validity() before gather, so a fresh/all-valid mask is the default).
+static void gatherValidity(Vector &rows, const SelectionVector &row_sel, Vector &col,
+                           const SelectionVector &col_sel, idx_t count, idx_t col_no) {
+	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
+	for (idx_t i = 0; i < count; i++) {
+		auto row = ptrs[row_sel.getIndex(i)];
+		if (!rowIsValid(row, col_no)) {
+			col.setInvalid(col_sel.getIndex(i));
+		}
+	}
+}
+
 void RowOperations::gather(Vector &rows, const SelectionVector &row_sel, Vector &col, const SelectionVector &col_sel,
-                           const idx_t count, const idx_t col_offset) {
+                           const idx_t count, const idx_t col_offset, const idx_t col_no) {
 	BB_ASSERT(rows.getVectorType() == VectorType::FLAT_VECTOR);
 	BB_ASSERT(rows.getType() == PhysicalType::UBIGINT); // "Cannot gather from non-pointer type!"
 
 	col.setVectorType(VectorType::FLAT_VECTOR);
+	// Reset the output mask to all-valid before gathering — otherwise stale invalid bits
+	// from a previous batch (e.g. when `col` is the reused result Vector across scan
+	// iterations) leak into this batch. Cheap in the common case: just drops the buffer.
+	col.validity().reset();
 
 	switch (col.getType()) {
 		case PhysicalType::TINYINT:
@@ -85,7 +103,8 @@ void RowOperations::gather(Vector &rows, const SelectionVector &row_sel, Vector 
 			ErrorHandler::errorNotImplemented("Unimplemented type for RowOperations::gather");
 	}
 
-
+	// Propagate the per-row validity prefix bit into col.validity().
+	gatherValidity(rows, row_sel, col, col_sel, count, col_no);
 }
 
 template <class T>
@@ -105,6 +124,8 @@ static void templatedFullScanLoop(Vector &rows, Vector &col, idx_t count, idx_t 
 void RowOperations::fullScanColumn(const RowLayout &layout, Vector &rows, Vector &col, idx_t count, idx_t col_no) {
 	const auto col_offset = layout.getOffsets()[col_no];
 	col.setVectorType(VectorType::FLAT_VECTOR);
+	// Reset the output mask to all-valid before scanning (same rationale as gather above).
+	col.validity().reset();
 	switch (col.getType()) {
 
 		case PhysicalType::TINYINT:
@@ -144,6 +165,14 @@ void RowOperations::fullScanColumn(const RowLayout &layout, Vector &rows, Vector
 		default:
 			ErrorHandler::errorNotImplemented("Unimplemented type for RowOperations::fullScanColumn");
 
+	}
+
+	// Propagate the per-row validity prefix bit into col.validity().
+	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
+	for (idx_t i = 0; i < count; i++) {
+		if (!rowIsValid(ptrs[i], col_no)) {
+			col.setInvalid(i);
+		}
 	}
 }
 

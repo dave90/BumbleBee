@@ -112,7 +112,8 @@ void templatedFinalizeState(Vector &result, data_ptr_t states, const SelectionVe
         idx_t state_index = sel.getIndex(i);
         idx_t input_index = result_data.sel_->getIndex(state_index);
 
-        func.finalize_( states + state_size * state_index, (data_ptr_t)(data + input_index));
+        if (!func.finalize_( states + state_size * state_index, (data_ptr_t)(data + input_index)))
+            result.setInvalid(input_index);
     }
 }
 
@@ -175,20 +176,40 @@ void AggregateFunction::initStates(RowLayout &layout, Vector &addresses, const S
 }
 
 template <class INPUT_TYPE>
-void templatedUpdateStateFlatLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict idata, data_ptr_t* __restrict sdata, idx_t agg_offset, idx_t count) {
-    for (idx_t i = 0; i < count; ++i) {
-        auto row = sdata[i];
-        aggr.update_((data_ptr_t)(idata +i), row + agg_offset);
+void templatedUpdateStateFlatLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict idata, data_ptr_t* __restrict sdata, const ValidityMask* validity, idx_t agg_offset, idx_t count) {
+    // Skip NULL inputs uniformly — SUM/AVG/MIN/MAX/COUNT all want this. SQL COUNT(*)
+    // is handled upstream in the aggregate operator by feeding an all-valid input.
+    if (!validity || validity->allValid()) {
+        for (idx_t i = 0; i < count; ++i) {
+            auto row = sdata[i];
+            aggr.update_((data_ptr_t)(idata +i), row + agg_offset);
+        }
+    } else {
+        for (idx_t i = 0; i < count; ++i) {
+            if (!validity->rowIsValid(i)) continue;
+            auto row = sdata[i];
+            aggr.update_((data_ptr_t)(idata +i), row + agg_offset);
+        }
     }
 }
 
 template <class INPUT_TYPE>
-void templatedUpdateStateLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict idata, data_ptr_t* __restrict sdata,const SelectionVector& sidata,const SelectionVector& ssdata, idx_t agg_offset, idx_t count) {
-    for (idx_t i = 0; i < count; ++i) {
-        auto idx = sidata.getIndex(i);
-        auto row_idx = ssdata.getIndex(i);
-        auto row = sdata[row_idx];
-        aggr.update_((data_ptr_t)(idata +idx), row + agg_offset);
+void templatedUpdateStateLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict idata, data_ptr_t* __restrict sdata,const SelectionVector& sidata,const SelectionVector& ssdata, const ValidityMask* validity, idx_t agg_offset, idx_t count) {
+    if (!validity || validity->allValid()) {
+        for (idx_t i = 0; i < count; ++i) {
+            auto idx = sidata.getIndex(i);
+            auto row_idx = ssdata.getIndex(i);
+            auto row = sdata[row_idx];
+            aggr.update_((data_ptr_t)(idata +idx), row + agg_offset);
+        }
+    } else {
+        for (idx_t i = 0; i < count; ++i) {
+            auto idx = sidata.getIndex(i);
+            if (!validity->rowIsValid(idx)) continue;
+            auto row_idx = ssdata.getIndex(i);
+            auto row = sdata[row_idx];
+            aggr.update_((data_ptr_t)(idata +idx), row + agg_offset);
+        }
     }
 }
 
@@ -199,7 +220,9 @@ void templatedUpdateState(RowLayout &layout, AggregateFunction &aggr, Vector &ad
     if (input.getVectorType() == VectorType::CONSTANT_VECTOR &&
             addresses.getVectorType() == VectorType::CONSTANT_VECTOR) {
 
-        // constant input and constant address: update for each row
+        // Constant input: a single value broadcast `count` times. If the constant
+        // itself is NULL, the whole batch contributes nothing.
+        if (ConstantVector::isNull(input)) return;
         auto idata = ConstantVector::getData<INPUT_TYPE>(input);
         auto sdata = ConstantVector::getData<data_ptr_t>(addresses);
         auto state = sdata[0] + agg_offset;
@@ -210,13 +233,13 @@ void templatedUpdateState(RowLayout &layout, AggregateFunction &aggr, Vector &ad
                        addresses.getVectorType() == VectorType::FLAT_VECTOR) {
         auto idata = FlatVector::getData<INPUT_TYPE>(input);
         auto sdata = FlatVector::getData<data_ptr_t>(addresses);
-        templatedUpdateStateFlatLoop<INPUT_TYPE>(aggr, idata, sdata, agg_offset, count);
+        templatedUpdateStateFlatLoop<INPUT_TYPE>(aggr, idata, sdata, &input.validity(), agg_offset, count);
     } else {
        VectorData idata, sdata;
        input.orrify(count, idata);
        addresses.orrify(count, sdata);
        templatedUpdateStateLoop<INPUT_TYPE>(aggr, (INPUT_TYPE *)idata.data_, (data_ptr_t *)sdata.data_,
-                                                    *idata.sel_, *sdata.sel_, agg_offset, count);
+                                                    *idata.sel_, *sdata.sel_, idata.validity_, agg_offset, count);
     }
 }
 
@@ -280,20 +303,24 @@ void AggregateFunction::combineStates(RowLayout &layout, Vector &sources, Vector
 
 
 template <class INPUT_TYPE>
-void templatedFinalizeStateFlatLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata, idx_t agg_offset, idx_t count) {
+void templatedFinalizeStateFlatLoop(AggregateFunction &aggr, Vector &result, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata, idx_t agg_offset, idx_t count) {
     for (idx_t i = 0; i < count; ++i) {
         auto row = sdata[i];
-        aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +i));
+        // finalize_ returns false for empty groups (no non-null input was ever
+        // observed) → mark the corresponding output row NULL.
+        if (!aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +i)))
+            result.setInvalid(i);
     }
 }
 
 template <class INPUT_TYPE>
-void templatedFinalizeStateLoop(AggregateFunction &aggr, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata,const SelectionVector& srdata,const SelectionVector& ssdata, idx_t agg_offset, idx_t count) {
+void templatedFinalizeStateLoop(AggregateFunction &aggr, Vector &result, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata,const SelectionVector& srdata,const SelectionVector& ssdata, idx_t agg_offset, idx_t count) {
     for (idx_t i = 0; i < count; ++i) {
         auto idx = srdata.getIndex(i);
         auto row_idx = ssdata.getIndex(i);
         auto row = sdata[row_idx];
-        aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +idx));
+        if (!aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +idx)))
+            result.setInvalid(idx);
     }
 }
 
@@ -305,18 +332,19 @@ void templatedFinalizeState(AggregateFunction& aggr, Vector &addresses, Vector &
         // regular constant: get first state
         auto rdata = ConstantVector::getData<RESULT_TYPE>(result);
         auto sdata = ConstantVector::getData<data_ptr_t>(addresses);
-        aggr.finalize_(  sdata[0] + agg_offset, (data_ptr_t)(rdata));
+        if (!aggr.finalize_(  sdata[0] + agg_offset, (data_ptr_t)(rdata)))
+            ConstantVector::setNull(result, true);
 
     } else if (addresses.getVectorType() == VectorType::FLAT_VECTOR) {
         BB_ASSERT(result.getVectorType() == VectorType::FLAT_VECTOR);
         auto rdata = FlatVector::getData<RESULT_TYPE>(result);
         auto sdata = FlatVector::getData<data_ptr_t>(addresses);
-        templatedFinalizeStateFlatLoop<RESULT_TYPE>(aggr, rdata, sdata, agg_offset, count);
+        templatedFinalizeStateFlatLoop<RESULT_TYPE>(aggr, result, rdata, sdata, agg_offset, count);
     } else {
         VectorData rdata, sdata;
         result.orrify(count, rdata);
         addresses.orrify(count, sdata);
-        templatedFinalizeStateLoop<RESULT_TYPE>(aggr, (RESULT_TYPE *)rdata.data_, (data_ptr_t *)sdata.data_,
+        templatedFinalizeStateLoop<RESULT_TYPE>(aggr, result, (RESULT_TYPE *)rdata.data_, (data_ptr_t *)sdata.data_,
                                                     *rdata.sel_, *sdata.sel_, agg_offset, count);
    }
 }

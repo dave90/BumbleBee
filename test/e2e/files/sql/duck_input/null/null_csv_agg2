@@ -1,0 +1,3 @@
+SELECT active, MIN(score) as MN, MAX(score) as MX, AVG(score) as AV
+FROM "./files/csv/null_data.csv"
+GROUP BY active

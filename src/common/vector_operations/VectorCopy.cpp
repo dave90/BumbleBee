@@ -199,6 +199,29 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 			ErrorHandler::errorNotImplemented("Unimplemented type for copy!");
 	}
 
+	// Propagate validity (NULLs) from source to target, mirroring the data copy.
+	// The target positions [targetOffset, targetOffset+copyCount) must reflect the source's
+	// validity exactly — including clearing stale invalid bits that the target may carry
+	// over from a previous use (e.g. a result chunk reused across scan iterations).
+	//
+	// Fast path: when BOTH source and target are all-valid we can skip the loop entirely
+	// (target positions are valid by default and nothing in source could invalidate them).
+	const auto &srcValidity = source.validity();
+	const bool src_all_valid = srcValidity.allValid();
+	if (!src_all_valid || !target.validity().allValid()) {
+		const SelectionVector *tSel = targetSel ? targetSel : &FlatVector::INCREMENTAL_SELECTION_VECTOR;
+		for (idx_t i = 0; i < copyCount; i++) {
+			auto sourceIdx = sel.getIndex(sourceOffset + i);
+			auto targetIdx = tSel->getIndex(targetOffset + i);
+			const bool src_valid = src_all_valid || srcValidity.rowIsValid(sourceIdx);
+			if (src_valid) {
+				target.setValid(targetIdx);
+			} else {
+				target.setInvalid(targetIdx);
+			}
+		}
+	}
+
 	if (tvType != VectorType::FLAT_VECTOR) {
 		target.setVectorType(tvType);
 	}

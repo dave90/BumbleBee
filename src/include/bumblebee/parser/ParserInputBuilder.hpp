@@ -65,6 +65,8 @@ public:
 	virtual void onGreaterOperator();
 	virtual void onGreaterOrEqualOperator();
 	virtual void onTerm( char* value );
+	// Push a typeless NULL term (the NULLKW literal).
+	virtual void onNullTerm();
 	virtual void onUnknownVariable();
 	virtual void onFunction( char* functionSymbol, int nTerms );
 	virtual void onHeadTailList();
@@ -81,6 +83,8 @@ public:
 	virtual void onChoiceElement();
 	virtual void onChoiceAtom();
 	virtual void onBuiltinAtom();
+	// Unary NULL predicate: `term IS NULL` (isNot=false) or `term IS NOT NULL` (isNot=true).
+	virtual void onIsNullPredicate(bool isNot);
 	virtual void onBuiltinOrList();
 	virtual void onAggregateLowerGuard();
 	virtual void onAggregateUpperGuard();
@@ -145,6 +149,8 @@ public:
 	void onSQLInListValue();
 	void onSQLInListPredicate(bool isNotIn);
 	void onSQLInSubqueryPredicate(bool isNotIn);
+	// SQL unary NULL predicate: `expr IS NULL` (isNot=false) or `expr IS NOT NULL` (isNot=true).
+	void onSQLIsNullPredicate(bool isNot);
 	void onSQLExtTable();
 	void onSQLExtTableName(char*);
 	void onSQLExtTableNameString(char*);

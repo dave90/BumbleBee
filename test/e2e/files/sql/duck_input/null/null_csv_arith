@@ -1,0 +1,2 @@
+SELECT id, score + 100 as SP
+FROM "./files/csv/null_data.csv"

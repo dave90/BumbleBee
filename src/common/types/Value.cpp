@@ -25,7 +25,13 @@
 namespace bumblebee{
 Value::Value() {}
 
-Value::Value(Value &&term):ctype_(term.ctype_), value_(term.value_), stringValue_(std::move(term.stringValue_)) {
+Value::Value(Value &&term):ctype_(term.ctype_), value_(term.value_), stringValue_(std::move(term.stringValue_)), isNull_(term.isNull_) {
+}
+
+Value Value::null() {
+    Value v;
+    v.isNull_ = true;
+    return v;
 }
 
 Value::Value(int8_t c)
@@ -67,6 +73,9 @@ Value::Value(string_t c):ctype_(PhysicalType::STRING), stringValue_(c.c_str(), c
 Value::Value(const char *c):ctype_(PhysicalType::STRING), stringValue_(c) {}
 
 bool operator==(const Value &lhs, const Value &rhs) {
+    // NULL handling (IS-NOT-DISTINCT-FROM at the Value level): two NULLs are equal,
+    // a NULL is never equal to a non-NULL.
+    if (lhs.isNull_ || rhs.isNull_) return lhs.isNull_ && rhs.isNull_;
     if (lhs.ctype_ != rhs.ctype_) return false;
     switch (lhs.ctype_) {
         case PhysicalType::TINYINT:
@@ -166,6 +175,7 @@ void Value::setConstantType(PhysicalType type) {
 }
 
 std::string Value::toString() const {
+    if (isNull_) return "NULL";
     switch (ctype_) {
         case PhysicalType::TINYINT:
             return std::to_string(value_.tinyint);
@@ -196,6 +206,9 @@ std::string Value::toString() const {
 
 
 Value Value::cast(PhysicalType type) const {
+    // NULL is preserved across casts: there is no value to convert.
+    if (isNull_) return Value::null();
+
     if (ctype_ == PhysicalType::STRING && type == PhysicalType::STRING)
         return Value(stringValue_.c_str());
 

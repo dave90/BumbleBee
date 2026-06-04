@@ -1,0 +1,3 @@
+SELECT id, score
+FROM "./files/parquet/null_data.parquet"
+WHERE score > 15

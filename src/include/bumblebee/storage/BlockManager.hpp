@@ -48,7 +48,7 @@ public:
     virtual void write(FileBuffer &block, block_id_t block_id) = 0;
     // Writes the block to disk
     void write(Block &block) {
-        write(block, block.id);
+        write(block, block.id_);
     }
     // Write the header; should be the final step of a checkpoint
     virtual void writeHeader(DatabaseHeader header) = 0;

@@ -106,7 +106,7 @@ idx_t PRLHashTable::scan(idx_t offset, DataChunk &result, Vector &addresses, idx
         BB_ASSERT(result.data_[i].getVectorType() == VectorType::FLAT_VECTOR);
         RowOperations::gather(addresses, FlatVector::INCREMENTAL_SELECTION_VECTOR,
             result.data_[i], FlatVector::INCREMENTAL_SELECTION_VECTOR, toScan,
-            layout_.getOffsets()[i]);
+            layout_.getOffsets()[i], i);
     }
 
     result.setCardinality(toScan);
@@ -337,7 +337,7 @@ Vector PRLHashTable::move(Vector &addresses, Vector &hashes, idx_t count, Select
         auto &column = groups.data_[i];
         const auto colOffset = layout_.getOffsets()[i];
         RowOperations::gather(addresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, column,
-                              FlatVector::INCREMENTAL_SELECTION_VECTOR, count, colOffset);
+                              FlatVector::INCREMENTAL_SELECTION_VECTOR, count, colOffset, i);
     }
 
 
@@ -442,9 +442,12 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
         // Scatter the new groups in the row storage
         RowOperations::scatter(groups, groupsData.get(), layout_, addresses, *stringHeap_, emptySel, newEntryCount);
 
-        // Now let's try to match the groups with same hash of our ht
+        // Now let's try to match the groups with same hash of our ht.
+        // Dedup / GROUP BY treats two NULLs in the same column as equal (IS-NOT-DISTINCT-FROM,
+        // decision #1) — without this, recursion over null-bearing facts never reaches a fixed
+        // point because every iteration re-derives `a(1,NULL)` as a fresh tuple.
         idx_t noMatchCount = 0;
-        idx_t matchCount = RowOperations::equal(groups, groupsData.get(), layout_, addresses, compareSel, newNeedCompareCount, &nms, noMatchCount);
+        idx_t matchCount = RowOperations::notDistinctFrom(groups, groupsData.get(), layout_, addresses, compareSel, newNeedCompareCount, &nms, noMatchCount);
         if (matchedSel) {
             // add the matched index
             for (idx_t j = 0; j< matchCount; j++) {

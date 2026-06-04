@@ -148,7 +148,10 @@ std::unique_ptr<BaseStatistics> parquetTransformColumnStatistics(const bumblebee
 			// floats/doubles can have infinity, which becomes NULL
 			row_group_stats->validityStats_ = std::make_unique<ValidityStatistics>(true);
 		} else if (parquet_stats.__isset.null_count) {
-			row_group_stats->validityStats_ = std::make_unique<ValidityStatistics>(parquet_stats.null_count != 0);
+			// has_no_null is true iff at least one value in the chunk is non-NULL
+			bool has_null = parquet_stats.null_count != 0;
+			bool has_no_null = parquet_stats.null_count < column_chunk.meta_data.num_values;
+			row_group_stats->validityStats_ = std::make_unique<ValidityStatistics>(has_null, has_no_null);
 		} else {
 			row_group_stats->validityStats_ = std::make_unique<ValidityStatistics>(true);
 		}

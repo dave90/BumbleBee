@@ -46,7 +46,7 @@ bool BaseStatistics::canHaveNoNull() {
 		// solid maybe
 		return true;
 	}
-	return ((ValidityStatistics &)*validityStats_).hasNull_;
+	return ((ValidityStatistics &)*validityStats_).hasNoNull_;
 }
 
 std::unique_ptr<BaseStatistics> BaseStatistics::copy() {

@@ -18,6 +18,7 @@
  */
 #pragma once
 #include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/common/types/NullValue.hpp"
 
 namespace bumblebee{
 
@@ -79,15 +80,45 @@ private:
 
 	}
 
+	// 3VL for unary execute: a NULL input row produces a NULL result row. Skipped
+	// in the all-valid common case (which is most callers).
+	static inline void propagateUnaryValidity(Vector &input, Vector &result, idx_t count) {
+		if (input.validity().allValid()) {
+			return;
+		}
+		if (result.getVectorType() == VectorType::CONSTANT_VECTOR) {
+			ConstantVector::setNull(result, true);
+			return;
+		}
+		auto &rmask = FlatVector::validity(result);
+		rmask.ensureWritable();
+		for (idx_t i = 0; i < count; i++) {
+			if (!input.rowIsValid(i)) {
+				rmask.setInvalid(i);
+			}
+		}
+	}
+
 	template <class INPUT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP>
 	static inline void executeStandard(Vector &input, Vector &result, idx_t count, void *dataptr) {
+		// When the input has NULLs we never run OP on a NULL row: the result is
+		// NULL regardless of the input bytes, and skipping avoids spurious work
+		// (e.g. a string->int cast of a NULL cell must not report a parse error).
+		// The defensive NullValue fill keeps the skipped slot from holding garbage;
+		// propagateUnaryValidity below marks the row NULL. The all-valid common
+		// case keeps the original branch-free fast path untouched.
+		bool hasNulls = !input.validity().allValid();
 		switch (input.getVectorType()) {
 		case VectorType::CONSTANT_VECTOR: {
 			result.setVectorType(VectorType::CONSTANT_VECTOR);
 			auto result_data = ConstantVector::getData<RESULT_TYPE>(result);
 			auto ldata = ConstantVector::getData<INPUT_TYPE>(input);
 
-			*result_data = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(*ldata, 0, dataptr);
+			if (hasNulls && !input.rowIsValid(0)) {
+				*result_data = NullValue<RESULT_TYPE>();
+			} else {
+				*result_data = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(*ldata, 0, dataptr);
+			}
 			break;
 		}
 		case VectorType::FLAT_VECTOR: {
@@ -95,7 +126,17 @@ private:
 			auto result_data = FlatVector::getData<RESULT_TYPE>(result);
 			auto ldata = FlatVector::getData<INPUT_TYPE>(input);
 
-			executeFlat<INPUT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(ldata, result_data, count, dataptr);
+			if (hasNulls) {
+				for (idx_t i = 0; i < count; i++) {
+					if (input.rowIsValid(i)) {
+						result_data[i] = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[i], i, dataptr);
+					} else {
+						result_data[i] = NullValue<RESULT_TYPE>();
+					}
+				}
+			} else {
+				executeFlat<INPUT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(ldata, result_data, count, dataptr);
+			}
 			break;
 		}
 		default: {
@@ -106,10 +147,21 @@ private:
 			auto result_data = FlatVector::getData<RESULT_TYPE>(result);
 			auto ldata = (INPUT_TYPE *)vdata.data_;
 
-			executeLoop<INPUT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(ldata, result_data, count, vdata.sel_, dataptr);
+			if (hasNulls) {
+				for (idx_t i = 0; i < count; i++) {
+					if (input.rowIsValid(i)) {
+						result_data[i] = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[vdata.sel_->getIndex(i)], i, dataptr);
+					} else {
+						result_data[i] = NullValue<RESULT_TYPE>();
+					}
+				}
+			} else {
+				executeLoop<INPUT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(ldata, result_data, count, vdata.sel_, dataptr);
+			}
 			break;
 		}
 		}
+		propagateUnaryValidity(input, result, count);
 	}
 
 	template <class INPUT_TYPE, class OPWRAPPER, class OP>

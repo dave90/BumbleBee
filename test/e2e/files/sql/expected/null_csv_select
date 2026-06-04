@@ -1,0 +1,7 @@
+id,name,score,active
+1,alice,10.5,1
+2,,20.0,0
+3,carol,,1
+,dave,40.0,
+5,,,
+6,eve,60.5,1

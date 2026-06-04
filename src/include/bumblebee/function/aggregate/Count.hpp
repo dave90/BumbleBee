@@ -54,8 +54,10 @@ struct CountOperation {
         ++state->count;
     }
 
-    static void finalize(CountState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    // COUNT of an empty/all-null group is 0, never NULL — finalize always succeeds.
+    static bool finalize(CountState<RESULT_TYPE> *state, RESULT_TYPE *result) {
         *result = (RESULT_TYPE)state->count;
+        return true;
     }
 };
 

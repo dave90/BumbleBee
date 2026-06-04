@@ -119,12 +119,32 @@ static uint8_t getVarintSize(uint32_t val) {
     } while (val != 0);
     return res;
 }
+template <class SRC, class TGT, bool HAS_NULL>
+static void templatedWritePlainNullCheck(Vector &col, idx_t length, Serializer &ser) {
+	auto *ptr = FlatVector::getData<SRC>(col);
+	if (! HAS_NULL) {
+		for (idx_t r = 0; r < length; r++) {
+			ser.write<TGT>((TGT)ptr[r]);
+		}
+	} else {
+		// NULL rows have no payload entry (see definition levels)
+		for (idx_t r = 0; r < length; r++) {
+			if (col.rowIsValid(r)) {
+				ser.write<TGT>((TGT)ptr[r]);
+			}
+		}
+	}
+}
+
 
 template <class SRC, class TGT>
 static void templatedWritePlain(Vector &col, idx_t length, Serializer &ser) {
     auto *ptr = FlatVector::getData<SRC>(col);
-    for (idx_t r = 0; r < length; r++) {
-        ser.write<TGT>((TGT)ptr[r]);
+    if (col.validity().allValid()) {
+    	templatedWritePlainNullCheck<SRC, TGT, false>(col, length, ser);
+    } else {
+    	templatedWritePlainNullCheck<SRC, TGT, true>(col, length, ser);
+
     }
 }
 
@@ -224,12 +244,25 @@ void bumblebee::ParquetWriter::flush(ChunkCollection &buffer) {
 
 
 		for (auto &chunk : buffer.chunks()) {
-			// TODO write the null checking the limits
-			// write that all the rows are valid
+			// definition levels: bit=1 valid, bit=0 NULL (bit-packed, LSB-first).
+			// STANDARD_VECTOR_SIZE is a multiple of 8, so per-chunk byte-aligned
+			// packing stays contiguous for the reader (only the last chunk pads).
 			BB_ASSERT(chunk->getSize() <= STANDARD_VECTOR_SIZE);
-			auto data = FlatVector::getData(allOne_);
+			auto &define_col = chunk->data_[i];
 			auto chunk_define_byte_count = (chunk->getSize() + 7) / 8;
-			temp_writer.writeData((const_data_ptr_t)data, chunk_define_byte_count);
+			if (define_col.validity().allValid()) {
+				auto data = FlatVector::getData(allOne_);
+				temp_writer.writeData((const_data_ptr_t)data, chunk_define_byte_count);
+			} else {
+				uint8_t define_buf[(STANDARD_VECTOR_SIZE + 7) / 8];
+				memset(define_buf, 0, chunk_define_byte_count);
+				for (idx_t r = 0; r < chunk->getSize(); r++) {
+					if (define_col.rowIsValid(r)) {
+						define_buf[r / 8] |= static_cast<uint8_t>(1u << (r % 8));
+					}
+				}
+				temp_writer.writeData((const_data_ptr_t)define_buf, chunk_define_byte_count);
+			}
 		}
 
 		// now write the actual payload: we write this as PLAIN values
@@ -244,6 +277,7 @@ void bumblebee::ParquetWriter::flush(ChunkCollection &buffer) {
 				uint8_t byte = 0;
 				uint8_t byte_pos = 0;
 				for (idx_t r = 0; r < input.getSize(); r++) {
+					if (!input_column.rowIsValid(r)) continue;  // NULL: no payload entry
 					byte |= (ptr[r] & 1) << byte_pos;
 					byte_pos++;
 
@@ -287,6 +321,7 @@ void bumblebee::ParquetWriter::flush(ChunkCollection &buffer) {
 			case LogicalTypeId::DATE: {
 				auto *ptr = FlatVector::getData<date_t>(input_column);
 				for (idx_t r = 0; r < input.getSize(); r++) {
+					if (!input_column.rowIsValid(r)) continue;  // NULL: no payload entry
 					auto ts = Timestamp::fromDatetime(ptr[r]);
 					temp_writer.write<Int96>(timestampToImpalaTimestamp(ts));
 				}
@@ -295,6 +330,7 @@ void bumblebee::ParquetWriter::flush(ChunkCollection &buffer) {
 			case LogicalTypeId::TIMESTAMP: {
 				auto *ptr = FlatVector::getData<timestamp_t>(input_column);
 				for (idx_t r = 0; r < input.getSize(); r++) {
+					if (!input_column.rowIsValid(r)) continue;  // NULL: no payload entry
 					temp_writer.write<Int96>(timestampToImpalaTimestamp(ptr[r]));
 				}
 				break;
@@ -302,6 +338,7 @@ void bumblebee::ParquetWriter::flush(ChunkCollection &buffer) {
 			case LogicalTypeId::STRING: {
 				auto *ptr = FlatVector::getData<string_t>(input_column);
 				for (idx_t r = 0; r < input.getSize(); r++) {
+					if (!input_column.rowIsValid(r)) continue;  // NULL: no payload entry
 					temp_writer.write<uint32_t>(ptr[r].size());
 					temp_writer.writeData((const_data_ptr_t)ptr[r].getDataUnsafe(), ptr[r].size());
 				}

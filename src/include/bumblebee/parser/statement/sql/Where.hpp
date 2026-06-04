@@ -46,6 +46,10 @@ enum SQLBinop {
     SQL_GREATER_OR_EQ = 6,
     SQL_ASSIGNMENT = 7,
     SQL_LIKE = 8,
+    // Same numeric values as Binop::IS_NULL / IS_NOT_NULL so toSQLBinop /
+    // toCoreBinop remain value-preserving.
+    SQL_IS_NULL = 99,
+    SQL_IS_NOT_NULL = 100,
 };
 
 inline SQLBinop toSQLBinop(Binop op) {

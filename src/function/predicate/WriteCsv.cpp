@@ -312,6 +312,12 @@ static void writeChunk(WriteCSVData &bind_data, WriteCSVOperatorData &data) {
 				writer.writeBufferData(bind_data.delimiter_);
 			}
 
+			// NULL cell: emit the null marker (raw, unquoted) instead of a value.
+			if (!data.chunk_.data_[col_idx].rowIsValid(row_idx)) {
+				writer.writeBufferData(bind_data.nullMarker_);
+				continue;
+			}
+
 			// non-null value, fetch the string value from the cast chunk
 			auto str_data = FlatVector::getData<string_t>(data.chunk_.data_[col_idx]);
 			auto& str_value = str_data[row_idx];
@@ -343,6 +349,12 @@ static void writeChunkWithPartitions(WriteCSVData &bind_data, WriteCSVOperatorDa
 		for (idx_t col_idx = 0; col_idx < data.chunk_.columnCount(); col_idx++) {
 			if (col_idx != 0) {
 				writer.writeBufferData(bind_data.delimiter_);
+			}
+
+			// NULL cell: emit the null marker (raw, unquoted) instead of a value.
+			if (!data.chunk_.data_[col_idx].rowIsValid(row_idx)) {
+				writer.writeBufferData(bind_data.nullMarker_);
+				continue;
 			}
 
 			// non-null value, fetch the string value from the cast chunk
