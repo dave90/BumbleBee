@@ -1,0 +1,3 @@
+SELECT id, label
+FROM "./files/csv/null_data.csv", "./files/csv/null_flags.csv"
+WHERE active = actkey

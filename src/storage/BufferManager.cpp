@@ -69,7 +69,7 @@ block_handle_shared_ptr_t BufferManager::registerBlock(block_id_t block_id) {
 	// create a new block pointer for this block
 	auto result = block_handle_shared_ptr_t(new BlockHandle(context_, block_id));
 	// register the block pointer in the set of blocks as a weak pointer
-	blocks_[block_id] = std::weak_ptr<BlockHandle>(result);
+	blocks_[block_id] = std::weak_ptr(result);
 	return result;
 }
 

@@ -89,6 +89,7 @@ print()
 - **Dual query languages** — SQL and Datalog, including recursive Datalog
 - **High-performance engine** — push-based execution, columnar storage, multithreading
 - **Read and write CSV and Parquet** — import data from and export results to CSV and Parquet files
+- **Native NULL support** — NULL across all operators: `IS NULL`/`IS NOT NULL`, NULL-aware aggregates, three-valued comparisons, and CSV/Parquet/pandas (`None`/`pd.NA`) round-trip
 - **DataFrame interop** — load any pandas DataFrame as input via `db.load_df()`, meaning you can connect to virtually any data source (databases, APIs, Excel, in-memory structures) before handing it off for analysis
 - **Command-line interface** — run queries directly from the terminal
 
@@ -157,5 +158,4 @@ BumbleBee DB includes a rule-based query optimizer that applies logical rewrites
 - **Code generation**: cover complex AND and OR clause combinations in filter expressions
 - **Predicate table types**: allow users to explicitly declare column types for predicates (currently auto-deduced at runtime)
 - **Left and right joins**: support for LEFT JOIN and RIGHT JOIN
-- **NULL handling**: NULL values across all operators, including NULL-safe comparisons and aggregations
 - **Cost-based join optimizer**: reorder joins based on cardinality estimates

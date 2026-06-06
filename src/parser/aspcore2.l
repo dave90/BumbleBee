@@ -107,6 +107,13 @@ NUMBER              ([0-9]+(\.[0-9]+)?)
 "\\E"                   { return EXISTS; }
 
 "not"                   { return NAF; }
+<INITIAL>"NOT"          { return NAF; }
+
+"null"                  { return NULLKW; }
+"NULL"                  { return NULLKW; }
+
+"is"                    { return IS_KW; }
+"IS"                    { return IS_KW; }
 
 ":-"                    { return CONS; }
 ":~"                    { return WCONS; }

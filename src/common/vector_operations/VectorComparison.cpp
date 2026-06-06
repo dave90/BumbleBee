@@ -102,6 +102,8 @@ idx_t templatedSelectOperationDecimal(Vector &left, Vector &right, const Selecti
         lSelVector.slice(*sel, count);
         rSelVector.slice(*sel, count);
     }
+    // tryCast carries source validity 1:1 (UnaryExecution::propagateUnaryValidity),
+    // so castVec ends up with the correct mask without further fix-up here.
     idx_t trueCount;
     if (lSelVector.getLogicalTypeId() == LogicalTypeId::DECIMAL) {
         BB_ASSERT(rSelVector.getLogicalTypeId() != LogicalTypeId::DECIMAL);
@@ -316,6 +318,89 @@ idx_t VectorOperations::lessThanEquals(Vector &left, Vector &right, const Select
     if (left.getType() == right.getType())
         return templatedSelectOperationSwitchEqualType<LessThanEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
     return templatedSelectOperationSwitchLeft<LessThanEquals>(left, right, sel, count, trueSel, falseSel, falseCount);
+}
+
+// Shared core for IS [NOT] DISTINCT FROM. Reuses the NULL-excludes `equals` to
+// split rows into matched (both-non-null and equal) and unmatched (everything
+// else, which mixes both-null rows with value-mismatch rows), then either adds
+// the both-null rows on top (NOT_DISTINCT) or drops them (DISTINCT).
+template <bool NOT_DISTINCT>
+static inline idx_t selectDistinctOrNot(Vector &left, Vector &right, const SelectionVector *sel,
+                                        idx_t count, SelectionVector *trueSel) {
+    if (!sel) sel = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
+    SelectionVector innerTrue(STANDARD_VECTOR_SIZE);
+    SelectionVector innerFalse(STANDARD_VECTOR_SIZE);
+    idx_t falseCount = 0;
+    idx_t matched = VectorOperations::equals(left, right, sel, count, &innerTrue, &innerFalse, falseCount);
+
+    idx_t out = 0;
+    if constexpr (NOT_DISTINCT) {
+        if (trueSel)
+            for (idx_t i = 0; i < matched; i++) trueSel->setIndex(out + i, innerTrue.getIndex(i));
+        out += matched;
+    }
+    for (idx_t i = 0; i < falseCount; i++) {
+        auto idx = innerFalse.getIndex(i);
+        bool bothNull = !left.rowIsValid(idx) && !right.rowIsValid(idx);
+        bool include = NOT_DISTINCT ? bothNull : !bothNull;
+        if (include) {
+            if (trueSel) trueSel->setIndex(out, idx);
+            out++;
+        }
+    }
+    return out;
+}
+
+idx_t VectorOperations::notDistinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+    return selectDistinctOrNot<true>(left, right, sel, count, trueSel);
+}
+
+idx_t VectorOperations::distinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+    return selectDistinctOrNot<false>(left, right, sel, count, trueSel);
+}
+
+// IS NULL / IS NOT NULL: pure mask reads. Vector::rowIsValid handles every encoding
+// (constant -> bit 0, dictionary -> through the selection, sequences -> always valid),
+// so the loop is uniform. The optional falseSel splits non-matching rows for OR-eval.
+template <bool WANT_VALID>
+static inline idx_t selectByValidity(Vector &input, const SelectionVector *sel, idx_t count,
+                                     SelectionVector *trueSel,
+                                     SelectionVector *falseSel, idx_t &falseCount) {
+    if (!sel) sel = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
+    idx_t trueCount = 0;
+    falseCount = 0;
+    for (idx_t i = 0; i < count; i++) {
+        auto idx = sel->getIndex(i);
+        bool match = input.rowIsValid(idx) == WANT_VALID;
+        if (match) {
+            if (trueSel) trueSel->setIndex(trueCount, idx);
+            trueCount++;
+        } else {
+            if (falseSel) falseSel->setIndex(falseCount, idx);
+            falseCount++;
+        }
+    }
+    return trueCount;
+}
+
+idx_t VectorOperations::isNull(Vector &input, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+    idx_t falseCount = 0;
+    return selectByValidity<false>(input, sel, count, trueSel, nullptr, falseCount);
+}
+
+idx_t VectorOperations::isNotNull(Vector &input, const SelectionVector *sel, idx_t count, SelectionVector *trueSel) {
+    idx_t falseCount = 0;
+    return selectByValidity<true>(input, sel, count, trueSel, nullptr, falseCount);
+}
+
+idx_t VectorOperations::isNull(Vector &input, const SelectionVector *sel, idx_t count,
+                               SelectionVector *trueSel, SelectionVector *falseSel, idx_t &falseCount) {
+    return selectByValidity<false>(input, sel, count, trueSel, falseSel, falseCount);
+}
+
+idx_t VectorOperations::isNotNull(Vector &input, const SelectionVector *sel, idx_t count,
+                                  SelectionVector *trueSel, SelectionVector *falseSel, idx_t &falseCount) {
+    return selectByValidity<true>(input, sel, count, trueSel, falseSel, falseCount);
 }
 
 }

@@ -28,13 +28,16 @@ namespace bumblebee{
 template <class T>
 struct SumState {
     T value;
+    bool seen;
 
     void initialize() {
         value = 0;
+        seen = false;
     }
 
     void combine(SumState<T>* other) {
         this->value += other->value;
+        this->seen = this->seen || other->seen;
     }
 };
 
@@ -51,10 +54,15 @@ struct SumOperation {
 
     static void operation(INPUT_TYPE *input, SumState<RESULT_TYPE> *state) {
         state->value += ((RESULT_TYPE)(*input));
+        state->seen = true;
     }
 
-    static void finalize(SumState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    // Returns true when the result is valid; false when the group was empty
+    // (no non-null input) → caller marks the output row NULL.
+    static bool finalize(SumState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+        if (!state->seen) return false;
         *result = state->value;
+        return true;
     }
 };
 

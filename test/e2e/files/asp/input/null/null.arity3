@@ -1,0 +1,6 @@
+t(1,2,3).
+t(NULL,5,6).
+t(7,NULL,9).
+t(10,11,NULL).
+t(NULL,NULL,NULL).
+t(X,Y,Z)?

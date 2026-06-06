@@ -1,0 +1,3 @@
+SELECT id
+FROM "./files/parquet/allnull_col.parquet"
+WHERE g > 0

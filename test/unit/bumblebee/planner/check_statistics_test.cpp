@@ -21,6 +21,7 @@
 
 #include "bumblebee/planner/filter/ConstantFilter.hpp"
 #include "bumblebee/storage/statistics/NumericStatistics.hpp"
+#include "bumblebee/storage/statistics/ValidityStatistics.hpp"
 #include "bumblebee/common/types/Date.hpp"
 
 using namespace bumblebee;
@@ -150,4 +151,35 @@ TEST(CheckStatisticsTest, StandardIntegerPath) {
     NumericStatistics stats(intType, Value((int32_t)10), Value((int32_t)100));
     ConstantFilter filter(GREATER, Value((int32_t)50));
     EXPECT_EQ(filter.checkStatistics(stats), FilterPropagateResult::NO_PRUNING_POSSIBLE);
+}
+
+// --- Validity (NULL) statistics pruning ---
+
+// An all-NULL segment can never satisfy a value comparison -> prune (row group skipped),
+// even when the constant is within the min/max zonemap.
+TEST(CheckStatisticsTest, AllNullSegmentPrunes) {
+    NumericStatistics stats(LogicalType(PhysicalType::INTEGER), Value((int32_t)1), Value((int32_t)100));
+    stats.validityStats_ = std::make_unique<ValidityStatistics>(/*has_null=*/true, /*has_no_null=*/false);
+    ConstantFilter filter(EQUAL, Value((int32_t)50));  // within [1,100]; only validity prunes
+    EXPECT_EQ(filter.checkStatistics(stats), FilterPropagateResult::FILTER_ALWAYS_FALSE);
+}
+
+// A segment that has non-NULL values is not pruned by validity; the zonemap applies normally.
+TEST(CheckStatisticsTest, PartialNullSegmentNotPrunedByValidity) {
+    NumericStatistics stats(LogicalType(PhysicalType::INTEGER), Value((int32_t)1), Value((int32_t)100));
+    stats.validityStats_ = std::make_unique<ValidityStatistics>(/*has_null=*/true, /*has_no_null=*/true);
+    ConstantFilter filter(EQUAL, Value((int32_t)50));  // within range
+    EXPECT_NE(filter.checkStatistics(stats), FilterPropagateResult::FILTER_ALWAYS_FALSE);
+}
+
+// canHaveNull / canHaveNoNull reflect the flags (regression guard for the fixed
+// canHaveNoNull copy-paste bug that returned hasNull_).
+TEST(CheckStatisticsTest, CanHaveNullAccessors) {
+    NumericStatistics stats(LogicalType(PhysicalType::INTEGER), Value((int32_t)1), Value((int32_t)100));
+    stats.validityStats_ = std::make_unique<ValidityStatistics>(/*has_null=*/true, /*has_no_null=*/false);
+    EXPECT_TRUE(stats.canHaveNull());
+    EXPECT_FALSE(stats.canHaveNoNull());
+    stats.validityStats_ = std::make_unique<ValidityStatistics>(/*has_null=*/false, /*has_no_null=*/true);
+    EXPECT_FALSE(stats.canHaveNull());
+    EXPECT_TRUE(stats.canHaveNoNull());
 }

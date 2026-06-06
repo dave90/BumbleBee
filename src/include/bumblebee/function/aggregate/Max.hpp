@@ -36,7 +36,7 @@ struct MaxState {
 
     void combine(MaxState<T>* other) {
         value = (other->init && ( !init || value < other->value))?other->value: value;
-        init = true;
+        init = init || other->init;
     }
 };
 
@@ -56,8 +56,11 @@ struct MaxOperation {
         state->init = true;
     }
 
-    static void finalize(MaxState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    // Returns false (→ output NULL) when no non-null input was ever observed.
+    static bool finalize(MaxState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+        if (!state->init) return false;
         *result = state->value;
+        return true;
     }
 };
 

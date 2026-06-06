@@ -1,0 +1,2 @@
+SELECT *
+FROM "./files/parquet/null_data.parquet"

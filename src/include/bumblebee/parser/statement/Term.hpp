@@ -56,7 +56,7 @@ class Term {
 public:
 	Term();
 	Term(bool negative);
-	Term(Term&& term);
+	Term(Term&& term) noexcept;
 	Term(int8_t c);
 	Term(int16_t c);
 	Term(int32_t c);
@@ -124,6 +124,12 @@ public:
 		return value_;
 	}
 
+	// True when this term is the typeless NULL literal (a CONSTANT term whose
+	// value carries the isNull_ flag).
+	inline bool isNull() const {
+		return value_.isNull();
+	}
+
 	inline const string& getVariable()const {
 		BB_ASSERT(getType() == VARIABLE);
 		return value_.stringValue_;
@@ -176,6 +182,8 @@ public:
 	// static functions
 	static Term createVariable(std::string&& value);
 	static Term createVariable(const char* value);
+	// Build a typeless NULL term (CONSTANT with value_.isNull()).
+	static Term createNull();
 	static Operator getOperator(char sop);
 	static Term createRange(int from, int to);
 	static Term createArith(Term&& t1,Term&& t2, char op );

@@ -78,6 +78,10 @@ struct WriteCSVData : public FunctionData {
 
     string newline_ = "\n";
 
+    // String written in place of a NULL cell. Empty by default, mirroring the
+    // reader (an empty field round-trips as NULL).
+    string nullMarker_;
+
     // return file to write for each thread
     string getFileToWrite(const vector<string>& partitionValues = {});
 

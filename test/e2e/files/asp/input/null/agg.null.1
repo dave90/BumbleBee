@@ -1,0 +1,18 @@
+input(1, 10).
+input(1, 20).
+input(1, NULL).
+input(2, NULL).
+input(2, NULL).
+input(3, 30).
+input(3, NULL).
+input(3, 50).
+
+g_sum(G, S) :- input(G, _), S = #sum{V : input(G, V)}.
+g_min(G, M) :- input(G, _), M = #min{V : input(G, V)}.
+g_max(G, M) :- input(G, _), M = #max{V : input(G, V)}.
+g_count(G, C) :- input(G, _), C = #count{V : input(G, V)}.
+
+g_sum(X, Y)?
+g_min(X, Y)?
+g_max(X, Y)?
+g_count(X, Y)?

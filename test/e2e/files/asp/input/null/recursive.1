@@ -1,0 +1,11 @@
+edge(1,2).
+edge(2,3).
+edge(3,4).
+edge(NULL,5).
+edge(6,NULL).
+edge(NULL,NULL).
+
+tc(X,Y) :- edge(X,Y).
+tc(X,Y) :- tc(X,Z), edge(Z,Y).
+
+tc(X,Y)?

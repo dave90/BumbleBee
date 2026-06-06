@@ -86,6 +86,15 @@ int ParserInputDirector::parse(vector<std::string> files) {
 
 int ParserInputDirector::parse(const char *filename, FILE *file) {
     yyin = file;
+    // The flex lexer keeps a translation-unit-global buffer state across parses;
+    // a previous parse (e.g. one that switched into the SQL start condition via
+    // `%@sql`) may leave the lexer in a non-INITIAL state. yyrestart resets the
+    // buffer to the new yyin but explicitly does NOT reset the start condition
+    // (see flex docs / generated `aspcore2_lexer.hpp` line ~1898). So we BEGIN
+    // INITIAL ourselves — otherwise the next Datalog parse tokenizes `not` /
+    // `NULL` under SQL rules and fails with a syntax error.
+    yyrestart(file);
+    BEGIN(INITIAL);
     parserFile_ = filename;
     parserLine_ = 1;
     parserColumn_ = 0;

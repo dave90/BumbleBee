@@ -1,0 +1,4 @@
+%@sql
+SELECT ACTIVE, SUM(SCORE) as S, COUNT(SCORE) as CS, COUNT(*) as CALL
+FROM "./files/parquet/null_data.parquet"
+GROUP BY ACTIVE

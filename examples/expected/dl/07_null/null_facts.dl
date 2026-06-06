@@ -1,0 +1,8 @@
+record("a",10).
+record("b",NULL).
+record(NULL,20).
+record("c",30).
+has_value("a",10).
+has_value(NULL,20).
+has_value("c",30).
+missing_value("b").

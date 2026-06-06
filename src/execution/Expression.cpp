@@ -189,6 +189,11 @@ idx_t Expression::executeBinop(Vector& left,Vector& right, SelectionVector& sel,
             return VectorOperations::lessThan(left, right, nullptr, count, &sel);
         case LESS_OR_EQ:
             return VectorOperations::lessThanEquals(left, right, nullptr, count, &sel);
+        case IS_NULL:
+            // Unary predicate on the left operand; `right` is the placeholder NULL term.
+            return VectorOperations::isNull(left, nullptr, count, &sel);
+        case IS_NOT_NULL:
+            return VectorOperations::isNotNull(left, nullptr, count, &sel);
         default:
             ErrorHandler::errorNotImplemented("Binop not implemented");
             return 0;
@@ -219,6 +224,12 @@ void Expression::executeBinop(Vector& left,Vector& right,SelectionVector& sel, i
             break;
         case LESS_OR_EQ:
             VectorOperations::lessThanEquals(left, right, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case IS_NULL:
+            VectorOperations::isNull(left, &sel, count, &trueSel, &falseSel, falseCount);
+            break;
+        case IS_NOT_NULL:
+            VectorOperations::isNotNull(left, &sel, count, &trueSel, &falseSel, falseCount);
             break;
         default:
             ErrorHandler::errorNotImplemented("Binop not implemented");

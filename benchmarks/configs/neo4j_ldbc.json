@@ -1,0 +1,24 @@
+{
+  "output_folder": "files/ldbc/actual_neo4j",
+  "expected_folder": "files/ldbc/expected",
+  "input_folder": "files/ldbc/input_neo4j",
+  "comparison_config": "duckdb_ldbc.json",
+  "result_format": "cypher_plain",
+  "previous_comparison": true,
+  "defaults": {
+    "timeout": 600,
+    "commands": ["cypher-shell -a ${NEO4J_URI:-neo4j://localhost:7687} -u ${NEO4J_USER:-neo4j} -p ${NEO4J_PASSWORD:-bumblebee} --format plain -f $file"]
+  },
+  "tests": [
+    { "test": "LOAD", "input_file": "IS1.cypher", "num_tries": 1, "timeout": 7200, "skip_compare": true,
+      "commands": ["bash neo4j_load.sh"] },
+    { "test": "IS1", "input_file": "IS1.cypher" },
+    { "test": "IS3", "input_file": "IS3.cypher" },
+    { "test": "IS7", "input_file": "IS7.cypher" },
+    { "test": "IC2", "input_file": "IC2.cypher" },
+    { "test": "IC3", "input_file": "IC3.cypher" },
+    { "test": "IC8", "input_file": "IC8.cypher" },
+    { "test": "REACH", "input_file": "REACH.cypher" },
+    { "test": "RCHAIN", "input_file": "RCHAIN.cypher" }
+  ]
+}

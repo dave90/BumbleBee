@@ -1,0 +1,3 @@
+SELECT id, name
+FROM "./files/csv/null_data.csv"
+WHERE score IS NULL

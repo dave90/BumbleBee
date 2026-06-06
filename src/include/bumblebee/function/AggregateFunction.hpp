@@ -33,8 +33,10 @@ typedef void (*aggregate_initialize_t)(data_ptr_t state);
 typedef void (*aggregate_update_t)(data_ptr_t input, data_ptr_t state);
 // The type used for combining hashed aggregate states (optional)
 typedef void (*aggregate_combine_t)(data_ptr_t state, data_ptr_t combined);
-// The type used for finalizing hashed aggregate function payloads
-typedef void (*aggregate_finalize_t)(data_ptr_t state, data_ptr_t result);
+// Finalize the state into result. Returns true when the result is valid; false
+// signals that the group was empty (no non-null input) and the caller should
+// mark the output row as NULL instead of using the data slot. 
+typedef bool (*aggregate_finalize_t)(data_ptr_t state, data_ptr_t result);
 
 using agg_states_ptr = std::unique_ptr<data_t[]> ;
 
@@ -138,8 +140,8 @@ protected:
     }
 
     template <class RESULT_TYPE, class STATE, class OP>
-    static void stateFinalize(data_ptr_t state, data_ptr_t result ) {
-        OP::finalize((STATE *)state, (RESULT_TYPE *)result);
+    static bool stateFinalize(data_ptr_t state, data_ptr_t result ) {
+        return OP::finalize((STATE *)state, (RESULT_TYPE *)result);
     }
 
 

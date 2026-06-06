@@ -1,0 +1,23 @@
+{
+  "output_folder": "files/ldbc/actual",
+  "expected_folder": "files/ldbc/expected",
+  "input_folder": "files/ldbc/input_bumblebee",
+  "comparison_config": "duckdb_ldbc.json",
+  "result_format": "datalog",
+  "clean_predicates": true,
+  "previous_comparison": true,
+  "defaults": {
+    "timeout": 600,
+    "commands": ["../cmake-build-release/BumbleBee -a -d -t 50 -i $file"]
+  },
+  "tests": [
+    { "test": "IS1", "input_file": "IS1.dl" },
+    { "test": "IS3", "input_file": "IS3.dl" },
+    { "test": "IS7", "input_file": "IS7.dl" },
+    { "test": "IC2", "input_file": "IC2.dl" },
+    { "test": "IC3", "input_file": "IC3.dl" },
+    { "test": "IC8", "input_file": "IC8.dl" },
+    { "test": "REACH", "input_file": "REACH.dl" },
+    { "test": "RCHAIN", "input_file": "RCHAIN.dl" }
+  ]
+}

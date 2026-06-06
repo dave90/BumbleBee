@@ -101,7 +101,7 @@ TEST_F(RowOperationsTest, TestRowOpOneCols) {
 
 
     Vector col(types[0]);
-    RowOperations::gather(addresses, sel, col, sel, chunk.getSize(), layout.getOffsets()[0]);
+    RowOperations::gather(addresses, sel, col, sel, chunk.getSize(), layout.getOffsets()[0], 0);
 
     // compare the original vector to the gather vector
     count = VectorOperations::equals(chunk.data_[0], col, nullptr, chunk.getSize(),nullptr);
@@ -144,7 +144,7 @@ TEST_F(RowOperationsTest, TestRowOpMultiCols) {
     // gather and compare columns
     for (idx_t i = 0; i < chunk.columnCount(); i++) {
         Vector col(types[i], chunk.getSize());
-        RowOperations::gather(addresses, sel, col, sel, chunk.getSize(), layout.getOffsets()[i]);
+        RowOperations::gather(addresses, sel, col, sel, chunk.getSize(), layout.getOffsets()[i], i);
 
         // compare the original vector to the gather vector
         count = VectorOperations::equals(chunk.data_[i], col, nullptr, chunk.getSize(),nullptr);
@@ -187,7 +187,7 @@ TEST_F(RowOperationsTest, TestRowOpString) {
     // gather and compare columns
     for (idx_t i = 0; i < chunk.columnCount(); i++) {
         Vector col(types[i], chunk.getSize());
-        RowOperations::gather(addresses, sel, col, sel, chunk.getSize(), layout.getOffsets()[i]);
+        RowOperations::gather(addresses, sel, col, sel, chunk.getSize(), layout.getOffsets()[i], i);
 
         // compare the original vector to the gather vector
         count = VectorOperations::equals(chunk.data_[i], col, nullptr, chunk.getSize(),nullptr);

@@ -1,0 +1,6 @@
+a(1,2).
+a(3,NULL).
+a(NULL,6).
+a(7,8).
+both_known(X,Y) :- a(X,Y), X IS NOT NULL, Y IS NOT NULL.
+both_known(X,Y)?

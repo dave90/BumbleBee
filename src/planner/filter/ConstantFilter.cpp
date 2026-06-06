@@ -68,6 +68,10 @@ ConstantFilter::ConstantFilter(Binop comparison_type_p, Value constant_p)
 }
 
 FilterPropagateResult ConstantFilter::checkStatistics(BaseStatistics &stats) {
+    // An all-NULL segment never satisfies a value comparison (NULL is never =,<,> a constant).
+    if (!stats.canHaveNoNull()) {
+        return FilterPropagateResult::FILTER_ALWAYS_FALSE;
+    }
     auto logicalTypeId = stats.type_.type();
     if (logicalTypeId == LogicalTypeId::DATE ||
         logicalTypeId == LogicalTypeId::TIMESTAMP ||

@@ -578,6 +578,20 @@ void BufferedCSVReader::addValue(char *str_val, idx_t length, idx_t &column, vec
 
 	auto &v = parseChunk_.data_[column];
 	auto parse_data = FlatVector::getData<string_t>(v);
+
+	// NULL marker: a field whose raw bytes equal nullMarker_ (empty string by
+	// default, so an empty field) becomes NULL. Also applied while sniffing types
+	// so a NULL cell doesn't force its column to STRING.
+	if ((mode_ == ParserMode::PARSING || mode_ == ParserMode::SNIFFING_DATATYPES) &&
+	    escape_positions.empty() &&
+	    length == options_.nullMarker_.size() &&
+	    memcmp(str_val, options_.nullMarker_.data(), length) == 0) {
+		v.setInvalid(row_entry);
+		parse_data[row_entry] = StringVector::addString(v, "");
+		column++;
+		return;
+	}
+
 	if (!escape_positions.empty()) {
 		// remove escape characters (if any)
 		string old_val = str_val;
@@ -909,6 +923,14 @@ void BufferedCSVReader::detectCandidateTypes(const vector<PhysicalType> &type_ca
 			idx_t row = row_idx - 1;
 			for (idx_t col = 0; col < parseChunk_.columnCount(); col++) {
 				auto &col_type_candidates = info_sql_types_candidates[col];
+				// a null-marker cell (empty by default) is NULL — it doesn't constrain the type
+				if (!is_header_row) {
+					auto s = FlatVector::getData<string_t>(parseChunk_.data_[col])[row];
+					if (s.size() == options_.nullMarker_.size() &&
+					    memcmp(s.getDataUnsafe(), options_.nullMarker_.data(), s.size()) == 0) {
+						continue;
+					}
+				}
 				while (col_type_candidates.size() > 1) {
 					const auto &sql_type = col_type_candidates.back();
 					// try cast from string to sql_type

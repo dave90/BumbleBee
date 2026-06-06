@@ -128,8 +128,9 @@ void JoinPRLHashTable::probe(idx_t &ltuple, idx_t &rtuple, DataChunk &lchunk, Ve
     // fetch the payload columns
     for (idx_t idx=0; idx < payloadTypes.size(); ++idx) {
         result.data_[idx].initialize(false, finalCount);
-        idx_t offset = layout_.getOffsets()[keyColumns_.size() + idx];
-        RowOperations::gather(addresses, rsel, result.data_[idx], FlatVector::INCREMENTAL_SELECTION_VECTOR,finalCount, offset);
+        idx_t col_no = keyColumns_.size() + idx;
+        idx_t offset = layout_.getOffsets()[col_no];
+        RowOperations::gather(addresses, rsel, result.data_[idx], FlatVector::INCREMENTAL_SELECTION_VECTOR,finalCount, offset, col_no);
     }
     result.setCapacity(finalCount);
     result.setCardinality(finalCount);

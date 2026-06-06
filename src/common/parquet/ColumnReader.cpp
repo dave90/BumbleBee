@@ -296,6 +296,9 @@ idx_t ColumnReader::read(uint64_t num_values, parquet_filter_t &filter, uint8_t 
 	auto &trans = (ThriftFileTransport &)*protocol_->getTransport();
 	trans.setLocation(chunkReadOffset_);
 
+	// reset reused result so stale NULL bits don't leak
+	result.validity().setAllValid();
+
 	idx_t result_offset = 0;
 	auto to_read = num_values;
 

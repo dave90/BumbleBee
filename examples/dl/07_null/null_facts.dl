@@ -1,0 +1,22 @@
+% NULL literals and IS NULL / IS NOT NULL
+% NULL is a first-class value in Datalog: write it as the literal NULL
+% (case-insensitive) in any term position. It round-trips through storage
+% and printing, and you can test for it with IS NULL / IS NOT NULL.
+%
+% A NULL never matches an ordinary comparison (three-valued logic), so to
+% find or exclude NULLs you must use IS NULL / IS NOT NULL.
+
+% Sample facts: record(Key, Value) with NULLs in either position.
+record("a", 10).
+record("b", NULL).
+record(NULL, 20).
+record("c", 30).
+
+% Keys whose value is missing.
+missing_value(K) :- record(K, V), V IS NULL.
+
+% Keys whose value is present (NULL keys included — only the value is checked).
+has_value(K, V) :- record(K, V), V IS NOT NULL.
+
+missing_value(X)?
+has_value(X, Y)?

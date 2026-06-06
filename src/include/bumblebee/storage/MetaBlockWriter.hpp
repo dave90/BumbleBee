@@ -45,12 +45,12 @@ public:
 public:
     BlockPointer getBlockPointer() {
         BlockPointer pointer;
-        pointer.blockId_ = block_->id;
+        pointer.blockId_ = block_->id_;
         pointer.offset_ = offset_;
         return pointer;
     }
     void flush() {
-        writtenBlocks_.insert(block_->id);
+        writtenBlocks_.insert(block_->id_);
         if (offset_ > sizeof(block_id_t)) {
             auto &block_manager = *context_.blockManager_;
             block_manager.write(*block_);
@@ -77,7 +77,7 @@ public:
             // first flush the old block
             flush();
             // now update the block id of the lbock
-            block_->id = new_block_id;
+            block_->id_ = new_block_id;
             store<block_id_t>(-1, block_->buffer_);
         }
         memcpy(block_->buffer_ + offset_, buffer, write_size);
