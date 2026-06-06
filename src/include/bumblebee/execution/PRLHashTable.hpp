@@ -85,7 +85,7 @@ public:
     using distinct_ht_ptr_t = std::unique_ptr<PRLHashTable>;
 
     // The hash table load factor, when a resize is triggered
-    constexpr static float LOAD_FACTOR = 0.5;
+    constexpr static float LOAD_FACTOR = 0.6;
 
 
     PRLHashTable(BufferManager& manager, const vector<LogicalType>& types, idx_t capacity = HT_INIT_CAPACITY, bool resizable = true);
