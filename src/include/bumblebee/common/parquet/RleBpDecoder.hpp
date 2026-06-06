@@ -138,7 +138,24 @@ private:
 	uint32_t bitUnpack(T *dest, uint32_t count) {
 		auto mask = BITPACK_MASKS[bitWidth_];
 
-		for (uint32_t i = 0; i < count; i++) {
+		uint32_t i = 0;
+		// Fast path: while at least 8 bytes remain we can read a 64-bit little-endian
+		// window per value (a value spans at most bitpackPos_(<=7) + bitWidth_(<=32)
+		// = 39 bits, always inside the window) and advance by whole consumed bytes.
+		// This avoids the per-byte boundary loop. Bit order is LSB-first, matching
+		// the scalar path below.
+		while (i < count && buffer_.len_ >= 8) {
+			uint64_t window = load<uint64_t>((data_ptr_t)buffer_.ptr_);
+			dest[i++] = (T)((window >> bitpackPos_) & mask);
+			bitpackPos_ += bitWidth_;
+			idx_t consumed = bitpackPos_ >> 3;        // whole bytes now consumed
+			buffer_.ptr_ += consumed;
+			buffer_.len_ -= consumed;
+			bitpackPos_ &= 7;
+		}
+
+		// Tail: byte-by-byte for the final values where fewer than 8 bytes remain.
+		for (; i < count; i++) {
 			T val = (buffer_.get<uint8_t>() >> bitpackPos_) & mask;
 			bitpackPos_ += bitWidth_;
 			while (bitpackPos_ > BITPACK_DLEN) {
