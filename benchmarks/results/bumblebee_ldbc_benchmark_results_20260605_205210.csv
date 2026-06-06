@@ -1,0 +1,9 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_cmp_%,delta_vs_prev,output_match
+IS1,IS1.dl,0.2344,0.2328,0.2354,0.1220,108.51%,-,match
+IS3,IS3.dl,1.0771,1.0389,1.1448,0.8820,452.09%,-,match
+IS7,IS7.dl,8.4069,8.0514,8.9527,6.7735,414.69%,-,match
+IC2,IC2.dl,8.0325,7.2296,8.6446,7.1982,862.79%,-,match
+IC3,IC3.dl,11.0281,10.4725,11.9618,9.1891,499.68%,-,match
+IC8,IC8.dl,8.8485,8.2962,9.7153,7.3134,476.41%,-,match
+REACH,REACH.dl,1.5693,1.4863,1.6884,1.3893,771.82%,-,match
+RCHAIN,RCHAIN.dl,4.7914,4.5827,5.1630,4.0315,530.53%,-,match

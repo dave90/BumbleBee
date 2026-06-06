@@ -1,0 +1,11 @@
+RESPONDENT_ID,REGION,AGE,SCORE
+1,North,34,80
+2,North,,75
+3,South,29,
+4,South,41,90
+5,,52,65
+6,East,38,
+7,East,,88
+8,West,45,72
+9,West,27,95
+10,,33,

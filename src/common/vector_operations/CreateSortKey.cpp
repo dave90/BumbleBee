@@ -146,8 +146,9 @@ void templatedConstructSortKeyFlat(T* __restrict data, const ValidityMask &valid
                                    idx_t size, data_ptr_t* __restrict result,
                                    idx_t* __restrict offsets, bool flip) {
     if (HAS_NULL) {
+        bool noNulls = validity.allValid();
         for (idx_t r = 0; r < size; r++) {
-            bool isNull = !validity.rowIsValid(r);
+            bool isNull = !noNulls && !validity.rowIsValid(r);
             encodeOneRow<OP>(result[r], offsets[r], data[r], isNull, flip);
         }
     }else {
@@ -299,6 +300,7 @@ static void getSortKeyVariableLengthFlat(string_t* __restrict data, const Validi
 static void getSortKeyLength(SortKeyVectorData &data, SortKeyLengthInfo &result) {
     auto &vector = data.vector_;
     auto type = vector.getType();
+
     if (typeIsConstantSize(type)) {
         // Fixed-width column: same byte count whether NULL or not (encodeNull pads
         // to sizeof(T)). One constant addend covers every row in this column.

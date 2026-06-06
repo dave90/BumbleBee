@@ -32,6 +32,7 @@ python python/01_getting_started.py
 | `03_multi_source_join.py` | Join CSV file data with in-memory DataFrames |
 | `04_recursive_analysis.py` | Graph reachability with recursive Datalog rules |
 | `05_iterative_queries.py` | Interactive session: multiple queries, inspect state, redefine predicates |
+| `06_null_handling.py` | Missing values: `None`/`pd.NA` round-trip via `load_df`/`to_df`/`tuples`, NULL-aware aggregates, `IS NULL` |
 
 
 
@@ -82,6 +83,7 @@ SQL files start with `%@sql` to indicate SQL mode.
 | `05_in_clause/` | IN and NOT IN with constants and subqueries |
 | `06_subqueries/` | Scalar subqueries in WHERE clauses |
 | `07_like/` | LIKE pattern matching with `%` wildcards |
+| `08_null/` | NULL handling: `IS NULL`/`IS NOT NULL`, NULL-aware aggregates, NULLS-LAST ordering |
 
 ## Datalog Examples (`dl/`)
 
@@ -93,6 +95,7 @@ SQL files start with `%@sql` to indicate SQL mode.
 | `04_recursion/` | Recursive rules: transitive closure, graph reachability |
 | `05_order_by/` | `#order_by` and `#limit` directives |
 | `06_like/` | Filter strings with `&like` pattern matching |
+| `07_null/` | NULL literals, `IS NULL`/`IS NOT NULL`, NULL-aware aggregates |
 
 ## Sample Data (`data/`)
 
@@ -103,3 +106,4 @@ SQL files start with `%@sql` to indicate SQL mode.
 | `sales.csv` | 20 sales transactions with products and customers |
 | `products.csv` | 10 products with categories and prices |
 | `nations.parquet` | 25 nations from the TPC-H benchmark (Parquet format) |
+| `survey.csv` | 10 survey responses with empty fields (read as NULL) for the NULL examples |

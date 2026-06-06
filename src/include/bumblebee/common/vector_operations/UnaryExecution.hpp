@@ -90,11 +90,13 @@ private:
 			ConstantVector::setNull(result, true);
 			return;
 		}
+		VectorData vd; input.orrify(count, vd);
 		auto &rmask = FlatVector::validity(result);
-		rmask.ensureWritable();
+		bool allocated = false;  // allocate the result mask only on the first actual null
 		for (idx_t i = 0; i < count; i++) {
-			if (!input.rowIsValid(i)) {
-				rmask.setInvalid(i);
+			if (!vd.validity_->rowIsValid(vd.sel_->getIndex(i))) {
+				if (!allocated) { rmask.ensureWritable(count); allocated = true; }
+				rmask.setInvalidUnsafe(i);
 			}
 		}
 	}
@@ -127,8 +129,9 @@ private:
 			auto ldata = FlatVector::getData<INPUT_TYPE>(input);
 
 			if (hasNulls) {
+				const ValidityMask &imask = FlatVector::validity(input);
 				for (idx_t i = 0; i < count; i++) {
-					if (input.rowIsValid(i)) {
+					if (imask.rowIsValid(i)) {
 						result_data[i] = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[i], i, dataptr);
 					} else {
 						result_data[i] = NullValue<RESULT_TYPE>();
@@ -148,9 +151,11 @@ private:
 			auto ldata = (INPUT_TYPE *)vdata.data_;
 
 			if (hasNulls) {
+				const ValidityMask *imask = vdata.validity_;
 				for (idx_t i = 0; i < count; i++) {
-					if (input.rowIsValid(i)) {
-						result_data[i] = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[vdata.sel_->getIndex(i)], i, dataptr);
+					idx_t sidx = vdata.sel_->getIndex(i);
+					if (imask->rowIsValid(sidx)) {
+						result_data[i] = OPWRAPPER::template operation<OP, INPUT_TYPE, RESULT_TYPE>(ldata[sidx], i, dataptr);
 					} else {
 						result_data[i] = NullValue<RESULT_TYPE>();
 					}

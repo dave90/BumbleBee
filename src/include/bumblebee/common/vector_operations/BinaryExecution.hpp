@@ -121,10 +121,18 @@ protected:
 			return;
 		}
 		auto &rmask = FlatVector::validity(result);
-		rmask.ensureWritable();
+		VectorData lvd, rvd;
+		left.orrify(count, lvd);
+		right.orrify(count, rvd);
+		const bool lav = !lvd.validity_ || lvd.validity_->allValid();
+		const bool rav = !rvd.validity_ || rvd.validity_->allValid();
+		bool allocated = false;  // allocate the result mask only on the first actual null
 		for (idx_t i = 0; i < count; i++) {
-			if (!left.rowIsValid(i) || !right.rowIsValid(i)) {
-				rmask.setInvalid(i);
+			bool lnull = !lav && !lvd.validity_->rowIsValid(lvd.sel_->getIndex(i));
+			bool rnull = !rav && !rvd.validity_->rowIsValid(rvd.sel_->getIndex(i));
+			if (lnull || rnull) {
+				if (!allocated) { rmask.ensureWritable(count); allocated = true; }
+				rmask.setInvalidUnsafe(i);
 			}
 		}
 	}

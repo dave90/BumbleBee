@@ -93,6 +93,18 @@ public:
         if (valid) setValid(idx); else setInvalid(idx);
     }
 
+    // Unchecked WRITE accessors. Precondition: the writer called ensureWritable(count) once for
+    // its full row count before the loop. No unsafe read exists: an input mask may be sized
+    // below its vector (grown only to its last null), so reads keep the bounds-checked rowIsValid.
+    inline void setValidUnsafe(idx_t idx) {
+        BB_ASSERT(mask_ && idx / BITS_PER_WORD < capacityWords_);
+        mask_[idx / BITS_PER_WORD] |= (uint64_t(1) << (idx % BITS_PER_WORD));
+    }
+    inline void setInvalidUnsafe(idx_t idx) {
+        BB_ASSERT(mask_ && idx / BITS_PER_WORD < capacityWords_);
+        mask_[idx / BITS_PER_WORD] &= ~(uint64_t(1) << (idx % BITS_PER_WORD));
+    }
+
     // Drop the buffer: the mask becomes all-valid again.
     void setAllValid();
     // Allocate (if needed) and clear all bits in [0, count): every row becomes null.

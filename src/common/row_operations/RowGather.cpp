@@ -45,10 +45,13 @@ static void templatedGatherLoop(Vector &rows, const SelectionVector &row_sel, Ve
 static void gatherValidity(Vector &rows, const SelectionVector &row_sel, Vector &col,
                            const SelectionVector &col_sel, idx_t count, idx_t col_no) {
 	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
+	ValidityMask &m = FlatVector::validity(col);
+	bool allocated = false;  // keep the all-valid path zero-allocation
 	for (idx_t i = 0; i < count; i++) {
 		auto row = ptrs[row_sel.getIndex(i)];
 		if (!rowIsValid(row, col_no)) {
-			col.setInvalid(col_sel.getIndex(i));
+			if (!allocated) { m.ensureWritable(count); allocated = true; }
+			m.setInvalidUnsafe(col_sel.getIndex(i));
 		}
 	}
 }
@@ -169,9 +172,12 @@ void RowOperations::fullScanColumn(const RowLayout &layout, Vector &rows, Vector
 
 	// Propagate the per-row validity prefix bit into col.validity().
 	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
+	ValidityMask &m = FlatVector::validity(col);
+	bool allocated = false;  // keep the all-valid path zero-allocation
 	for (idx_t i = 0; i < count; i++) {
 		if (!rowIsValid(ptrs[i], col_no)) {
-			col.setInvalid(i);
+			if (!allocated) { m.ensureWritable(count); allocated = true; }
+			m.setInvalidUnsafe(i);
 		}
 	}
 }

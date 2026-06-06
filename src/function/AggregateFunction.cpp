@@ -304,23 +304,31 @@ void AggregateFunction::combineStates(RowLayout &layout, Vector &sources, Vector
 
 template <class INPUT_TYPE>
 void templatedFinalizeStateFlatLoop(AggregateFunction &aggr, Vector &result, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata, idx_t agg_offset, idx_t count) {
+    ValidityMask &m = FlatVector::validity(result);
+    bool allocated = false;  // allocate the result mask only on the first empty group
     for (idx_t i = 0; i < count; ++i) {
         auto row = sdata[i];
         // finalize_ returns false for empty groups (no non-null input was ever
         // observed) → mark the corresponding output row NULL.
-        if (!aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +i)))
-            result.setInvalid(i);
+        if (!aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +i))) {
+            if (!allocated) { m.ensureWritable(count); allocated = true; }
+            m.setInvalidUnsafe(i);
+        }
     }
 }
 
 template <class INPUT_TYPE>
 void templatedFinalizeStateLoop(AggregateFunction &aggr, Vector &result, INPUT_TYPE* __restrict rdata, data_ptr_t* __restrict sdata,const SelectionVector& srdata,const SelectionVector& ssdata, idx_t agg_offset, idx_t count) {
+    ValidityMask &m = result.validity();  // resolves DICTIONARY -> child once; idx is already resolved
+    bool allocated = false;
     for (idx_t i = 0; i < count; ++i) {
         auto idx = srdata.getIndex(i);
         auto row_idx = ssdata.getIndex(i);
         auto row = sdata[row_idx];
-        if (!aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +idx)))
-            result.setInvalid(idx);
+        if (!aggr.finalize_( row + agg_offset, (data_ptr_t)(rdata +idx))) {
+            if (!allocated) { m.ensureWritable(count); allocated = true; }
+            m.setInvalidUnsafe(idx);
+        }
     }
 }
 

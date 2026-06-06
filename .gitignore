@@ -52,3 +52,4 @@ build/
 .cache/
 dist/
 python/_version.py
+benchmarks/files/ldbc/*/

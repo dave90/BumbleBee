@@ -1,0 +1,21 @@
+{
+  "output_folder": "files/ldbc/expected",
+  "input_folder": "files/ldbc/input_duckdb",
+  "result_format": "sql_csv",
+  "previous_comparison": true,
+  "defaults": {
+    "sql_export_csv": true,
+    "timeout": 600,
+    "commands": ["duckdb -c \"$(cat $file)\""]
+  },
+  "tests": [
+    { "test": "IS1", "input_file": "IS1.sql" },
+    { "test": "IS3", "input_file": "IS3.sql" },
+    { "test": "IS7", "input_file": "IS7.sql" },
+    { "test": "IC2", "input_file": "IC2.sql" },
+    { "test": "IC3", "input_file": "IC3.sql" },
+    { "test": "IC8", "input_file": "IC8.sql" },
+    { "test": "REACH", "input_file": "REACH.sql" },
+    { "test": "RCHAIN", "input_file": "RCHAIN.sql" }
+  ]
+}

@@ -210,14 +210,17 @@ void VectorOperations::copy(const Vector &source, Vector &target, const Selectio
 	const bool src_all_valid = srcValidity.allValid();
 	if (!src_all_valid || !target.validity().allValid()) {
 		const SelectionVector *tSel = targetSel ? targetSel : &FlatVector::INCREMENTAL_SELECTION_VECTOR;
+		// target is FLAT; grow its mask once (targetOffset+copyCount = new size, may exceed 1024)
+		ValidityMask &tMask = FlatVector::validity(target);
+		tMask.ensureWritable(targetOffset + copyCount);
 		for (idx_t i = 0; i < copyCount; i++) {
 			auto sourceIdx = sel.getIndex(sourceOffset + i);
 			auto targetIdx = tSel->getIndex(targetOffset + i);
-			const bool src_valid = src_all_valid || srcValidity.rowIsValid(sourceIdx);
-			if (src_valid) {
-				target.setValid(targetIdx);
+			// explicit setValid clears any stale invalid bit from a reused result chunk
+			if (src_all_valid || srcValidity.rowIsValid(sourceIdx)) {
+				tMask.setValidUnsafe(targetIdx);
 			} else {
-				target.setInvalid(targetIdx);
+				tMask.setInvalidUnsafe(targetIdx);
 			}
 		}
 	}
