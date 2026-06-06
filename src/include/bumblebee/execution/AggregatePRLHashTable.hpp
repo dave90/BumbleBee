@@ -74,6 +74,10 @@ public:
     vector<LogicalType> getPayloadsTypes();
 
     void moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes);
+    // Tuple-level merge fast path for fixed-width group keys: copies whole source
+    // tuples for new groups and combines states for matches, avoiding the generic
+    // gather/scatter/init round trip.
+    void moveAndMergeStatesFixed(idx_t count, Vector &addresses, Vector &hashes);
 
 private:
     void findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups);
