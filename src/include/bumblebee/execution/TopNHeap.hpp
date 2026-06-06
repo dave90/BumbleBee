@@ -101,10 +101,9 @@ private:
     // Only valid when prefilterEnabled_.
     uint64_t orderCodeAt(Vector &v, idx_t i) const;
 
-    // True if at least one row in the chunk could enter a full heap (or if the
-    // chunk cannot be cheaply ruled out). When false, no row can beat the
-    // current threshold and the whole chunk can be skipped.
-    bool chunkCanContribute(DataChunk &input) const;
+    // Build sort keys for every row of the chunk and push qualifying rows into
+    // the heap. Assumes the chunk is already flat (normalified).
+    void sinkChunk(DataChunk &chunk);
 
     // return true if we should add the entry
     inline bool shouldAddToHeap(const string_t &sortKey) {
@@ -147,6 +146,7 @@ private:
     // Cached objects
     DataChunk keyStrings_;
     SelectionVector dataToInsert_;
+    SelectionVector candSel_;   // candidate rows surviving the first-column prefilter
 
     bool finalized_{false};
 
