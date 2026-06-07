@@ -220,8 +220,13 @@ void PhysicalOptimizer::findColsAndTypesBuiltin(Atom &atom) {
         BB_ASSERT(left.getType() == VARIABLE);
         BB_ASSERT(right.getType() == CONSTANT);
         BB_ASSERT(!colsMap_.contains(left.getVariable()));
-        // we need to calculate the type of the left side
-        typesMap_[left.getVariable()] = {right.getPhysicalType()};
+        // we need to calculate the type of the left side. A folded constant may
+        // carry an explicit logical type (e.g. DATE/TIMESTAMP from parquet
+        // metadata) that must be preserved so the result formats correctly.
+        if (right.hasExplicitLogicalType())
+            typesMap_[left.getVariable()] = right.getLogicalType();
+        else
+            typesMap_[left.getVariable()] = {right.getPhysicalType()};
         colsMap_[left.getVariable()] = colsMap_.size();
         vars.insert(vars.begin(),left.getVariable());
     }else if (atom.isOrBuiltin() || atom.getBinop() != ASSIGNMENT) {

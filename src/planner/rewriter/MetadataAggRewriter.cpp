@@ -20,6 +20,7 @@
 
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "bumblebee/ClientContext.hpp"
 #include "bumblebee/common/Log.hpp"
@@ -69,7 +70,128 @@ bool MetadataAggRewriter::countRowsFromMetadata(Atom& atom, idx_t& total) {
     }
 }
 
+bool MetadataAggRewriter::minMaxFromMetadata(Atom& scanAtom, const string& aggVar, bool wantMin,
+                                             Value& out, LogicalType& outType) {
+    if (scanAtom.getType() != EXTERNAL) return false;
+    if (scanAtom.getExternalFunctionName() != READ_PARQUET) return false;
+    auto& inputs = scanAtom.getInputValues();
+    if (inputs.size() != 1) return false;
+    string folder = inputs[0].toString();
+    auto& fs = *context_.fileSystem_;
+    try {
+        vector<string> files;
+        if (!StringUtils::hasGlob(folder)) {
+            if (fs.fileExists(folder)) files.push_back(folder);
+            else if (fs.directoryExists(folder)) {
+                auto sep = fs.getFileSeparator();
+                files = fs.glob(folder + sep + "**" + sep + "*.parquet");
+            } else return false;
+        } else {
+            files = fs.glob(folder);
+        }
+        if (files.size() != 1) return false;   // single file only (avoids cross-file merge)
+
+        // Map the aggregate variable to its real parquet column via columns_mapping.
+        string realCol = aggVar;
+        auto& named = scanAtom.getNamedParamters();
+        auto it = named.find("columns_mapping");
+        if (it != named.end()) {
+            auto mapping = StringUtils::parseColMapping(it->second.toString(), {aggVar});
+            auto mit = mapping.find(aggVar);
+            if (mit != mapping.end()) realCol = mit->second;
+        }
+
+        ParquetReader reader(context_, files[0], ParquetOptions{});
+        idx_t colIdx = reader.columnIndex(StringUtils::normalizeColumnName(realCol));
+        if (colIdx == (idx_t)-1) return false;
+        PhysicalType pt;
+        auto stats = ParquetReader::readStatistics(reader, pt, colIdx, reader.getFileMetadata());
+        if (!stats) return false;
+        Value mn, mx;
+        if (!stats->numericMinMax(mn, mx)) return false;   // numeric/temporal columns only
+        out = (wantMin ? mn : mx).clone();
+        outType = reader.columnLogicalType(colIdx);        // logical type (DATE/TIMESTAMP/...)
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+void MetadataAggRewriter::foldMinMax(rules_vector_t& program) {
+    for (auto& rule : program) {
+        if (rule.getHead().size() != 1 || rule.getBody().size() != 1) continue;
+        Atom& agg = rule.getBody()[0];
+        if (agg.getType() != AGGREGATE || agg.hasExplicitGroups()) continue;
+
+        // The aggregate body must be exactly one unfiltered &read_parquet scan.
+        auto& aggBody = agg.getAggsAtoms();
+        if (aggBody.size() != 1) continue;
+        Atom& scan = aggBody[0];
+        if (scan.getType() != EXTERNAL || scan.getExternalFunctionName() != READ_PARQUET) continue;
+
+        // Every aggregate function must be MIN or MAX (COUNT is handled separately).
+        auto& funcs = agg.getAggregateFunctions();
+        if (funcs.empty()) continue;
+        bool allMinMax = true;
+        for (auto f : funcs) if (f != MIN && f != MAX) { allMinMax = false; break; }
+        if (!allMinMax) continue;
+
+        auto& aggTerms = agg.getAggTerms();
+        auto assignTerms = agg.getAssignmentTerms();
+        if (assignTerms.size() != funcs.size() || aggTerms.size() < funcs.size()) continue;
+
+        // The head is rebuilt by matching head variables to assignment-result
+        // variables by name. If two aggregates share an assignment variable
+        // (e.g. MIN and MAX of the same column with no SQL alias) the mapping is
+        // ambiguous, so skip the fold and let the normal aggregate path run.
+        bool uniqueAssign = true;
+        std::unordered_set<string> seenAssign;
+        for (auto& at : assignTerms) {
+            if (at.getType() != VARIABLE || !seenAssign.insert(at.getVariable()).second) {
+                uniqueAssign = false; break;
+            }
+        }
+        if (!uniqueAssign) continue;
+
+        // result var -> (value, logical type)
+        std::unordered_map<string, std::pair<Value, LogicalType>> resultConst;
+        bool ok = true;
+        for (idx_t i = 0; i < funcs.size(); ++i) {
+            if (aggTerms[i].getType() != VARIABLE || assignTerms[i].getType() != VARIABLE) { ok = false; break; }
+            Value v; LogicalType lt;
+            if (!minMaxFromMetadata(scan, aggTerms[i].getVariable(), funcs[i] == MIN, v, lt)) { ok = false; break; }
+            resultConst.emplace(assignTerms[i].getVariable(), std::make_pair(std::move(v), lt));
+        }
+        if (!ok) continue;
+
+        Atom& head = rule.getHead()[0];
+        if (head.getType() != CLASSICAL || !head.getPredicate()) continue;
+        terms_vector_t newTerms;
+        bool hok = true;
+        for (auto& t : head.getTerms()) {
+            if (t.getType() == VARIABLE) {
+                auto rit = resultConst.find(t.getVariable());
+                if (rit == resultConst.end()) { hok = false; break; }
+                Value vcopy = rit->second.first.clone();
+                Term ct(vcopy);
+                ct.setLogicalType(rit->second.second);   // preserve DATE/etc. formatting + typing
+                newTerms.push_back(std::move(ct));
+            } else {
+                newTerms.push_back(t);
+            }
+        }
+        if (!hok) continue;
+
+        Predicate* hp = head.getPredicate();
+        Atom newHead = Atom::createClassicalAtom(hp, std::move(newTerms));
+        rule.getHead().clear();
+        rule.getHead().push_back(std::move(newHead));
+        rule.getBody().clear();
+    }
+}
+
 void MetadataAggRewriter::rewrite(rules_vector_t& program) {
+    foldMinMax(program);
     // Index predicate definitions (in heads) and body uses (classical body
     // atoms and aggregate-body classical atoms). Used to verify the scan
     // predicate is defined once and referenced only by the count rule.

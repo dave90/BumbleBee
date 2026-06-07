@@ -48,6 +48,13 @@ void PredicateTables::addFact(Atom &atom) {
         // inferred from the first non-NULL fact (or defaults to INTEGER if all
         // facts are NULL, see loadFacts).
         if (i < atomTerms.size() && atomTerms[i].isNull()) continue;
+        // A constant carrying an explicit logical type (e.g. a DATE folded from
+        // parquet statistics) sets the column's logical type directly, so output
+        // formatting and downstream typing match the un-folded query.
+        if (i < atomTerms.size() && atomTerms[i].hasExplicitLogicalType()) {
+            types_[i] = atomTerms[i].getLogicalType();
+            continue;
+        }
         if (types[i] == types_[i].getPhysicalType()) continue;
         types_[i] = {getCommonType(types_[i], types[i])};
     }

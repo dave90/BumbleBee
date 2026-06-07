@@ -23,6 +23,8 @@
 namespace bumblebee {
 
 class ClientContext;
+class Value;
+class LogicalType;
 
 // Program-level rewrite that folds a plain COUNT(*) over an unfiltered
 // &read_parquet scan into a constant fact, reading the row count from the
@@ -45,6 +47,14 @@ private:
     // their row counts from metadata. Returns false (and leaves total unset)
     // if the path cannot be resolved or any reader fails.
     bool countRowsFromMetadata(Atom& readParquetAtom, idx_t& total);
+
+    // Fold MIN(col)/MAX(col) over an unfiltered &read_parquet scan into constants
+    // read from parquet column statistics (numeric/temporal columns only). The
+    // folded constant carries the column's logical type so DATE/TIMESTAMP results
+    // format and type exactly as the un-folded query.
+    void foldMinMax(rules_vector_t& program);
+    bool minMaxFromMetadata(Atom& readParquetAtom, const string& aggVar, bool wantMin,
+                            Value& out, LogicalType& outType);
 };
 
 } // namespace bumblebee
