@@ -399,7 +399,14 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
         idx_t newNoMatchCount = 0;
 
         // first figure out if it belongs to a full or empty group
+        constexpr idx_t PREFETCH_DIST = 8;
         for (idx_t i = 0; i < remainingEntries; i++) {
+
+            // Bounded-lookahead prefetch of the directory slot a few iterations
+            // ahead: htEntries[bucket] is a random-access cache miss for large
+            // tables. The directory is stable here (resize happened above).
+            if (i + PREFETCH_DIST < remainingEntries)
+                __builtin_prefetch(((HTEntry64*)hashesPtr_) + bucketsPtr[selVector.getIndex(i + PREFETCH_DIST)], 1, 0);
 
             idx_t index = selVector.getIndex(i);
             auto bucket = bucketsPtr[index];
