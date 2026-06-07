@@ -298,7 +298,12 @@ void PRLHashTable::resize(idx_t size, bool initResize) {
     BB_ASSERT(size != 0 && (size & (size - 1)) == 0); // new size should be power of 2
     BB_ASSERT(resizable_ || initResize);
 
-    auto byteSize =  (size * sizeof(HTEntry64) > Storage::BLOCK_SIZE)? size * sizeof(HTEntry64): Storage::BLOCK_SIZE;
+    // The directory only needs `size` buckets (size * sizeof(HTEntry64) bytes).
+    // Allocate and zero exactly that much instead of rounding up to a full
+    // storage block: small per-partition tables (which grow 256 -> 512 -> 1024
+    // ...) previously memset a whole 256 KiB block on every resize even though
+    // only a few KiB were used, making memset a top hot spot in string GROUP BY.
+    auto byteSize = size * sizeof(HTEntry64);
     auto hashes = bufferManager_.allocate(byteSize);
     auto hashesPtr = hashes->ptr();
     memset(hashesPtr, 0, byteSize);
