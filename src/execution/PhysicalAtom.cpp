@@ -114,10 +114,6 @@ idx_t PhysicalAtom::getMaxThreads() const {
 void PhysicalAtom::setMaxThreads(idx_t threads) const {
 }
 
-idx_t PhysicalAtom::getEstimatedCardinality() const {
-    return getMaxThreads() * MORSEL_SIZE;
-}
-
 bool GlobalPhysicalAtomState::getNextBucket(idx_t &start, idx_t &end, idx_t &current, vector<idx_t> &size) {
     if (current >= size.size()) {
         return false;

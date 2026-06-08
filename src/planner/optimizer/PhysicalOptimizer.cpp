@@ -941,11 +941,8 @@ void PhysicalOptimizer::generateOutputPhysicalAtom(Rule &rule, patom_ptr_t &sink
             BB_ASSERT(function);
             aggFunctions.push_back((AggregateFunction*) function.get());
         }
-        // get source cardinality (upper bound on number of groups) so the
-        // aggregation hash table is pre-sized and avoids repeated resize+rehash.
-        // For parquet this is the exact metadata row count; otherwise a coarse
-        // estimate from the scan's parallelism granularity.
-        auto estimatedSourceCardinality = source->getEstimatedCardinality();
+        // get source cardinality
+        auto estimatedSourceCardinality = source->getMaxThreads() * MORSEL_SIZE;
         ptSink->createPartitionedAggHashTable(aggInfo.groups_, aggInfo.payloads_, aggFunctions, estimatedSourceCardinality);
         if (aggInfo.distinct_)
             ptSink->getPartitionedAggHashTable()->setDistinct();

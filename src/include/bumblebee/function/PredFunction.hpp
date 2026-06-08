@@ -72,11 +72,6 @@ public:
     pred_function_finalize_t finalize_function_;
     pred_function_combine_t combine_function_;
 
-    // Optional: estimate the number of rows the scan will produce (an upper
-    // bound is fine). Used to pre-size downstream hash tables. If null, callers
-    // fall back to a coarse estimate. Same signature as maxThreadFunction_.
-    pred_function_max_threads_t cardinalityFunction_ = nullptr;
-
     // The named parameters of the function
     std::unordered_map<string, PhysicalType> namedParameters_;
 };

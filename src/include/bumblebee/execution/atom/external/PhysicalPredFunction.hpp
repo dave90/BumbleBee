@@ -34,7 +34,6 @@ public:
     ~PhysicalPredFunction() override;
 
     idx_t getMaxThreads() const override;
-    idx_t getEstimatedCardinality() const override;
     bool isSource() const override;
     bool isSink() const override;
 
