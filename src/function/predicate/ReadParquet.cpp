@@ -26,6 +26,7 @@ idx_t ReadParquetData::getMaxThread() {
 	ParquetOptions options;
 
 	filesToProcess_.clear();
+	totalRows_ = 0;
 	for (idx_t fileIdx = 0; fileIdx < files_.size(); ++fileIdx) {
 		ParquetReader reader(context_, files_[fileIdx], options);
 		auto metadata = reader.getFileMetadata();
@@ -35,6 +36,7 @@ idx_t ReadParquetData::getMaxThread() {
 
 		for (idx_t rgIdx = 0; rgIdx < metadata->row_groups.size(); ++rgIdx) {
 			const auto rows = metadata->row_groups[rgIdx].num_rows;
+			totalRows_ += rows;
 
 			// If adding this group would exceed the morsel and we already have something, flush.
 			if (currentRows > 0 && currentRows + rows > MORSEL_SIZE) {
@@ -54,6 +56,12 @@ idx_t ReadParquetData::getMaxThread() {
 	}
 
 	return filesToProcess_.size();
+}
+
+idx_t ReadParquetData::getTotalRows() {
+	if (totalRows_ == 0)
+		getMaxThread(); // populates totalRows_ from metadata
+	return totalRows_;
 }
 
 
@@ -171,6 +179,13 @@ static idx_t readParquetMaxThread(ClientContext &context, const FunctionData *bi
 	return bind_data.getMaxThread();
 }
 
+static idx_t readParquetCardinality(ClientContext &context, const FunctionData *bind_data_p) {
+	auto &bind_data = (ReadParquetData &)*bind_data_p;
+	// Exact row count from parquet metadata: a precise upper bound on the number
+	// of groups for a downstream aggregation, so its hash table is sized once.
+	return bind_data.getTotalRows();
+}
+
 static void readParquetFunction(ClientContext &context, const FunctionData *bind_data_p,
 									 FunctionOperatorData *operator_state, DataChunk *input, DataChunk &output) {
 	auto &bind_data = (ReadParquetData &)*bind_data_p;
@@ -228,6 +243,7 @@ string ReadParquetFunc::getName() {
 function_ptr_t ReadParquetFunc::createFunction(const vector<LogicalType> &type) {
 	string name = getName();
 	function_ptr_t fun = function_ptr_t(new PredFunction( name, {PhysicalType::STRING}, readParquetFunction, readParquetBind, readParquetInit, readParquetMaxThread, nullptr, nullptr));
+	((PredFunction&)*fun).cardinalityFunction_ = readParquetCardinality;
 	readParquetAddNamedParameters((PredFunction&)*fun);
 	return fun;
 }

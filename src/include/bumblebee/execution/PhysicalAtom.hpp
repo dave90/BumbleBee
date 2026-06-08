@@ -105,6 +105,11 @@ public:
 	virtual idx_t getMaxThreads() const;
 	virtual void setMaxThreads(idx_t threads) const;
 
+	// Estimated number of output rows (upper bound acceptable). Used to pre-size
+	// downstream structures (e.g. aggregation hash tables). The base value is a
+	// coarse estimate from the parallelism granularity.
+	virtual idx_t getEstimatedCardinality() const;
+
 	virtual bool isSource() const;
 	virtual bool isSink() const;
 	virtual string getName() const;

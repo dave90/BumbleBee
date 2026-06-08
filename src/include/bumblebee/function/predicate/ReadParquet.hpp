@@ -66,10 +66,15 @@ struct ReadParquetData : public FunctionData {
     atomic<idx_t> nextFileToProcess_{0};
     vector<ReadParquetDataChunk> filesToProcess_;
 
+    // Total rows across all files, summed from parquet metadata by getMaxThread.
+    idx_t totalRows_{0};
+
     string extension_ = ".parquet";
 
     //Return the max thread to read the csv
     idx_t getMaxThread();
+    // Total row count across all files (from metadata); computes it if needed.
+    idx_t getTotalRows();
     // return the chunk to read for a thread
     ReadParquetDataChunk getNextChunksToRead();
 };

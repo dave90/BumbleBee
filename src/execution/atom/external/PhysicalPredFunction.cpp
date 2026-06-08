@@ -60,6 +60,14 @@ idx_t PhysicalPredFunction::getMaxThreads() const {
     return predFunction_->maxThreadFunction_(context_, bindData_.get());
 }
 
+idx_t PhysicalPredFunction::getEstimatedCardinality() const {
+    // Prefer a real row-count estimate (e.g. from parquet metadata) when the
+    // function provides one; otherwise fall back to the coarse base estimate.
+    if (predFunction_->cardinalityFunction_)
+        return predFunction_->cardinalityFunction_(context_, bindData_.get());
+    return PhysicalAtom::getEstimatedCardinality();
+}
+
 bool PhysicalPredFunction::isSource() const {
     return true;
 }
