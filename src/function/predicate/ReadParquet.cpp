@@ -137,14 +137,38 @@ static function_data_ptr_t readParquetBind(ClientContext &context,
 		returnTypes.push_back(result->reader_->returnTypes_[col]);
 	}
 
+	// Build the scan layout: the distinct file columns in first-use order. The
+	// scan chunk holds only these, and outputMap_ projects them to the output
+	// positions (handling a column requested more than once without reading the
+	// same file column twice, which would double-advance its reader).
+	result->scanCols_.clear();
+	result->outputMap_.clear();
+	result->scanTypes_.clear();
+	for (auto col : result->cols_) {
+		idx_t pos = result->scanCols_.size();
+		for (idx_t i = 0; i < result->scanCols_.size(); ++i)
+			if (result->scanCols_[i] == col) { pos = i; break; }
+		if (pos == result->scanCols_.size()) {
+			result->scanCols_.push_back(col);
+			result->scanTypes_.push_back(result->reader_->returnTypes_[col]);
+		}
+		result->outputMap_.push_back(pos);
+	}
+
 	if (!filters.filters_.empty()) {
 		result->filters_ = table_filter_set_ptr_t(new TableFilterSet());
-		// index of the table filter is based on the column name passed in name, we need to find the real index
+		// the table filter index refers to the output name position; remap it to
+		// the column's position in the scan chunk (scanCols_)
 		for (auto& [idx, filter]:filters.filters_) {
 			BB_ASSERT(idx < names.size());
 			auto realName = columnMapping[names[idx]];
 			auto realIdx = result->reader_->colNormalizedIdx_[realName];
-			result->filters_->pushFilter(realIdx, std::move(filter));
+			for (idx_t p = 0; p < result->scanCols_.size(); ++p) {
+				if (result->scanCols_[p] == realIdx) {
+					result->filters_->pushFilter(p, std::move(filter));
+					break;
+				}
+			}
 		}
 	}
 
@@ -186,31 +210,25 @@ static void readParquetFunction(ClientContext &context, const FunctionData *bind
 		for (idx_t i=data.filesToProcess_.groupStart_;i<=data.filesToProcess_.groupEnd_;++i)
 			groups.push_back(i);
 
-		// set the non-needed columns to COLUMN_IDENTIFIER_ROW_ID
-		vector<idx_t> colIdx;
-		std::unordered_set colsSet(bind_data.cols_.begin(), bind_data.cols_.end());
-		for (idx_t i=0;i<reader->names_.size();++i) {
-			if (colsSet.contains(i))
-				colIdx.emplace_back(i);
-			else
-				colIdx.push_back(COLUMN_IDENTIFIER_ROW_ID);
-		}
-		reader->initializeScan(data.readerState_, colIdx, groups, bind_data.filters_.get());
-		data.readChunk_.initialize(reader->returnTypes_);
+		// scan only the selected file columns: the scan chunk has one vector per
+		// scanCols_ entry, so per-chunk setup/slice/reset don't touch the file
+		// columns the query never reads
+		reader->initializeScan(data.readerState_, bind_data.scanCols_, groups, bind_data.filters_.get());
+		data.readChunk_.initialize(bind_data.scanTypes_);
 		data.initialized_ = true;
 	}
 
 	reader->scan(data.readerState_, data.readChunk_);
 
-	output.reference(data.readChunk_, bind_data.cols_);
+	output.reference(data.readChunk_, bind_data.outputMap_);
 
 	if (output.getSize() == 0 ) {
 		// exhausted
 		data.finished_ = true;
 		data.readChunk_.data_.clear();
 	}else {
-		// data.readChunk_.reset();
-		data.readChunk_.reset(bind_data.cols_);
+		// every column of the (narrow) scan chunk is selected, reset them all
+		data.readChunk_.reset();
 	}
 
 }
