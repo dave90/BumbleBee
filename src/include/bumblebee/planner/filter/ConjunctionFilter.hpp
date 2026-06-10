@@ -46,6 +46,11 @@ public:
     FilterPropagateResult checkStatistics(BaseStatistics &stats) override;
     string toString(const string &column_name) override;
     bool equals(const TableFilter &other) const override;
+    // AND combination: every child may clear additional bits.
+    void filterRows(Vector &v, idx_t count, std::bitset<STANDARD_VECTOR_SIZE> &mask) override {
+        for (auto &child : childFilters_)
+            child->filterRows(v, count, mask);
+    }
 };
 
 

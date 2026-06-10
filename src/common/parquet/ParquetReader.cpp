@@ -468,6 +468,11 @@ bool ParquetReader::scanInternal(ParquetReaderScanState &state, DataChunk &resul
 			root_reader->getChildReader(file_col_idx)
 			    ->read(result.getSize(), filter_mask, define_ptr, repeat_ptr, result.data_[filter_col.first]);
 
+			// evaluate the filter on the freshly decoded values: rows that
+			// provably fail clear their mask bit, so the remaining columns can
+			// skip decoding them and the chunk is sliced before leaving the scan
+			filter_col.second->filterRows(result.data_[filter_col.first], this_output_chunk_rows, filter_mask);
+
 			need_to_read[filter_col.first] = false;
 
 		}

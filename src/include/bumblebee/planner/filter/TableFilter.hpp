@@ -17,9 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <bitset>
 #include <cstdint>
 #include <unordered_map>
 
+#include "bumblebee/common/Constants.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
 #include "bumblebee/storage/statistics/BaseStatistics.hpp"
 
@@ -27,6 +29,7 @@ namespace bumblebee{
 
 
 class BaseStatistics;
+class Vector;
 
 enum class TableFilterType : std::uint8_t {
     CONSTANT_COMPARISON = 0, // constant comparison (e.g. =C, >C, >=C, <C, <=C)
@@ -52,6 +55,14 @@ public:
     virtual string toString(const string &column_name) = 0;
     virtual bool equals(const TableFilter &other) const {
         return filterType_ != other.filterType_;
+    }
+
+    // Row-level evaluation at the scan: clear mask bits for rows of `v` (flat,
+    // already decoded) that PROVABLY fail the filter. Implementations must be
+    // conservative — a bit may only be cleared when the downstream pipeline
+    // filter would also reject the row (so NULLs and any uncertain case keep
+    // their bit set and are left to the pipeline). The default keeps all rows.
+    virtual void filterRows(Vector &v, idx_t count, std::bitset<STANDARD_VECTOR_SIZE> &mask) {
     }
 };
 
