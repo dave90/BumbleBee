@@ -121,6 +121,16 @@ protected:
 		return maxDefine_ > 0;
 	}
 
+	// True when no value in defines[offset, offset+count) is NULL (i.e. every
+	// definition level equals the column maximum). Lets decode loops take a
+	// branch-free batch path for the common all-valid case.
+	bool allDefined(const uint8_t *defines, idx_t offset, idx_t count) {
+		if (!hasDefines()) return true;
+		for (idx_t i = 0; i < count; i++)
+			if (defines[i + offset] != maxDefine_) return false;
+		return true;
+	}
+
 	bool hasRepeats() {
 		return maxRepeat_ > 0;
 	}

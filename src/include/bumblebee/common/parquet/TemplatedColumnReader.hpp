@@ -21,6 +21,8 @@
 #include "ColumnReader.hpp"
 #include "bumblebee/common/Limits.hpp"
 
+#include <type_traits>
+
 namespace bumblebee{
 
 
@@ -63,6 +65,19 @@ public:
 		BB_ASSERT(result.getVectorType() == VectorType::FLAT_VECTOR);
 		auto result_ptr = FlatVector::getData<VALUE_TYPE>(result);
 
+		if constexpr (std::is_same_v<VALUE_CONVERSION, TemplatedParquetValueConversion<VALUE_TYPE>>) {
+			// Fast path for plain fixed-width dictionary values: when the batch has
+			// no NULLs and no row is filtered out, the per-row loop below
+			// degenerates to a branch-free dictionary gather. Only valid for the
+			// trivial conversion, whose dictRead is exactly dict[offset].
+			if (filter.all() && allDefined(defines, result_offset, num_values)) {
+				auto dict_ptr = (VALUE_TYPE *)dict_->ptr_;
+				for (idx_t i = 0; i < num_values; i++)
+					result_ptr[i + result_offset] = dict_ptr[offsets[i]];
+				return;
+			}
+		}
+
 		idx_t offset_idx = 0;
 		for (idx_t row_idx = 0; row_idx < num_values; row_idx++) {
 			if (hasDefines() && defines[row_idx + result_offset] != maxDefine_) {
@@ -86,6 +101,19 @@ public:
 	void plain(std::shared_ptr<ByteBuffer> plain_data, uint8_t *defines, uint64_t num_values, parquet_filter_t &filter,
 	           idx_t result_offset, Vector &result) override {
 		auto result_ptr = FlatVector::getData<VALUE_TYPE>(result);
+
+		if constexpr (std::is_same_v<VALUE_CONVERSION, TemplatedParquetValueConversion<VALUE_TYPE>>) {
+			// Fast path for plain fixed-width values: with no NULLs and no filtered
+			// rows, the per-row read<T> loop is a straight buffer copy. copy_to/inc
+			// perform the same bounds check the per-value reads would.
+			if (filter.all() && allDefined(defines, result_offset, num_values)) {
+				const uint64_t bytes = num_values * sizeof(VALUE_TYPE);
+				plain_data->copy_to((char *)(result_ptr + result_offset), bytes);
+				plain_data->inc(bytes);
+				return;
+			}
+		}
+
 		for (idx_t row_idx = 0; row_idx < num_values; row_idx++) {
 			if (hasDefines() && defines[row_idx + result_offset] != maxDefine_) {
 				// NULL: a definition level below the column max means the value is
