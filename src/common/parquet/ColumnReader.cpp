@@ -178,28 +178,50 @@ void ColumnReader::prepareRead(parquet_filter_t &filter) {
 void ColumnReader::preparePage(idx_t compressed_page_size, idx_t uncompressed_page_size) {
 	auto &trans = (ThriftFileTransport &)*protocol_->getTransport();
 
-	block_ = std::make_shared<ResizeableBuffer>(reader_.allocator_, compressed_page_size + 1);
-	trans.read((uint8_t *)block_->ptr_, compressed_page_size);
+	// Decompressing every page into a freshly allocated buffer faults in a new
+	// OS page every 4 KiB of output -> millions of minor page faults dominate
+	// scan system time and serialize threads. Reuse buffers across pages so
+	// their pages stay resident:
+	//  - the compressed read buffer is pure transient input to the decompressor
+	//    (never referenced afterwards) so it is always reused;
+	//  - the decompressed buffer is referenced zero-copy by string columns, so
+	//    it is only reused when no output chunk still holds it (use_count == 1);
+	//    otherwise a fresh buffer is allocated, preserving the referenced data.
+	if (chunk_->meta_data.codec == CompressionCodec::UNCOMPRESSED) {
+		// uncompressed: the read buffer is the data buffer (referenced) -> guard
+		if (block_ && block_.use_count() == 1) {
+			block_->resize(reader_.allocator_, compressed_page_size + 1);
+		} else {
+			block_ = std::make_shared<ResizeableBuffer>(reader_.allocator_, compressed_page_size + 1);
+		}
+		trans.read((uint8_t *)block_->ptr_, compressed_page_size);
+		return;
+	}
+
+	compressedBuffer_.resize(reader_.allocator_, compressed_page_size + 1);
+	trans.read((uint8_t *)compressedBuffer_.ptr_, compressed_page_size);
 
 	std::shared_ptr<ResizeableBuffer> unpacked_block;
-	if (chunk_->meta_data.codec != CompressionCodec::UNCOMPRESSED) {
+	if (block_ && block_.use_count() == 1) {
+		// safe to reuse: no live output chunk references the previous page
+		block_->resize(reader_.allocator_, uncompressed_page_size + 1);
+		unpacked_block = block_;
+	} else {
 		unpacked_block = std::make_shared<ResizeableBuffer>(reader_.allocator_, uncompressed_page_size + 1);
 	}
 
 	switch (chunk_->meta_data.codec) {
-	case CompressionCodec::UNCOMPRESSED:
-		break;
 	case CompressionCodec::GZIP: {
 		MiniZStream s;
 
-		s.decompress((const char *) block_->ptr_, compressed_page_size, (char *)unpacked_block->ptr_,
+		s.decompress((const char *) compressedBuffer_.ptr_, compressed_page_size, (char *)unpacked_block->ptr_,
 		             uncompressed_page_size);
 		block_ = std::move(unpacked_block);
 
 		break;
 	}
 	case CompressionCodec::SNAPPY: {
-		auto res = snappy::RawUncompress((const char *)block_->ptr_, compressed_page_size, (char *)unpacked_block->ptr_);
+		auto res = snappy::RawUncompress((const char *)compressedBuffer_.ptr_, compressed_page_size, (char *)unpacked_block->ptr_);
 		if (!res) {
 			ErrorHandler::errorGeneric("Decompression failure");
 		}
@@ -208,7 +230,7 @@ void ColumnReader::preparePage(idx_t compressed_page_size, idx_t uncompressed_pa
 	}
 	case CompressionCodec::ZSTD: {
 		auto res = ZSTD_decompress((char *)unpacked_block->ptr_, uncompressed_page_size,
-		                                        (const char *)block_->ptr_, compressed_page_size);
+		                                        (const char *)compressedBuffer_.ptr_, compressed_page_size);
 		if (ZSTD_isError(res) || res != (size_t)uncompressed_page_size) {
 			ErrorHandler::errorGeneric("ZSTD Decompression failure");
 		}

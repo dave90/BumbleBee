@@ -158,6 +158,8 @@ private:
 	idx_t chunkReadOffset_;
 
 	std::shared_ptr<ResizeableBuffer> block_;
+	// reused per-page compressed read buffer (transient decompressor input)
+	ResizeableBuffer compressedBuffer_;
 
 	ResizeableBuffer offsetBuffer_;
 
