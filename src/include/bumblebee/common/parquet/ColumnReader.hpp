@@ -147,8 +147,18 @@ protected:
 
 private:
 	void prepareRead(parquet_filter_t &filter);
-	void preparePage(idx_t compressed_page_size, idx_t uncompressed_page_size);
+	void preparePage(idx_t compressed_page_size, idx_t uncompressed_page_size, bool poolable);
 	void prepareDataPage(PageHeader &page_hdr);
+
+	// Acquire a decompressed-page buffer from the reader-local pool, reusing one
+	// no longer referenced by any live output chunk (use_count == 1) instead of
+	// allocating a fresh one. Data pages are referenced zero-copy by string
+	// columns, so a single block_ slot cannot be reused while a chunk still holds
+	// the previous page; without a pool every page hits malloc/free of a buffer
+	// above glibc's mmap threshold, so each page faults in fresh zero pages and
+	// the per-mm kernel lock on mmap/munmap serializes scan threads. Recycling a
+	// small set of buffers keeps their pages resident and avoids that churn.
+	std::shared_ptr<ResizeableBuffer> acquireDecompressed(idx_t size);
 
 	const bumblebee::format::ColumnChunk *chunk_;
 
@@ -160,6 +170,12 @@ private:
 	std::shared_ptr<ResizeableBuffer> block_;
 	// reused per-page compressed read buffer (transient decompressor input)
 	ResizeableBuffer compressedBuffer_;
+
+	// Pool of decompressed data-page buffers recycled across pages (see
+	// acquireDecompressed). Dictionary-page buffers are not pooled (one per row
+	// group, moved into dict_), so this only holds the small working set of
+	// per-page buffers in flight for this column.
+	std::vector<std::shared_ptr<ResizeableBuffer>> decompressedPool_;
 
 	ResizeableBuffer offsetBuffer_;
 

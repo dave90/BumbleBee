@@ -22,6 +22,37 @@
 #include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee{
+
+void AggregatePRLHashTable::internalizeStrings(Vector &payload, idx_t count) {
+    if (count == 0 || payload.getType() != PhysicalType::STRING)
+        return;
+    // flatten so we can rewrite the string_t entries in place
+    payload.normalify(count);
+    auto data = FlatVector::getData<string_t>(payload);
+
+    idx_t entry_sizes[STANDARD_VECTOR_SIZE];
+    data_ptr_t locations[STANDARD_VECTOR_SIZE];
+    bool any = false;
+    for (idx_t i = 0; i < count; i++) {
+        entry_sizes[i] = 0;
+        // NULL and inlined (<= prefix) strings carry their bytes in the string_t
+        // itself, so they need no external storage and stay valid as-is.
+        if (payload.rowIsValid(i) && !data[i].isInlined()) {
+            entry_sizes[i] = data[i].size();
+            any = true;
+        }
+    }
+    if (!any) return;
+
+    stringHeap_->build(count, locations, entry_sizes);
+    for (idx_t i = 0; i < count; i++) {
+        if (entry_sizes[i] == 0) continue;
+        const idx_t sz = data[i].size();
+        memcpy(locations[i], data[i].getDataUnsafe(), sz);
+        data[i] = string_t((const char *)locations[i], (uint32_t)sz);
+    }
+}
+
 AggregatePRLHashTable::AggregatePRLHashTable(BufferManager &manager, const vector<LogicalType> &types,
     idx_t capacity, bool resizable, const vector<AggregateFunction *> &functions): PRLHashTable(manager, types, capacity, resizable), functions_(functions) {
     layout_.initialize(types, functions);
@@ -49,9 +80,13 @@ void AggregatePRLHashTable::addChunk(Vector &hash, DataChunk &groups, DataChunk 
     // init the states (initStates already iterates all aggregate functions via layout)
     AggregateFunction::initStates(layout_, addresses, newGroupsSel, newGroupCount);
 
-    // now update the states
-    for (id_t i = 0;i<functions_.size();++i)
+    // now update the states. Internalize string payloads first so string
+    // aggregate states reference heap memory owned by this table, not the
+    // transient scan/decode buffer the payload points into.
+    for (id_t i = 0;i<functions_.size();++i) {
+        internalizeStrings(payload.data_[i], payload.getSize());
         AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
+    }
 
 }
 
@@ -76,9 +111,11 @@ void AggregatePRLHashTable::addChunk(DataChunk &payload) {
     auto val = Value((uint64_t)payloadPtrs_.back());
     addresses.reference(val);
     BB_ASSERT(addresses.getVectorType() == VectorType::CONSTANT_VECTOR);
-    // update the payload with the first state
-    for (id_t i = 0;i<functions_.size();++i)
+    // update the payload with the first state (internalize strings first, see above)
+    for (id_t i = 0;i<functions_.size();++i) {
+        internalizeStrings(payload.data_[i], payload.getSize());
         AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
+    }
 }
 
 void AggregatePRLHashTable::moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes) {

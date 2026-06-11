@@ -84,6 +84,12 @@ private:
     // Helper for scanWithAggregates: builds addresses and gathers group values
     idx_t scanEntries(idx_t offset, DataChunk &groups, Vector &addresses, idx_t size);
 
+    // Copy a string payload's (non-inlined) values into this table's stringHeap_
+    // and repoint the vector at the copies, so string aggregate states (MIN/MAX)
+    // that keep a shallow string_t reference point at heap memory owned and
+    // merged by this table rather than at the transient scan/decode buffer.
+    void internalizeStrings(Vector &payload, idx_t count);
+
     // Aggregates functions
     vector<AggregateFunction*> functions_;
 };
