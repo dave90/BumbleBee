@@ -226,6 +226,15 @@ static void readParquetFunction(ClientContext &context, const FunctionData *bind
 		// exhausted
 		data.finished_ = true;
 		data.readChunk_.data_.clear();
+		// Release this morsel's reader as soon as it is drained. The column readers
+		// own the decompressed parquet page buffers (one ~page-sized buffer per
+		// scanned column), which are no longer referenced once the output chunk
+		// above has been cleared. Holding them until the whole pipeline tears down
+		// makes scan memory grow with the number of row groups (one morsel each);
+		// freeing here bounds it to the morsels actively being scanned.
+		data.readerState_.rootReader_.reset();
+		data.readerState_.fileHandle_.reset();
+		data.readerState_.thriftFileProto_.reset();
 	}else {
 		// every column of the (narrow) scan chunk is selected, reset them all
 		data.readChunk_.reset();
