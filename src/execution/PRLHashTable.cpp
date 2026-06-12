@@ -303,8 +303,15 @@ void PRLHashTable::resize(idx_t size, bool initResize) {
     // storage block: small per-partition tables (which grow 256 -> 512 -> 1024
     // ...) previously memset a whole 256 KiB block on every resize even though
     // only a few KiB were used, making memset a top hot spot in string GROUP BY.
+    // The block buffer manager requires every managed buffer to be at least one
+    // storage block, so floor the allocation at BLOCK_SIZE while still zeroing only
+    // the bytes the directory actually uses (`byteSize`) - this keeps the memset
+    // optimization above for small tables without violating that invariant. For
+    // directories larger than a block (the common case for big GROUP BYs) the
+    // allocation is unchanged.
     auto byteSize = size * sizeof(HTEntry64);
-    auto hashes = bufferManager_.allocate(byteSize);
+    auto allocSize = maxValue<idx_t>(byteSize, (idx_t)Storage::BLOCK_SIZE);
+    auto hashes = bufferManager_.allocate(allocSize);
     auto hashesPtr = hashes->ptr();
     memset(hashesPtr, 0, byteSize);
 
