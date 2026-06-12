@@ -26,6 +26,11 @@ AllocatedData::AllocatedData(Allocator &allocator, data_ptr_t pointer, idx_t all
 }
 
 AllocatedData::~AllocatedData() {
+    // Free the underlying allocation. Without this, every owner that relies on
+    // destruction (ResizeableBuffer on resize/destroy - i.e. every decompressed
+    // parquet page buffer) leaked its memory until process exit, so scan RSS grew
+    // with the number of row groups read instead of the working set.
+    reset();
 }
 
 void AllocatedData::reset() {
