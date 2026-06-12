@@ -83,6 +83,14 @@ void PartitionedAggHT::initialize(DataChunk &chunk) {
             BB_ASSERT(col < types_.size());
             groupColsType_.push_back(types_[col]);
         }
+        // Does any aggregate keep variable-length (heap-referencing) state? Only
+        // string-valued aggregates (MIN/MAX over VARCHAR) store a string_t that
+        // points into the local HT's string heap; for those we must carry that
+        // heap over when combining thread-local HTs. A STRING payload column is a
+        // safe superset of that condition.
+        aggStateVarlen_ = false;
+        for (auto& t : payloadColsType_)
+            if (t.getPhysicalType() == PhysicalType::STRING) { aggStateVarlen_ = true; break; }
     }
     initialized_ = true;
 }
@@ -230,9 +238,18 @@ void PartitionedAggHT::combineLocalHt(agg_ht_ptr_t localHt) {
 
     // Transfer string heap from local HT to each partition that received entries,
     // so aggregate states referencing variable-length data remain valid.
-    for (idx_t p = 0; p < partitions_; ++p) {
-        if (pAggHts_[p])
-            pAggHts_[p]->mergeStringHeap(*localHt);
+    //
+    // Group-key strings are re-scattered into each partition's own heap by
+    // moveAndMergeStates (generic path), so the local heap's copy of them is dead
+    // weight after the merge. Only variable-length aggregate *state* (string
+    // MIN/MAX) still points into the local heap. When no such state exists, skip
+    // the merge entirely and let the local heap be freed with the local HT - this
+    // avoids retaining a full duplicate of every distinct key string.
+    if (aggStateVarlen_) {
+        for (idx_t p = 0; p < partitions_; ++p) {
+            if (pAggHts_[p])
+                pAggHts_[p]->mergeStringHeap(*localHt);
+        }
     }
 }
 
