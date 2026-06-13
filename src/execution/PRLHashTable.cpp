@@ -411,7 +411,7 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
         idx_t newNoMatchCount = 0;
 
         // first figure out if it belongs to a full or empty group
-        constexpr idx_t PREFETCH_DIST = 8;
+        constexpr idx_t PREFETCH_DIST = 32;
         for (idx_t i = 0; i < remainingEntries; i++) {
 
             // Bounded-lookahead prefetch of the directory slot a few iterations

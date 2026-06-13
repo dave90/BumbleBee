@@ -166,7 +166,7 @@ void AggregatePRLHashTable::moveAndMergeStatesFixed(idx_t count, Vector &address
         // hash and is the dominant cache miss when merging large HTs. Pull the
         // bucket for a later iteration into cache while we work on this one. The
         // pre-resize above keeps bitmask_/htEntries stable for the whole loop.
-        constexpr idx_t PREFETCH_DIST = 8;
+        constexpr idx_t PREFETCH_DIST = 32;
         if (i + PREFETCH_DIST < count)
             __builtin_prefetch(&htEntries[hashPtrs[i + PREFETCH_DIST] & bitmask_], 1, 0);
         auto src = srcPtrs[i];
