@@ -31,6 +31,10 @@ struct ColModifier {
 struct TopNEntry {
     string_t sortKey_;
     idx_t index_;
+    // Monotonic order-code of the first sort column (see TopNHeap::orderCodeAt),
+    // cached so the sink can cheaply skip chunks that cannot beat the threshold.
+    uint64_t firstCode_{0};
+    bool firstValid_{false};
 
     string toString() const {
         string result = "STRING: ";
@@ -92,6 +96,15 @@ private:
         return maxValue<idx_t>(MORSEL_SIZE, 2ULL * heapSize_);
     }
 
+    // Monotonic encoding of the first sort column at row i of a flat vector:
+    // a smaller code sorts earlier (i.e. is "better") under the column's order.
+    // Only valid when prefilterEnabled_.
+    uint64_t orderCodeAt(Vector &v, idx_t i) const;
+
+    // Build sort keys for every row of the chunk and push qualifying rows into
+    // the heap. Assumes the chunk is already flat (normalified).
+    void sinkChunk(DataChunk &chunk);
+
     // return true if we should add the entry
     inline bool shouldAddToHeap(const string_t &sortKey) {
         if (heap_.size() < heapSize_) {
@@ -122,12 +135,18 @@ private:
     vector<LogicalType> sortColTypes_;
     idx_t heapSize_;
 
+    // First-sort-column prefilter configuration (set in the constructor).
+    bool prefilterEnabled_{false};   // first sort col is a supported integer type
+    bool desc0_{false};              // first sort col is DESC
+    PhysicalType firstColPhysType_{PhysicalType::UNKNOWN};
+
     DataChunk heapData_;
     DataChunk heapPayload_;
 
     // Cached objects
     DataChunk keyStrings_;
     SelectionVector dataToInsert_;
+    SelectionVector candSel_;   // candidate rows surviving the first-column prefilter
 
     bool finalized_{false};
 

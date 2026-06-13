@@ -22,6 +22,37 @@
 #include "bumblebee/function/AggregateFunction.hpp"
 
 namespace bumblebee{
+
+void AggregatePRLHashTable::internalizeStrings(Vector &payload, idx_t count) {
+    if (count == 0 || payload.getType() != PhysicalType::STRING)
+        return;
+    // flatten so we can rewrite the string_t entries in place
+    payload.normalify(count);
+    auto data = FlatVector::getData<string_t>(payload);
+
+    idx_t entry_sizes[STANDARD_VECTOR_SIZE];
+    data_ptr_t locations[STANDARD_VECTOR_SIZE];
+    bool any = false;
+    for (idx_t i = 0; i < count; i++) {
+        entry_sizes[i] = 0;
+        // NULL and inlined (<= prefix) strings carry their bytes in the string_t
+        // itself, so they need no external storage and stay valid as-is.
+        if (payload.rowIsValid(i) && !data[i].isInlined()) {
+            entry_sizes[i] = data[i].size();
+            any = true;
+        }
+    }
+    if (!any) return;
+
+    stringHeap_->build(count, locations, entry_sizes);
+    for (idx_t i = 0; i < count; i++) {
+        if (entry_sizes[i] == 0) continue;
+        const idx_t sz = data[i].size();
+        memcpy(locations[i], data[i].getDataUnsafe(), sz);
+        data[i] = string_t((const char *)locations[i], (uint32_t)sz);
+    }
+}
+
 AggregatePRLHashTable::AggregatePRLHashTable(BufferManager &manager, const vector<LogicalType> &types,
     idx_t capacity, bool resizable, const vector<AggregateFunction *> &functions): PRLHashTable(manager, types, capacity, resizable), functions_(functions) {
     layout_.initialize(types, functions);
@@ -49,9 +80,13 @@ void AggregatePRLHashTable::addChunk(Vector &hash, DataChunk &groups, DataChunk 
     // init the states (initStates already iterates all aggregate functions via layout)
     AggregateFunction::initStates(layout_, addresses, newGroupsSel, newGroupCount);
 
-    // now update the states
-    for (id_t i = 0;i<functions_.size();++i)
+    // now update the states. Internalize string payloads first so string
+    // aggregate states reference heap memory owned by this table, not the
+    // transient scan/decode buffer the payload points into.
+    for (id_t i = 0;i<functions_.size();++i) {
+        internalizeStrings(payload.data_[i], payload.getSize());
         AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
+    }
 
 }
 
@@ -76,12 +111,26 @@ void AggregatePRLHashTable::addChunk(DataChunk &payload) {
     auto val = Value((uint64_t)payloadPtrs_.back());
     addresses.reference(val);
     BB_ASSERT(addresses.getVectorType() == VectorType::CONSTANT_VECTOR);
-    // update the payload with the first state
-    for (id_t i = 0;i<functions_.size();++i)
+    // update the payload with the first state (internalize strings first, see above)
+    for (id_t i = 0;i<functions_.size();++i) {
+        internalizeStrings(payload.data_[i], payload.getSize());
         AggregateFunction::updateStates(layout_, addresses,payload.data_[i],payload.getSize(), i );
+    }
 }
 
 void AggregatePRLHashTable::moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes) {
+    if (count == 0) return;
+
+    // Fast path: fixed-width group keys -> merge at the tuple level. A new group is
+    // a single whole-tuple memcpy; a match combines states. The validity prefix sits
+    // at offset 0 (inside the compared key region) and NULL keys carry a canonical
+    // sentinel value, so memcmp of the key region is exact. Avoids the generic
+    // gather/scatter/init round trip that dominates high-cardinality combines.
+    if (layout_.allConstant() && !types_.empty()) {
+        moveAndMergeStatesFixed(count, addresses, hashes);
+        return;
+    }
+
     SelectionVector newGroupsSel(count);
     idx_t newGroupsCount = 0;
     auto groupAddresses = move(addresses, hashes, count, &newGroupsSel, newGroupsCount);
@@ -92,6 +141,66 @@ void AggregatePRLHashTable::moveAndMergeStates(idx_t count, Vector &addresses, V
 
     AggregateFunction::combineStates(layout_, addresses, groupAddresses, FlatVector::INCREMENTAL_SELECTION_VECTOR, count);
 
+}
+
+void AggregatePRLHashTable::moveAndMergeStatesFixed(idx_t count, Vector &addresses, Vector &hashes) {
+    // Ensure capacity for up to `count` brand-new groups so the probe below never
+    // needs to resize mid-loop (which would invalidate the directory pointer).
+    while (entries_ + count >= capacity_ ||
+           (float)(entries_ + count) / (float)capacity_ > LOAD_FACTOR) {
+        resize(capacity_ * 2);
+    }
+
+    auto srcPtrs = FlatVector::getData<data_ptr_t>(addresses);
+    auto hashPtrs = FlatVector::getData<hash_t>(hashes);
+    auto htEntries = (HTEntry64 *)hashesPtr_;
+    auto &offsets = layout_.getOffsets();
+    auto &aggregates = layout_.getAggregates();
+    const idx_t aggBase = layout_.columnCount();
+    // Key region = validity prefix (offset 0) + packed fixed-width group columns.
+    const idx_t keyEnd = offsets[types_.size() - 1] +
+                         getPhysicalTypeSize(types_[types_.size() - 1].getPhysicalType());
+
+    for (idx_t i = 0; i < count; ++i) {
+        // Software prefetch: the directory read below is a random access keyed by
+        // hash and is the dominant cache miss when merging large HTs. Pull the
+        // bucket for a later iteration into cache while we work on this one. The
+        // pre-resize above keeps bitmask_/htEntries stable for the whole loop.
+        constexpr idx_t PREFETCH_DIST = 8;
+        if (i + PREFETCH_DIST < count)
+            __builtin_prefetch(&htEntries[hashPtrs[i + PREFETCH_DIST] & bitmask_], 1, 0);
+        auto src = srcPtrs[i];
+        const auto h = hashPtrs[i];
+        idx_t bucket = h & bitmask_;
+        while (true) {
+            auto &e = htEntries[bucket];
+            if (e.pageNum_ == 0) {
+                // empty bucket -> new group: copy the whole source tuple
+                if (payloadPageOffset_ == tuplesPerBlock_ || payload_.empty())
+                    newBlock();
+                auto dest = payloadPtrs_.back() + payloadPageOffset_ * tupleSize_;
+                memcpy(dest, src, tupleSize_);
+                e.pageNum_ = payload_.size();
+                e.pageOffset_ = payloadPageOffset_++;
+                e.hash_ = h;
+                entries_++;
+                break;
+            }
+            if (e.hash_ == h) {
+                auto dest = payloadPtrs_[e.pageNum_ - 1] + e.pageOffset_ * tupleSize_;
+                if (memcmp(src, dest, keyEnd) == 0) {
+                    // existing group: combine source state into the kept one
+                    idx_t a = aggBase;
+                    for (auto *aggr : aggregates) {
+                        aggr->combine_(src + offsets[a], dest + offsets[a]);
+                        ++a;
+                    }
+                    break;
+                }
+            }
+            bucket = (bucket + 1) & bitmask_;  // capacity is a power of two
+        }
+    }
 }
 
 void AggregatePRLHashTable::combine(AggregatePRLHashTable &other) {

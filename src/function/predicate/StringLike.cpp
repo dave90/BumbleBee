@@ -19,130 +19,26 @@
 #include "bumblebee/function/predicate/StringLike.hpp"
 
 #include "bumblebee/common/vector_operations/UnaryExecution.hpp"
+#include <cstring>
 
 
 namespace bumblebee{
 
 
-template <class UNSIGNED, int NEEDLE_SIZE>
-static idx_t containsUnaligned(const unsigned char *haystack, idx_t haystack_size, const unsigned char *needle,
-                               idx_t base_offset) {
-	if (NEEDLE_SIZE > haystack_size) {
-		// needle is bigger than haystack: haystack cannot contain needle
-		return -1;
-	}
-	// contains for a small unaligned needle (3/5/6/7 bytes)
-	// we perform unsigned integer comparisons to check for equality of the entire needle in a single comparison
-
-	UNSIGNED needle_entry = 0;
-	UNSIGNED haystack_entry = 0;
-	const UNSIGNED start = (sizeof(UNSIGNED) * 8) - 8;
-	const UNSIGNED shift = (sizeof(UNSIGNED) - NEEDLE_SIZE) * 8;
-	for (int i = 0; i < NEEDLE_SIZE; i++) {
-		needle_entry |= UNSIGNED(needle[i]) << UNSIGNED(start - i * 8);
-		haystack_entry |= UNSIGNED(haystack[i]) << UNSIGNED(start - i * 8);
-	}
-	// now we perform the actual search
-	for (idx_t offset = NEEDLE_SIZE; offset < haystack_size; offset++) {
-		// for this position we first compare the haystack with the needle
-		if (haystack_entry == needle_entry) {
-			return base_offset + offset - NEEDLE_SIZE;
-		}
-		// now we adjust the haystack entry by
-		// (1) removing the left-most character (shift by 8)
-		// (2) adding the next character (bitwise or, with potential shift)
-		// this shift is only necessary if the needle size is not aligned with the unsigned integer size
-		// (e.g. needle size 3, unsigned integer size 4, we need to shift by 1)
-		haystack_entry = (haystack_entry << 8) | ((UNSIGNED(haystack[offset])) << shift);
-	}
-	if (haystack_entry == needle_entry) {
-		return base_offset + haystack_size - NEEDLE_SIZE;
-	}
-	return -1;
-}
-
-template <class UNSIGNED>
-static idx_t containsAligned(const unsigned char *haystack, idx_t haystack_size, const unsigned char *needle,
-                             idx_t base_offset) {
-	if (sizeof(UNSIGNED) > haystack_size) {
-		// needle is bigger than haystack: haystack cannot contain needle
-		return -1;
-	}
-	// contains for a small needle aligned with unsigned integer (2/4/8)
-	// similar to ContainsUnaligned, but simpler because we only need to do a reinterpret cast
-	auto needle_entry = load<UNSIGNED>(needle);
-	for (idx_t offset = 0; offset <= haystack_size - sizeof(UNSIGNED); offset++) {
-		// for this position we first compare the haystack with the needle
-		auto haystack_entry = load<UNSIGNED>(haystack + offset);
-		if (needle_entry == haystack_entry) {
-			return base_offset + offset;
-		}
-	}
-	return -1;
-}
-
-idx_t containsGeneric(const unsigned char *haystack, idx_t haystack_size, const unsigned char *needle,
-                      idx_t needle_size, idx_t base_offset) {
-	if (needle_size > haystack_size) {
-		// needle is bigger than haystack: haystack cannot contain needle
-		return -1;
-	}
-	// we keep track of a shifting window sum of all characters with window size equal to needle_size
-	// this shifting sum is used to avoid calling into memcmp;
-	// we only need to call into memcmp when the window sum is equal to the needle sum
-	// when that happens, the characters are potentially the same and we call into memcmp to check if they are
-	uint32_t sums_diff = 0;
-	for (idx_t i = 0; i < needle_size; i++) {
-		sums_diff += haystack[i];
-		sums_diff -= needle[i];
-	}
-	idx_t offset = 0;
-	while (true) {
-		if (sums_diff == 0 && haystack[offset] == needle[0]) {
-			if (memcmp(haystack + offset, needle, needle_size) == 0) {
-				return base_offset + offset;
-			}
-		}
-		if (offset >= haystack_size - needle_size) {
-			return -1;
-		}
-		sums_diff -= haystack[offset];
-		sums_diff += haystack[offset + needle_size];
-		offset++;
-	}
-}
-
+// Find the first occurrence of `needle` within `haystack`, or -1 if absent.
+// Delegates to memmem, whose Two-Way/SIMD implementation is faster than a
+// per-position windowed scan for the long haystacks (URLs) typical of LIKE
+// '%substr%' predicates, which dominate such queries.
 int find(const unsigned char *haystack, idx_t haystack_size, const unsigned char *needle, idx_t needle_size) {
 	BB_ASSERT(needle_size > 0);
-	// start off by performing a memchr to find the first character
-	auto location = memchr(haystack, needle[0], haystack_size);
+	if (needle_size > haystack_size) {
+		return -1;
+	}
+	auto location = memmem(haystack, haystack_size, needle, needle_size);
 	if (location == nullptr) {
 		return -1;
 	}
-	idx_t base_offset = (const unsigned char *)location - haystack;
-	haystack_size -= base_offset;
-	haystack = (const unsigned char *)location;
-	// switch algorithm depending on needle size
-	switch (needle_size) {
-		case 1:
-			return base_offset;
-		case 2:
-			return containsAligned<uint16_t>(haystack, haystack_size, needle, base_offset);
-		case 3:
-			return containsUnaligned<uint32_t, 3>(haystack, haystack_size, needle, base_offset);
-		case 4:
-			return containsAligned<uint32_t>(haystack, haystack_size, needle, base_offset);
-		case 5:
-			return containsUnaligned<uint64_t, 5>(haystack, haystack_size, needle, base_offset);
-		case 6:
-			return containsUnaligned<uint64_t, 6>(haystack, haystack_size, needle, base_offset);
-		case 7:
-			return containsUnaligned<uint64_t, 7>(haystack, haystack_size, needle, base_offset);
-		case 8:
-			return containsAligned<uint64_t>(haystack, haystack_size, needle, base_offset);
-		default:
-			return containsGeneric(haystack, haystack_size, needle, needle_size, base_offset);
-	}
+	return (int)((const unsigned char *)location - haystack);
 }
 
 

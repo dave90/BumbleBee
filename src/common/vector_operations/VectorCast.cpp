@@ -170,6 +170,13 @@ bool numericCastSwitch(Vector &source, Vector &result, idx_t count, string *erro
             return vectorCastLoop<SRC, double, NumericTryCast>(source, result, count, errorMessage);
         case LogicalTypeId::STRING:
             return vectorStringCastLoop<SRC, string_t, StringTryCast>(source, result, count, errorMessage);
+        case LogicalTypeId::DATE:
+            // DATE is physically an int32 (days since epoch); a numeric value
+            // (e.g. a constant folded from parquet metadata) maps directly onto it.
+            return vectorCastLoop<SRC, int32_t, NumericTryCast>(source, result, count, errorMessage);
+        case LogicalTypeId::TIMESTAMP:
+            // TIMESTAMP is physically an int64 (microseconds since epoch).
+            return vectorCastLoop<SRC, int64_t, NumericTryCast>(source, result, count, errorMessage);
         case LogicalTypeId::DECIMAL: {
             switch (result.getType()) {
                 case PhysicalType::SMALLINT:

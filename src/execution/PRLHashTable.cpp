@@ -298,8 +298,20 @@ void PRLHashTable::resize(idx_t size, bool initResize) {
     BB_ASSERT(size != 0 && (size & (size - 1)) == 0); // new size should be power of 2
     BB_ASSERT(resizable_ || initResize);
 
-    auto byteSize =  (size * sizeof(HTEntry64) > Storage::BLOCK_SIZE)? size * sizeof(HTEntry64): Storage::BLOCK_SIZE;
-    auto hashes = bufferManager_.allocate(byteSize);
+    // The directory only needs `size` buckets (size * sizeof(HTEntry64) bytes).
+    // Allocate and zero exactly that much instead of rounding up to a full
+    // storage block: small per-partition tables (which grow 256 -> 512 -> 1024
+    // ...) previously memset a whole 256 KiB block on every resize even though
+    // only a few KiB were used, making memset a top hot spot in string GROUP BY.
+    // The block buffer manager requires every managed buffer to be at least one
+    // storage block, so floor the allocation at BLOCK_SIZE while still zeroing only
+    // the bytes the directory actually uses (`byteSize`) - this keeps the memset
+    // optimization above for small tables without violating that invariant. For
+    // directories larger than a block (the common case for big GROUP BYs) the
+    // allocation is unchanged.
+    auto byteSize = size * sizeof(HTEntry64);
+    auto allocSize = maxValue<idx_t>(byteSize, (idx_t)Storage::BLOCK_SIZE);
+    auto hashes = bufferManager_.allocate(allocSize);
     auto hashesPtr = hashes->ptr();
     memset(hashesPtr, 0, byteSize);
 
@@ -399,7 +411,14 @@ void PRLHashTable::findOrCreateGroupsInternal(Vector &hash, DataChunk &groups,
         idx_t newNoMatchCount = 0;
 
         // first figure out if it belongs to a full or empty group
+        constexpr idx_t PREFETCH_DIST = 8;
         for (idx_t i = 0; i < remainingEntries; i++) {
+
+            // Bounded-lookahead prefetch of the directory slot a few iterations
+            // ahead: htEntries[bucket] is a random-access cache miss for large
+            // tables. The directory is stable here (resize happened above).
+            if (i + PREFETCH_DIST < remainingEntries)
+                __builtin_prefetch(((HTEntry64*)hashesPtr_) + bucketsPtr[selVector.getIndex(i + PREFETCH_DIST)], 1, 0);
 
             idx_t index = selVector.getIndex(i);
             auto bucket = bucketsPtr[index];

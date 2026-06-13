@@ -253,7 +253,9 @@ TEST_F(ParquetScanTest, DecimalFilterAllOneColParquetScanTest1) {
     auto tableFilters = std::make_unique<TableFilterSet>();
     auto filter = std::make_unique<ConstantFilter>(Binop::EQUAL,  getConstantValue(1,0, types));
     tableFilters->pushFilter(0, std::move(filter));
-    testParquetReader(file, {}, {}, {}, tableFilters.get());
+    // the scan applies filters per row (not only per row group): the column
+    // holds 1.00 .. 24.00, so exactly one row matches value = 1
+    testParquetReaderCount(file, 1, {}, {}, {}, tableFilters.get());
 }
 
 TEST_F(ParquetScanTest, DecimalFilterAllOneColParquetScanTest2) {
@@ -272,8 +274,9 @@ TEST_F(ParquetScanTest, TPCHLineItemFiltersParquetScanTest1) {
     auto tableFilters = std::make_unique<TableFilterSet>();
     auto filter = std::make_unique<ConstantFilter>(Binop::EQUAL,  getConstantValue(1,0, types));
     tableFilters->pushFilter(0, std::move(filter));
-    // expected 122880 (first row group contains first column equal to 1)
-    testParquetReaderCount(file, 122880, {}, {}, {}, tableFilters.get());
+    // the scan applies filters per row (not only per row group): lineitem has
+    // exactly 6 rows with l_orderkey = 1
+    testParquetReaderCount(file, 6, {}, {}, {}, tableFilters.get());
 }
 
 TEST_F(ParquetScanTest, TPCHLineItemFiltersParquetScanTest2) {

@@ -59,7 +59,17 @@ struct ReadParquetData : public FunctionData {
 
     // The columns to select
     vector<idx_t> cols_;
+    // The file columns actually scanned: cols_ deduplicated, preserving order.
+    // The scan chunk contains exactly these columns, so wide files don't pay
+    // per-chunk vector setup/slice/reset for the 100+ columns a query ignores.
+    vector<idx_t> scanCols_;
+    // For each output column, its position inside scanCols_.
+    vector<idx_t> outputMap_;
+    // Logical types of scanCols_ (the scan chunk layout).
+    vector<LogicalType> scanTypes_;
 
+    // Filters are keyed by position in scanCols_ (the scan chunk / columnIds_
+    // position), which is what ParquetReader::prepareRowGroupBuffer expects.
     table_filter_set_ptr_t filters_;
 
     // file to be processed

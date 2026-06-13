@@ -20,6 +20,8 @@
 #include "bumblebee/storage/statistics/NumericStatistics.hpp"
 #include "bumblebee/storage/statistics/StringStatistics.hpp"
 #include "bumblebee/common/types/Date.hpp"
+#include "bumblebee/common/types/Vector.hpp"
+#include "bumblebee/common/operator/ComparisonOperators.hpp"
 #include "bumblebee/common/NumericUtils.hpp"
 
 namespace bumblebee{
@@ -101,6 +103,102 @@ FilterPropagateResult ConstantFilter::checkStatistics(BaseStatistics &stats) {
             return ((StringStatistics &)stats).checkZonemap(comparisonType_, constant_.toString());
         }default:
             return FilterPropagateResult::NO_PRUNING_POSSIBLE;
+    }
+}
+
+namespace {
+
+template <class T, class OP>
+void filterRowsLoop(Vector &v, const T constant, idx_t count, std::bitset<STANDARD_VECTOR_SIZE> &mask) {
+    auto data = FlatVector::getData<T>(v);
+    for (idx_t i = 0; i < count; i++) {
+        if (!mask[i]) continue;          // already filtered out (value may be undecoded)
+        if (!v.rowIsValid(i)) continue;  // NULL: must be left to the pipeline filter
+        if (!OP::operation(data[i], constant)) mask[i] = false;
+    }
+}
+
+template <class T>
+void filterRowsTypedOp(Binop op, Vector &v, const T constant, idx_t count, std::bitset<STANDARD_VECTOR_SIZE> &mask) {
+    switch (op) {
+        case EQUAL:         filterRowsLoop<T, Equals>(v, constant, count, mask); break;
+        case UNEQUAL:       filterRowsLoop<T, NotEquals>(v, constant, count, mask); break;
+        case LESS:          filterRowsLoop<T, LessThan>(v, constant, count, mask); break;
+        case LESS_OR_EQ:    filterRowsLoop<T, LessThanEquals>(v, constant, count, mask); break;
+        case GREATER:       filterRowsLoop<T, GreaterThan>(v, constant, count, mask); break;
+        case GREATER_OR_EQ: filterRowsLoop<T, GreaterThanEquals>(v, constant, count, mask); break;
+        default: break; // unknown comparison: keep all rows
+    }
+}
+
+} // namespace
+
+void ConstantFilter::filterRows(Vector &v, idx_t count, std::bitset<STANDARD_VECTOR_SIZE> &mask) {
+    // Evaluate `column <op> constant` on the decoded values and clear the mask
+    // bits of rows that provably fail. This must be a subset of what the
+    // downstream pipeline filter rejects, so every uncertain case (NULLs,
+    // non-representable constants, unhandled types) keeps its bit set.
+    const auto physType = v.getType();
+    const auto logicalId = v.getLogicalType().type();
+
+    if (logicalId == LogicalTypeId::TIMESTAMP) {
+        return; // mirror checkStatistics: timestamp constants are not handled
+    }
+    if (logicalId == LogicalTypeId::DATE ||
+        (logicalId == LogicalTypeId::DECIMAL && constant_.getPhysicalType() != physType)) {
+        // mirror checkStatistics: convert the constant (string date -> days,
+        // integer -> scaled decimal) only in the cases the statistics check
+        // converts; bail out (keep all rows) when it isn't convertible
+        Value converted;
+        if (!castConstantForStats(constant_, v.getLogicalType(), converted)) return;
+        switch (physType) {
+            case PhysicalType::SMALLINT: filterRowsTypedOp<int16_t>(comparisonType_, v, converted.getValueUnsafe<int16_t>(), count, mask); break;
+            case PhysicalType::INTEGER:  filterRowsTypedOp<int32_t>(comparisonType_, v, converted.getValueUnsafe<int32_t>(), count, mask); break;
+            case PhysicalType::BIGINT:   filterRowsTypedOp<int64_t>(comparisonType_, v, converted.getValueUnsafe<int64_t>(), count, mask); break;
+            default: break;
+        }
+        return;
+    }
+    if (logicalId == LogicalTypeId::DECIMAL) {
+        // same physical type: the constant already carries the scaled
+        // representation (as in checkStatistics), compare it directly
+        switch (physType) {
+            case PhysicalType::SMALLINT: filterRowsTypedOp<int16_t>(comparisonType_, v, constant_.getValueUnsafe<int16_t>(), count, mask); break;
+            case PhysicalType::INTEGER:  filterRowsTypedOp<int32_t>(comparisonType_, v, constant_.getValueUnsafe<int32_t>(), count, mask); break;
+            case PhysicalType::BIGINT:   filterRowsTypedOp<int64_t>(comparisonType_, v, constant_.getValueUnsafe<int64_t>(), count, mask); break;
+            default: break;
+        }
+        return;
+    }
+    if (physType == PhysicalType::STRING) {
+        const string constStr = constant_.toString();
+        const string_t cst(constStr.c_str(), (uint32_t)constStr.size());
+        filterRowsTypedOp<string_t>(comparisonType_, v, cst, count, mask);
+        return;
+    }
+
+    // Numeric columns: cast the constant to the column type, but only filter
+    // when the cast is exact (round-trips back to the original value).
+    // Otherwise a truncated constant (e.g. X < 10.5 against an int column)
+    // would reject rows the pipeline filter keeps.
+    Value casted, roundTrip;
+    string error;
+    if (!constant_.tryCastAs(physType, casted, &error)) return;
+    if (!casted.tryCastAs(constant_.getPhysicalType(), roundTrip, &error)) return;
+    if (!(roundTrip == constant_)) return;
+
+    switch (physType) {
+        case PhysicalType::TINYINT:   filterRowsTypedOp<int8_t>(comparisonType_, v, casted.getValueUnsafe<int8_t>(), count, mask); break;
+        case PhysicalType::SMALLINT:  filterRowsTypedOp<int16_t>(comparisonType_, v, casted.getValueUnsafe<int16_t>(), count, mask); break;
+        case PhysicalType::INTEGER:   filterRowsTypedOp<int32_t>(comparisonType_, v, casted.getValueUnsafe<int32_t>(), count, mask); break;
+        case PhysicalType::BIGINT:    filterRowsTypedOp<int64_t>(comparisonType_, v, casted.getValueUnsafe<int64_t>(), count, mask); break;
+        case PhysicalType::UTINYINT:  filterRowsTypedOp<uint8_t>(comparisonType_, v, casted.getValueUnsafe<uint8_t>(), count, mask); break;
+        case PhysicalType::USMALLINT: filterRowsTypedOp<uint16_t>(comparisonType_, v, casted.getValueUnsafe<uint16_t>(), count, mask); break;
+        case PhysicalType::UINTEGER:  filterRowsTypedOp<uint32_t>(comparisonType_, v, casted.getValueUnsafe<uint32_t>(), count, mask); break;
+        case PhysicalType::UBIGINT:   filterRowsTypedOp<uint64_t>(comparisonType_, v, casted.getValueUnsafe<uint64_t>(), count, mask); break;
+        case PhysicalType::FLOAT:     filterRowsTypedOp<float>(comparisonType_, v, casted.getValueUnsafe<float>(), count, mask); break;
+        case PhysicalType::DOUBLE:    filterRowsTypedOp<double>(comparisonType_, v, casted.getValueUnsafe<double>(), count, mask); break;
+        default: break; // unhandled type: keep all rows
     }
 }
 

@@ -26,39 +26,39 @@ namespace bumblebee{
 //===--------------------------------------------------------------------===//
 struct Equals {
 	template <class T>
-	static inline bool operation(T left, T right) {
+	static inline bool operation(const T& left, const T& right) {
 		return left == right;
 	}
 };
 
 struct NotEquals {
 	template <class T>
-	static inline bool operation(T left, T right) {
+	static inline bool operation(const T& left, const T& right) {
 		return left != right;
 	}
 };
 struct GreaterThan {
 	template <class T>
-	static inline bool operation(T left, T right) {
+	static inline bool operation(const T& left, const T& right) {
 		return left > right;
 	}
 };
 struct GreaterThanEquals {
 	template <class T>
-	static inline bool operation(T left, T right) {
+	static inline bool operation(const T& left, const T& right) {
 		return left >= right;
 	}
 };
 
 struct LessThan {
 	template <class T>
-	static inline bool operation(T left, T right) {
+	static inline bool operation(const T& left, const T& right) {
 		return left < right;
 	}
 };
 struct LessThanEquals {
 	template <class T>
-	static inline bool operation(T left, T right) {
+	static inline bool operation(const T& left, const T& right) {
 		return left <= right;
 	}
 };
@@ -67,11 +67,11 @@ struct LessThanEquals {
 // Specialized Boolean Comparison Operators
 //===--------------------------------------------------------------------===//
 template <>
-inline bool GreaterThan::operation(bool left, bool right) {
+inline bool GreaterThan::operation(const bool& left, const bool& right) {
 	return !right && left;
 }
 template <>
-inline bool LessThan::operation(bool left, bool right) {
+inline bool LessThan::operation(const bool& left, const bool& right) {
 	return !left && right;
 }
 //===--------------------------------------------------------------------===//
@@ -79,42 +79,30 @@ inline bool LessThan::operation(bool left, bool right) {
 //===--------------------------------------------------------------------===//
 struct StringComparisonOperators {
 	template <bool INVERSE>
-	static inline bool EqualsOrNot(const string_t a, const string_t b) {
-		auto size = a.size();
-		if (size != b.length()) return INVERSE ? true : false;
-		if (a.isInlined()) {
-			// small string: compare entire string
-			if (memcmp(a.getPrefix(), b.getPrefix(), size) == 0) {
-				// entire string is equal
-				return INVERSE ? false : true;
-			}
-		} else {
-			// large string: first check prefix and length
-			if (memcmp(a.getPrefix(), b.getPrefix(), string_t::PREFIX_LENGTH) == 0) {
-				// prefix and length are equal: check main string
-				if (memcmp(a.c_str(), b.c_str(), size) == 0) {
-					// entire string is equal
-					return INVERSE ? false : true;
-				}
-			}
-		}
-		// not equal
-		return INVERSE ? true : false;
+	static inline bool EqualsOrNot(const string_t& a, const string_t& b) {
+		// Compare via getDataUnsafe() (inlined prefix or external ptr) rather than the
+		// raw prefix field. The prefix is only guaranteed consistent for strings built
+		// through the (data,len) constructor; comparing the actual data keeps this
+		// correct for every string_t source (matching BumbleString::operator==).
+		const auto size = a.size();
+		if (size != b.size()) return INVERSE ? true : false;
+		const bool equal = memcmp(a.getDataUnsafe(), b.getDataUnsafe(), size) == 0;
+		return INVERSE ? !equal : equal;
 	}
 };
 
 template <>
-inline bool Equals::operation(string_t left, string_t right) {
+inline bool Equals::operation(const string_t& left, const string_t& right) {
 	return StringComparisonOperators::EqualsOrNot<false>(left, right);
 }
 template <>
-inline bool NotEquals::operation(string_t left, string_t right) {
+inline bool NotEquals::operation(const string_t& left, const string_t& right) {
 	return StringComparisonOperators::EqualsOrNot<true>(left, right);
 }
 
 // compare up to shared length. if still the same, compare lengths
 template <class OP>
-static bool templated_string_compare_op(string_t left, string_t right) {
+static bool templated_string_compare_op(const string_t& left, const string_t& right) {
 	auto memcmp_res =
 	    memcmp(left.getDataUnsafe(), right.getDataUnsafe(), std::min(left.size(), right.size()));
 	auto final_res = memcmp_res == 0 ? OP::operation(left.size(), right.size()) : OP::operation(memcmp_res, 0);
@@ -122,22 +110,22 @@ static bool templated_string_compare_op(string_t left, string_t right) {
 }
 
 template <>
-inline bool GreaterThan::operation(string_t left, string_t right) {
+inline bool GreaterThan::operation(const string_t& left, const string_t& right) {
 	return templated_string_compare_op<GreaterThan>(left, right);
 }
 
 template <>
-inline bool GreaterThanEquals::operation(string_t left, string_t right) {
+inline bool GreaterThanEquals::operation(const string_t& left, const string_t& right) {
 	return templated_string_compare_op<GreaterThanEquals>(left, right);
 }
 
 template <>
-inline bool LessThan::operation(string_t left, string_t right) {
+inline bool LessThan::operation(const string_t& left, const string_t& right) {
 	return templated_string_compare_op<LessThan>(left, right);
 }
 
 template <>
-inline bool LessThanEquals::operation(string_t left, string_t right) {
+inline bool LessThanEquals::operation(const string_t& left, const string_t& right) {
 	return templated_string_compare_op<LessThanEquals>(left, right);
 }
 

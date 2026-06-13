@@ -33,6 +33,7 @@ public:
     FilterPropagateResult checkStatistics(BaseStatistics &stats) override;
     string toString(const string &column_name) override;
     bool equals(const TableFilter &other) const override;
+    void filterRows(Vector &v, idx_t count, std::bitset<STANDARD_VECTOR_SIZE> &mask) override;
 };
 
 

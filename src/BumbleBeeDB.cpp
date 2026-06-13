@@ -30,6 +30,7 @@
 #include "bumblebee/planner/Planner.hpp"
 #include "bumblebee/planner/StatementDependency.hpp"
 #include "bumblebee/planner/rewriter/AggregatesRewriter.hpp"
+#include "bumblebee/planner/rewriter/MetadataAggRewriter.hpp"
 
 namespace bumblebee {
 
@@ -146,6 +147,10 @@ void BumbleBeeDB::runFromInputString(const string &inputProgram) {
 }
 
 void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) {
+    // fold COUNT(*) over an unfiltered parquet scan into a constant from metadata
+    MetadataAggRewriter metadataRewriter(context_);
+    metadataRewriter.rewrite(program);
+
     // rewrite the aggregates
     AggregatesRewriter rewriter(context_);
     rewriter.rewrite(program);

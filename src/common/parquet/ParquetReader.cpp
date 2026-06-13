@@ -26,6 +26,10 @@
 #include "bumblebee/common/types/Decimal.hpp"
 #include "bumblebee/planner/filter/TableFilter.hpp"
 
+#include <chrono>
+#include <mutex>
+#include <unordered_map>
+
 namespace bumblebee {
 
 
@@ -35,13 +39,30 @@ static std::unique_ptr<thrift::protocol::TProtocol> createThriftProtocol(Allocat
 	return make_unique<thrift::protocol::TCompactProtocolT<ThriftFileTransport>>(std::move(transport));
 }
 
-static std::shared_ptr<ParquetFileMetadataCache> loadMetadata(Allocator &allocator, FileHandle &file_handle) {
+// Process-wide cache of parsed parquet footers, keyed by path + size + mtime. The footer
+// of a wide many-row-group file is megabytes of thrift and is otherwise parsed
+// several times per query (bind, max-thread estimation, scan); parsing once and
+// sharing the immutable FileMetaData removes that fixed per-query overhead, which
+// dominates the wall time of small/selective scans over large files.
+static std::mutex g_mdCacheMutex;
+static std::unordered_map<std::string, std::shared_ptr<ParquetFileMetadataCache>> g_mdCache;
 
+static std::shared_ptr<ParquetFileMetadataCache> loadMetadata(Allocator &allocator, FileHandle &file_handle) {
 	auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
 	auto proto = createThriftProtocol(allocator, file_handle);
 	auto &transport = ((ThriftFileTransport &)*proto->getTransport());
 	auto file_size = transport.getSize();
+
+	// Cache lookup: identity is the path plus current size and mtime (a cheap
+	// change detector for read-mostly analytics files).
+	time_t mtime = file_handle.fileSystem_.getLastModifiedTime(file_handle);
+	std::string cacheKey = file_handle.path_ + ":" + std::to_string(file_size) + ":" + std::to_string((long long)mtime);
+	{
+		std::lock_guard<std::mutex> lock(g_mdCacheMutex);
+		auto it = g_mdCache.find(cacheKey);
+		if (it != g_mdCache.end()) return it->second;
+	}
 	if (file_size < 12) {
 		ErrorHandler::errorGeneric(StringUtils::format("File '%s' too small to be a Parquet file", file_handle.path_));
 	}
@@ -67,7 +88,15 @@ static std::shared_ptr<ParquetFileMetadataCache> loadMetadata(Allocator &allocat
 
 	auto metadata = std::make_unique<format::FileMetaData>();
 	metadata->read(proto.get());
-	return make_shared<ParquetFileMetadataCache>(std::move(metadata), current_time);
+	auto cache = make_shared<ParquetFileMetadataCache>(std::move(metadata), current_time);
+	{
+		std::lock_guard<std::mutex> lock(g_mdCacheMutex);
+		// Bound the cache so a long-lived process scanning many distinct files
+		// cannot grow it without limit; footers are immutable so a coarse cap is fine.
+		if (g_mdCache.size() > 256) g_mdCache.clear();
+		g_mdCache[cacheKey] = cache;
+	}
+	return cache;
 }
 
 LogicalType ParquetReader::deriveLogicalType(const SchemaElement &s_ele) {
@@ -467,6 +496,11 @@ bool ParquetReader::scanInternal(ParquetReaderScanState &state, DataChunk &resul
 
 			root_reader->getChildReader(file_col_idx)
 			    ->read(result.getSize(), filter_mask, define_ptr, repeat_ptr, result.data_[filter_col.first]);
+
+			// evaluate the filter on the freshly decoded values: rows that
+			// provably fail clear their mask bit, so the remaining columns can
+			// skip decoding them and the chunk is sliced before leaving the scan
+			filter_col.second->filterRows(result.data_[filter_col.first], this_output_chunk_rows, filter_mask);
 
 			need_to_read[filter_col.first] = false;
 
