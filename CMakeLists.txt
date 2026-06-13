@@ -17,6 +17,14 @@ project(BumbleBee)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
+# Force-include a small prelude of standard headers into every translation
+# unit. libstdc++ (GCC) does not transitively expose as many standard headers
+# as libc++, so sources that relied on those transitive includes fail to build.
+# See src/include/std_prelude.hpp. (GCC/Clang flag; skip on MSVC.)
+if(NOT MSVC)
+    add_compile_options(-include ${CMAKE_SOURCE_DIR}/src/include/std_prelude.hpp)
+endif()
+
 # Enable AddressSanitizer only for Debug builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Building with AddressSanitizer in Debug mode")
