@@ -54,3 +54,5 @@ build/
 dist/
 python/_version.py
 benchmarks/files/ldbc/*/
+# local benchmark harness outputs
+benchmarks/files/sql/_local/
