@@ -1,0 +1,4 @@
+%@sql
+SELECT GRP, COUNT(*) as C, COUNT(VAL) as CV, SUM(VAL) as S, MIN(VAL) as MN, MAX(VAL) as MX
+FROM &read_csv("./files/csv/null_large.csv";auto_detect=1,header=1)
+GROUP BY GRP

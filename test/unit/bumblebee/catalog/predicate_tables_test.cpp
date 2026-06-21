@@ -42,6 +42,10 @@ public:
         return types_;
     }
 
+    // expose the protected loader for testing
+    void callLoadFacts() { loadFacts(); }
+    // expose the predicate so tests can build Atoms for it
+    Predicate* getPredicate() { return predicate_.get(); }
 };
 
 class PredicateTablesTest : public ::testing::Test {
@@ -329,6 +333,71 @@ TEST_F(PredicateTablesTest, TestMultipleBigSequenceWithSmallChunks) {
 
 
 // sequence with facts
+
+
+// ---------- NULL fact loading ----------
+
+// Build a CLASSICAL fact `p(t0, t1, ...)` from the listed values; `nullCols` are
+// the column indices where the term should be a typeless NULL.
+static Atom makeFactWithNulls(Predicate *p, const vector<int64_t> &values,
+                              const std::unordered_set<idx_t> &nullCols) {
+    terms_vector_t terms;
+    for (idx_t i = 0; i < values.size(); i++) {
+        if (nullCols.contains(i))
+            terms.push_back(Term::createNull());
+        else
+            terms.emplace_back(values[i]);
+    }
+    return Atom::createClassicalAtom(p, std::move(terms));
+}
+
+TEST_F(PredicateTablesTest, LoadFactsWithNullClearsValidityBit) {
+    auto tbl = std::make_unique<PredicateTablesTester>(&context, "a", 2);
+    auto p = tbl->getPredicate();
+
+    auto f1 = makeFactWithNulls(p, {1, 2}, {});     // a(1,2)
+    auto f2 = makeFactWithNulls(p, {3, 0}, {1});    // a(3,NULL)
+    tbl->addFact(f1);
+    tbl->addFact(f2);
+
+    // Column 1's type is inferred from the first non-NULL fact (BIGINT for 2).
+    tbl->callLoadFacts();
+    ASSERT_GE(tbl->chunkCount(), 1u);
+    auto &chunk = tbl->getChunk(0);
+    ASSERT_EQ(chunk.getSize(), 2u);
+
+    // row 0: both columns valid
+    EXPECT_TRUE(chunk.data_[0].rowIsValid(0));
+    EXPECT_TRUE(chunk.data_[1].rowIsValid(0));
+    EXPECT_EQ(chunk.getValue(0, 0).getNumericValue<int64_t>(), 1);
+    EXPECT_EQ(chunk.getValue(1, 0).getNumericValue<int64_t>(), 2);
+
+    // row 1: column 1 is NULL
+    EXPECT_TRUE(chunk.data_[0].rowIsValid(1));
+    EXPECT_FALSE(chunk.data_[1].rowIsValid(1));
+    EXPECT_EQ(chunk.getValue(0, 1).getNumericValue<int64_t>(), 3);
+    EXPECT_TRUE(chunk.getValue(1, 1).isNull());
+}
+
+TEST_F(PredicateTablesTest, NullTermDoesNotConstrainColumnType) {
+    // First fact's only contribution to column 1 is NULL; the type for column 1
+    // must come from the *second* fact (BIGINT for 7), not from the NULL term.
+    auto tbl = std::make_unique<PredicateTablesTester>(&context, "a", 2);
+    auto p = tbl->getPredicate();
+
+    auto f1 = makeFactWithNulls(p, {1, 0}, {1});    // a(1, NULL)
+    auto f2 = makeFactWithNulls(p, {2, 7}, {});     // a(2, 7)
+    tbl->addFact(f1);
+    tbl->addFact(f2);
+
+    auto types = tbl->getTypes();
+    // Without skipping NULL terms during inference, column 1 would either stay
+    // UNKNOWN or be dragged toward the NULL term's default (INTEGER). Either
+    // outcome would be wrong; we expect the type to come from the non-NULL fact
+    // (an int64_t literal lands as BIGINT).
+    EXPECT_NE(types[1].getPhysicalType(), PhysicalType::UNKNOWN);
+    EXPECT_EQ(types[1].getPhysicalType(), PhysicalType::BIGINT);
+}
 
 
 }  // namespace

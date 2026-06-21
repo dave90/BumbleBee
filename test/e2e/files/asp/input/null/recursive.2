@@ -1,0 +1,11 @@
+start(1).
+start(NULL).
+edge(1,2).
+edge(2,3).
+edge(NULL,4).
+edge(2,NULL).
+
+reach(X) :- start(X).
+reach(X) :- reach(Y), edge(Y,X).
+
+reach(X)?

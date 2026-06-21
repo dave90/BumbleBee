@@ -20,6 +20,7 @@
 
 #include "bumblebee/common/Helper.hpp"
 #include "bumblebee/common/Profiler.hpp"
+#include "bumblebee/common/types/NullValue.hpp"
 #include "bumblebee/common/vector_operations/VectorOperations.hpp"
 
 namespace bumblebee{
@@ -53,16 +54,18 @@ Vector::Vector(LogicalType type, bool create_data, bool zero_data, idx_t capacit
     }
 }
 
-Vector::Vector(Vector &&other) noexcept : type_(other.type_), vtype_(other.vtype_), data_(other.data_), dataMngr_(std::move(other.dataMngr_)) , auxDataMngr_(std::move(other.auxDataMngr_)) {
+Vector::Vector(Vector &&other) noexcept : type_(other.type_), vtype_(other.vtype_), data_(other.data_), dataMngr_(std::move(other.dataMngr_)) , auxDataMngr_(std::move(other.auxDataMngr_)), validity_(std::move(other.validity_)) {
 
 }
 
 void Vector::reference(const Value &value) {
     vtype_ = VectorType::CONSTANT_VECTOR;
-    dataMngr_ = VectorDataMngr::createConstantVector(value.ctype_);
+    dataMngr_ = VectorDataMngr::createConstantVector(value.isNull_ ? type_.getPhysicalType() : value.ctype_);
     data_ = dataMngr_->getData();
     // free aux data mngr we do not need it
     auxDataMngr_.reset();
+    // fresh all-valid mask; setValue handles a NULL value by clearing the bit
+    validity_.reset();
     // set the constant value at position 0
     setValue(0, value);
 }
@@ -77,6 +80,8 @@ void Vector::reinterpret(const Vector &other) {
     data_ = other.data_;
     assignSharedPointer(dataMngr_, other.dataMngr_);
     assignSharedPointer(auxDataMngr_, other.auxDataMngr_);
+    // share the validity buffer (shallow): referenced vectors share their nulls
+    validity_ = other.validity_;
 }
 
 void Vector::referenceAndSetType(Vector &other) {
@@ -97,6 +102,11 @@ void Vector::slice(Vector &other, idx_t offset) {
     if (offset > 0) {
         // move the data by offset
         data_ = data_ + getPhysicalTypeSize(internalType) * offset;
+        // the mask must shift with the data; produce an independent shifted copy
+        // (only when nulls are actually present — all-valid stays zero-copy)
+        if (!other.validity_.allValid()) {
+            validity_.slice(other.validity_, offset);
+        }
     }
 }
 
@@ -121,6 +131,8 @@ void Vector::slice(const SelectionVector &sel, idx_t count) {
     vtype_ = VectorType::DICTIONARY_VECTOR;
     dataMngr_ = vector_data_mngr_ptr_t(new DictionaryDataMngr(sel));
     auxDataMngr_ = vector_data_mngr_ptr_t(new VectorChildDataMngr(std::move(child)));
+    // the authoritative mask now lives on the child; read through the selection
+    validity_.reset();
 }
 
 void Vector::slice(const SelectionVector &sel, idx_t count, SelCache &cache) {
@@ -155,6 +167,8 @@ void Vector::initialize(bool zeroData, idx_t capacity) {
     auxDataMngr_.reset();
     dataMngr_ = VectorDataMngr::createStandardVector(type_.getPhysicalType(), capacity);
     data_ = dataMngr_->getData();
+    // fresh vector is all-valid
+    validity_.reset();
     if (zeroData)
         memset(data_, 0, getPhysicalTypeSize(type_.getPhysicalType()) * capacity);
 }
@@ -250,6 +264,9 @@ void Vector::normalify(idx_t count) {
         // take old data manager otherwise will remove the old data
         auto oldDataMngr = dataMngr_;
         auto oldData = oldDataMngr->getData();
+        // a constant carries a single validity bit (row 0) -> replicate it to every row
+        bool constantIsNull = !validity_.rowIsValid(0);
+        validity_.reset();
         dataMngr_ = VectorDataMngr::createStandardVector(getType());
         data_ = dataMngr_->getData();
         vtype_ = VectorType::FLAT_VECTOR;
@@ -290,6 +307,8 @@ void Vector::normalify(idx_t count) {
             default:
                 ;
         }
+        if (constantIsNull)
+            validity_.setAllInvalid(count);
         return;
     }
     ErrorHandler::errorNotImplemented("Vector::normalify not implemented");
@@ -326,6 +345,8 @@ void Vector::orrify(idx_t count, VectorData &data) {
         if (child.getVectorType() == VectorType::FLAT_VECTOR) {
             data.data_ = child.getData();
             data.sel_ = &selVector;
+            // validity lives on the child, indexed (like data_) through the selection
+            data.validity_ = &child.validity_;
             return ;
         }
         // dictionary with no flat vectory as child, so normalify the child
@@ -334,17 +355,21 @@ void Vector::orrify(idx_t count, VectorData &data) {
         auxDataMngr_ = vector_data_mngr_ptr_t(new VectorChildDataMngr(std::move(childFlat)));
         data.data_ = FlatVector::getData(DictionaryVector::child(*this));
         data.sel_ = &selVector;
+        data.validity_ = &DictionaryVector::child(*this).validity_;
         return;
     }
     if (vtype_ == VectorType::CONSTANT_VECTOR) {
         data.sel_ = ConstantVector::zeroSelectionVector(count, data.owned_sel_);
         data.data_ = ConstantVector::getData(*this);
+        // single validity bit (row 0); zero selection makes every read hit bit 0
+        data.validity_ = &validity_;
         return;
     }
     // other vector type
     normalify(count);
     data.sel_ = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
     data.data_ = FlatVector::getData(*this);
+    data.validity_ = &validity_;
 }
 
 void Vector::sequence(int64_t start, int64_t increment) {
@@ -412,7 +437,10 @@ Value Vector::getValue(idx_t index) const {
         case VectorType::FLAT_VECTOR:
             ;
     }
-    // flat vector
+    // flat / constant vector: index is resolved (0 for constant)
+    if (!validity_.rowIsValid(index)) {
+        return Value::null();
+    }
     switch (type_.getPhysicalType()) {
         case PhysicalType::TINYINT:
             return Value( ((int8_t*)data_)[index] );
@@ -443,23 +471,28 @@ Value Vector::getValue(idx_t index) const {
 }
 
 void Vector::setValue(idx_t index, const Value &val) {
+    if (getVectorType() == VectorType::DICTIONARY_VECTOR) {
+        // resolve the real index in the child and delegate
+        index = DictionaryVector::selVector(*this).getIndex(index);
+        return DictionaryVector::child(*this).setValue(index, val);
+    }
+    if (val.isNull_) {
+        // clear the validity bit; write a defensive NULL fill so raw-data readers
+        // never observe garbage (the fill is never used to *detect* nullness).
+        writeNullFill(index);
+        validity_.setInvalid(index);
+        return;
+    }
+
     BB_ASSERT(val.ctype_ == type_.getPhysicalType() && "Error during set value on vector: different types");
 
-    switch (getVectorType()){
-        case VectorType::DICTIONARY_VECTOR: {
-            // get the rela index from the sel vector
-            index = DictionaryVector::selVector(*this).getIndex(index);
-            // call the get value from child
-            auto &child = DictionaryVector::child(*this);
-            return child.setValue(index, val);
-        }
-        case VectorType::SEQUENCE_VECTOR:
-        case VectorType::SEQUENCE_CIRCULAR_VECTOR:
-            ErrorHandler::errorNotImplemented("Unimplemented set type on constant");
-        case VectorType::FLAT_VECTOR:
-        case VectorType::CONSTANT_VECTOR:
-            ;
+    if (getVectorType() == VectorType::SEQUENCE_VECTOR ||
+        getVectorType() == VectorType::SEQUENCE_CIRCULAR_VECTOR) {
+        ErrorHandler::errorNotImplemented("Unimplemented set type on constant");
     }
+    // a previously-null slot becomes valid again (no-op when all-valid)
+    validity_.setValid(index);
+
     // FLAT or CONSTANT vector
     switch (type_.getPhysicalType()) {
         case PhysicalType::TINYINT:
@@ -502,6 +535,86 @@ void Vector::setValue(idx_t index, const Value &val) {
 }
 
 
+void Vector::writeNullFill(idx_t index) {
+    // Defensive physical fill for a NULL slot (never used to detect nullness).
+    switch (type_.getPhysicalType()) {
+        case PhysicalType::TINYINT:   ((int8_t*)data_)[index]   = NullValue<int8_t>();   break;
+        case PhysicalType::SMALLINT:  ((int16_t*)data_)[index]  = NullValue<int16_t>();  break;
+        case PhysicalType::INTEGER:   ((int32_t*)data_)[index]  = NullValue<int32_t>();  break;
+        case PhysicalType::BIGINT:    ((int64_t*)data_)[index]  = NullValue<int64_t>();  break;
+        case PhysicalType::UTINYINT:  ((uint8_t*)data_)[index]  = NullValue<uint8_t>();  break;
+        case PhysicalType::USMALLINT: ((uint16_t*)data_)[index] = NullValue<uint16_t>(); break;
+        case PhysicalType::UINTEGER:  ((uint32_t*)data_)[index] = NullValue<uint32_t>(); break;
+        case PhysicalType::UBIGINT:   ((uint64_t*)data_)[index] = NullValue<uint64_t>(); break;
+        case PhysicalType::FLOAT:     ((float*)data_)[index]    = NullValue<float>();    break;
+        case PhysicalType::DOUBLE:    ((double*)data_)[index]   = NullValue<double>();   break;
+        case PhysicalType::STRING:    ((string_t*)data_)[index] = NullValue<string_t>(); break;
+        default:
+            ErrorHandler::errorNotImplemented("Unimplemented type for null fill");
+    }
+}
+
+ValidityMask &Vector::validity() {
+    if (vtype_ == VectorType::DICTIONARY_VECTOR)
+        return DictionaryVector::child(*this).validity();
+    return validity_;
+}
+
+const ValidityMask &Vector::validity() const {
+    if (vtype_ == VectorType::DICTIONARY_VECTOR)
+        return DictionaryVector::child(*this).validity();
+    return validity_;
+}
+
+bool Vector::rowIsValid(idx_t idx) const {
+    switch (vtype_) {
+        case VectorType::CONSTANT_VECTOR:
+            return validity_.rowIsValid(0);
+        case VectorType::DICTIONARY_VECTOR: {
+            auto realIdx = DictionaryVector::selVector(*this).getIndex(idx);
+            return DictionaryVector::child(*this).rowIsValid(realIdx);
+        }
+        case VectorType::SEQUENCE_VECTOR:
+        case VectorType::SEQUENCE_CIRCULAR_VECTOR:
+            return true;
+        case VectorType::FLAT_VECTOR:
+            ;
+    }
+    return validity_.rowIsValid(idx);
+}
+
+void Vector::setValid(idx_t idx) {
+    switch (vtype_) {
+        case VectorType::CONSTANT_VECTOR:
+            validity_.setValid(0);
+            return;
+        case VectorType::DICTIONARY_VECTOR: {
+            auto realIdx = DictionaryVector::selVector(*this).getIndex(idx);
+            DictionaryVector::child(*this).setValid(realIdx);
+            return;
+        }
+        default:
+            ;
+    }
+    validity_.setValid(idx);
+}
+
+void Vector::setInvalid(idx_t idx) {
+    switch (vtype_) {
+        case VectorType::CONSTANT_VECTOR:
+            validity_.setInvalid(0);
+            return;
+        case VectorType::DICTIONARY_VECTOR: {
+            auto realIdx = DictionaryVector::selVector(*this).getIndex(idx);
+            DictionaryVector::child(*this).setInvalid(realIdx);
+            return;
+        }
+        default:
+            ;
+    }
+    validity_.setInvalid(idx);
+}
+
 void Vector::resize(idx_t curSize, idx_t newSize) {
     if (!dataMngr_)
         dataMngr_ = vector_data_mngr_ptr_t(new VectorDataMngr(0));
@@ -511,6 +624,9 @@ void Vector::resize(idx_t curSize, idx_t newSize) {
     memcpy(newData.get(), data_, curSize * getPhysicalTypeSize(type_.getPhysicalType()));
     dataMngr_->setData(std::move(newData));
     data_ = dataMngr_->getData();
+    // grow the validity buffer to match (preserves existing bits, extends as all-valid)
+    if (!validity_.allValid())
+        validity_.ensureWritable(newSize);
 }
 
 

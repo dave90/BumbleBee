@@ -27,14 +27,14 @@ namespace bumblebee{
 class Block : public FileBuffer {
 public:
     Block(Allocator &allocator, block_id_t id)
-        : FileBuffer(allocator, FileBufferType::BLOCK, Storage::BLOCK_ALLOC_SIZE), id(id) {
+        : FileBuffer(allocator, FileBufferType::BLOCK, Storage::BLOCK_ALLOC_SIZE), id_(id) {
     }
 
-    Block(FileBuffer &source, block_id_t id) : FileBuffer(source, FileBufferType::BLOCK), id(id) {
+    Block(FileBuffer &source, block_id_t id) : FileBuffer(source, FileBufferType::BLOCK), id_(id) {
         BB_ASSERT(getMallocedSize() == Storage::BLOCK_ALLOC_SIZE);
         BB_ASSERT(size_ == Storage::BLOCK_SIZE);
     }
-    block_id_t id;
+    block_id_t id_;
 };
 
 struct BlockPointer {

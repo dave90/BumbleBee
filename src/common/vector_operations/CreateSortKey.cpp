@@ -56,26 +56,47 @@ struct SortKeyConstantOperator {
         return sizeof(T);
     }
 
+    // NULL encoding: all 0xFF bytes of the natural width. Sorts after any real value
+    // when unflipped (NULLS LAST in ASC); the existing DESC flip turns it into all
+    // 0x00 (NULLS FIRST in DESC) — the conventional SQL default.
+    static idx_t encodeNull(data_ptr_t result) {
+        for (idx_t i = 0; i < sizeof(T); i++) result[i] = 0xFF;
+        return sizeof(T);
+    }
 };
 
 struct SortKeyStringOperator {
     static constexpr data_t STRING_DELIMITER = 0;
+    // Every STRING key starts with a small prefix byte: NON_NULL_PREFIX for a real
+    // value, NON_NULL_PREFIX+1 for a NULL. Both sit above STRING_DELIMITER (0x00)
+    // and the +1 gap means a non-null key always sorts strictly before a NULL key
+    // under memcmp (NULLS LAST in ASC); the existing whole-key flip for DESC turns
+    // them into 0xFE / 0xFD, putting NULLs first there.
+    static constexpr data_t NON_NULL_PREFIX = 0x01;
     using TYPE = string_t;
 
+    // +2 = 1 prefix byte + the trailing delimiter.
     static idx_t getEncodeLength(TYPE& input) {
-        return input.size() + 1; // +1 for the delimiter
+        return input.size() + 2;
     }
 
     static idx_t encode(data_ptr_t result, TYPE& input) {
         auto input_data = (const_data_ptr_t)input.getDataUnsafe();
         auto input_size = input.size();
+        result[0] = NON_NULL_PREFIX;
         for (idx_t r = 0; r < input_size; r++) {
-            result[r] = input_data[r] + 1;
+            result[1 + r] = input_data[r] + 1;
         }
-        result[input_size] = STRING_DELIMITER; // null-byte delimiter
-        return input_size + 1;
+        result[1 + input_size] = STRING_DELIMITER;
+        return input_size + 2;
     }
 
+    // NULL key is the single prefix-plus-1 byte; nothing follows.
+    static idx_t getNullEncodeLength() { return 1; }
+    static idx_t encodeNull(data_ptr_t result) {
+        result[0] = NON_NULL_PREFIX + 1;
+        return 1;
+    }
 };
 
 
@@ -93,79 +114,101 @@ struct SortKeyConstructInfo {
 
 
 // ------------------------------------------------------------------------------------------------------------------
+// Encode one row's value (or its NULL placeholder), then apply the DESC byte flip,
+// and bump the per-row offset. Centralizing this here keeps the constant / flat /
+// generic loops below one-liners.
+template <class OP, class T>
+static inline void encodeOneRow(data_ptr_t result_ptr, idx_t &offset,
+                                T value, bool isNull, bool flip) {
+    idx_t encode_len = isNull ? OP::encodeNull(result_ptr + offset)
+                            : OP::encode(result_ptr + offset, value);
+
+    if (flip) {
+        for (idx_t b = offset; b < offset + encode_len; b++) {
+            result_ptr[b] = ~result_ptr[b];
+        }
+    }
+    offset += encode_len;
+}
+
 template <class OP>
 void templatedConstructSortKeyConstant(Vector &vector, idx_t size, SortKeyConstructInfo &info) {
     BB_ASSERT(vector.getVectorType() == VectorType::CONSTANT_VECTOR);
     auto data = ConstantVector::getData<typename OP::TYPE>(vector);
-    auto& offsets = info.offsets_;
+    bool isNull = !vector.rowIsValid(0);
     for (idx_t r = 0; r < size; r++) {
-        auto result_ptr = info.result_[r];
-        auto& offset = offsets[r];
-
-        idx_t encode_len = OP::encode(result_ptr + offset, data[0]);
-        if (info.flip_bytes) {
-            // descending order - so flip bytes
-            for (idx_t b = offset; b < offset + encode_len; b++) {
-                result_ptr[b] = ~(result_ptr[b]);
-            }
-        }
-        offset += encode_len;
+        encodeOneRow<OP>(info.result_[r], info.offsets_[r], data[0], isNull, info.flip_bytes);
     }
 }
 
-template <class OP, class T>
-void templatedConstructSortKeyFlat(T* __restrict data, idx_t size, data_ptr_t* __restrict result,
-    idx_t* __restrict offsets,  bool flip) {
-    for (idx_t r = 0; r < size; r++) {
-        auto result_ptr = result[r];
-        auto& offset = offsets[r];
-
-        idx_t encode_len = OP::encode(result_ptr + offset, data[r]);
-        if (flip) {
-            // descending order - so flip bytes
-            for (idx_t b = offset; b < offset + encode_len; b++) {
-                result_ptr[b] = ~(result_ptr[b]);
-            }
+template <class OP, class T, bool HAS_NULL>
+void templatedConstructSortKeyFlat(T* __restrict data, const ValidityMask &validity,
+                                   idx_t size, data_ptr_t* __restrict result,
+                                   idx_t* __restrict offsets, bool flip) {
+    if (HAS_NULL) {
+        bool noNulls = validity.allValid();
+        for (idx_t r = 0; r < size; r++) {
+            bool isNull = !noNulls && !validity.rowIsValid(r);
+            encodeOneRow<OP>(result[r], offsets[r], data[r], isNull, flip);
         }
-        offset += encode_len;
+    }else {
+        for (idx_t r = 0; r < size; r++) {
+            encodeOneRow<OP>(result[r], offsets[r], data[r], false, flip);
+        }
     }
 }
 
-template <class OP, class T>
-void templatedConstructSortKeyGeneric(T* __restrict data, idx_t size, const SelectionVector& sel,
-    data_ptr_t* __restrict result, idx_t* __restrict offsets,  bool flip) {
-    for (idx_t r = 0; r < size; r++) {
-        idx_t idx = sel.getIndex(r);
-        auto result_ptr = result[r];
-        auto& offset = offsets[r];
-
-        idx_t encode_len = OP::encode(result_ptr + offset, data[idx]);
-        if (flip) {
-            // descending order - so flip bytes
-            for (idx_t b = offset; b < offset + encode_len; b++) {
-                result_ptr[b] = ~(result_ptr[b]);
-            }
+template <class OP, class T, bool HAS_NULL>
+void templatedConstructSortKeyGeneric(T* __restrict data, const ValidityMask *validity,
+                                      idx_t size, const SelectionVector& sel,
+                                      data_ptr_t* __restrict result,
+                                      idx_t* __restrict offsets, bool flip) {
+    if (HAS_NULL) {
+        bool noNulls = !validity || validity->allValid();
+        for (idx_t r = 0; r < size; r++) {
+            idx_t idx = sel.getIndex(r);
+            bool isNull = !noNulls && !validity->rowIsValid(idx);
+            encodeOneRow<OP>(result[r], offsets[r], data[idx], isNull, flip);
         }
-        offset += encode_len;
+    }else {
+        for (idx_t r = 0; r < size; r++) {
+            idx_t idx = sel.getIndex(r);
+            encodeOneRow<OP>(result[r], offsets[r], data[idx], false, flip);
+        }
     }
 }
 
 
 template <class OP>
 void templatedConstructSortKey(SortKeyVectorData &vector_data, SortKeyConstructInfo &info) {
-    switch (vector_data.vector_.getVectorType()) {
+    auto &vector = vector_data.vector_;
+    switch (vector.getVectorType()) {
         case VectorType::CONSTANT_VECTOR:
-            templatedConstructSortKeyConstant<OP>(vector_data.vector_, vector_data.size_, info);
+            templatedConstructSortKeyConstant<OP>(vector, vector_data.size_, info);
             break;
         case VectorType::FLAT_VECTOR: {
-            auto dataPtr = FlatVector::getData<typename OP::TYPE>(vector_data.vector_);
-            templatedConstructSortKeyFlat<OP, typename OP::TYPE>(dataPtr, vector_data.size_, info.result_, info.offsets_.data(), info.flip_bytes);
+            auto dataPtr = FlatVector::getData<typename OP::TYPE>(vector);
+            if (vector.validity().allValid())
+                templatedConstructSortKeyFlat<OP, typename OP::TYPE, false>(
+                    dataPtr, FlatVector::validity(vector), vector_data.size_,
+                    info.result_, info.offsets_.data(), info.flip_bytes);
+            else
+                templatedConstructSortKeyFlat<OP, typename OP::TYPE, true>(
+                    dataPtr, FlatVector::validity(vector), vector_data.size_,
+                    info.result_, info.offsets_.data(), info.flip_bytes);
             break;
         }
         default: {
             VectorData vd;
-            vector_data.vector_.orrify(vector_data.size_,vd);
-            templatedConstructSortKeyGeneric<OP, typename OP::TYPE>((typename OP::TYPE*)vd.data_, vector_data.size_, *vd.sel_, info.result_,info.offsets_.data(), info.flip_bytes);
+            vector.orrify(vector_data.size_, vd);
+            if (vd.validity_->allValid())
+                templatedConstructSortKeyGeneric<OP, typename OP::TYPE, false>(
+                    (typename OP::TYPE*)vd.data_, vd.validity_, vector_data.size_,
+                    *vd.sel_, info.result_, info.offsets_.data(), info.flip_bytes);
+            else
+                templatedConstructSortKeyGeneric<OP, typename OP::TYPE, true>(
+                    (typename OP::TYPE*)vd.data_, vd.validity_, vector_data.size_,
+                    *vd.sel_, info.result_, info.offsets_.data(), info.flip_bytes);
         }
     }
 }
@@ -215,51 +258,70 @@ static void constructSortKey(SortKeyVectorData &vectorData, SortKeyConstructInfo
 
 
 
-static void getSortKeyVariableLengthGeneric(string_t* __restrict data, idx_t size, const SelectionVector& sel, idx_t* __restrict result) {
-    for (idx_t i=0; i< size; ++i) {
+// Per-row length for the STRING encoding: getNullEncodeLength() (=1) for NULL
+// rows, getEncodeLength(value) for non-null. Centralized so the constant / flat /
+// generic length walkers below stay one-liners.
+static inline idx_t stringRowEncodeLength(string_t &value, bool isNull) {
+    return isNull ? SortKeyStringOperator::getNullEncodeLength()
+                  : SortKeyStringOperator::getEncodeLength(value);
+}
+
+static void getSortKeyVariableLengthGeneric(string_t* __restrict data, const ValidityMask *validity,
+                                            idx_t size, const SelectionVector& sel,
+                                            idx_t* __restrict result) {
+    bool noNulls = !validity || validity->allValid();
+    for (idx_t i = 0; i < size; ++i) {
         auto idx = sel.getIndex(i);
-        result[i] += SortKeyStringOperator::getEncodeLength(data[idx]);
+        bool isNull = !noNulls && !validity->rowIsValid(idx);
+        result[i] += stringRowEncodeLength(data[idx], isNull);
     }
 }
 
-static void getSortKeyVariableLengthConstant(Vector& data, idx_t size,  idx_t* __restrict result) {
+static void getSortKeyVariableLengthConstant(Vector& data, idx_t size, idx_t* __restrict result) {
     BB_ASSERT(data.getVectorType() == VectorType::CONSTANT_VECTOR);
     auto s = ConstantVector::getData<string_t>(data);
-    auto length = SortKeyStringOperator::getEncodeLength(*s);
-    for (idx_t i=0; i< size; ++i) {
+    bool isNull = ConstantVector::isNull(data);
+    auto length = stringRowEncodeLength(*s, isNull);
+    for (idx_t i = 0; i < size; ++i) {
         result[i] += length;
     }
 }
 
-static void getSortKeyVariableLengthFlat(string_t* __restrict data, idx_t size,  idx_t* __restrict result) {
-    for (idx_t i=0; i< size; ++i) {
-        result[i] += SortKeyStringOperator::getEncodeLength(data[i]);
+static void getSortKeyVariableLengthFlat(string_t* __restrict data, const ValidityMask &validity,
+                                         idx_t size, idx_t* __restrict result) {
+    bool allValid = validity.allValid();
+    for (idx_t i = 0; i < size; ++i) {
+        bool isNull = !allValid && !validity.rowIsValid(i);
+        result[i] += stringRowEncodeLength(data[i], isNull);
     }
 }
 
 
 static void getSortKeyLength(SortKeyVectorData &data, SortKeyLengthInfo &result) {
-    // top-level method
-    auto type = data.vector_.getType();
+    auto &vector = data.vector_;
+    auto type = vector.getType();
+
     if (typeIsConstantSize(type)) {
+        // Fixed-width column: same byte count whether NULL or not (encodeNull pads
+        // to sizeof(T)). One constant addend covers every row in this column.
         result.constant_ += getPhysicalTypeSize(type);
         return;
     }
 
-    BB_ASSERT(data.vector_.getType() == PhysicalType::STRING);
-    switch (data.vector_.getVectorType()) {
+    BB_ASSERT(type == PhysicalType::STRING);
+    switch (vector.getVectorType()) {
         case VectorType::CONSTANT_VECTOR:
-            getSortKeyVariableLengthConstant(data.vector_, data.size_, result.variable_.data());
+            getSortKeyVariableLengthConstant(vector, data.size_, result.variable_.data());
             break;
         case VectorType::FLAT_VECTOR: {
-            auto dataPtr = FlatVector::getData<string_t>(data.vector_);
-            getSortKeyVariableLengthFlat(dataPtr, data.size_, result.variable_.data());
+            auto dataPtr = FlatVector::getData<string_t>(vector);
+            getSortKeyVariableLengthFlat(dataPtr, FlatVector::validity(vector), data.size_, result.variable_.data());
             break;
         }
         default: {
             VectorData vd;
-            data.vector_.orrify(data.size_,vd);
-            getSortKeyVariableLengthGeneric((string_t*)vd.data_, data.size_, *vd.sel_, result.variable_.data());
+            vector.orrify(data.size_, vd);
+            getSortKeyVariableLengthGeneric((string_t*)vd.data_, vd.validity_, data.size_, *vd.sel_, result.variable_.data());
         }
     }
 }
@@ -309,4 +371,9 @@ void CreateSortKey::createSortKey(DataChunk &input, const vector<OrderModifiers>
     createSortKeyInternal(sortKeyData, modifiers, result, input.getSize());
 }
 
+void CreateSortKey::createSortKey(Vector &input, idx_t size, const OrderModifiers &modifiers, Vector &result) {
+    vector<sort_key_data_ptr_t> sortKeyData;
+    sortKeyData.push_back(sort_key_data_ptr_t(new SortKeyVectorData(input, size)));
+    createSortKeyInternal(sortKeyData, {modifiers}, result, size);
+}
 }

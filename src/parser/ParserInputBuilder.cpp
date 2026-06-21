@@ -314,6 +314,11 @@ void ParserInputBuilder::onTerm(char *value) {
     newTerm(value);
 }
 
+void ParserInputBuilder::onNullTerm() {
+    if (foundASafetyError_) return;
+    terms_parsered.push_back(Term::createNull());
+}
+
 
 void ParserInputBuilder::onUnknownVariable() {
     if(foundASafetyError_) return;
@@ -441,6 +446,17 @@ void ParserInputBuilder::onChoiceAtom() {
 void ParserInputBuilder::onBuiltinAtom() {
     if(foundASafetyError_) return;
 
+    auto atom = Atom::createBuiltinAtom(std::move(terms_parsered), binop_);
+    builtin_atoms.push_back(std::move(atom));
+    terms_parsered.clear();
+}
+
+void ParserInputBuilder::onIsNullPredicate(bool isNot) {
+    if (foundASafetyError_) return;
+    // The builtin-atom slot is binary; push a placeholder NULL term so the right
+    // operand is well-formed. The downstream executor reads only the left side.
+    terms_parsered.push_back(Term::createNull());
+    binop_ = isNot ? Binop::IS_NOT_NULL : Binop::IS_NULL;
     auto atom = Atom::createBuiltinAtom(std::move(terms_parsered), binop_);
     builtin_atoms.push_back(std::move(atom));
     terms_parsered.clear();
@@ -946,6 +962,17 @@ void ParserInputBuilder::onSQLLikePredicate() {
     sqlPredicate_.setValue2(valueExpr_);
     valueExpr_.clear();
     sqlPredicate_.setOp(sql::SQLBinop::SQL_LIKE);
+}
+
+void ParserInputBuilder::onSQLIsNullPredicate(bool isNot) {
+    if (foundASafetyError_) return;
+    // value1 is already on sqlPredicate_ from the preceding predicate_value_expr
+    // rule. value2 is unused for the unary IS NULL op. Register the completed
+    // predicate on the current WHERE clause — search_atom does not run a generic
+    // commit action for this rule, unlike the binary `predicate` rule.
+    sqlPredicate_.setOp(isNot ? sql::SQLBinop::SQL_IS_NOT_NULL
+                              : sql::SQLBinop::SQL_IS_NULL);
+    sqlStatements_.back().getWhere().addItem(sqlPredicate_);
 }
 
 void ParserInputBuilder::onSQLOperatorCondition(const char * op) {

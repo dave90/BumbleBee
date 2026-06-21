@@ -54,6 +54,11 @@ void printVal(const Value& val, string& line, const LogicalType& type) {
     //     // Convert to decimal
     //     line.append(formatDecimalValue(val, type));
     // }
+    if (val.isNull()) {
+        // NULL is printed bare (unquoted) regardless of column type.
+        line.append("NULL");
+        return;
+    }
     if (type.getPhysicalType() != PhysicalType::STRING)
         line.append(val.toString());
     else {
@@ -83,17 +88,20 @@ void TextOutputBuilder::outputAtoms(DataChunk &chunk, Predicate *predicate) {
     }
     stringChunk.setCardinality(chunk.getSize());
 
+    auto cellValue = [&](idx_t col, idx_t row) -> Value {
+        if (!chunk.data_[col].rowIsValid(row)) return Value::null();
+        return stringChunk.getValue(col, row);
+    };
+
     for (idx_t row = 0; row < stringChunk.getSize();++row) {
         line.clear();
         line.append(predicate->getName());
         line.push_back('(');
-        auto firstVal = stringChunk.getValue(0, row);
-        printVal(firstVal, line,  chunk.data_[0].getLogicalType()); // pass the original value
+        printVal(cellValue(0, row), line, chunk.data_[0].getLogicalType());
 
         for (idx_t col = 1; col < arity; ++col) {
             line.push_back(',');
-            auto val = stringChunk.getValue(col, row);
-            printVal(val, line, chunk.data_[col].getLogicalType()); // pass the original value
+            printVal(cellValue(col, row), line, chunk.data_[col].getLogicalType());
         }
         line.append(").\n");
         std::cout.write(line.data(), static_cast<std::streamsize>(line.size()));

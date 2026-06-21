@@ -1,0 +1,4 @@
+%@sql
+SELECT GRP, COUNT(*) as C, COUNT(VAL) as CV, SUM(VAL) as S, MIN(VAL) as MN, MAX(VAL) as MX
+FROM "./files/parquet/null_large.parquet"
+GROUP BY GRP

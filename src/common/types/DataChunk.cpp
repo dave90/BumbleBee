@@ -329,6 +329,9 @@ void DataChunk::cast(const vector<LogicalType>& types) {
         Vector newVec(types[i], getCapacity());
         LOG_DEBUG("Casting vector %s to %s.", physicalTypeToString(data_[i].getType()).c_str(), physicalTypeToString(newVec.getType()).c_str() );
         VectorOperations::cast(data_[i], newVec, getSize());
+        // cast is a 1:1 row mapping: carry validity over (independent copy when nulls exist)
+        if (!data_[i].validity().allValid())
+            newVec.validity() = data_[i].validity().copy();
         data_[i].reference(newVec);
     }
 }
@@ -343,6 +346,9 @@ void DataChunk::cast(DataChunk &result) {
         }
         LOG_DEBUG("Casting vector %s to %s.", physicalTypeToString(data_[i].getType()).c_str(), physicalTypeToString(result.data_[i].getType()).c_str() );
         VectorOperations::cast(data_[i], result.data_[i], getSize());
+        // cast is a 1:1 row mapping: carry validity over (independent copy when nulls exist)
+        if (!data_[i].validity().allValid())
+            result.data_[i].validity() = data_[i].validity().copy();
     }
 }
 }

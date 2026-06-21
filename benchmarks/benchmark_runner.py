@@ -263,6 +263,7 @@ def process_test(test, config, config_name, comparison_results, previous_results
     input_path = Path(config["input_folder"]) / input_file
     output_folder = Path(config["output_folder"])
     compare_csv = config.get("compare_csv", False)
+    result_format = config.get("result_format", "sql_csv")
     output_folder.mkdir(parents=True, exist_ok=True)
     expected_folder = None
     if "expected_folder" in config:
@@ -300,7 +301,24 @@ def process_test(test, config, config_name, comparison_results, previous_results
             filter_output_by_predicates(output_path, query_preds)
 
 
-        if expected_folder and not compare_csv:
+        if test.get("skip_compare"):
+            # e.g. a timed setup/LOAD step that produces no comparable result rows
+            output_match = ""
+        elif result_format in ("datalog", "cypher_plain") and expected_folder:
+            # Cross-engine: normalize raw engine output and compare to the DuckDB
+            # reference CSV (produced by the duckdb_ldbc config in expected_folder).
+            import ldbc_normalize
+            expected_path = expected_folder / f"{test_name.replace(' ', '_')}.csv"
+            canon_csv = output_folder / f"{test_name.replace(' ', '_')}.canonical.csv"
+            try:
+                rows = ldbc_normalize.to_canonical(output_path, result_format)
+                ldbc_normalize.write_canonical_csv(canon_csv, rows)
+                output_match = "match" if (expected_path.exists() and
+                    rows == ldbc_normalize.to_canonical(expected_path, "sql_csv")) else "mismatch"
+            except Exception as e:
+                print(f"  [WARN] normalization failed for {test_name}: {e}")
+                output_match = "mismatch"
+        elif expected_folder and not compare_csv:
             expected_path = expected_folder / f"{test_name.replace(' ', '_')}.txt"
             output_match = "match" if compare_outputs(output_path, expected_path) else "mismatch"
         elif expected_folder and compare_csv:

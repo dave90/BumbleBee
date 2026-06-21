@@ -21,6 +21,7 @@
 
 #include "Assert.hpp"
 #include "Value.hpp"
+#include "ValidityMask.hpp"
 #include "VectorDataMngr.hpp"
 #include "bumblebee/common/TypeDefs.hpp"
 
@@ -46,6 +47,8 @@ struct VectorData {
 	const SelectionVector *sel_;
 	data_ptr_t data_;
 	SelectionVector owned_sel_;
+	// Validity of the underlying (flat/constant) data, read through sel_ like data_.
+	const ValidityMask *validity_{nullptr};
 };
 
 // Vector class for columnar execution
@@ -122,6 +125,17 @@ public:
 	// Set a value in the specific index
 	void setValue(idx_t index, const Value &val);
 
+	// --- Validity (NULL) handling ---
+	// Returns the mask that owns the per-row validity for this vector. For DICTIONARY
+	// vectors that is the child's mask (read through the selection).
+	ValidityMask &validity();
+	const ValidityMask &validity() const;
+	// True if the logical row `idx` is valid (not null), dispatching per encoding.
+	bool rowIsValid(idx_t idx) const;
+	// Mark a logical row valid / invalid (null), dispatching per encoding.
+	void setValid(idx_t idx);
+	void setInvalid(idx_t idx);
+
 	// resize the vector
 	void resize(idx_t cur_size, idx_t new_size);
 
@@ -155,6 +169,10 @@ public:
 		auxDataMngr_ = std::move(newBuffer);
 	}
 
+private:
+    // Write a defensive NULL physical fill at the given flat index (per type).
+    void writeNullFill(idx_t index);
+
 protected:
     // Type of the vector
     VectorType vtype_{VectorType::FLAT_VECTOR};
@@ -166,6 +184,9 @@ protected:
     vector_data_mngr_ptr_t dataMngr_;
     // Aux data manager (used for string vectors where it contains the heap and for dictionary hold the real data)
     vector_data_mngr_ptr_t auxDataMngr_;
+    // Per-row validity. Default all-valid (no buffer). For DICTIONARY vectors the
+    // authoritative mask is the child's; this member is unused there.
+    ValidityMask validity_;
 };
 
 
@@ -202,6 +223,16 @@ struct ConstantVector {
 	static const SelectionVector *zeroSelectionVector(idx_t count, SelectionVector &owned_sel);
 	// Turns Vector into a constant vector by referencing a value within the source vector
 	static void reference(Vector &vector, Vector &source, idx_t position, idx_t count);
+
+	// A constant vector carries a single validity bit (row 0).
+	static inline bool isNull(const Vector &vector) {
+		BB_ASSERT(vector.getVectorType() == VectorType::CONSTANT_VECTOR);
+		return !vector.validity_.rowIsValid(0);
+	}
+	static inline void setNull(Vector &vector, bool isNull) {
+		BB_ASSERT(vector.getVectorType() == VectorType::CONSTANT_VECTOR);
+		vector.validity_.set(0, !isNull);
+	}
 
 	static const sel_t ZERO_VECTOR[STANDARD_VECTOR_SIZE];
 	static const SelectionVector ZERO_SELECTION_VECTOR;
@@ -246,6 +277,12 @@ struct FlatVector {
 	static inline T getValue(Vector &vector, idx_t idx) {
 		BB_ASSERT(vector.getVectorType() == VectorType::FLAT_VECTOR);
 		return FlatVector::getData<T>(vector)[idx];
+	}
+	static inline ValidityMask &validity(Vector &vector) {
+		return vector.validity_;
+	}
+	static inline const ValidityMask &validity(const Vector &vector) {
+		return vector.validity_;
 	}
 
 	static const sel_t INCREMENTAL_VECTOR[STANDARD_VECTOR_SIZE];

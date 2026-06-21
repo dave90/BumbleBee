@@ -190,6 +190,11 @@ enum Binop {
     LESS_OR_EQ = 5,
     GREATER_OR_EQ = 6,
     ASSIGNMENT = 7,
+    // Placed well above the contiguous block so new comparison/arithmetic binops
+    // can be added without renumbering, and so the direct static_cast between
+    // Binop and SQLBinop (where SQL_LIKE sits at 8) stays unambiguous.
+    IS_NULL = 99,
+    IS_NOT_NULL = 100,
 };
 
 enum PhysicalHashType : uint8_t {

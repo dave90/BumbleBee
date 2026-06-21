@@ -81,11 +81,32 @@ void RowOperations::scatter(DataChunk &columns, VectorData col_data[], const Row
 		return;
 	}
 
-	// Set the validity mask for each row before inserting data
 	auto ptrs = FlatVector::getData<data_ptr_t>(rows);
 
 	auto &offsets = layout.getOffsets();
 	auto &types = layout.getTypes();
+
+	// Initialize the per-row validity prefix to all-valid (0xFF bytes), then clear bits
+	// for columns that carry NULLs (read through col_data[col].validity_ → sel_).
+	// Fast path: when every column is all-valid, only the memset runs (≤1 byte per row
+	// for typical predicates, hot in L1).
+	const idx_t flag_width = layout.getFlagWidth();
+	if (flag_width) {
+		for (idx_t i = 0; i < count; i++) {
+			rowSetAllValid(ptrs[sel.getIndex(i)], flag_width);
+		}
+		for (idx_t col_no = 0; col_no < types.size(); col_no++) {
+			auto &col = col_data[col_no];
+			if (!col.validity_ || col.validity_->allValid()) continue;
+			for (idx_t i = 0; i < count; i++) {
+				auto idx = sel.getIndex(i);
+				auto col_idx = col.sel_->getIndex(idx);
+				if (!col.validity_->rowIsValid(col_idx)) {
+					rowSetInvalid(ptrs[idx], col_no);
+				}
+			}
+		}
+	}
 
 	// Compute the entry size of the variable size columns
 	vector<buffer_handle_ptr_t> handles;

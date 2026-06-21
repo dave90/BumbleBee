@@ -37,7 +37,7 @@ struct MinState {
 
     void combine(MinState<T>* other) {
         value = (other->init && ( !init || value > other->value))?other->value: value;
-        init = true;
+        init = init || other->init;
     }
 };
 
@@ -57,8 +57,11 @@ struct MinOperation {
         state->init = true;
     }
 
-    static void finalize(MinState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+    // Returns false (→ output NULL) when no non-null input was ever observed.
+    static bool finalize(MinState<RESULT_TYPE> *state, RESULT_TYPE *result) {
+        if (!state->init) return false;
         *result = state->value;
+        return true;
     }
 };
 

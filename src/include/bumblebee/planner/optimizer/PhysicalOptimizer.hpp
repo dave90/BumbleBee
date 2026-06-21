@@ -70,6 +70,9 @@ private:
                               prule_ptr_vector_t& prules, idx_t& priority);
     void generateJoinRLHTBuildRules(PredicateTables* pred, vector<idx_t>& keys, vector<idx_t>& payloads,
                               prule_ptr_vector_t& prules, idx_t& priority);
+    // Build rule for the sort-merge (inequality) join index: scan all columns, sink into the index.
+    void generateSortMergeBuildRules(PredicateTables* pred, idx_t buildKeyCol, vector<idx_t>& payloads,
+                              prule_ptr_vector_t& prules, idx_t& priority);
     void generatePhysicalExternal(const set_term_variable_t& vars, idx_t index, Rule& rule, patom_ptr_vector_t &patoms);
 
     bool isRowLayoutHTRuleHTCreated(Predicate* predicate, const vector<idx_t>& keys, const vector<idx_t>& payloads );

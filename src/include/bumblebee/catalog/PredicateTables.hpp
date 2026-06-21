@@ -27,6 +27,7 @@
 #include "bumblebee/execution/PartitionedAggHT.hpp"
 #include "bumblebee/execution/PartitionedPRLHashTable.hpp"
 #include "bumblebee/execution/RowLayoutJoinHashTable.hpp"
+#include "bumblebee/execution/SortMergeJoinIndex.hpp"
 
 namespace bumblebee{
 
@@ -109,6 +110,11 @@ public:
     void createJoinRLHashTable(const vector<LogicalType>& types, const vector<idx_t>& keys,const vector<idx_t>& payload );
     bool existJoinRLHashTable(const vector<idx_t>& keys,const vector<idx_t>& payload) const;
 
+    // Return a sort-merge join index for the given key column and payloads. If it does not exist create it.
+    sort_merge_index_ptr_t& getSortMergeIndex(idx_t keyCol, const vector<idx_t>& payloads);
+    void createSortMergeIndex(const vector<LogicalType>& types, idx_t keyCol, const vector<idx_t>& payloads);
+    bool existSortMergeIndex(idx_t keyCol, const vector<idx_t>& payloads) const;
+
     bool existPartitionedPRLHashTable() const{
         return partitionedPRLHT_ != nullptr;
     }
@@ -171,6 +177,8 @@ protected:
     partitioned_prl_ht_ptr_t partitionedPRLHT_;
     // Row Layout hash tables (for joins)
     vector<rl_join_ht_ptr_t> rlHTables_;
+    // Sort-merge join indexes (for inequality/theta joins)
+    vector<sort_merge_index_ptr_t> sortMergeIndexes_;
     // partitioned aggregate hash table (for aggregates)
     partitioned_agg_ht_ptr_t partitionedAggHT_;
 

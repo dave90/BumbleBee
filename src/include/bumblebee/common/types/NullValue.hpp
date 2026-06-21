@@ -25,7 +25,9 @@
 namespace bumblebee{
 
 
-// Placeholder to insert in Vectors or to use for hashing NULLs
+// Defensive physical fill for NULL slots — write-only. NULL is detected via the
+// ValidityMask, never by comparing a value to NullValue() (the sentinel is a
+// legitimate value for unsigned/min types). Do not use this for null detection.
 template <class T>
 inline T NullValue() {
     return std::numeric_limits<T>::min();

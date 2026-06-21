@@ -41,6 +41,28 @@ public:
     static idx_t lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
     static idx_t lessThanEquals(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount);
 
+    // NULL-aware comparators.
+    //
+    // The standard equals/notEquals above implement the SQL "=" / "!=" semantics:
+    // a NULL operand makes the comparison UNKNOWN, which is never TRUE, so the
+    // row is excluded from `trueSel`. That is the right behavior for equi-join
+    // keys, where a NULL key must never match.
+    //
+    // notDistinctFrom implements SQL `IS NOT DISTINCT FROM`: two NULLs compare
+    // equal, a NULL and a non-NULL do not. distinctFrom is the inverse. These
+    // are the comparators to use for dedup, DISTINCT, GROUP BY, and the
+    // recursive head-predicate hash tables — without them a recursive program
+    // over null-bearing facts re-derives `a(1,NULL)` forever.
+    static idx_t notDistinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
+    static idx_t distinctFrom(Vector &left, Vector &right, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
+
+    // Unary NULL predicates: pure mask reads, independent of the underlying value.
+    static idx_t isNull(Vector &input, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
+    static idx_t isNotNull(Vector &input, const SelectionVector *sel, idx_t count, SelectionVector *trueSel);
+    // 7-arg variant produces both selections so OR-eval can feed unmatched rows to the next branch.
+    static idx_t isNull(Vector &input, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t &falseCount);
+    static idx_t isNotNull(Vector &input, const SelectionVector *sel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t &falseCount);
+
     // Arithmetic operations
     static void sum(Vector &left, Vector &right, Vector &result, idx_t count);
     static void dot(Vector &left, Vector &right, Vector &result, idx_t count);

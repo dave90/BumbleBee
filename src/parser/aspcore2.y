@@ -62,6 +62,8 @@ bool queryFound=false;
 %token PLUS TIMES SLASH BACK_SLASH
 
 %token ANON_VAR
+%token NULLKW
+%token IS_KW
 
 %token PARAM_OPEN PARAM_CLOSE
 %token SQUARE_OPEN SQUARE_CLOSE
@@ -400,6 +402,14 @@ builtin_atom
     {
         director.getBuilder()->onBuiltinAtom();
     }
+    | term IS_KW NULLKW
+    {
+        director.getBuilder()->onIsNullPredicate(false);
+    }
+    | term IS_KW NAF NULLKW
+    {
+        director.getBuilder()->onIsNullPredicate(true);
+    }
     ;
 
 compareop
@@ -460,6 +470,10 @@ term__
         {
             director.getBuilder()->onTerm($1);
             delete[] $1;
+        }
+    | NULLKW
+        {
+            director.getBuilder()->onNullTerm();
         }
     | PARAM_OPEN term PARAM_CLOSE
         {
@@ -1077,6 +1091,14 @@ search_atom
     | predicate_value_expr SQL_NOT SQL_IN PARAM_OPEN sql_query PARAM_CLOSE
     {
         director.getBuilder()->onSQLInSubqueryPredicate(true);
+    }
+    | predicate_value_expr IS_KW NULLKW
+    {
+        director.getBuilder()->onSQLIsNullPredicate(false);
+    }
+    | predicate_value_expr IS_KW SQL_NOT NULLKW
+    {
+        director.getBuilder()->onSQLIsNullPredicate(true);
     }
     | where_group
     ;

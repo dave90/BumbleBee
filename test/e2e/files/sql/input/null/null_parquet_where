@@ -1,0 +1,4 @@
+%@sql
+SELECT ID, SCORE
+FROM "./files/parquet/null_data.parquet"
+WHERE SCORE > 15

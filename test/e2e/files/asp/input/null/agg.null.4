@@ -1,0 +1,22 @@
+% Regression for the COUNT-over-NULL-column behaviour at the Datalog level.
+% `#count{X : ...}` skips NULL X (matches SQL `COUNT(col)`); the equivalent of SQL
+% `COUNT(*)` is obtained by counting over a constant — `#count{Z, #ID : ..., Z=1}`
+% wouldn't currently work (planner limitation in builtin-in-agg-body) so we test
+% the simpler `COUNT(col)` semantics directly:
+%
+%   - col_with_nulls counted via #count → skips NULL → 2
+%   - col_without_nulls counted via #count → counts all → 4
+
+input(NULL, 10).
+input(NULL, 20).
+input(3, 30).
+input(4, 40).
+
+% Count over col 0 (has NULLs) — skip-NULL semantics → 2.
+cnt_col0(C) :- C = #count{X : input(X, Y)}.
+
+% Count over col 1 (no NULLs) — counts all rows → 4.
+cnt_col1(C) :- C = #count{Y : input(X, Y)}.
+
+cnt_col0(X)?
+cnt_col1(X)?

@@ -69,14 +69,22 @@ bool BumbleString::operator<(const BumbleString &r) const {
     auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
     return memcmp_res < 0 || (memcmp_res == 0 && left_length < right_length);
 
-    auto cmp = strcmp(getDataUnsafe(), r.getDataUnsafe());
-    return (cmp < 0);
 }
 
 bool BumbleString::operator>(const BumbleString &r) const {
-    // compare the data
-    auto cmp = strcmp(getDataUnsafe(), r.getDataUnsafe());
-    return (cmp > 0);
+    // compare the data: length-aware memcmp, consistent with operator<. strcmp is unusable here
+    // because byte-comparable sort keys contain embedded NUL bytes (which terminate strcmp early).
+    auto left_length = size();
+    auto right_length = r.size();
+    auto min_length = std::min(left_length, right_length);
+    auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
+    return memcmp_res > 0 || (memcmp_res == 0 && left_length > right_length);
+}
+
+bool BumbleString::operator==(const BumbleString &r) const {
+    auto left_length = size();
+    auto right_length = r.size();
+    return left_length == right_length && memcmp(getDataUnsafe(), r.getDataUnsafe(), left_length) == 0;
 }
 
 const char * BumbleString::c_str() const {

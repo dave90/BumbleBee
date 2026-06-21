@@ -225,6 +225,59 @@ class TestIterativeQueries:
         assert "temp" not in preds
 
 
+class TestNullHandling:
+    """Tests for 06_null_handling.py — NULL round-trip."""
+
+    def _make_db(self):
+        survey = pd.DataFrame({
+            "name":  ["Alice", "Bob", "Carol", "Dan", "Eve"],
+            "score": pd.array([90, None, 75, None, 88], dtype="Int64"),
+        })
+        db = bb.db()
+        db.load_df(survey, "scores")
+        return db
+
+    def test_aggregates_skip_null(self):
+        db = self._make_db()
+        db.run("""
+            total(S)    :- S = #sum{V : scores(_, V)}.
+            recorded(C) :- C = #count{V : scores(_, V)}.
+            total(X)?
+            recorded(X)?
+        """)
+        # NULL inputs are skipped: 90 + 75 + 88 = 253 over 3 of 5 rows.
+        assert db.get_table("total", 1).tuples() == [(253,)]
+        assert db.get_table("recorded", 1).tuples() == [(3,)]
+
+    def test_is_null_and_is_not_null(self):
+        db = self._make_db()
+        db.run("""
+            missing(N) :- scores(N, V), V IS NULL.
+            answered(N, V) :- scores(N, V), V IS NOT NULL.
+            missing(X)?
+            answered(X, Y)?
+        """)
+        assert _rows(db, "missing", 1) == [("Bob",), ("Dan",)]
+        assert _rows(db, "answered", 2) == [("Alice", 90), ("Carol", 75), ("Eve", 88)]
+
+    def test_tuples_surface_none(self):
+        db = self._make_db()
+        rows = sorted(db.get_table("scores", 2).tuples(), key=lambda r: r[0])
+        assert rows == [
+            ("Alice", 90), ("Bob", None), ("Carol", 75), ("Dan", None), ("Eve", 88),
+        ]
+
+    def test_to_df_surfaces_pd_na(self):
+        db = self._make_db()
+        df = db.get_table("scores", 2).to_df(col_names=["name", "score"])
+        df = df.sort_values("name").reset_index(drop=True)
+        # NULLs come back as a nullable (NA-aware) dtype, not plain numpy.
+        assert df["score"].isna().sum() == 2
+        present = {row["name"]: row["score"] for _, row in df.iterrows()
+                   if not pd.isna(row["score"])}
+        assert present == {"Alice": 90, "Carol": 75, "Eve": 88}
+
+
 class TestPredicateTableColumns:
     """Tests that SQL queries on predicate tables use COL_0, COL_1, ... naming,
     consistent with to_df() default column names."""

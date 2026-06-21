@@ -1,0 +1,15 @@
+best("Alice",90).
+best("Carol",NULL).
+best("Bob",70).
+total("Alice",170).
+total("Carol",NULL).
+total("Bob",70).
+score("Alice",90).
+score("Alice",NULL).
+score("Alice",80).
+score("Bob",NULL).
+score("Bob",70).
+score("Carol",NULL).
+recorded("Alice",2).
+recorded("Carol",0).
+recorded("Bob",1).

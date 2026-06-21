@@ -1,0 +1,4 @@
+item(1). item(2). item(NULL). item(3).
+exclude(2). exclude(NULL).
+keep(X) :- item(X), not exclude(X).
+keep(X)?

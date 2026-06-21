@@ -17,7 +17,11 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <cstring>
+#include <memory>
+
 #include "bumblebee/common/TypeDefs.hpp"
+#include "bumblebee/common/types/ValidityMask.hpp"
 
 namespace bumblebee{
 
@@ -52,6 +56,29 @@ public:
 		if (len > 0) {
 			writeData(val, len);
 		}
+	}
+
+	// Serialize the first `count` bits of `mask`. Layout:
+	//   [allValid:1B] [packed:(count+7)/8 B if !allValid]
+	// Packed bytes are LSB-first within each byte (bit i of row r lives in
+	// byte r/8, bit position r%8); bit=1 means valid (matches ValidityMask).
+	// All-valid fast path writes only the flag byte — zero overhead in the
+	// common case.
+	void writeBitmask(const ValidityMask &mask, idx_t count) {
+		bool allValid = mask.checkAllValid(count);
+		write<uint8_t>(allValid ? 1 : 0);
+		if (allValid || count == 0) {
+			return;
+		}
+		idx_t byteCount = (count + 7) / 8;
+		std::unique_ptr<uint8_t[]> buf(new uint8_t[byteCount]);
+		std::memset(buf.get(), 0, byteCount);
+		for (idx_t r = 0; r < count; r++) {
+			if (mask.rowIsValid(r)) {
+				buf[r / 8] |= static_cast<uint8_t>(1u << (r % 8));
+			}
+		}
+		writeData((const_data_ptr_t)buf.get(), byteCount);
 	}
 
 	template <class T>
@@ -110,6 +137,26 @@ public:
 			return T::deserialize(*this);
 		}
 		return nullptr;
+	}
+
+	// Mirror of writeBitmask: read the allValid flag, then (if !allValid) the
+	// packed mask bytes for `count` rows. Resets the mask before reading so
+	// stale bits from a previous use don't leak. All-valid restores the
+	// no-buffer fast path.
+	void readBitmask(ValidityMask &mask, idx_t count) {
+		mask.setAllValid();
+		auto allValid = read<uint8_t>();
+		if (allValid || count == 0) {
+			return;
+		}
+		idx_t byteCount = (count + 7) / 8;
+		std::unique_ptr<uint8_t[]> buf(new uint8_t[byteCount]);
+		readData((data_ptr_t)buf.get(), byteCount);
+		for (idx_t r = 0; r < count; r++) {
+			if ((buf[r / 8] & (1u << (r % 8))) == 0) {
+				mask.setInvalid(r);
+			}
+		}
 	}
 
 	void readStringVector(vector<string> &list);

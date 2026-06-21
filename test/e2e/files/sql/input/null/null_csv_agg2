@@ -1,0 +1,4 @@
+%@sql
+SELECT ACTIVE, MIN(SCORE) as MN, MAX(SCORE) as MX, AVG(SCORE) as AV
+FROM &read_csv("./files/csv/null_data.csv";auto_detect=1,header=1)
+GROUP BY ACTIVE

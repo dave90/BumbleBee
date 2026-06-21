@@ -76,6 +76,8 @@ struct BufferedCSVReaderOptions {
 	idx_t bufferSize_ = STANDARD_VECTOR_SIZE * 100;
 	// Consider all columns to be of type varchar
 	bool allVarchar_ = false;
+	// String that represents a NULL value. Defaults to the empty string
+	string nullMarker_;
 
 	std::string toString() const {
 		return "DELIMITER='" + delimiter_ + (hasDelimiter_ ? "'" : (autoDetect_ ? "' (auto detected)" : "' (default)")) +

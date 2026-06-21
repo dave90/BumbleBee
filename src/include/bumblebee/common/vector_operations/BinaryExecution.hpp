@@ -106,6 +106,37 @@ protected:
 		*result_data = OPWRAPPER::template operation<OP, LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE>(*ldata, *rdata, 0, dataptr);
 	}
 
+	// 3VL for binary execute: a NULL on either input produces a NULL result row.
+	// Single helper called after every executeStandard variant; fast-path returns
+	// immediately when both inputs are all-valid (the common case).
+	static inline void propagateBinaryValidity(Vector &left, Vector &right, Vector &result, idx_t count) {
+		bool leftAllValid = left.validity().allValid();
+		bool rightAllValid = right.validity().allValid();
+		if (leftAllValid && rightAllValid) {
+			return;
+		}
+		if (result.getVectorType() == VectorType::CONSTANT_VECTOR) {
+			// both operands are CONSTANT; if either constant is null, the result is null.
+			ConstantVector::setNull(result, true);
+			return;
+		}
+		auto &rmask = FlatVector::validity(result);
+		VectorData lvd, rvd;
+		left.orrify(count, lvd);
+		right.orrify(count, rvd);
+		const bool lav = !lvd.validity_ || lvd.validity_->allValid();
+		const bool rav = !rvd.validity_ || rvd.validity_->allValid();
+		bool allocated = false;  // allocate the result mask only on the first actual null
+		for (idx_t i = 0; i < count; i++) {
+			bool lnull = !lav && !lvd.validity_->rowIsValid(lvd.sel_->getIndex(i));
+			bool rnull = !rav && !rvd.validity_->rowIsValid(rvd.sel_->getIndex(i));
+			if (lnull || rnull) {
+				if (!allocated) { rmask.ensureWritable(count); allocated = true; }
+				rmask.setInvalidUnsafe(i);
+			}
+		}
+	}
+
 	template <class LEFT_TYPE, class RIGHT_TYPE, class RESULT_TYPE, class OPWRAPPER, class OP>
 	static inline void executeStandard(Vector &left, Vector &right, Vector &result, idx_t count, void *dataptr) {
 		auto left_vector_type = left.getVectorType();
@@ -124,19 +155,24 @@ protected:
 		} else {
 			executeGeneric<LEFT_TYPE, RIGHT_TYPE, RESULT_TYPE, OPWRAPPER, OP>(left, right, result, count, dataptr);
 		}
+		propagateBinaryValidity(left, right, result, count);
 	}
 
 
 protected:
+	// 3-valued logic for comparison select: a NULL on either side makes the comparison UNKNOWN,
+	// which is treated as not-TRUE (stays in falseSel so the next OR branch can still match the row,
+	// and the existing PhysicalExpression OR-eval invariant `count == trueCount + falseCount` holds).
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
 	static idx_t selectConstant(Vector &left, Vector &right, const SelectionVector *sel, idx_t count,
 								SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 		auto ldata = ConstantVector::getData<LEFT_TYPE>(left);
 		auto rdata = ConstantVector::getData<RIGHT_TYPE>(right);
 
-		// both sides are constant, return either 0 or the count
-		// in this case we do not fill in the result selection vector at all
-		if (! OP::operation(*ldata, *rdata)) {
+		// either constant is NULL -> the comparison is UNKNOWN for every row.
+		bool either_null = ConstantVector::isNull(left) || ConstantVector::isNull(right);
+		bool result = !either_null && OP::operation(*ldata, *rdata);
+		if (!result) {
 			if (falseSel) {
 				for (idx_t i = 0; i < count; i++) {
 					falseSel->setIndex(i, sel->getIndex(i));
@@ -155,8 +191,10 @@ protected:
 
 	}
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT, bool HAS_TRUE_SEL, bool HAS_FALSE_SEL>
+	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT,
+	          bool HAS_TRUE_SEL, bool HAS_FALSE_SEL, bool HAS_NULLS>
 	static inline idx_t selectFlatLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
+	                                   const ValidityMask *lvalidity, const ValidityMask *rvalidity,
 	                                   const SelectionVector *sel, idx_t count,
 	                                   SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 		idx_t true_count = 0;
@@ -164,7 +202,14 @@ protected:
 		for (idx_t idx = 0; idx < count; idx++) {
 			idx_t lidx = LEFT_CONSTANT ? 0 : sel->getIndex(idx);
 			idx_t ridx = RIGHT_CONSTANT ? 0 : sel->getIndex(idx);
-			bool comparison_result = OP::operation(ldata[lidx], rdata[ridx]);
+			bool comparison_result;
+			if constexpr (HAS_NULLS) {
+				bool both_valid = (LEFT_CONSTANT ? lvalidity->rowIsValid(0) : lvalidity->rowIsValid(lidx)) &&
+				                  (RIGHT_CONSTANT ? rvalidity->rowIsValid(0) : rvalidity->rowIsValid(ridx));
+				comparison_result = both_valid && OP::operation(ldata[lidx], rdata[ridx]);
+			} else {
+				comparison_result = OP::operation(ldata[lidx], rdata[ridx]);
+			}
 			if (HAS_TRUE_SEL) {
 				trueSel->setIndex(true_count, sel->getIndex(idx));
 			}
@@ -178,32 +223,50 @@ protected:
 	}
 
 
+	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT, bool HAS_NULLS>
+	static inline idx_t selectFlatSelSwitch(LEFT_TYPE *ldata, RIGHT_TYPE *rdata,
+	                                         const ValidityMask *lvalidity, const ValidityMask *rvalidity,
+	                                         const SelectionVector *sel, idx_t count,
+	                                         SelectionVector *trueSel, SelectionVector *falseSel, idx_t &false_count) {
+		if (trueSel && falseSel)
+			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true, true, HAS_NULLS>(
+				ldata, rdata, lvalidity, rvalidity, sel, count, trueSel, falseSel, false_count);
+		if (trueSel)
+			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true, false, HAS_NULLS>(
+				ldata, rdata, lvalidity, rvalidity, sel, count, trueSel, falseSel, false_count);
+		if (falseSel)
+			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false, true, HAS_NULLS>(
+				ldata, rdata, lvalidity, rvalidity, sel, count, trueSel, falseSel, false_count);
+		return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false, false, HAS_NULLS>(
+				ldata, rdata, lvalidity, rvalidity, sel, count, trueSel, falseSel, false_count);
+	}
+
 	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool LEFT_CONSTANT, bool RIGHT_CONSTANT>
 	static inline idx_t selectFlat(Vector &left, Vector &right, const SelectionVector *sel, idx_t count,
 	                        SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 		auto ldata = FlatVector::getData<LEFT_TYPE>(left);
 		auto rdata = FlatVector::getData<RIGHT_TYPE>(right);
-		if (trueSel && falseSel)
-			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true, true>(
-			    ldata, rdata, sel, count, trueSel, falseSel, false_count);
-		if (trueSel)
-			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true, false>(
-				ldata, rdata, sel, count, trueSel, falseSel, false_count);
-		if (falseSel)
-			return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false, true>(
-				ldata, rdata, sel, count, trueSel, falseSel, false_count);
-		return selectFlatLoop<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false, false>(
-				ldata, rdata, sel, count, trueSel, falseSel, false_count);
-
+		// Validity lives on the Vector (FlatVector::validity returns its mask, which
+		// for a CONSTANT vector is a single-bit mask read at index 0).
+		const auto &lvalidity = FlatVector::validity(left);
+		const auto &rvalidity = FlatVector::validity(right);
+		bool hasNulls = !lvalidity.allValid() || !rvalidity.allValid();
+		if (hasNulls)
+			return selectFlatSelSwitch<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, true>(
+				ldata, rdata, &lvalidity, &rvalidity, sel, count, trueSel, falseSel, false_count);
+		return selectFlatSelSwitch<LEFT_TYPE, RIGHT_TYPE, OP, LEFT_CONSTANT, RIGHT_CONSTANT, false>(
+				ldata, rdata, nullptr, nullptr, sel, count, trueSel, falseSel, false_count);
 	}
 
 
 
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool HAS_TRUE_SEL,bool HAS_FALSE_SEL >
+	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool HAS_TRUE_SEL, bool HAS_FALSE_SEL, bool HAS_NULLS>
 	static inline idx_t
 	selectGenericLoop(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata, const SelectionVector *__restrict lsel,
-	                  const SelectionVector *__restrict rsel, const SelectionVector *__restrict sel, idx_t count,
+	                  const SelectionVector *__restrict rsel,
+	                  const ValidityMask *lvalidity, const ValidityMask *rvalidity,
+	                  const SelectionVector *__restrict sel, idx_t count,
 	                  SelectionVector *trueSel,SelectionVector *falseSel, idx_t& false_count) {
 
 		idx_t true_count = 0;
@@ -212,7 +275,13 @@ protected:
 			auto idx = sel->getIndex(i);
 			auto lindex = lsel->getIndex(idx);
 			auto rindex = rsel->getIndex(idx);
-			bool comparison_result = OP::operation(ldata[lindex], rdata[rindex]);
+			bool comparison_result;
+			if constexpr (HAS_NULLS) {
+				bool both_valid = lvalidity->rowIsValid(lindex) && rvalidity->rowIsValid(rindex);
+				comparison_result = both_valid && OP::operation(ldata[lindex], rdata[rindex]);
+			} else {
+				comparison_result = OP::operation(ldata[lindex], rdata[rindex]);
+			}
 			// write same index if does not match ( branchless operation ;) )
 			if (HAS_TRUE_SEL) {
 				trueSel->setIndex(true_count, idx);
@@ -225,21 +294,22 @@ protected:
 		return true_count;
 	}
 
-	template <class LEFT_TYPE, class RIGHT_TYPE, class OP>
+	template <class LEFT_TYPE, class RIGHT_TYPE, class OP, bool HAS_NULLS>
 	static inline idx_t selectGenericLoopSelSwitch(LEFT_TYPE *__restrict ldata, RIGHT_TYPE *__restrict rdata,
 						   const SelectionVector *__restrict lsel, const SelectionVector *__restrict rsel,
+						   const ValidityMask *lvalidity, const ValidityMask *rvalidity,
 						   const SelectionVector *__restrict resultSel, idx_t count, SelectionVector *trueSel, SelectionVector *falseSel, idx_t& falseCount) {
 		if (trueSel && falseSel)
-			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true, true>(
-				ldata, rdata, lsel, rsel, resultSel, count,  trueSel, falseSel, falseCount);
+			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true, true, HAS_NULLS>(
+				ldata, rdata, lsel, rsel, lvalidity, rvalidity, resultSel, count,  trueSel, falseSel, falseCount);
 		if (trueSel)
-			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true, false>(
-				ldata, rdata, lsel, rsel, resultSel, count,  trueSel, falseSel, falseCount);
+			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, true, false, HAS_NULLS>(
+				ldata, rdata, lsel, rsel, lvalidity, rvalidity, resultSel, count,  trueSel, falseSel, falseCount);
 		if (falseSel)
-			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false, true>(
-				ldata, rdata, lsel, rsel, resultSel, count,  trueSel, falseSel, falseCount);
-		return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false, false>(
-				ldata, rdata, lsel, rsel, resultSel, count, trueSel, falseSel, falseCount);
+			return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false, true, HAS_NULLS>(
+				ldata, rdata, lsel, rsel, lvalidity, rvalidity, resultSel, count,  trueSel, falseSel, falseCount);
+		return selectGenericLoop<LEFT_TYPE, RIGHT_TYPE, OP, false, false, HAS_NULLS>(
+				ldata, rdata, lsel, rsel, lvalidity, rvalidity, resultSel, count, trueSel, falseSel, falseCount);
 
 	}
 
@@ -252,8 +322,18 @@ protected:
 		left.orrify(count, ldata);
 		right.orrify(count, rdata);
 
-		return selectGenericLoopSelSwitch<LEFT_TYPE, RIGHT_TYPE, OP>((LEFT_TYPE *)ldata.data_, (RIGHT_TYPE *)rdata.data_,
-		                                                          ldata.sel_, rdata.sel_, sel, count, trueSel, falseSel, falseCount);
+		// orrify populates validity_ as the source mask read through sel_ (see Vector.cpp).
+		bool hasNulls = (ldata.validity_ && !ldata.validity_->allValid()) ||
+		                (rdata.validity_ && !rdata.validity_->allValid());
+		if (hasNulls)
+			return selectGenericLoopSelSwitch<LEFT_TYPE, RIGHT_TYPE, OP, true>(
+				(LEFT_TYPE *)ldata.data_, (RIGHT_TYPE *)rdata.data_,
+				ldata.sel_, rdata.sel_, ldata.validity_, rdata.validity_,
+				sel, count, trueSel, falseSel, falseCount);
+		return selectGenericLoopSelSwitch<LEFT_TYPE, RIGHT_TYPE, OP, false>(
+			(LEFT_TYPE *)ldata.data_, (RIGHT_TYPE *)rdata.data_,
+			ldata.sel_, rdata.sel_, nullptr, nullptr,
+			sel, count, trueSel, falseSel, falseCount);
 	}
 
 public:

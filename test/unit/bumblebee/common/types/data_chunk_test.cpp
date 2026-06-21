@@ -290,4 +290,150 @@ TEST(DataChunkTests, OrrifyWithSelectionInt32) {
     }
 }
 
+// ---------- NULL propagation across DataChunk movement ----------
+
+TEST(DataChunkNullTests, AppendCarriesNull) {
+    DataChunk chunk1;
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk1, 10);
+
+    DataChunk chunk2;
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk2, 10);
+    chunk2.setValue(1, 4, Value::null()); // null in col 1, row 4
+
+    chunk1.append(chunk2);
+    EXPECT_EQ(chunk1.getSize(), 20);
+    // null landed at row 10+4 in chunk1
+    EXPECT_TRUE(chunk1.getValue(1, 14).isNull());
+    EXPECT_FALSE(chunk1.getValue(1, 13).isNull());
+}
+
+TEST(DataChunkNullTests, AppendWithSelectionCarriesNull) {
+    DataChunk chunk1;
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk1, 10);
+
+    DataChunk chunk2;
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk2, 20);
+    chunk2.setValue(0, 15, Value::null()); // selected below
+
+    SelectionVector sel(10);
+    for (idx_t i = 0; i < 10; i++) sel.setIndex(i, i + 10); // picks rows 10..19
+
+    chunk1.append(chunk2, true, &sel, 10);
+    EXPECT_EQ(chunk1.getSize(), 20);
+    // source row 15 maps to sel position 5 -> target row 10+5 = 15
+    EXPECT_TRUE(chunk1.getValue(0, 15).isNull());
+    EXPECT_FALSE(chunk1.getValue(0, 14).isNull());
+}
+
+TEST(DataChunkNullTests, CopyCarriesNull) {
+    DataChunk src;
+    src.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(src, 50);
+    src.setValue(0, 7, Value::null());
+
+    DataChunk dst;
+    dst.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    dst.setCardinality(0);
+    src.copy(dst);
+    EXPECT_EQ(dst.getSize(), 50);
+    EXPECT_TRUE(dst.getValue(0, 7).isNull());
+    EXPECT_FALSE(dst.getValue(0, 6).isNull());
+}
+
+TEST(DataChunkNullTests, SliceReadsNull) {
+    DataChunk chunk;
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk, 20);
+    chunk.setValue(1, 13, Value::null());
+
+    SelectionVector sel(10);
+    for (idx_t i = 0; i < 10; i++) sel.setIndex(i, i + 10); // rows 10..19
+
+    chunk.slice(sel, 10);
+    // source row 13 -> sliced position 3
+    EXPECT_TRUE(chunk.getValue(1, 3).isNull());
+    EXPECT_FALSE(chunk.getValue(1, 2).isNull());
+}
+
+TEST(DataChunkNullTests, ResetClearsNull) {
+    DataChunk chunk;
+    chunk.initialize((vector<PhysicalType>){PhysicalType::BIGINT, PhysicalType::BIGINT});
+    fillChunk(chunk, 100);
+    chunk.setValue(0, 3, Value::null());
+    EXPECT_TRUE(chunk.getValue(0, 3).isNull());
+
+    chunk.reset();
+    fillChunk(chunk, 100);
+    // after reset+refill the previously-null slot is a normal value again
+    EXPECT_FALSE(chunk.getValue(0, 3).isNull());
+}
+
+TEST(DataChunkNullTests, CastCarriesNull) {
+    DataChunk chunk;
+    chunk.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk, 30);
+    chunk.setValue(0, 9, Value::null());
+
+    chunk.cast((vector<LogicalType>){PhysicalType::BIGINT, PhysicalType::INTEGER});
+    EXPECT_EQ(chunk.data_[0].getType(), PhysicalType::BIGINT);
+    EXPECT_TRUE(chunk.getValue(0, 9).isNull());
+    EXPECT_FALSE(chunk.getValue(0, 8).isNull());
+}
+
+// cast(DataChunk& result) overload (writes into a pre-typed result chunk)
+TEST(DataChunkNullTests, CastIntoResultCarriesNull) {
+    DataChunk src;
+    src.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(src, 30);
+    src.setValue(0, 9, Value::null());
+
+    DataChunk result;
+    result.initialize((vector<PhysicalType>){PhysicalType::BIGINT, PhysicalType::INTEGER});
+    result.setCardinality(30);
+    src.cast(result);
+    EXPECT_TRUE(result.getValue(0, 9).isNull());
+    EXPECT_FALSE(result.getValue(0, 8).isNull());
+}
+
+// copy(other, sel, sourceCount, offset) variant carries nulls
+TEST(DataChunkNullTests, CopyWithSelectionCarriesNull) {
+    DataChunk src;
+    src.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(src, 20);
+    src.setValue(1, 7, Value::null());
+
+    SelectionVector sel(20);
+    for (idx_t i = 0; i < 20; i++) sel.setIndex(i, i);
+
+    DataChunk dst;
+    dst.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    src.copy(dst, sel, 20, 0);
+    EXPECT_EQ(dst.getSize(), 20);
+    EXPECT_TRUE(dst.getValue(1, 7).isNull());
+    EXPECT_FALSE(dst.getValue(1, 6).isNull());
+}
+
+// append that forces a resize must preserve the target's existing nulls
+TEST(DataChunkNullTests, AppendWithResizePreservesNull) {
+    DataChunk chunk1;
+    chunk1.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk1, 1000);
+    chunk1.setValue(0, 5, Value::null());
+
+    DataChunk chunk2;
+    chunk2.initialize((vector<PhysicalType>){PhysicalType::INTEGER, PhysicalType::INTEGER});
+    fillChunk(chunk2, 300);
+    chunk2.setValue(0, 1, Value::null());
+
+    chunk1.append(chunk2, true); // 1000 + 300 = 1300 > capacity 1024 -> resize
+    EXPECT_EQ(chunk1.getSize(), 1300);
+    EXPECT_TRUE(chunk1.getValue(0, 5).isNull());      // target's null survived resize
+    EXPECT_TRUE(chunk1.getValue(0, 1000 + 1).isNull()); // appended null landed
+    EXPECT_FALSE(chunk1.getValue(0, 999).isNull());
+}
+
 

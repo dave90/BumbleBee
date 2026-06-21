@@ -26,7 +26,14 @@ class AggregateFunction;
 
 /*
  * Row layout:
- * [DATA] [HEAP POINTER] [AGGREGATES] | [DATA] [HEAP POINTER] [AGGREGATES] ...
+ * [VALIDITY (ceil(N/8) bytes)] [HEAP POINTER?] [DATA] [AGGREGATES] | ... per row.
+ *
+ * Validity prefix:
+ *  - lives at row offset 0 — same cache line the row-match loop already touches.
+ *  - one bit per data column; bit = 1 means valid (not NULL), matching ValidityMask.
+ *  - flagWidth_ = ceil(columnCount() / 8); zero when there are no data columns
+ *    (aggregate-only layouts skip the prefix entirely).
+ *  - the heap pointer (when present) and column offsets are shifted right by flagWidth_.
 */
 class RowLayout {
     using Aggregates = vector<AggregateFunction*>;
@@ -83,6 +90,11 @@ public:
     inline idx_t getHeapPointerOffset() const {
         return heapPointerOffset_;
     }
+    // Width of the per-row validity bitmap prefix at row offset 0 (bytes).
+    // ceil(columnCount() / 8); 0 when there are no data columns.
+    inline idx_t getFlagWidth() const {
+        return flagWidth_;
+    }
 
 private:
     // The types of the data columns
@@ -101,6 +113,8 @@ private:
     bool allConstant_;
     // Offset to the pointer to the heap for each row
     idx_t heapPointerOffset_;
+    // Width of the per-row validity bitmap prefix (bytes). ceil(cols / 8); 0 when no data cols.
+    idx_t flagWidth_{0};
 };
 
 

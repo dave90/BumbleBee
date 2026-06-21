@@ -1,0 +1,26 @@
+% Aggregates over NULL-bearing facts
+% Aggregates skip NULL inputs:
+%   - #sum / #min / #max / #avg ignore NULL values; a group whose values
+%     are all NULL aggregates to NULL.
+%   - #count counts only the non-NULL values, so an all-NULL group counts 0.
+
+% Sample facts: score(Student, Value) — Value is NULL when not recorded.
+score("Alice", 90).
+score("Alice", NULL).
+score("Alice", 80).
+score("Bob", NULL).
+score("Bob", 70).
+score("Carol", NULL).
+
+% Sum of the recorded scores per student (NULLs skipped; all-NULL -> NULL).
+total(S, T) :- T = #sum{V ; S : score(S, V)}.
+
+% How many recorded (non-NULL) scores each student has.
+recorded(S, C) :- C = #count{V ; S : score(S, V)}.
+
+% Highest recorded score per student (all-NULL -> NULL).
+best(S, M) :- M = #max{V ; S : score(S, V)}.
+
+total(X, Y)?
+recorded(X, Y)?
+best(X, Y)?

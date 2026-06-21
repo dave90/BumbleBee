@@ -1,0 +1,38 @@
+{
+  "_comment": "Fixed parameter bindings baked as literals into every query file (all three engines use IDENTICAL bindings for fairness). For a real SF dataset, pick valid ids/dates from the data and re-substitute the literals in input_*/ files. Temporal columns in the normalized CSVs are epoch-second integers; birthday is YYYYMMDD.",
+  "_normalized_schema": {
+    "person.csv": "p_personid,p_firstname,p_lastname,p_gender,p_birthday,p_creationdate,p_locationip,p_browserused,p_placeid",
+    "knows.csv": "k_person1id,k_person2id,k_creationdate  (bidirectional: both (a,b) and (b,a) materialized)",
+    "message.csv": "m_messageid,m_creationdate,m_creatorid,m_locationid,m_c_replyof  (message = post UNION ALL comment; m_c_replyof null for posts)",
+    "place.csv": "pl_placeid,pl_name,pl_type,pl_containerplaceid  (city.pl_containerplaceid -> country)"
+  },
+  "IS1": {
+    "personId": 10027
+  },
+  "IS3": {
+    "personId": 10027
+  },
+  "IS7": {
+    "messageId": 2888
+  },
+  "IC2": {
+    "personId": 10027,
+    "maxDate": 9999999999
+  },
+  "IC3": {
+    "personId": 10027,
+    "countryXName": "India",
+    "countryYName": "China",
+    "startDate": 0,
+    "endDate": 9999999999
+  },
+  "IC8": {
+    "personId": 10027
+  },
+  "REACH": {
+    "personId": 10027
+  },
+  "RCHAIN": {
+    "messageId": 2888
+  }
+}

@@ -27,7 +27,7 @@
 namespace bumblebee {
 Term::Term():negative_(false) {}
 
-Term::Term(Term&& term)
+Term::Term(Term&& term) noexcept
     : negative_(term.negative_),
       interval_(term.interval_),
       value_(std::move(term.value_)),
@@ -248,6 +248,13 @@ Term Term::createVariable(std::string &&value) {
 Term Term::createVariable(const char *value) {
     string s = value;
     return createVariable(std::move(s));
+}
+
+Term Term::createNull() {
+    Term t;
+    t.value_ = Value::null();
+    t.type_ = TermType::CONSTANT;
+    return t;
 }
 
 bool Term::containsAnonymous() const {
