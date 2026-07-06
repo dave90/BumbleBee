@@ -204,7 +204,7 @@ void ParserInputBuilder::setRuleDirective() {
             }
 
             // decrement as 0 is not found
-            colModifiers.push_back({.col_ = varColIndex[var], .modifier_ = orderModifiers_[i]});
+            colModifiers.push_back({.modifier_ = orderModifiers_[i], .col_ = varColIndex[var]});
         }
 
         currentRule.setModifiers(colModifiers);
@@ -1239,7 +1239,7 @@ void ParserInputBuilder::onSqlOrderCol() {
         safetyErrorMessage = "order by variable: '"+colVar+"' not found in the select. Please specify a variable in the head.";
     }
     BB_ASSERT(!orderModifiers_.empty());
-    ColModifier colModifier = {.col_ = idx, .modifier_ = orderModifiers_.back()};
+    ColModifier colModifier = {.modifier_ = orderModifiers_.back(), .col_ = idx};
     orderModifiers_.pop_back();
     sqlStatements_.back().getOrderby().addColModifier(colModifier);
 }
@@ -1258,7 +1258,7 @@ void ParserInputBuilder::onSQLLimit(char *number) {
     limit_ = 0;
     if (sqlStatements_.back().getOrderby().empty()) {
         // order by is empty because we have a limit create it
-        ColModifier cm = {.col_ = 0, .modifier_ = OrderType::ASCENDING};
+        ColModifier cm = {.modifier_ = OrderType::ASCENDING, .col_ = 0};
         sqlStatements_.back().getOrderby().addColModifier(cm);
     }
 }
