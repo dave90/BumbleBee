@@ -98,6 +98,10 @@ public:
 	string getAvailableColumns() const;
 
 	idx_t numRows();
+	// Normalized column name -> file column index, or (idx_t)-1 if absent.
+	idx_t columnIndex(const string &normalizedName) const { auto it = colNormalizedIdx_.find(normalizedName); return it != colNormalizedIdx_.end() ? it->second : (idx_t)-1; }
+	// Logical (not physical) type of a file column, carrying DATE/TIMESTAMP/etc.
+	LogicalType columnLogicalType(idx_t i) const { return i < returnTypes_.size() ? returnTypes_[i] : LogicalType(); }
 	idx_t numRowGroups();
 
 	const bumblebee::format::FileMetaData *getFileMetadata();

@@ -33,6 +33,9 @@ void TaskExecutor::executeForeverTask(ConcurrentQueue *queue_, std::atomic<bool>
         bool res = queue_->q.wait_dequeue_timed(task ,WAIT_TIMEOUT_USECS);
         // if res is false no data in the queue, continue to spin if marker is true
         if (!res) continue;
+        // a null task is a wake-up sentinel enqueued on shutdown: loop back so the
+        // marker check can terminate the thread without waiting for the timeout
+        if (!task) continue;
         // task to execute
         task->execute();
         // signal the scheduler that the task is completed
@@ -57,6 +60,12 @@ void TaskExecutor::stopThreadsAndJoin() {
 
     for (auto& marker: markers_) {
         marker->store(false);
+    }
+    // Wake any worker blocked in wait_dequeue_timed with a null sentinel per
+    // thread, so they observe the cleared marker immediately instead of waiting
+    // out the full dequeue timeout. This removes a ~100ms tail latency per query.
+    for (idx_t i = 0; i < threadsNumber_; ++i) {
+        queue_.q.enqueue(task_ptr_t(nullptr));
     }
     for (auto& thread: threads_) {
         thread->join();

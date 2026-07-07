@@ -24,75 +24,12 @@
 #include "bumblebee/common/ErrorHandler.hpp"
 
 namespace bumblebee {
-BumbleString::BumbleString(uint32_t len) {
-    value_.length = len;
-}
-
-BumbleString::BumbleString(const char *data): BumbleString(data, strlen(data)) {}
-
-BumbleString::BumbleString(const char *data, uint32_t len) {
-    value_.length = len;
-    if (isInlined()) {
-        // store the data in prefix
-        // +1 for string termination
-        memcpy(value_.prefix, data, len * sizeof(char));
-        value_.prefix[len] = '\0';
-        return;
-    }
-    memcpy(value_.prefix, data, PREFIX_LENGTH * sizeof(char));
-    value_.prefix[PREFIX_LENGTH] = '\0';
-    value_.ptr = (char *)(data);
-}
-
-BumbleString::BumbleString(const BumbleString &other): BumbleString(other.c_str(), other.size()) {}
-
-
-char * BumbleString::getDataWriteable() const {
-    if (isInlined())
-        return (char*)value_.prefix;
-    return value_.ptr;
-}
 
 string BumbleString::getString() const {
     const char* data = getDataUnsafe();
 
     string result(data, size());
     return result;
-}
-
-
-bool BumbleString::operator<(const BumbleString &r) const {
-    // compare the data
-    auto left_length = size();
-    auto right_length = r.size();
-    auto min_length = std::min(left_length, right_length);
-    auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
-    return memcmp_res < 0 || (memcmp_res == 0 && left_length < right_length);
-
-}
-
-bool BumbleString::operator>(const BumbleString &r) const {
-    // compare the data: length-aware memcmp, consistent with operator<. strcmp is unusable here
-    // because byte-comparable sort keys contain embedded NUL bytes (which terminate strcmp early).
-    auto left_length = size();
-    auto right_length = r.size();
-    auto min_length = std::min(left_length, right_length);
-    auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
-    return memcmp_res > 0 || (memcmp_res == 0 && left_length > right_length);
-}
-
-bool BumbleString::operator==(const BumbleString &r) const {
-    auto left_length = size();
-    auto right_length = r.size();
-    return left_length == right_length && memcmp(getDataUnsafe(), r.getDataUnsafe(), left_length) == 0;
-}
-
-const char * BumbleString::c_str() const {
-    return getDataUnsafe();
-}
-
-bool BumbleString::isInlined( uint32_t len) {
-    return len <= PREFIX_LENGTH;
 }
 
 }

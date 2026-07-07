@@ -76,6 +76,7 @@ public:
 
 	Term(const Term &other)
 		: negative_(other.negative_),
+		  logicalType_(other.logicalType_),
 		  interval_(other.interval_),
 		  type_(other.type_),
 		  anonymous_(other.anonymous_),
@@ -135,6 +136,11 @@ public:
 		return value_.stringValue_;
 	}
 
+	// Explicit logical type accessors (see logicalType_).
+	inline void setLogicalType(const LogicalType& t) { logicalType_ = t; }
+	inline const LogicalType& getLogicalType() const { return logicalType_; }
+	inline bool hasExplicitLogicalType() const { return logicalType_.type() != LogicalTypeId::UNKNOWN; }
+
 	inline const IntervalTerm& getInterval()const {
 		return interval_;
 	}
@@ -165,6 +171,11 @@ private:
 
 	// Numeric Values
 	Value value_;
+	// Optional explicit logical type for a CONSTANT term. UNKNOWN means "derive
+	// from the value's physical type" (the default). Set when a constant must
+	// carry richer typing than its physical storage (e.g. a DATE folded from
+	// parquet statistics: physical INT32, but must render and type as DATE).
+	LogicalType logicalType_{};
 	// If it is interval the interval from to
 	IntervalTerm interval_{};
 	// Type of the term Constant/Variable/etc.

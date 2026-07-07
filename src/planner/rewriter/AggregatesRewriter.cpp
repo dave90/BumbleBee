@@ -151,13 +151,13 @@ void AggregatesRewriter::rewrite(rules_vector_t &program) {
             Predicate *predicate = clientContext_.defaultSchema_.createPredicate(&clientContext_, newPredName.c_str(), info.terms_.size());
             predicate->setInternal(true);
             if (createAuxRule) {
-                Atom head = Atom::createClassicalAtom(predicate, std::move(vector(terms)));
+                Atom head = Atom::createClassicalAtom(predicate, std::move(vector<Term>(terms)));
                 Rule newRule;
                 newRule.addAtomInHead(std::move(head));
                 newRule.setBody(a.getAggsAtoms());
                 program.push_back(std::move(newRule));
             }
-            auto newAtom =  Atom::createClassicalAtom(predicate, std::move(vector(terms)));
+            auto newAtom =  Atom::createClassicalAtom(predicate, std::move(vector<Term>(terms)));
             a.getAggsAtoms().clear();
             a.getAggsAtoms().push_back(std::move(newAtom));
         }

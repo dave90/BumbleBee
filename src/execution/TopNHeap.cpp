@@ -22,7 +22,8 @@ namespace bumblebee{
 
 TopNHeap::TopNHeap(const vector<LogicalType> &payloadTypes,const vector<ColModifier> &modifiers, idx_t limit): payloadTypes_(payloadTypes),
     heapSize_(limit),
-    dataToInsert_(STANDARD_VECTOR_SIZE){
+    dataToInsert_(STANDARD_VECTOR_SIZE),
+    candSel_(STANDARD_VECTOR_SIZE){
     BB_ASSERT(limit <= STANDARD_VECTOR_SIZE);
     vector<PhysicalType> types {PhysicalType::STRING};
     heapData_.initialize(types);
@@ -35,39 +36,110 @@ TopNHeap::TopNHeap(const vector<LogicalType> &payloadTypes,const vector<ColModif
         sortCols_.push_back(colModifier.col_);
         sortColTypes_.push_back(payloadTypes_[colModifier.col_]);
     }
+
+    // Enable the first-column prefilter only for integer first sort columns,
+    // where a monotonic order-code can be derived cheaply (covers counts,
+    // dates/timestamps and integer keys). Other types use the full path.
+    if (!sortColTypes_.empty()) {
+        firstColPhysType_ = sortColTypes_[0].getPhysicalType();
+        desc0_ = modifiers_[0].order_type == OrderType::DESCENDING;
+        switch (firstColPhysType_) {
+            case PhysicalType::TINYINT:  case PhysicalType::SMALLINT:
+            case PhysicalType::INTEGER:  case PhysicalType::BIGINT:
+            case PhysicalType::UTINYINT: case PhysicalType::USMALLINT:
+            case PhysicalType::UINTEGER: case PhysicalType::UBIGINT:
+                prefilterEnabled_ = true;
+                break;
+            default:
+                prefilterEnabled_ = false;
+        }
+    }
 }
 
-void TopNHeap::sink(DataChunk &input) {
-    BB_ASSERT(keyStrings_.columnCount() == 1 && keyStrings_.data_[0].getType() == PhysicalType::STRING);
-    BB_ASSERT(input.getSize() <= STANDARD_VECTOR_SIZE);
-    // we need to normalify as we will copy only a subset of rows
-    input.normalify();
+uint64_t TopNHeap::orderCodeAt(Vector &v, idx_t i) const {
+    // Map the value to a uint64 that preserves the column's sort order, so that
+    // a smaller code means "sorts earlier" (better). Signed types are offset by
+    // the sign bit; DESC inverts the code.
+    static constexpr uint64_t SIGN = 0x8000000000000000ull;
+    uint64_t code;
+    switch (firstColPhysType_) {
+        case PhysicalType::TINYINT:  code = (uint64_t)(int64_t)FlatVector::getData<int8_t>(v)[i] ^ SIGN; break;
+        case PhysicalType::SMALLINT: code = (uint64_t)(int64_t)FlatVector::getData<int16_t>(v)[i] ^ SIGN; break;
+        case PhysicalType::INTEGER:  code = (uint64_t)(int64_t)FlatVector::getData<int32_t>(v)[i] ^ SIGN; break;
+        case PhysicalType::BIGINT:   code = (uint64_t)FlatVector::getData<int64_t>(v)[i] ^ SIGN; break;
+        case PhysicalType::UTINYINT: code = (uint64_t)FlatVector::getData<uint8_t>(v)[i]; break;
+        case PhysicalType::USMALLINT:code = (uint64_t)FlatVector::getData<uint16_t>(v)[i]; break;
+        case PhysicalType::UINTEGER: code = (uint64_t)FlatVector::getData<uint32_t>(v)[i]; break;
+        case PhysicalType::UBIGINT:  code = (uint64_t)FlatVector::getData<uint64_t>(v)[i]; break;
+        default: return 0; // unreachable when prefilterEnabled_
+    }
+    return desc0_ ? ~code : code;
+}
 
-    BB_ASSERT(keyStrings_.getCapacity() >= STANDARD_VECTOR_SIZE);
+void TopNHeap::sinkChunk(DataChunk &chunk) {
     DataChunk sortChunk;
     sortChunk.initializeEmpty(sortColTypes_);
-    sortChunk.reference(input, sortCols_);
+    sortChunk.reference(chunk, sortCols_);
     CreateSortKey::createSortKey(sortChunk, modifiers_, keyStrings_.data_[0]);
-    keyStrings_.setCardinality(input.getSize());
+    keyStrings_.setCardinality(chunk.getSize());
 
     auto dataPtr = FlatVector::getData<string_t>(keyStrings_.data_[0]);
+    Vector &firstCol = chunk.data_[sortCols_[0]];
     idx_t count = 0;
     idx_t idx = heapData_.getSize();
-    for (idx_t i = 0; i < input.getSize(); ++i) {
-        auto& key = dataPtr[i];
+    for (idx_t i = 0; i < chunk.getSize(); ++i) {
+        auto &key = dataPtr[i];
         if (!shouldAddToHeap(key))
             continue;
         TopNEntry entry{.sortKey_ = key, .index_ = idx++};
+        if (prefilterEnabled_) {
+            entry.firstValid_ = firstCol.rowIsValid(i);
+            if (entry.firstValid_) entry.firstCode_ = orderCodeAt(firstCol, i);
+        }
         dataToInsert_.setIndex(count++, i);
         addEntryToHeap(entry);
     }
 
     if (!count) return;
-    // for all the entry added we need to copy the strings and the payload
+    // copy the strings and payload only for the rows that entered the heap
     heapData_.append(keyStrings_, true, &dataToInsert_, count);
-    heapPayload_.append(input, true, &dataToInsert_, count);
+    heapPayload_.append(chunk, true, &dataToInsert_, count);
+}
 
-    int x = 0;
+void TopNHeap::sink(DataChunk &input) {
+    BB_ASSERT(keyStrings_.columnCount() == 1 && keyStrings_.data_[0].getType() == PhysicalType::STRING);
+    BB_ASSERT(input.getSize() <= STANDARD_VECTOR_SIZE);
+    BB_ASSERT(keyStrings_.getCapacity() >= STANDARD_VECTOR_SIZE);
+    // we need to normalify as we will copy only a subset of rows
+    input.normalify();
+
+    const idx_t n = input.getSize();
+    // Fast path: once the heap is full, only rows whose first-column order-code
+    // is <= the threshold (the worst kept entry) can possibly qualify. A row with
+    // a strictly larger code sorts strictly after the threshold on the dominant
+    // column and can never enter the heap, so we skip building its sort key.
+    if (prefilterEnabled_ && heap_.size() >= heapSize_ && heap_.front().firstValid_) {
+        const uint64_t thresh = heap_.front().firstCode_;
+        Vector &col = input.data_[sortCols_[0]];
+        idx_t nc = 0;
+        for (idx_t i = 0; i < n; ++i) {
+            // NULL rows cannot be ruled out cheaply -> keep as candidates
+            if (!col.rowIsValid(i) || orderCodeAt(col, i) <= thresh)
+                candSel_.setIndex(nc++, i);
+        }
+        if (nc == 0) return;                 // whole chunk pruned
+        if (nc < n) {
+            DataChunk cand;
+            cand.initAndReference(input);
+            cand.slice(candSel_, nc);
+            cand.normalify();
+            sinkChunk(cand);
+            return;
+        }
+        // nc == n: every row is a candidate, fall through to the full path
+    }
+
+    sinkChunk(input);
 }
 
 void TopNHeap::reduce(bool force) {
@@ -128,7 +200,9 @@ void TopNHeap::combine(TopNHeap &other) {
 
         dataToInsert_.setIndex(count++, other.heap_[i].index_);
 
-        TopNEntry entry{.sortKey_ = key, .index_ = idx++};
+        TopNEntry entry{.sortKey_ = key, .index_ = idx++,
+                        .firstCode_ = other.heap_[i].firstCode_,
+                        .firstValid_ = other.heap_[i].firstValid_};
         addEntryToHeap(entry);
     }
 

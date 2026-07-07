@@ -105,59 +105,59 @@ protected:
 TEST_F(TopNHeapTest, CreateTop10neColNumeric) {
 
     topNChunksTest(1, {PhysicalType::UINTEGER, PhysicalType::INTEGER, PhysicalType::FLOAT, PhysicalType::DOUBLE}, {
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING}
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1}
     }, 10);
 }
 
 TEST_F(TopNHeapTest, CreateTop10TwoColNumeric) {
 
     topNChunksTest(1, {PhysicalType::UINTEGER, PhysicalType::INTEGER, PhysicalType::FLOAT, PhysicalType::DOUBLE}, {
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
-        {.col_ = 3, .modifier_ = OrderType::DESCENDING}
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 3}
     }, 10);
 }
 
 TEST_F(TopNHeapTest, TopNMultipleChunksMixedTypes) {
     topNChunksTest(2, {PhysicalType::UINTEGER, PhysicalType::STRING, PhysicalType::DOUBLE}, {
-        {.col_ = 0, .modifier_ = OrderType::DESCENDING},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 0},
     }, 3);
 }
 
 TEST_F(TopNHeapTest, TopNStringAndNumericAllDescending) {
     topNChunksTest(3, {PhysicalType::STRING, PhysicalType::INTEGER, PhysicalType::FLOAT}, {
-        {.col_ = 0, .modifier_ = OrderType::DESCENDING},
-        {.col_ = 1, .modifier_ = OrderType::DESCENDING},
-        {.col_ = 2, .modifier_ = OrderType::DESCENDING}
+        {.modifier_ = OrderType::DESCENDING, .col_ = 0},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 1},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 2}
     }, 5);
 }
 
 TEST_F(TopNHeapTest, TopNLimitGreaterThanRows) {
     topNChunksTest(2, {PhysicalType::INTEGER, PhysicalType::STRING}, {
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING}
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1}
     }, 100); // limit > total rows
 }
 
 TEST_F(TopNHeapTest, TopNAllAscendingMixedTypes) {
     topNChunksTest(4, {PhysicalType::STRING, PhysicalType::DOUBLE, PhysicalType::UINTEGER}, {
-        {.col_ = 0, .modifier_ = OrderType::ASCENDING},
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
-        {.col_ = 2, .modifier_ = OrderType::ASCENDING}
+        {.modifier_ = OrderType::ASCENDING, .col_ = 0},
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1},
+        {.modifier_ = OrderType::ASCENDING, .col_ = 2}
     }, 8);
 }
 
 TEST_F(TopNHeapTest, TopNComplexModifiers) {
     topNChunksTest(6, {PhysicalType::FLOAT, PhysicalType::STRING, PhysicalType::INTEGER, PhysicalType::DOUBLE}, {
-        {.col_ = 2, .modifier_ = OrderType::DESCENDING},
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
-        {.col_ = 3, .modifier_ = OrderType::DESCENDING}
+        {.modifier_ = OrderType::DESCENDING, .col_ = 2},
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 3}
     }, 3);
 }
 
 TEST_F(TopNHeapTest, TopNAllStringColumns) {
     topNChunksTest(4, {PhysicalType::STRING, PhysicalType::STRING, PhysicalType::STRING}, {
-        {.col_ = 0, .modifier_ = OrderType::ASCENDING},
-        {.col_ = 1, .modifier_ = OrderType::DESCENDING},
-        {.col_ = 2, .modifier_ = OrderType::ASCENDING}
+        {.modifier_ = OrderType::ASCENDING, .col_ = 0},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 1},
+        {.modifier_ = OrderType::ASCENDING, .col_ = 2}
     }, 6);
 }
 
@@ -165,9 +165,9 @@ TEST_F(TopNHeapTest, TopNComplexModifiersCombineSameChunks) {
     auto randomChunks = 3;
     vector<LogicalType> types = {LogicalTypeId::FLOAT, LogicalTypeId::STRING, LogicalTypeId::INTEGER, LogicalTypeId::DOUBLE};
     vector<ColModifier> modifiers ={
-        {.col_ = 2, .modifier_ = OrderType::DESCENDING},
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
-        {.col_ = 3, .modifier_ = OrderType::DESCENDING}
+        {.modifier_ = OrderType::DESCENDING, .col_ = 2},
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 3}
     };
     auto limit = 100;
 
@@ -201,8 +201,8 @@ TEST_F(TopNHeapTest, TopNComplexModifiersCombineDifferentChunks) {
     auto randomChunks = 10;
     vector<LogicalType> types = {LogicalTypeId::STRING, LogicalTypeId::DOUBLE, LogicalTypeId::UINTEGER};
     vector<ColModifier> modifiers ={
-        {.col_ = 2, .modifier_ = OrderType::DESCENDING},
-        {.col_ = 1, .modifier_ = OrderType::ASCENDING},
+        {.modifier_ = OrderType::DESCENDING, .col_ = 2},
+        {.modifier_ = OrderType::ASCENDING, .col_ = 1},
     };
     auto limit = 800;
 

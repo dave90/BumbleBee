@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <cstring>
 #include <string>
 
 #include "bumblebee/common/TypeDefs.hpp"
@@ -45,11 +46,33 @@ public:
     // lenght set to 11 as total data should fit in 24 bytes (multiple of 8)
     static constexpr idx_t PREFIX_LENGTH = 11;
 
+    // These member functions are deliberately defined inline in the header:
+    // construction, hashing and comparison of strings run once per row in
+    // scans, group-bys and joins, and an out-of-line call per value dominated
+    // string-heavy query profiles.
     BumbleString() = default;
-    BumbleString(uint32_t len);
-    BumbleString(const char* data);
-    BumbleString(const char* data, uint32_t len);
-    BumbleString(const BumbleString& other);
+    inline BumbleString(uint32_t len) {
+        value_.length = len;
+    }
+    inline BumbleString(const char* data, uint32_t len) {
+        value_.length = len;
+        if (isInlined()) {
+            // store the data in prefix
+            // +1 for string termination
+            memcpy(value_.prefix, data, len * sizeof(char));
+            value_.prefix[len] = '\0';
+            return;
+        }
+        memcpy(value_.prefix, data, PREFIX_LENGTH * sizeof(char));
+        value_.prefix[PREFIX_LENGTH] = '\0';
+        value_.ptr = (char *)(data);
+    }
+    inline BumbleString(const char* data): BumbleString(data, strlen(data)) {}
+    // Member-wise copy: the prefix always mirrors the referenced data, so the
+    // default copy is equivalent to re-deriving it (and matches the implicitly
+    // defaulted copy assignment). Keeping the type trivially copyable lets it
+    // be passed in registers.
+    BumbleString(const BumbleString& other) = default;
 
 
     inline bool isInlined() const {
@@ -60,7 +83,11 @@ public:
             return value_.prefix;
         return value_.ptr;
     }
-    char * getDataWriteable() const ;
+    inline char *getDataWriteable() const {
+        if (isInlined())
+            return (char*)value_.prefix;
+        return value_.ptr;
+    }
     inline const char * getPrefix() const {
         return value_.prefix;
     }
@@ -73,13 +100,34 @@ public:
     }
     string getString() const;
 
-    bool operator<(const BumbleString &r) const;
-    bool operator>(const BumbleString &r) const;
-    bool operator==(const BumbleString &r) const;
-    const char* c_str() const;
+    inline bool operator<(const BumbleString &r) const {
+        // compare the data: length-aware memcmp. strcmp is unusable here because
+        // byte-comparable sort keys contain embedded NUL bytes.
+        auto left_length = size();
+        auto right_length = r.size();
+        auto min_length = left_length < right_length ? left_length : right_length;
+        auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
+        return memcmp_res < 0 || (memcmp_res == 0 && left_length < right_length);
+    }
+    inline bool operator>(const BumbleString &r) const {
+        auto left_length = size();
+        auto right_length = r.size();
+        auto min_length = left_length < right_length ? left_length : right_length;
+        auto memcmp_res = memcmp(getDataUnsafe(), r.getDataUnsafe(), min_length);
+        return memcmp_res > 0 || (memcmp_res == 0 && left_length > right_length);
+    }
+    inline bool operator==(const BumbleString &r) const {
+        auto left_length = size();
+        return left_length == r.size() && memcmp(getDataUnsafe(), r.getDataUnsafe(), left_length) == 0;
+    }
+    inline const char* c_str() const {
+        return getDataUnsafe();
+    }
 
     // return true if the string is inline
-    static bool isInlined( uint32_t len);
+    static inline bool isInlined(uint32_t len) {
+        return len <= PREFIX_LENGTH;
+    }
 private:
     struct {
         // +1 for end termination

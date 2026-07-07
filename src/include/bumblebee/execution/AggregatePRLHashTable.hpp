@@ -74,11 +74,21 @@ public:
     vector<LogicalType> getPayloadsTypes();
 
     void moveAndMergeStates(idx_t count, Vector &addresses, Vector &hashes);
+    // Tuple-level merge fast path for fixed-width group keys: copies whole source
+    // tuples for new groups and combines states for matches, avoiding the generic
+    // gather/scatter/init round trip.
+    void moveAndMergeStatesFixed(idx_t count, Vector &addresses, Vector &hashes);
 
 private:
     void findAddresses(Vector &hash, DataChunk &groups, SelectionVector &sel, Vector &addresses, idx_t &matchedGroups);
     // Helper for scanWithAggregates: builds addresses and gathers group values
     idx_t scanEntries(idx_t offset, DataChunk &groups, Vector &addresses, idx_t size);
+
+    // Copy a string payload's (non-inlined) values into this table's stringHeap_
+    // and repoint the vector at the copies, so string aggregate states (MIN/MAX)
+    // that keep a shallow string_t reference point at heap memory owned and
+    // merged by this table rather than at the transient scan/decode buffer.
+    void internalizeStrings(Vector &payload, idx_t count);
 
     // Aggregates functions
     vector<AggregateFunction*> functions_;

@@ -169,6 +169,9 @@ private:
     vector<LogicalType> types_;
     // If we need to calculate distinct of values
     bool distinct_{false};
+    // True iff some aggregate keeps variable-length (string-heap-referencing) state,
+    // requiring the local HT's string heap to be carried over when combining.
+    bool aggStateVarlen_{false};
 };
 
 using partitioned_agg_ht_ptr_t = std::unique_ptr<PartitionedAggHT>;

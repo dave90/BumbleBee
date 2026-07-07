@@ -85,8 +85,13 @@ public:
         if (new_size > allocLen_) {
             allocLen_ = new_size;
             allocatedData_ = allocator.allocate(allocLen_);
-            ptr_ = (char *)allocatedData_->get();
         }
+        // Always reset ptr_ to the allocation base. A previous user of this buffer
+        // may have advanced ptr_ via ByteBuffer::inc()/read() while consuming a
+        // page; when the buffer is reused without reallocating, ptr_ must point
+        // back at the start or the next writer (e.g. page decompression) would
+        // run past the end of the allocation.
+        ptr_ = (char *)allocatedData_->get();
     }
 
 private:

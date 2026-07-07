@@ -20,7 +20,6 @@
 
 #include <iostream>
 #include <stack>
-#include <__ostream/basic_ostream.h>
 
 #include "bumblebee/common/Log.hpp"
 

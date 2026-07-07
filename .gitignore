@@ -38,6 +38,7 @@ test.1
 benchmarks/files/asp/actual/
 benchmarks/files/asp/expected/
 benchmarks/downloads/
+benchmarks/files/sql/input/downloads/
 test/e2e/files/asp/actual/
 test/unit/bumblebee/function/data/output
 test/e2e/files/csv/mini_hits.csv
@@ -53,3 +54,5 @@ build/
 dist/
 python/_version.py
 benchmarks/files/ldbc/*/
+# local benchmark harness outputs
+benchmarks/files/sql/_local/

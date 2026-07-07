@@ -30,6 +30,7 @@
 #include "bumblebee/planner/Planner.hpp"
 #include "bumblebee/planner/StatementDependency.hpp"
 #include "bumblebee/planner/rewriter/AggregatesRewriter.hpp"
+#include "bumblebee/planner/rewriter/MetadataAggRewriter.hpp"
 
 namespace bumblebee {
 
@@ -146,6 +147,10 @@ void BumbleBeeDB::runFromInputString(const string &inputProgram) {
 }
 
 void BumbleBeeDB::processProgram(rules_vector_t& program, Scheduler& scheduler) {
+    // fold COUNT(*) over an unfiltered parquet scan into a constant from metadata
+    MetadataAggRewriter metadataRewriter(context_);
+    metadataRewriter.rewrite(program);
+
     // rewrite the aggregates
     AggregatesRewriter rewriter(context_);
     rewriter.rewrite(program);
@@ -326,7 +331,10 @@ void BumbleBeeDB::print() {
         }
     }
     if (context_.printProfiling_) {
-        LOG_INFO("\n\n%s\n%s", profilingReport_.c_str(), FunctionProfiler::instance().toString().c_str());
+        // The -r flag is an explicit user request for the profiling report, so emit
+        // it to stderr directly (LOG_INFO is compiled out in Release at LOG_LEVEL=2).
+        fprintf(stderr, "\n\n%s\n%s\n", profilingReport_.c_str(),
+                FunctionProfiler::instance().toString().c_str());
     }
 }
 
