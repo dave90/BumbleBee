@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import date, time, timedelta
-import bumblebeedb as bb
+import bumbledl as bb
 from conftest import _rows
 
 

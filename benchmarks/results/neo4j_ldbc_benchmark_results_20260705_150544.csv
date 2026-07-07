@@ -1,0 +1,10 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_cmp_%,delta_vs_prev,output_match
+LOAD,IS1.cypher,772.1482,772.1482,772.1482,-,-,75.9775,
+IS1,IS1.cypher,1.1748,1.0466,1.3666,1.0104,614.59%,0.0727,match
+IS3,IS3.cypher,1.2489,1.2158,1.2690,1.0529,537.20%,0.2412,match
+IS7,IS7.cypher,1.0886,1.0444,1.1708,-0.6149,-36.10%,0.0430,match
+IC2,IC2.cypher,2.2587,1.6309,2.8750,1.2325,120.10%,0.8708,match
+IC3,IC3.cypher,13.3457,7.7622,19.9485,11.5520,644.03%,5.9502,match
+IC8,IC8.cypher,1.1196,1.0959,1.1337,-0.4803,-30.02%,0.1197,match
+REACH,REACH.cypher,1.7903,1.6989,1.8766,1.5530,654.46%,0.4177,match
+RCHAIN,RCHAIN.cypher,1.0451,0.9995,1.0909,0.1279,13.95%,0.0461,match

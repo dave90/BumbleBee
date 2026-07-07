@@ -8,7 +8,7 @@ Run from the examples/ directory:
     python python/03_multi_source_join.py
 """
 
-import bumblebeedb as bb
+import bumbledl as bb
 import pandas as pd
 
 db = bb.db()

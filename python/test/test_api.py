@@ -1,5 +1,5 @@
 import pytest
-import bumblebeedb as bb
+import bumbledl as bb
 from conftest import _rows
 
 

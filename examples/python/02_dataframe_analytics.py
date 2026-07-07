@@ -8,7 +8,7 @@ Run from the examples/ directory:
     python python/02_dataframe_analytics.py
 """
 
-import bumblebeedb as bb
+import bumbledl as bb
 import pandas as pd
 
 # Build a sales DataFrame in Python

@@ -13,7 +13,7 @@ Run from the examples/ directory:
     python python/06_null_handling.py
 """
 
-import bumblebeedb as bb
+import bumbledl as bb
 import pandas as pd
 
 # A survey where some respondents did not give a score (missing values).

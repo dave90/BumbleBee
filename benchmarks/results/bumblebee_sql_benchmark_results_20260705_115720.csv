@@ -1,0 +1,39 @@
+test,input_file,avg,min,max,delta_vs_cmp,delta_vs_cmp_%,delta_vs_prev,output_match
+Q00,q00.sql,2.1808,1.9922,2.4788,0.9656,79.46%,-0.7553,match
+Q01,q01.sql,2.2879,2.1967,2.3897,1.1290,97.42%,-0.5296,match
+Q02,q02.sql,2.3447,2.3167,2.3840,1.1466,95.70%,-0.8139,match
+Q03,q03.sql,2.3626,2.3124,2.4007,1.1532,95.36%,-0.7398,match
+Q06,q06.sql,2.3292,2.3235,2.3374,1.0798,86.43%,-0.4864,match
+Q14,q14.sql,2.3839,2.3306,2.4334,1.0295,76.01%,-0.2431,match
+Q19,q19.sql,2.0613,2.0101,2.1188,0.7751,60.26%,-0.2164,match
+Q30,q30.sql,2.4588,2.4371,2.4745,1.1019,81.20%,-0.2183,match
+TPCH Q01,tpch_q01.sql,0.7435,0.6199,0.9729,0.2167,41.13%,-0.3556,match
+TPCH Q03,tpch_q03.sql,0.7907,0.7366,0.8417,0.2113,36.46%,-0.6675,match
+TPCH Q05,tpch_q05.sql,0.7509,0.7402,0.7627,0.1435,23.63%,-0.4593,match
+TPCH Q10,tpch_q10.sql,0.8036,0.7306,0.8803,0.2388,42.28%,-0.3987,match
+Q00 Parquet,q00.parquet.sql,0.0744,0.0736,0.0749,-0.0348,-31.85%,-0.3876,match
+Q01 Parquet,q01.parquet.sql,0.1419,0.1358,0.1499,0.0130,10.06%,-0.2823,match
+Q02 Parquet,q02.parquet.sql,0.2464,0.2406,0.2515,0.0801,48.16%,-0.2274,match
+Q03 Parquet,q03.parquet.sql,0.2207,0.1984,0.2556,0.0568,34.68%,-0.2228,match
+Q06 Parquet,q06.parquet.sql,0.0743,0.0735,0.0754,-0.0534,-41.85%,-0.2922,match
+Q07 Parquet,q07.parquet.sql,0.1525,0.1218,0.1701,0.0237,18.38%,-0.3024,match
+Q12 Parquet,q12.parquet.sql,0.9693,0.9258,1.0302,0.4837,99.61%,-0.5211,match
+Q14 Parquet,q14.parquet.sql,1.0956,1.0725,1.1110,0.5817,113.19%,-0.3428,match
+Q19 Parquet,q19.parquet.sql,0.1657,0.1494,0.1901,0.0389,30.70%,-0.2771,match
+Q20 Parquet,q20.parquet.sql,2.4944,2.4167,2.6064,1.5835,173.84%,-0.7580,match
+Q21 Parquet,q21.parquet.sql,1.9300,1.8907,1.9574,1.1342,142.53%,-1.4380,match
+Q25 Parquet,q25.parquet.sql,0.8177,0.7351,0.8695,0.5292,183.42%,-0.1566,match
+Q26 Parquet,q26.parquet.sql,0.8366,0.7976,0.8571,0.6902,471.43%,-0.2924,match
+Q30 Parquet,q30.parquet.sql,1.3105,1.2753,1.3300,0.7712,143.00%,-0.1551,match
+Q32 Parquet,q32.parquet.sql,10.5487,10.4198,10.6249,8.0342,319.51%,3.3698,match
+Q33 Parquet,q33.parquet.sql,7.1040,5.8762,9.4160,4.2725,150.89%,-10.8129,match
+Q36 Parquet,q36.parquet.sql,0.1492,0.1312,0.1843,0.0047,3.24%,-0.2533,match
+TPCH Q01 Parquet,tpch_q01.parquet.sql,0.8462,0.8009,0.8888,0.6070,253.78%,0.0695,match
+TPCH Q02 Parquet,tpch_q02.parquet.sql,1.2162,1.0562,1.5328,1.1402,1500.29%,-0.0482,match
+TPCH Q03 Parquet,tpch_q03.parquet.sql,0.4821,0.4229,0.5695,0.2979,161.73%,-0.1269,match
+TPCH Q04 Parquet,tpch_q04.parquet.sql,0.5661,0.5643,0.5676,0.4384,343.32%,0.0271,match
+TPCH Q05 Parquet,tpch_q05.parquet.sql,0.6421,0.6188,0.6880,0.4572,247.26%,0.0420,match
+TPCH Q10 Parquet,tpch_q10.parquet.sql,0.6827,0.6381,0.7258,0.4965,266.67%,0.0206,match
+TPCH Q15 Parquet,tpch_q15.parquet.sql,0.6053,0.5835,0.6313,0.4176,222.50%,-0.1901,match
+TPCH Q17 Parquet,tpch_q17.parquet.sql,1.0226,0.9680,1.0722,0.8571,517.89%,0.1716,match
+TPCH MQ07 Parquet,tpch_mq07.parquet.sql,1.0662,1.0359,1.1083,0.8813,476.62%,0.1353,match

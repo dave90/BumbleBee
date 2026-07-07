@@ -9,7 +9,7 @@ import pytest
 import pandas as pd
 from pathlib import Path
 
-import bumblebeedb as bb
+import bumbledl as bb
 from conftest import _rows, _sql
 
 EXAMPLES_DATA = Path(__file__).resolve().parents[2] / "examples" / "data"

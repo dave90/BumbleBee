@@ -8,7 +8,7 @@ Run from the examples/ directory:
     python python/01_getting_started.py
 """
 
-import bumblebeedb as bb
+import bumbledl as bb
 import pandas as pd
 
 # Create a BumbleBee instance
