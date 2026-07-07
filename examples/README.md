@@ -9,9 +9,9 @@ Use BumbleBee as a Python library: load DataFrames, run SQL/Datalog, and get res
 
 **Prerequisites:**
 
-Install the `bumblebeedb` package from PyPI:
+Install the `bumbledl` package from PyPI:
 ```bash
-pip install bumblebeedb
+pip install bumbledl
 ```
 
 Or install from source (from the project root):

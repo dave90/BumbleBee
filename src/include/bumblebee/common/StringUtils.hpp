@@ -39,8 +39,10 @@ public:
     static bool glob(const string& str,const string& pattern);
     static bool hasGlob(const string &str);
     static bool characterIsSpace(char c);
-    static bool characterIsDigit(char c);
-    static bool characterIsNewline(char c);
+    // Hot in CSV parsing (called per character): defined inline so call sites in
+    // other translation units don't pay a non-inlined function call per byte.
+    static inline bool characterIsDigit(char c) { return c >= '0' && c <= '9'; }
+    static inline bool characterIsNewline(char c) { return c == '\n' || c == '\r'; }
     static string upper(const string &str);
     static string lower(const string &str);
     static void removeQuote(string& str);

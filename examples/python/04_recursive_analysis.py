@@ -8,7 +8,7 @@ Run from the examples/ directory:
     python python/04_recursive_analysis.py
 """
 
-import bumblebeedb as bb
+import bumbledl as bb
 import pandas as pd
 
 # Define an org hierarchy: (manager, report)

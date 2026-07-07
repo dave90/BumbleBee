@@ -9,7 +9,7 @@ import math
 import pandas as pd
 import numpy as np
 import pytest
-import bumblebeedb as bb
+import bumbledl as bb
 
 
 class TestTuplesNull:

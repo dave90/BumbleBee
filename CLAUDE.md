@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BumbleBee DB is a high-performance Datalog-based analytics engine written in C++20. It supports both Datalog and SQL as input languages, with push-based execution, columnar storage, and multithreading. Data sources include CSV, Parquet, and ASP files. A Python package (`bumblebeedb`) provides bindings via pybind11.
+BumbleBee DB is a high-performance Datalog-based analytics engine written in C++20. It supports both Datalog and SQL as input languages, with push-based execution, columnar storage, and multithreading. Data sources include CSV, Parquet, and ASP files. A Python package (`bumbledl`) provides bindings via pybind11.
 
 ## Build Commands
 
@@ -46,7 +46,7 @@ python -m build
 ### Python API
 
 ```python
-import bumblebeedb as bb
+import bumbledl as bb
 
 db = bb.db()                          # create engine instance
 db.run("a(1,2). b(X,Y) :- a(X,Y). b(X,Y)?")  # run Datalog
@@ -87,7 +87,7 @@ cd cmake-build-debug && ctest -R <test_name>
 # E2E tests (requires pytest, duckdb, clingo)
 cd test/e2e && pytest test.py
 
-# Python tests (requires release build with bumblebeedb*.so)
+# Python tests (requires release build with bumbledl*.so)
 pytest python/test/test_examples.py -v
 
 # Generate ASP expected output for E2E tests
@@ -124,7 +124,7 @@ Or
 - `src/parallel/` - Task scheduling and thread pool execution
 - `src/storage/` - Storage management (block manager, buffer manager, statistics, etc.)
 - `python/src/` - pybind11 bindings (PyBumbleBee, PyPredicateTable, PandasScan, VectorConversion)
-- `python/test/` - Python test suite (`conftest.py` auto-finds `bumblebeedb*.so` in `cmake-build-release/`)
+- `python/test/` - Python test suite (`conftest.py` auto-finds `bumbledl*.so` in `cmake-build-release/`)
 - `examples/python/` - Example scripts (01–05) demonstrating the Python API
 
 ### Recursion Handling

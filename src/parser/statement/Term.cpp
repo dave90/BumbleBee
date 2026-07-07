@@ -31,6 +31,7 @@ Term::Term(Term&& term) noexcept
     : negative_(term.negative_),
       interval_(term.interval_),
       value_(std::move(term.value_)),
+      logicalType_(term.logicalType_),
       type_(term.type_),
       anonymous_(term.anonymous_),
       parenthesized_(term.parenthesized_),
@@ -100,6 +101,7 @@ Term & Term::operator=(const Term &other) {
     parenthesized_ = other.parenthesized_;
     terms_ = other.terms_;
     operators_ = other.operators_ ;
+    logicalType_ = other.logicalType_;
     value_ = other.value_.cast(other.value_.ctype_);
     return *this;
 }

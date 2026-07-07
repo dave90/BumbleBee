@@ -70,8 +70,14 @@ struct BufferedCSVReaderOptions {
 	idx_t numCols_ = 0;
 	// Size of sample chunk used for dialect and type detection
 	idx_t sampleChunkSize_ = STANDARD_VECTOR_SIZE;
-	// Number of sample chunks used for type detection
-	idx_t sampleChunks_ = 75;
+	// Number of sample chunks used for type detection. Sniffing is single
+	// threaded and parses + type-casts every sampled row of every column, so it
+	// runs before any parallel scanning can start; 20 chunks (20480 rows, on par
+	// with DuckDB's default sample size) keeps detection robust — samples are
+	// spread across the whole file for large files — without the sniff dominating
+	// query time on wide files. Tunable per query via the sample_size /
+	// sample_chunks named parameters of &read_csv.
+	idx_t sampleChunks_ = 20;
 	// Number of samples to buffer
 	idx_t bufferSize_ = STANDARD_VECTOR_SIZE * 100;
 	// Consider all columns to be of type varchar

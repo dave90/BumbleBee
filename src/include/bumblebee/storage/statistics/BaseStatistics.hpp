@@ -32,6 +32,7 @@ enum class FilterPropagateResult : uint8_t {
 };
 
 
+class Value;
 class BaseStatistics {
 public:
     explicit BaseStatistics(LogicalType type);
@@ -56,6 +57,10 @@ public:
     static std::unique_ptr<BaseStatistics> deserialize(Deserializer &source, const LogicalType &type);
     virtual void verify(Vector &vector, const SelectionVector &sel, idx_t count);
     void verify(Vector &vector, idx_t count);
+
+    // Type-safe min/max access without RTTI: numeric/temporal stats override and
+    // fill mn/mx; others (e.g. string) return false.
+    virtual bool numericMinMax(Value &mn, Value &mx) { return false; }
 
     virtual string toString();
 };

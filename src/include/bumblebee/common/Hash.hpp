@@ -46,9 +46,15 @@ template <>
 hash_t Hash(char *val);
 template <>
 hash_t Hash(string val);
-template <>
-hash_t Hash(string_t val);
 hash_t Hash(const char *val, size_t size);
+
+// Inline so the per-row hashing loops in group-by/join don't pay an
+// out-of-line call (plus a by-value string_t copy) per value; the actual
+// byte-mixing loop stays in Hash(const char*, size_t).
+template <>
+inline hash_t Hash(string_t val) {
+	return Hash(val.getDataUnsafe(), val.size());
+}
 
 
 struct StringTHash {

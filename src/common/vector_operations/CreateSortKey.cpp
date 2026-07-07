@@ -330,9 +330,37 @@ static void prepareSortData(Vector &result, idx_t size, SortKeyLengthInfo &keyLe
     BB_ASSERT(result.getType() == PhysicalType::STRING);
 
     auto result_data = FlatVector::getData<string_t>(result);
+
+    // Fast path: fixed-width keys (no variable-length sort columns) that are not
+    // inlined (> PREFIX_LENGTH). Bulk-allocate one heap buffer per group of keys
+    // and carve equal-size slots instead of a per-row heap-string call. The
+    // string_t values reference the same heap with identical bytes, so
+    // comparisons and copies are byte-for-byte unchanged.
+    bool fixedWidth = true;
     for (idx_t r = 0; r < size; r++) {
-        auto blob_size = keyLengths.variable_[r] + keyLengths.constant_;
-        result_data[r] = StringVector::emptyString(result, blob_size);
+        if (keyLengths.variable_[r] != 0) { fixedWidth = false; break; }
+    }
+    const idx_t blob_size = keyLengths.constant_;
+    if (fixedWidth && blob_size > BumbleString::PREFIX_LENGTH) {
+        const idx_t stride = blob_size + 1;                 // +1 for null terminator
+        const idx_t perBuf = maxValue<idx_t>(1, (MINIMUM_HEAP_SIZE - 1) / stride);
+        idx_t r = 0;
+        while (r < size) {
+            idx_t batch = minValue<idx_t>(perBuf, size - r);
+            char *base = StringVector::emptyString(result, batch * stride).getDataWriteable();
+            for (idx_t k = 0; k < batch; ++k, ++r) {
+                char *p = base + k * stride;
+                p[blob_size] = '\0';
+                result_data[r] = string_t(p, (uint32_t)blob_size);
+                dataPtr[r] = (data_ptr_t)p;
+            }
+        }
+        return;
+    }
+
+    for (idx_t r = 0; r < size; r++) {
+        auto bs = keyLengths.variable_[r] + keyLengths.constant_;
+        result_data[r] = StringVector::emptyString(result, bs);
         dataPtr[r] = (data_ptr_t)result_data[r].getDataWriteable();
     }
 }

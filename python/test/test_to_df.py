@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-import bumblebeedb as bb
+import bumbledl as bb
 from pathlib import Path
 from conftest import DATA_DIR, _sql
 

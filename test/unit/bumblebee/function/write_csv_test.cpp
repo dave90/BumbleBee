@@ -31,7 +31,7 @@ using namespace bumblebee;
 class WriteCSVSCanTest : public ::testing::Test {
 protected:
     ClientContext context;
-    mutex mutex;
+    mutex mutex_;
 
     struct WriteParams {
         std::string sep = ",";

@@ -75,7 +75,8 @@ TEST_F(HyperLogLogTest, MergeTwoDistinctHLLs) {
     hll_add(hll2, (unsigned char*)e2, strlen(e2));
     hll_add(hll2, (unsigned char*)e3, strlen(e2));
 
-    robj* merged = hll_merge((robj*[]){hll1, hll2}, 2);
+    robj* mergeInputs[] = {hll1, hll2};
+    robj* merged = hll_merge(mergeInputs, 2);
     ASSERT_NE(merged, nullptr);
 
     size_t count = 0;

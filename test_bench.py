@@ -145,7 +145,7 @@ def _engine_child(kind, qname, queue):
     """Runs in a subprocess. Puts (elapsed_seconds, result_rows) on the queue."""
     q = QMAP[qname]
     if kind == "bb":
-        import bumblebeedb as bb
+        import bumbledl as bb
         db = bb.db()
 
         def call():

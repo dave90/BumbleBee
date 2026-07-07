@@ -1,4 +1,4 @@
-# Build dependencies (required to compile the bumblebeedb C++ extension)
+# Build dependencies (required to compile the bumbledl C++ extension)
 scikit-build-core>=0.3
 pybind11>=3.0
 pandas<3.0.0

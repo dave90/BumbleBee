@@ -26,7 +26,7 @@
 namespace py = pybind11;
 using namespace bumblebee::python;
 
-PYBIND11_MODULE(bumblebeedb, m) {
+PYBIND11_MODULE(bumbledl, m) {
     m.doc() = "BumbleBee Datalog analytics engine Python bindings";
 
     py::class_<PyPredicateTable>(m, "PredicateTable",

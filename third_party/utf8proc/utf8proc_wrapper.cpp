@@ -32,15 +32,35 @@ static void AssignInvalidUTF8Reason(UnicodeInvalidReason *invalid_reason, size_t
 
 UnicodeType Utf8Proc::Analyze(const char *s, size_t len, UnicodeInvalidReason *invalid_reason, size_t *invalid_pos) {
 	UnicodeType type = UnicodeType::ASCII;
-	char c;
-	for (size_t i = 0; i < len; i++) {
-		c = s[i];
+	// Word-at-a-time fast path: most strings are pure ASCII, so validate 8 bytes
+	// per step. A word is a run of plain ASCII iff no byte has the high bit set and
+	// no byte is NUL. The SWAR NUL test is the classic (w - 0x01..) & ~w & 0x80..
+	// trick. Any word failing either test falls through to the byte-precise loop
+	// below (which also handles all multi-byte sequences), so behaviour - including
+	// the exact invalid reason and position - is identical to the scalar scan.
+	constexpr uint64_t HIGH_BITS = 0x8080808080808080ULL;
+	constexpr uint64_t LOW_ONES = 0x0101010101010101ULL;
+	size_t i = 0;
+	for (;;) {
+		while (i + 8 <= len) {
+			uint64_t w;
+			memcpy(&w, s + i, 8);
+			if ((w & HIGH_BITS) || ((((w - LOW_ONES) & ~w) & HIGH_BITS))) {
+				break;
+			}
+			i += 8;
+		}
+		if (i >= len) {
+			break;
+		}
+		char c = s[i];
 		if (c == '\0') {
 			AssignInvalidUTF8Reason(invalid_reason, invalid_pos, i, UnicodeInvalidReason::NULL_BYTE);
 			return UnicodeType::INVALID;
 		}
 		// 1 Byte / ASCII
 		if ((c & 0x80) == 0) {
+			i++;
 			continue;
 		}
 		type = UnicodeType::UNICODE;
@@ -49,6 +69,7 @@ UnicodeType Utf8Proc::Analyze(const char *s, size_t len, UnicodeInvalidReason *i
 			return UnicodeType::INVALID;
 		}
 		if ((c & 0xE0) == 0xC0) {
+			i++;
 			continue;
 		}
 		if ((s[++i] & 0xC0) != 0x80) {
@@ -56,6 +77,7 @@ UnicodeType Utf8Proc::Analyze(const char *s, size_t len, UnicodeInvalidReason *i
 			return UnicodeType::INVALID;
 		}
 		if ((c & 0xF0) == 0xE0) {
+			i++;
 			continue;
 		}
 		if ((s[++i] & 0xC0) != 0x80) {
@@ -63,6 +85,7 @@ UnicodeType Utf8Proc::Analyze(const char *s, size_t len, UnicodeInvalidReason *i
 			return UnicodeType::INVALID;
 		}
 		if ((c & 0xF8) == 0xF0) {
+			i++;
 			continue;
 		}
 		AssignInvalidUTF8Reason(invalid_reason, invalid_pos, i, UnicodeInvalidReason::BYTE_MISMATCH);

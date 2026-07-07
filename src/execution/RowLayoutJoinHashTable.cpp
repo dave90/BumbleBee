@@ -137,11 +137,18 @@ void addNewEntriesInHash(idx_t idx, vector<buffer_handle_ptr_t>& payload, idx_t 
     idx_t page_nr = idx / tuplesPerBlock;
     idx_t page_offset = idx % tuplesPerBlock;
 
+    constexpr idx_t PREFETCH_DIST = 8;
     for (; page_nr < payload.size(); ++page_nr) {
         auto payload_chunk_ptr = payload[page_nr]->ptr() + page_offset * tupleSize;
         auto this_entries = minValue(tuplesPerBlock - page_offset, apply_entries);
         auto end = payload_chunk_ptr + this_entries * tupleSize;
         for (data_ptr_t ptr = payload_chunk_ptr; ptr < end; ptr += tupleSize) {
+            // Prefetch the directory slot for a later row while we insert this one:
+            // hashEntries[bucket] is a random-access write and the dominant cache
+            // miss when building a large join hash table.
+            auto pf = ptr + PREFETCH_DIST * tupleSize;
+            if (pf < end)
+                __builtin_prefetch(&hashEntries[load<hash_t>(pf + hashOffset) & bitmask], 1, 0);
             auto hash = load<hash_t>(ptr+hashOffset);
             auto bucket = hash & bitmask;
             while (hashEntries[bucket].pageNum_ != 0) {
@@ -258,7 +265,12 @@ void findAddresses(idx_t capacity, idx_t tupleSize, data_ptr_t hashesPtr, vector
     if (!sel)
         sel = &FlatVector::INCREMENTAL_SELECTION_VECTOR;
 
+    constexpr idx_t PREFETCH_DIST = 8;
     for (idx_t i=0; i < size; ++i) {
+        // Prefetch the directory slot a few probes ahead; the bucket is already
+        // computed, and the htEntry read below is the dominant cache miss.
+        if (i + PREFETCH_DIST < size)
+            __builtin_prefetch(((HTEntry64*)hashesPtr) + bucketPtr[sel->getIndex(i + PREFETCH_DIST)], 0, 0);
         auto idx = sel->getIndex(i);
         auto hash = hashPtr[idx];
         auto bucket = bucketPtr[idx];

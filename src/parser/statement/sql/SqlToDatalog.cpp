@@ -634,7 +634,23 @@ Rule generateAggRules(const std::unordered_set<string>& groupVars, const std::un
     // constant would let the optimizer prune the column-less source, so materialize the body
     // into an aux predicate carrying the constant to keep the source row stream.
     bool anchored = !groupVars.empty() || aggVars.size() > countStarSelectIdxs.size();
-    bool countStarNeedsAux = hasCountStar && !anchored;
+
+    // A single filtered scan (one source atom + at least one filter/comparison) is
+    // also safe to inline: the filter references a source column, so the optimizer
+    // keeps the scan alive and the aggregate pipelines directly over it instead of
+    // materialising the whole (possibly wide) filtered column into an aux predicate
+    // just to count rows. Plain unfiltered SELECT COUNT(*) FROM t keeps the aux so
+    // the metadata count optimization (which folds the aux scan away) still applies,
+    // and joins (multiple sources) keep the aux to avoid pruning the row source.
+    idx_t sourceAtoms = 0, filterAtoms = 0;
+    for (auto& atom : rule.getBody()) {
+        auto at = atom.getType();
+        if (at == CLASSICAL || at == EXTERNAL) sourceAtoms++;
+        else if (at == BUILTIN) filterAtoms++;
+    }
+    bool inlinableFilteredScan = (sourceAtoms == 1 && filterAtoms >= 1);
+
+    bool countStarNeedsAux = hasCountStar && !anchored && !inlinableFilteredScan;
 
     string cstarVarName;
     Predicate* auxPred = nullptr;

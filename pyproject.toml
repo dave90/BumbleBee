@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.3", "pybind11>=3.0", "setuptools-scm>=8"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "bumblebeedb"
+name = "bumbledl"
 dynamic = ["version"]
 description = "BumbleBee Datalog analytics engine"
 readme = "README.md"

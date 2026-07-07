@@ -44,6 +44,7 @@ public:
 	std::unique_ptr<BaseStatistics> copy() override;
 
 	string toString() override;
+	bool numericMinMax(Value &mn, Value &mx) override { mn = min_.clone(); mx = max_.clone(); return true; }
 
 private:
 

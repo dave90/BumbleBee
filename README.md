@@ -2,26 +2,26 @@
   <img src="./logo/bumblebee6.png"  width=30% />
 </p>
 
-# BumbleBee DB
+# BumbleBee DL
 
 **A high-performance Datalog-based analytics engine — with SQL support — from Python.**
 
-BumbleBee DB is a lightweight, in-memory analytics engine powered by **Datalog** — a declarative logic language that makes recursive queries, graph analysis, and complex joins natural to express. It also supports **SQL** as an alternative query language, so you can mix and match both in the same session. Query CSV files, Parquet files, and pandas DataFrames through a simple Python API. Built in C++ with push-based execution, columnar storage, and multithreading, it delivers serious performance on a single machine.
+BumbleBee DL is a lightweight, in-memory analytics engine powered by **Datalog** — a declarative logic language that makes recursive queries, graph analysis, and complex joins natural to express. It also supports **SQL** as an alternative query language, so you can mix and match both in the same session. Query CSV files, Parquet files, and pandas DataFrames through a simple Python API. Built in C++ with push-based execution, columnar storage, and multithreading, it delivers serious performance on a single machine.
 
 ## Quick Start
 
 ### Install
 
 ```bash
-pip install bumblebeedb
+pip install bumbledl
 ```
 
-> **Platform support:** Pre-built wheels are available for **Linux x86_64** and **macOS ARM (Apple Silicon)**. If your platform is not supported, you can still use BumbleBee DB in [Google Colab](https://colab.research.google.com/drive/1EWIS0OxGdTE99p14ElXXHESbLb2bgrb7?usp=sharing).
+> **Platform support:** Pre-built wheels are available for **Linux x86_64** and **macOS ARM (Apple Silicon)**. If your platform is not supported, you can still use BumbleBee (DL) in [Google Colab](https://colab.research.google.com/drive/1EWIS0OxGdTE99p14ElXXHESbLb2bgrb7?usp=sharing).
 
 ### Your first query
 
 ```python
-import bumblebeedb as bb
+import bumbledl as bb
 
 db = bb.db()
 
@@ -45,7 +45,7 @@ print(df)
 BumbleBee supports recursive Datalog rules, enabling graph analysis, transitive closure, and hierarchical queries with a clean, declarative syntax:
 
 ```python
-import bumblebeedb as bb
+import bumbledl as bb
 import pandas as pd
 
 hierarchy = pd.DataFrame({
@@ -85,7 +85,7 @@ print()
 
 ## Features
 
-- **Python client library** — `pip install bumblebeedb`, query and get DataFrames back
+- **Python client library** — `pip install bumbledl`, query and get DataFrames back
 - **Dual query languages** — SQL and Datalog, including recursive Datalog
 - **High-performance engine** — push-based execution, columnar storage, multithreading
 - **Read and write CSV and Parquet** — import data from and export results to CSV and Parquet files
@@ -151,7 +151,7 @@ cd examples
 
 ## Optimizer
 
-BumbleBee DB includes a rule-based query optimizer that applies logical rewrites such as filter push-down and column pruning. The current optimizer does **not** reorder joins — the execution order follows the join sequence as written in the query. A cost-based join reordering optimizer is planned as a future enhancement.
+BumbleBee DL includes a rule-based query optimizer that applies logical rewrites such as filter push-down and column pruning. The current optimizer does **not** reorder joins — the execution order follows the join sequence as written in the query. A cost-based join reordering optimizer is planned as a future enhancement.
 
 ## Roadmap
 

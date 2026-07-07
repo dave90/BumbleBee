@@ -77,7 +77,7 @@ jobs:
             CMAKE_ARGS="-DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@20/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@20/bin/clang++"
           # Test the built wheel
           CIBW_TEST_REQUIRES: "pytest pandas pyarrow"
-          CIBW_TEST_COMMAND: "python -c \"import bumblebeedb; db = bumblebeedb.db(); print('OK')\""
+          CIBW_TEST_COMMAND: "python -c \"import bumbledl; db = bumbledl.db(); print('OK')\""
           # manylinux_2_34 provides glibc 2.34 needed by LLVM 20 pre-built binaries
           CIBW_MANYLINUX_X86_64_IMAGE: "quay.io/pypa/manylinux_2_34_x86_64"
           # CIBW_MANYLINUX_AARCH64_IMAGE: "quay.io/pypa/manylinux_2_34_aarch64"
@@ -95,7 +95,7 @@ jobs:
     if: github.event_name == 'release'
     environment:
       name: pypi
-      url: https://pypi.org/p/bumblebeedb
+      url: https://pypi.org/p/bumbledl
     permissions:
       id-token: write  # for trusted publishing
 
