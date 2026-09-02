@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo/bumblebee6.png"  width=30% />
+  <img src="./logo/bumblebee-datalog-file.png"  width=30% />
 </p>
 
 # BumbleBee DL
