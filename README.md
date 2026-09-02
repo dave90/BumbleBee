@@ -8,6 +8,10 @@
 
 BumbleBee DL is a lightweight, in-memory analytics engine powered by **Datalog** — a declarative logic language that makes recursive queries, graph analysis, and complex joins natural to express. It also supports **SQL** as an alternative query language, so you can mix and match both in the same session. Query CSV files, Parquet files, and pandas DataFrames through a simple Python API. Built in C++ with push-based execution, columnar storage, and multithreading, it delivers serious performance on a single machine.
 
+> [!NOTE]
+> BumbleBeeDB is an early-stage project under active development. It is not yet intended for
+> production workloads.
+
 ## Quick Start
 
 ### Install
